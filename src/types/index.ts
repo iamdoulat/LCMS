@@ -1358,6 +1358,25 @@ export interface ClaimReportDocument {
 // --- END Claim Report Types ---
 
 // --- Employee Types ---
+export const educationLevelOptions = ["SSC", "HSC", "Diploma", "Bachelors", "Masters", "PhD"] as const;
+export const gradeDivisionOptions = ["1st Division", "2nd Division", "3rd Division", "A+", "A", "A-", "B", "C", "D"] as const;
+
+export const EducationSchema = z.object({
+  id: z.string().optional(), // For key in React
+  education: z.enum(educationLevelOptions, { required_error: "Education level is required." }),
+  gradeDivision: z.enum(gradeDivisionOptions, { required_error: "Grade/Division is required." }),
+  passedYear: z.string().min(4, "Passed Year is required.").max(4, "Invalid year."),
+  scale: z.preprocess(toNumberOrUndefined, z.number().positive().optional()),
+  cgpa: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  instituteName: z.string().min(1, "Institute Name is required."),
+  foreignDegree: z.boolean().default(false).optional(),
+  professional: z.boolean().default(false).optional(),
+  lastEducation: z.boolean().default(false).optional(),
+});
+
+export type Education = z.infer<typeof EducationSchema>;
+
+
 export const employeeStatusOptions = ["Active", "On Leave", "Terminated"] as const;
 export type EmployeeStatus = (typeof employeeStatusOptions)[number];
 
@@ -1399,6 +1418,7 @@ export const EmployeeSchema = z.object({
   jobBase: z.enum(jobBaseOptions).optional(),
   jobBaseEffectiveDate: z.date().optional(),
   remarksJobBase: z.string().optional(),
+  educationDetails: z.array(EducationSchema).optional(),
 });
 
 export type EmployeeFormValues = z.infer<typeof EmployeeSchema>;
@@ -1435,6 +1455,7 @@ export interface Employee {
   jobBase?: (typeof jobBaseOptions)[number];
   jobBaseEffectiveDate?: string; // ISO string
   remarksJobBase?: string;
+  educationDetails?: Education[];
 }
 
 export type EmployeeDocument = Employee & { id: string };

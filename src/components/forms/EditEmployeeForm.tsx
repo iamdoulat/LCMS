@@ -1,16 +1,17 @@
 
+
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UserPlus, Save, Building, History } from 'lucide-react';
+import { Loader2, UserPlus, Save, Building, History, GraduationCap, PlusCircle, Trash2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type { EmployeeFormValues, EmployeeDocument } from '@/types';
-import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions } from '@/types';
+import type { EmployeeFormValues, EmployeeDocument, Education } from '@/types';
+import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,8 @@ import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { Textarea } from '../ui/textarea';
+import { Checkbox } from '../ui/checkbox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface EditEmployeeFormProps {
   employee: EmployeeDocument;
@@ -33,7 +36,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     resolver: zodResolver(EmployeeSchema),
     defaultValues: {
       ...employee,
-      // Handle potential name splitting issues if middleName is not present
       firstName: employee.fullName?.split(' ')[0] || '',
       middleName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ')[1] : '',
       lastName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ').slice(2).join(' ') : (employee.fullName?.split(' ')[1] || ''),
@@ -42,7 +44,20 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       effectiveDate: employee.effectiveDate ? new Date(employee.effectiveDate) : undefined,
       jobStatusEffectiveDate: employee.jobStatusEffectiveDate ? new Date(employee.jobStatusEffectiveDate) : undefined,
       jobBaseEffectiveDate: employee.jobBaseEffectiveDate ? new Date(employee.jobBaseEffectiveDate) : undefined,
+      educationDetails: employee.educationDetails?.map(edu => ({
+        ...edu,
+        passedYear: String(edu.passedYear || ''),
+        scale: edu.scale || undefined,
+        cgpa: edu.cgpa || undefined,
+      })) || [],
     },
+  });
+
+  const { control, handleSubmit, watch } = form;
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "educationDetails",
   });
 
   async function onSubmit(data: EmployeeFormValues) {
@@ -58,10 +73,14 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       effectiveDate: data.effectiveDate ? data.effectiveDate.toISOString() : null,
       jobStatusEffectiveDate: data.jobStatusEffectiveDate ? data.jobStatusEffectiveDate.toISOString() : null,
       jobBaseEffectiveDate: data.jobBaseEffectiveDate ? data.jobBaseEffectiveDate.toISOString() : null,
+      educationDetails: data.educationDetails?.map(edu => ({
+          ...edu,
+          scale: Number(edu.scale) || undefined,
+          cgpa: Number(edu.cgpa) || undefined,
+      })),
       updatedAt: serverTimestamp(),
     };
 
-    // Remove fields not in the final schema
     delete (dataToSave as any).firstName;
     delete (dataToSave as any).middleName;
     delete (dataToSave as any).lastName;
@@ -90,7 +109,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
 
         <div className="flex items-center gap-6">
           <div className="w-32 h-40 rounded-md border-2 border-dashed flex items-center justify-center bg-muted/50">
@@ -98,7 +117,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
           </div>
           <div className="flex-1 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField control={form.control} name="firstName" render={({ field }) => (
+              <FormField control={control} name="firstName" render={({ field }) => (
                 <FormItem>
                   <FormLabel>First Name*</FormLabel>
                   <FormControl>
@@ -107,7 +126,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                   <FormMessage />
                 </FormItem>
               )}/>
-              <FormField control={form.control} name="middleName" render={({ field }) => (
+              <FormField control={control} name="middleName" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Middle Name</FormLabel>
                   <FormControl>
@@ -116,7 +135,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                   <FormMessage />
                 </FormItem>
               )}/>
-              <FormField control={form.control} name="lastName" render={({ field }) => (
+              <FormField control={control} name="lastName" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Last Name*</FormLabel>
                   <FormControl>
@@ -128,7 +147,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField control={form.control} name="gender" render={({ field }) => (
+              <FormField control={control} name="gender" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Gender*</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -146,14 +165,14 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                   <FormMessage />
                 </FormItem>
               )}/>
-              <FormField control={form.control} name="joinedDate" render={({ field }) => (
+              <FormField control={control} name="joinedDate" render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Joined Date*</FormLabel>
                   <DatePickerField field={field} placeholder="Select join date" />
                   <FormMessage />
                 </FormItem>
               )}/>
-              <FormField control={form.control} name="dateOfBirth" render={({ field }) => (
+              <FormField control={control} name="dateOfBirth" render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Date of Birth*</FormLabel>
                   <DatePickerField field={field} placeholder="Select birth date" />
@@ -165,7 +184,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField control={form.control} name="nationalId" render={({ field }) => (
+          <FormField control={control} name="nationalId" render={({ field }) => (
             <FormItem>
               <FormLabel>NID/SSN</FormLabel>
               <FormControl>
@@ -174,7 +193,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <FormMessage />
             </FormItem>
           )}/>
-          <FormField control={form.control} name="nationality" render={({ field }) => (
+          <FormField control={control} name="nationality" render={({ field }) => (
             <FormItem>
               <FormLabel>Nationality</FormLabel>
               <FormControl>
@@ -183,7 +202,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <FormMessage />
             </FormItem>
           )}/>
-          <FormField control={form.control} name="email" render={({ field }) => (
+          <FormField control={control} name="email" render={({ field }) => (
             <FormItem>
               <FormLabel>Email*</FormLabel>
               <FormControl>
@@ -195,7 +214,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField control={form.control} name="maritalStatus" render={({ field }) => (
+          <FormField control={control} name="maritalStatus" render={({ field }) => (
             <FormItem>
               <FormLabel>Marital Status</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -213,7 +232,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <FormMessage />
             </FormItem>
           )}/>
-          <FormField control={form.control} name="bloodGroup" render={({ field }) => (
+          <FormField control={control} name="bloodGroup" render={({ field }) => (
             <FormItem>
               <FormLabel>Blood Group</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -231,7 +250,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <FormMessage />
             </FormItem>
           )}/>
-          <FormField control={form.control} name="religion" render={({ field }) => (
+          <FormField control={control} name="religion" render={({ field }) => (
             <FormItem>
               <FormLabel>Religion</FormLabel>
               <FormControl>
@@ -243,7 +262,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField control={form.control} name="employeeCode" render={({ field }) => (
+          <FormField control={control} name="employeeCode" render={({ field }) => (
             <FormItem>
               <FormLabel>Employee Code*</FormLabel>
               <FormControl>
@@ -252,7 +271,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <FormMessage />
             </FormItem>
           )}/>
-          <FormField control={form.control} name="designation" render={({ field }) => (
+          <FormField control={control} name="designation" render={({ field }) => (
             <FormItem>
               <FormLabel>Designation*</FormLabel>
               <FormControl>
@@ -261,7 +280,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <FormMessage />
             </FormItem>
           )}/>
-          <FormField control={form.control} name="phone" render={({ field }) => (
+          <FormField control={control} name="phone" render={({ field }) => (
             <FormItem>
               <FormLabel>Mobile No*</FormLabel>
               <FormControl>
@@ -272,7 +291,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
           )}/>
         </div>
         
-        <FormField control={form.control} name="status" render={({ field }) => (
+        <FormField control={control} name="status" render={({ field }) => (
           <FormItem>
             <FormLabel>Employee Status</FormLabel>
             <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -300,12 +319,12 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     <CardDescription className="text-xs">Setup division, branch etc.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-2 space-y-4">
-                    <FormField control={form.control} name="division" render={({ field }) => (<FormItem><FormLabel>Division*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="effectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="remarksDivision" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="division" render={({ field }) => (<FormItem><FormLabel>Division*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="effectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
+                    <FormField control={control} name="remarksDivision" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </CardContent>
             </Card>
 
@@ -314,9 +333,9 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Status Setup</CardTitle>
                 </CardHeader>
                 <CardContent className="p-2 space-y-4">
-                    <FormField control={form.control} name="jobStatus" render={({ field }) => (<FormItem><FormLabel>Job Status*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger></FormControl><SelectContent>{jobStatusOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="jobStatusEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Status Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="remarksJobStatus" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="jobStatus" render={({ field }) => (<FormItem><FormLabel>Job Status*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger></FormControl><SelectContent>{jobStatusOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="jobStatusEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Status Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
+                    <FormField control={control} name="remarksJobStatus" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </CardContent>
             </Card>
             
@@ -325,12 +344,72 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Base Setup</CardTitle>
                 </CardHeader>
                 <CardContent className="p-2 space-y-4">
-                    <FormField control={form.control} name="jobBase" render={({ field }) => (<FormItem><FormLabel>Job Base*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Base" /></SelectTrigger></FormControl><SelectContent>{jobBaseOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="jobBaseEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Base Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="remarksJobBase" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="jobBase" render={({ field }) => (<FormItem><FormLabel>Job Base*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Base" /></SelectTrigger></FormControl><SelectContent>{jobBaseOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="jobBaseEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Base Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
+                    <FormField control={control} name="remarksJobBase" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </CardContent>
             </Card>
         </div>
+
+        <Separator />
+        
+        <Card className="p-4">
+            <CardHeader className="p-2 pt-0">
+                <CardTitle className="text-lg flex items-center gap-2"><GraduationCap className="h-5 w-5 text-primary"/>Education Information</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+                {fields.map((field, index) => (
+                    <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
+                        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <FormField control={control} name={`educationDetails.${index}.education`} render={({ field }) => (<FormItem><FormLabel>Education*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Education" /></SelectTrigger></FormControl><SelectContent>{educationLevelOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            <FormField control={control} name={`educationDetails.${index}.gradeDivision`} render={({ field }) => (<FormItem><FormLabel>Grade/Division</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger></FormControl><SelectContent>{gradeDivisionOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            <FormField control={control} name={`educationDetails.${index}.passedYear`} render={({ field }) => (<FormItem><FormLabel>Passed Year*</FormLabel><FormControl><Input placeholder="YYYY" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                            <FormField control={control} name={`educationDetails.${index}.scale`} render={({ field }) => (<FormItem><FormLabel>Scale</FormLabel><FormControl><Input type="number" placeholder="4" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                            <FormField control={control} name={`educationDetails.${index}.cgpa`} render={({ field }) => (<FormItem><FormLabel>CGPA</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Enter CGPA" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                        </div>
+                        <FormField control={control} name={`educationDetails.${index}.instituteName`} render={({ field }) => (<FormItem><FormLabel>Institute Name*</FormLabel><FormControl><Input placeholder="Enter Institute Name" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                        <div className="flex items-center space-x-4">
+                            <FormField control={control} name={`educationDetails.${index}.foreignDegree`} render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Foreign Degree</FormLabel></FormItem>)}/>
+                            <FormField control={control} name={`educationDetails.${index}.professional`} render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Professional</FormLabel></FormItem>)}/>
+                            <FormField control={control} name={`educationDetails.${index}.lastEducation`} render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Last Education</FormLabel></FormItem>)}/>
+                        </div>
+                        {fields.length > 1 && <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>}
+                    </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ education: 'Bachelors', gradeDivision: 'A', passedYear: '', instituteName: '' })}>
+                    <PlusCircle className="mr-2 h-4 w-4"/> Add Education
+                </Button>
+
+                 <div className="rounded-md border mt-4">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Education</TableHead>
+                                <TableHead>Passed Year</TableHead>
+                                <TableHead>Grade</TableHead>
+                                <TableHead>Institute Name</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {fields.length > 0 ? (
+                                fields.map((field, index) => (
+                                    <TableRow key={field.id}>
+                                        <TableCell>{watch(`educationDetails.${index}.education`)}</TableCell>
+                                        <TableCell>{watch(`educationDetails.${index}.passedYear`)}</TableCell>
+                                        <TableCell>{watch(`educationDetails.${index}.gradeDivision`)}</TableCell>
+                                        <TableCell>{watch(`educationDetails.${index}.instituteName`)}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">No education details added.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+        </Card>
 
 
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting}>
