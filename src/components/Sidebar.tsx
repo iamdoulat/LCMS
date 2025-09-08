@@ -91,12 +91,12 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ModeToggle } from './ModeToggle';
-import { useToast } from "@/components/ui/use-toast"
+import { ThemeToggleButton } from "@/components/ui/ThemeToggleButton";
 import { cn } from '@/lib/utils';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 
 interface NavItem {
   title: string
@@ -352,7 +352,6 @@ export const dashboardConfig = {
 interface SidebarProps extends React.HTMLAttributes<HTMLElement> {}
 
 const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(({ className, ...props }, ref) => {
-  const { toast } = useToast()
   const { user, userRole, isLoading } = useAuth();
   const router = useRouter();
   const isAdmin = userRole?.includes('Admin') || userRole?.includes('Super Admin');
@@ -361,16 +360,18 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(({ className, ...
     try {
       await signOut(auth);
       router.push('/login');
-      toast({
+      Swal.fire({
         title: "Signed out successfully.",
-        description: "You have been signed out.",
-      })
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     } catch (error: any) {
-      toast({
+      Swal.fire({
         title: "Error signing out.",
-        description: error.message,
-        variant: "destructive",
-      })
+        text: error.message,
+        icon: "error",
+      });
     }
   };
 
@@ -391,7 +392,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(({ className, ...
               <Button variant="ghost" className="flex h-8 w-full items-center justify-between rounded-md">
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.photoURL} alt={user?.displayName || 'User'} />
+                    <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
                     <AvatarFallback>{user?.displayName?.slice(0, 2).toUpperCase() || 'U'}</AvatarFallback>
                   </Avatar>
                   <span className="text-sm font-medium leading-none">{user?.displayName || 'Guest'}</span>
@@ -429,7 +430,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(({ className, ...
                   <Tooltip delayDuration={50}>
                     <TooltipTrigger asChild>
                       <Link
-                        href={item.href}
+                        href={item.href || '#'}
                         className="group flex w-full items-center space-x-2 rounded-md px-2 py-2 text-sm font-medium hover:underline"
                       >
                         {item.icon && <item.icon className="h-4 w-4 opacity-70 group-hover:opacity-100 transition-opacity" />}
@@ -446,7 +447,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(({ className, ...
           ))}
           <Separator />
           <div className="mt-auto px-4">
-            <ModeToggle />
+            <ThemeToggleButton />
           </div>
         </div>
       </div>
