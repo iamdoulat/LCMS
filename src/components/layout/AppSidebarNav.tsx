@@ -67,6 +67,7 @@ import {
   Wallet,
   Banknote,
   CalendarDays,
+  Calculator,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -158,8 +159,8 @@ const serviceNavItems: NavItem[] = [
 
 const hrNavItems: NavItem[] = [
   { href: '/dashboard/hr/employees', label: 'Employee List', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
-  { href: '/dashboard/hr/attendance', label: 'Attendance', icon: CalendarDays, iconColorClass: 'bg-icon-upcoming' },
-  { href: '/dashboard/hr/payroll', label: 'Payroll', icon: Banknote, iconColorClass: 'bg-icon-payment' },
+  { href: '/dashboard/hr/payroll/salary-generation', label: 'Salary Generation', icon: Calculator, iconColorClass: 'bg-icon-payment' },
+  { href: '/dashboard/hr/payroll/payslip-list', label: 'Payslip List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/hr/settings', label: 'HRM And Payroll Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 

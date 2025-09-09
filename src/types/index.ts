@@ -1518,6 +1518,9 @@ export interface Employee {
 
 export type EmployeeDocument = Employee & { id: string };
 
+export const BranchSchema = z.object({
+  name: z.string().min(2, "Branch name must be at least 2 characters long."),
+});
 export type BranchFormValues = z.infer<typeof BranchSchema>;
 export interface BranchDocument {
   id: string;
@@ -1525,6 +1528,9 @@ export interface BranchDocument {
   createdAt: any;
 }
 
+export const DepartmentSchema = z.object({
+  name: z.string().min(2, "Department name must be at least 2 characters long."),
+});
 export type DepartmentFormValues = z.infer<typeof DepartmentSchema>;
 export interface DepartmentDocument {
   id: string;
@@ -1532,13 +1538,16 @@ export interface DepartmentDocument {
   createdAt: any;
 }
 
+export const UnitSchema = z.object({
+  name: z.string().min(2, "Unit name must be at least 2 characters long."),
+});
 export type UnitFormValues = z.infer<typeof UnitSchema>;
 export interface UnitDocument {
   id: string;
   name: string;
   createdAt: any;
 }
-// --- Designation Types ---
+
 export const DesignationSchema = z.object({
   name: z.string().min(2, "Designation name must be at least 2 characters long."),
 });
@@ -1549,8 +1558,7 @@ export interface DesignationDocument {
   name: string;
   createdAt: any;
 }
-// --- END Employee Types ---
-// --- Division Types ---
+
 export const DivisionSchema = z.object({
   name: z.string().min(2, "Division name must be at least 2 characters long."),
 });
@@ -1561,4 +1569,45 @@ export interface DivisionDocument {
   name: string;
   createdAt: any;
 }
-// --- END Division Types ---
+// --- END Employee Types ---
+
+// --- Payroll Types ---
+export interface Payroll {
+    id: string; // e.g., PAYROLL-2024-08
+    month: string;
+    year: number;
+    generationDate: any; // Timestamp
+    generatedBy: string;
+    totalEmployees: number;
+    totalGrossSalary: number;
+    totalDeductions: number;
+    totalNetSalary: number;
+    status: 'Pending' | 'Approved' | 'Paid';
+}
+
+export interface Payslip {
+    id: string; // e.g., PAYSLIP-2024-08-EMP123
+    payrollId: string;
+    employeeId: string;
+    employeeName: string; // Denormalized
+    employeeCode: string; // Denormalized
+    designation: string; // Denormalized
+    payPeriod: string; // "August, 2024"
+    grossSalary: number;
+    // Breakdowns
+    basicSalary: number;
+    houseRent: number;
+    medicalAllowance: number;
+    // ... other earnings
+    // Deductions
+    taxDeduction: number;
+    providentFund: number;
+    leaveDeduction: number;
+    // ... other deductions
+    totalEarnings: number;
+    totalDeductions: number;
+    netSalary: number;
+    paymentDate?: any; // Timestamp
+    paymentMethod?: string;
+}
+// --- END Payroll Types ---
