@@ -1,4 +1,3 @@
-
 "use client";
 
 import { EditEmployeeForm } from '@/components/forms/EditEmployeeForm';
@@ -31,7 +30,7 @@ export default function EditEmployeePage() {
           return;
         }
 
-        const employeeDocRef = doc(firestore, "employees", id);
+        const employeeDocRef = doc(firestore, "employees", id as string);
         const docSnap = await getDoc(employeeDocRef);
 
         if (docSnap.exists()) {
@@ -59,7 +58,7 @@ export default function EditEmployeePage() {
           </Button>
         </Link>
       </div>
-      <Card className="max-w-4xl mx-auto shadow-xl">
+      <Card className="max-w-7xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <FileEdit className="h-7 w-7 text-primary" />
