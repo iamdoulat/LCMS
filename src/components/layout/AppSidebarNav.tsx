@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from 'next/link';
@@ -68,6 +69,8 @@ import {
   Banknote,
   CalendarDays,
   Calculator,
+  Mailbox,
+  Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -79,6 +82,7 @@ interface NavItem {
   label: string;
   icon?: React.ElementType;
   iconColorClass?: string;
+  disabled?: boolean;
 }
 
 interface NavItemGroup {
@@ -161,6 +165,8 @@ const hrNavItems: NavItem[] = [
   { href: '/dashboard/hr/employees', label: 'Employee List', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
   { href: '/dashboard/hr/payroll/salary-generation', label: 'Salary Generation', icon: Calculator, iconColorClass: 'bg-icon-payment' },
   { href: '/dashboard/hr/payroll/payslip-list', label: 'Payslip List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+  { href: "#", label: "Attendance", icon: Calendar, disabled: true },
+  { href: "#", label: "Leave list page", icon: Mailbox, disabled: true },
   { href: '/dashboard/hr/settings', label: 'HRM And Payroll Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 
@@ -319,6 +325,7 @@ export function AppSidebarNav() {
                               <SidebarMenuButton
                                 asChild
                                 isActive={isActive(subLink.href)}
+                                disabled={subLink.disabled}
                                 className={cn(
                                   isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                                   "h-8 text-xs"
