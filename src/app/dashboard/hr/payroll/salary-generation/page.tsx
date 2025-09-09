@@ -48,9 +48,15 @@ const monthOptions = [ "January", "February", "March", "April", "May", "June", "
 export default function SalaryGenerationPage() {
     const { user } = useAuth();
     const [isGenerating, setIsGenerating] = React.useState(false);
-    const [currentTime, setCurrentTime] = React.useState(new Date());
+    const [currentTime, setCurrentTime] = React.useState<Date | null>(null);
+    const [generationDate, setGenerationDate] = React.useState<Date | null>(null);
 
     React.useEffect(() => {
+        // Defer date initialization to client-side
+        const now = new Date();
+        setCurrentTime(now);
+        setGenerationDate(now);
+
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
@@ -81,6 +87,7 @@ export default function SalaryGenerationPage() {
 
     const onGenerateSalary = async (data: SalaryGenerationFormValues) => {
         setIsGenerating(true);
+        setGenerationDate(new Date()); // Refresh generation date on click
 
         const payrollId = `PAYROLL-${data.year}-${data.month.toUpperCase()}`;
         const payPeriod = `${data.month}, ${data.year}`;
@@ -105,15 +112,35 @@ export default function SalaryGenerationPage() {
 
         switch(data.generationType) {
             case 'Branch Wise':
+                if (!data.branch) {
+                     Swal.fire("Validation Error", "Please select a branch.", "error");
+                     setIsGenerating(false);
+                     return;
+                }
                 employeesToProcessQuery = query(baseQuery, where("branch", "==", data.branch));
                 break;
             case 'Department Wise':
+                if (!data.department) {
+                     Swal.fire("Validation Error", "Please select a department.", "error");
+                     setIsGenerating(false);
+                     return;
+                }
                  employeesToProcessQuery = query(baseQuery, where("department", "==", data.department));
                 break;
             case 'Department Unit Wise':
+                 if (!data.department || !data.unit) {
+                     Swal.fire("Validation Error", "Please select a department and a unit.", "error");
+                     setIsGenerating(false);
+                     return;
+                 }
                  employeesToProcessQuery = query(baseQuery, where("department", "==", data.department), where("unit", "==", data.unit));
                 break;
             case 'Employee Wise':
+                 if (!data.employee) {
+                     Swal.fire("Validation Error", "Please select an employee.", "error");
+                     setIsGenerating(false);
+                     return;
+                 }
                 employeesToProcessQuery = query(baseQuery, where("id", "==", data.employee));
                 break;
             default:
@@ -259,8 +286,8 @@ export default function SalaryGenerationPage() {
                                 </div>
                                 
                                 <div className="space-y-2 text-sm text-muted-foreground">
-                                    <p>Current Date: {currentTime.toLocaleString()}</p>
-                                    <p>Generation Date: {new Date().toLocaleString()}</p>
+                                    <p>Current Date: {currentTime ? currentTime.toLocaleString() : 'Loading...'}</p>
+                                    <p>Generation Date: {generationDate ? generationDate.toLocaleString() : '...'}</p>
                                 </div>
 
                                 <div className="flex items-center space-x-4 pt-4">
