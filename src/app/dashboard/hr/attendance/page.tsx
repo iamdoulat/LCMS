@@ -25,6 +25,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import type { DateRange } from 'react-day-picker';
 
+const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
+const ALL_UNITS_VALUE = "__ALL_UNITS_ATTENDANCE__";
+const ALL_DEPTS_VALUE = "__ALL_DEPTS_ATTENDANCE__";
+
 
 const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -222,24 +226,24 @@ export default function DailyAttendancePage() {
                                 <Input placeholder="Employee name or code" className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
                            <DatePickerWithRange className="h-10"/>
-                            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+                            <Select value={selectedBranch} onValueChange={(value) => setSelectedBranch(value === ALL_BRANCHES_VALUE ? '' : value)}>
                                 <SelectTrigger><SelectValue placeholder="Select Branch"/></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">All Branches</SelectItem>
+                                    <SelectItem value={ALL_BRANCHES_VALUE}>All Branches</SelectItem>
                                     {branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+                            <Select value={selectedUnit} onValueChange={(value) => setSelectedUnit(value === ALL_UNITS_VALUE ? '' : value)}>
                                 <SelectTrigger><SelectValue placeholder="Select Unit"/></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">All Units</SelectItem>
+                                    <SelectItem value={ALL_UNITS_VALUE}>All Units</SelectItem>
                                     {units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={selectedDept} onValueChange={setSelectedDept}>
+                            <Select value={selectedDept} onValueChange={(value) => setSelectedDept(value === ALL_DEPTS_VALUE ? '' : value)}>
                                 <SelectTrigger><SelectValue placeholder="Select Department"/></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">All Departments</SelectItem>
+                                    <SelectItem value={ALL_DEPTS_VALUE}>All Departments</SelectItem>
                                     {departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>

@@ -412,7 +412,7 @@ export default function InventoryRefundsReturnsPage() {
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                List of invoices eligible for refunds. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedSales.length)} of {displayedSales.length} entries.
+                List of invoices eligible for refunds. Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedSales.length)} of {displayedSales.length} entries.
               </TableCaption>
             </Table>
           </div>
@@ -514,7 +514,3 @@ export default function InventoryRefundsReturnsPage() {
     </div>
   );
 }
-
-
-    
-    

@@ -514,6 +514,3 @@ export default function InventoryRefundsReturnsPage() {
     </div>
   );
 }
-
-
-    
