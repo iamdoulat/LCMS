@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker'; // Assuming this component exists
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus } from 'lucide-react';
@@ -24,6 +23,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import Swal from 'sweetalert2';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import type { DateRange } from 'react-day-picker';
 
 
 const getInitials = (name?: string) => {
@@ -261,17 +261,8 @@ export default function DailyAttendancePage() {
     );
 }
 
-// Assuming DatePickerWithRange exists in ui components, if not it needs to be created.
-// For now, I'm importing it, but it might need a placeholder implementation.
-// Let's create a placeholder for it if it does not exist.
-namespace React {
-    export interface HTMLAttributes<T> extends AriaAttributes, DOMAttributes<T> {
-      // extends React's HTMLAttributes
-      className?: string;
-    }
-}
 const DatePickerWithRange = ({ className }: { className?: string }) => {
-    const [date, setDate] = React.useState<any>(null);
+    const [date, setDate] = React.useState<DateRange | undefined>(undefined);
     return (
         <div className={cn("grid gap-2", className)}>
             <Popover>
