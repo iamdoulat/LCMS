@@ -49,8 +49,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const [departmentOptions, setDepartmentOptions] = React.useState<ComboboxOption[]>([]);
   const [unitOptions, setUnitOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingHrmOptions, setIsLoadingHrmOptions] = React.useState(true);
-
-
   
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(EmployeeSchema),
@@ -321,7 +319,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
             </FormItem>
           )}/>
         </div>
-
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField control={control} name="maritalStatus" render={({ field }) => (
             <FormItem>
@@ -443,37 +441,45 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <CardDescription className="text-xs">Setup division, branch etc.</CardDescription>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-                <FormField control={control} name="division" render={({ field }) => (
-                  <FormItem><FormLabel>Division*</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select Division" /></SelectTrigger></FormControl>
-                      <SelectContent>{divisionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              <FormField control={control} name="division" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Division*</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select Division" /></SelectTrigger></FormControl>
+                    <SelectContent>{divisionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <FormMessage /></FormItem>
+                  <FormMessage />
+                </FormItem>
               )}/>
               <FormField control={control} name="branch" render={({ field }) => (
-                  <FormItem><FormLabel>Branch*</FormLabel>
+                <FormItem>
+                  <FormLabel>Branch*</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
-                      <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Branch"} /></SelectTrigger></FormControl>
-                      <SelectContent>{branchOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                    <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Branch"} /></SelectTrigger></FormControl>
+                    <SelectContent>{branchOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <FormMessage /></FormItem>
+                  <FormMessage />
+                </FormItem>
               )}/>
               <FormField control={control} name="department" render={({ field }) => (
-                  <FormItem><FormLabel>Department*</FormLabel>
+                <FormItem>
+                  <FormLabel>Department*</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
-                      <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Department"} /></SelectTrigger></FormControl>
-                      <SelectContent>{departmentOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                    <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Department"} /></SelectTrigger></FormControl>
+                    <SelectContent>{departmentOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <FormMessage /></FormItem>
+                  <FormMessage />
+                </FormItem>
               )}/>
               <FormField control={control} name="unit" render={({ field }) => (
-                  <FormItem><FormLabel>Unit*</FormLabel>
+                <FormItem>
+                  <FormLabel>Unit*</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingHrmOptions}>
-                      <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Unit"} /></SelectTrigger></FormControl>
-                      <SelectContent>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                    <FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Unit"} /></SelectTrigger></FormControl>
+                    <SelectContent>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <FormMessage /></FormItem>
+                  <FormMessage />
+                </FormItem>
               )}/>
               <FormField control={control} name="remarksDivision" render={({ field }) => (
                 <FormItem>
