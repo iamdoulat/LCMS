@@ -24,7 +24,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { firestore } from '@/lib/firebase/config';
-import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import type { HrmSettingDocument, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
@@ -39,29 +39,36 @@ import { AddUnitForm } from '@/components/forms/AddUnitForm';
 import { EditUnitForm } from '@/components/forms/EditUnitForm';
 import { AddDivisionForm } from '@/components/forms/AddDivisionForm';
 import { EditDivisionForm } from '@/components/forms/EditDivisionForm';
+import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const formatDisplayDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    try {
-        const date = parseISO(dateString);
-        return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
-    } catch (e) {
-        return 'N/A';
-    }
-};
+
+const DataTableSkeleton = () => (
+    <div className="rounded-md border">
+        <Table>
+            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
+            <TableBody>
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    </div>
+);
+
 
 export default function HrmSettingsPage() {
     const { userRole } = useAuth();
     const isReadOnly = userRole?.includes('Viewer');
 
-    const [designations, setDesignations] = React.useState<DesignationDocument[]>([]);
-    const [branches, setBranches] = React.useState<BranchDocument[]>([]);
-    const [departments, setDepartments] = React.useState<DepartmentDocument[]>([]);
-    const [units, setUnits] = React.useState<UnitDocument[]>([]);
-    const [divisions, setDivisions] = React.useState<DivisionDocument[]>([]);
-
-    const [isLoading, setIsLoading] = React.useState(true);
-    const [fetchError, setFetchError] = React.useState<string | null>(null);
+    const { data: designations, isLoading: isLoadingDesignations } = useFirestoreQuery<DesignationDocument[]>(query(collection(firestore, 'designations'), orderBy("name", "asc")), undefined, ['designations']);
+    const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(query(collection(firestore, 'branches'), orderBy("name", "asc")), undefined, ['branches']);
+    const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(query(collection(firestore, 'departments'), orderBy("name", "asc")), undefined, ['departments']);
+    const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(query(collection(firestore, 'units'), orderBy("name", "asc")), undefined, ['units']);
+    const { data: divisions, isLoading: isLoadingDivisions } = useFirestoreQuery<DivisionDocument[]>(query(collection(firestore, 'divisions'), orderBy("name", "asc")), undefined, ['divisions']);
 
     const [isAddDesignationDialogOpen, setIsAddDesignationDialogOpen] = React.useState(false);
     const [isAddBranchDialogOpen, setIsAddBranchDialogOpen] = React.useState(false);
@@ -84,41 +91,6 @@ export default function HrmSettingsPage() {
     const [editingDivision, setEditingDivision] = React.useState<DivisionDocument | null>(null);
     const [isEditDivisionDialogOpen, setIsEditDivisionDialogOpen] = React.useState(false);
 
-
-    React.useEffect(() => {
-        const createSubscription = (collectionName: string, setData: React.Dispatch<any>, setError: React.Dispatch<React.SetStateAction<string | null>>) => {
-            const q = query(collection(firestore, collectionName), orderBy("name", "asc"));
-            return onSnapshot(q, (snapshot) => {
-                setData(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })));
-            }, (error) => {
-                console.error(`Error fetching ${collectionName}:`, error);
-                setError(`Could not load ${collectionName}. Check permissions and console.`);
-            });
-        };
-
-        const unsubDesignations = createSubscription('designations', setDesignations, setFetchError);
-        const unsubBranches = createSubscription('branches', setBranches, setFetchError);
-        const unsubDepartments = createSubscription('departments', setDepartments, setFetchError);
-        const unsubUnits = createSubscription('units', setUnits, setFetchError);
-        const unsubDivisions = createSubscription('divisions', setDivisions, setFetchError);
-
-
-        Promise.all([
-          new Promise(resolve => onSnapshot(query(collection(firestore, "designations")), () => resolve(true), () => resolve(false))),
-          new Promise(resolve => onSnapshot(query(collection(firestore, "branches")), () => resolve(true), () => resolve(false))),
-          new Promise(resolve => onSnapshot(query(collection(firestore, "departments")), () => resolve(true), () => resolve(false))),
-          new Promise(resolve => onSnapshot(query(collection(firestore, "units")), () => resolve(true), () => resolve(false))),
-          new Promise(resolve => onSnapshot(query(collection(firestore, "divisions")), () => resolve(true), () => resolve(false))),
-        ]).then(() => setIsLoading(false));
-
-        return () => {
-            unsubDesignations();
-            unsubBranches();
-            unsubDepartments();
-            unsubUnits();
-            unsubDivisions();
-        };
-    }, []);
 
     const handleEdit = (item: any, setEditingItem: React.Dispatch<any>, setIsEditDialogOpen: React.Dispatch<any>) => {
         setEditingItem(item);
@@ -149,7 +121,8 @@ export default function HrmSettingsPage() {
     const renderTableSection = (
       title: string,
       description: string,
-      data: any[],
+      data: any[] | undefined,
+      isLoading: boolean,
       onAddClick: () => void,
       onEditClick: (item: any) => void,
       collectionName: string
@@ -163,9 +136,8 @@ export default function HrmSettingsPage() {
               <Button size="sm" disabled={isReadOnly} onClick={onAddClick}><PlusCircle className="mr-2 h-4 w-4"/>Add New</Button>
           </CardHeader>
           <CardContent>
-              {isLoading ? <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div> :
-               fetchError ? <div className="text-destructive text-center p-4">{fetchError}</div> :
-               data.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+              {isLoading ? <DataTableSkeleton /> :
+               !data || data.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
               (
                   <div className="rounded-md border">
                       <Table>
@@ -197,7 +169,7 @@ export default function HrmSettingsPage() {
 
     return (
         <div className="container mx-auto py-8">
-            <Card className="shadow-xl max-w-7xl mx-auto">
+            <Card className="max-w-7xl mx-auto shadow-xl">
                 <CardHeader>
                     <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                         <Settings className="h-7 w-7 text-primary" />
@@ -209,7 +181,7 @@ export default function HrmSettingsPage() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <Dialog open={isAddDivisionDialogOpen} onOpenChange={setIsAddDivisionDialogOpen}>
-                        <DialogTrigger asChild>{renderTableSection("Divisions", "Manage company divisions.", divisions, () => setIsAddDivisionDialogOpen(true), (item) => handleEdit(item, setEditingDivision, setIsEditDivisionDialogOpen), "divisions")}</DialogTrigger>
+                        {renderTableSection("Divisions", "Manage company divisions.", divisions, isLoadingDivisions, () => setIsAddDivisionDialogOpen(true), (item) => handleEdit(item, setEditingDivision, setIsEditDivisionDialogOpen), "divisions")}
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New Division</DialogTitle>
@@ -220,7 +192,7 @@ export default function HrmSettingsPage() {
                     </Dialog>
                     
                     <Dialog open={isAddBranchDialogOpen} onOpenChange={setIsAddBranchDialogOpen}>
-                        <DialogTrigger asChild>{renderTableSection("Branches", "Manage company branches.", branches, () => setIsAddBranchDialogOpen(true), (item) => handleEdit(item, setEditingBranch, setIsEditBranchDialogOpen), "branches")}</DialogTrigger>
+                        {renderTableSection("Branches", "Manage company branches.", branches, isLoadingBranches, () => setIsAddBranchDialogOpen(true), (item) => handleEdit(item, setEditingBranch, setIsEditBranchDialogOpen), "branches")}
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New Branch</DialogTitle>
@@ -231,7 +203,7 @@ export default function HrmSettingsPage() {
                     </Dialog>
 
                      <Dialog open={isAddDepartmentDialogOpen} onOpenChange={setIsAddDepartmentDialogOpen}>
-                         <DialogTrigger asChild>{renderTableSection("Departments", "Manage company departments.", departments, () => setIsAddDepartmentDialogOpen(true), (item) => handleEdit(item, setEditingDepartment, setIsEditDepartmentDialogOpen), "departments")}</DialogTrigger>
+                         {renderTableSection("Departments", "Manage company departments.", departments, isLoadingDepts, () => setIsAddDepartmentDialogOpen(true), (item) => handleEdit(item, setEditingDepartment, setIsEditDepartmentDialogOpen), "departments")}
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New Department</DialogTitle>
@@ -242,7 +214,7 @@ export default function HrmSettingsPage() {
                     </Dialog>
                     
                      <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
-                        <DialogTrigger asChild>{renderTableSection("Units", "Manage organizational units.", units, () => setIsAddUnitDialogOpen(true), (item) => handleEdit(item, setEditingUnit, setIsEditUnitDialogOpen), "units")}</DialogTrigger>
+                        {renderTableSection("Units", "Manage organizational units.", units, isLoadingUnits, () => setIsAddUnitDialogOpen(true), (item) => handleEdit(item, setEditingUnit, setIsEditUnitDialogOpen), "units")}
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New Unit</DialogTitle>
@@ -253,7 +225,7 @@ export default function HrmSettingsPage() {
                     </Dialog>
 
                     <Dialog open={isAddDesignationDialogOpen} onOpenChange={setIsAddDesignationDialogOpen}>
-                         <DialogTrigger asChild>{renderTableSection("Designations", "Manage employee job designations.", designations, () => setIsAddDesignationDialogOpen(true), (item) => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen), "designations")}</DialogTrigger>
+                         {renderTableSection("Designations", "Manage employee job designations.", designations, isLoadingDesignations, () => setIsAddDesignationDialogOpen(true), (item) => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen), "designations")}
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New Designation</DialogTitle>

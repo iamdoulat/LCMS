@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query as firestoreQuery, orderBy } from 'firebase/firestore';
 import type { EmployeeFormValues, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 
@@ -26,16 +26,34 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import type { ComboboxOption } from '@/components/ui/combobox';
+import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+
+
+// Helper to transform Firestore documents into Combobox options
+const toComboboxOptions = (data: any[], labelKey: string): ComboboxOption[] => {
+  if (!data) return [];
+  return data.map(doc => ({ value: doc.name, label: doc.name }));
+};
+
 
 export function AddEmployeeForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [designationOptions, setDesignationOptions] = React.useState<ComboboxOption[]>([]);
-  const [isLoadingDesignations, setIsLoadingDesignations] = React.useState(true);
-  const [branchOptions, setBranchOptions] = React.useState<ComboboxOption[]>([]);
-  const [departmentOptions, setDepartmentOptions] = React.useState<ComboboxOption[]>([]);
-  const [unitOptions, setUnitOptions] = React.useState<ComboboxOption[]>([]);
-  const [divisionOptions, setDivisionOptions] = React.useState<ComboboxOption[]>([]);
-  const [isLoadingHrmOptions, setIsLoadingHrmOptions] = React.useState(true);
+
+  // Use the hook to fetch data
+  const { data: designations, isLoading: isLoadingDesignations } = useFirestoreQuery<DesignationDocument[]>(firestoreQuery(collection(firestore, "designations"), orderBy("name")), undefined, ['designations']);
+  const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(firestoreQuery(collection(firestore, "branches"), orderBy("name")), undefined, ['branches']);
+  const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(firestoreQuery(collection(firestore, "departments"), orderBy("name")), undefined, ['departments']);
+  const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(firestoreQuery(collection(firestore, "units"), orderBy("name")), undefined, ['units']);
+  const { data: divisions, isLoading: isLoadingDivisions } = useFirestoreQuery<DivisionDocument[]>(firestoreQuery(collection(firestore, "divisions"), orderBy("name")), undefined, ['divisions']);
+
+  // Memoize the options to prevent re-computation on every render
+  const designationOptions = React.useMemo(() => toComboboxOptions(designations || [], 'name'), [designations]);
+  const branchOptions = React.useMemo(() => toComboboxOptions(branches || [], 'name'), [branches]);
+  const departmentOptions = React.useMemo(() => toComboboxOptions(departments || [], 'name'), [departments]);
+  const unitOptions = React.useMemo(() => toComboboxOptions(units || [], 'name'), [units]);
+  const divisionOptions = React.useMemo(() => toComboboxOptions(divisions || [], 'name'), [divisions]);
+  
+  const isLoadingHrmOptions = isLoadingBranches || isLoadingDepts || isLoadingUnits || isLoadingDivisions;
 
   
   const form = useForm<EmployeeFormValues>({
@@ -104,44 +122,6 @@ export function AddEmployeeForm() {
   const watchPresentAddress = watch("presentAddress");
   const watchSalaryBreakup = watch("salaryStructure.salaryBreakup");
   
-  React.useEffect(() => {
-    const fetchHrmOptions = async () => {
-        setIsLoadingDesignations(true);
-        setIsLoadingHrmOptions(true);
-        try {
-            const [designationsSnap, branchesSnap, departmentsSnap, unitsSnap, divisionsSnap] = await Promise.all([
-                getDocs(collection(firestore, "designations")),
-                getDocs(collection(firestore, "branches")),
-                getDocs(collection(firestore, "departments")),
-                getDocs(collection(firestore, "units")),
-                getDocs(collection(firestore, "divisions")),
-            ]);
-            setDesignationOptions(
-              designationsSnap.docs.map(doc => ({ value: (doc.data() as DesignationDocument).name, label: (doc.data() as DesignationDocument).name }))
-            );
-            setBranchOptions(
-              branchesSnap.docs.map(doc => ({ value: (doc.data() as BranchDocument).name, label: (doc.data() as BranchDocument).name }))
-            );
-            setDepartmentOptions(
-              departmentsSnap.docs.map(doc => ({ value: (doc.data() as DepartmentDocument).name, label: (doc.data() as DepartmentDocument).name }))
-            );
-            setUnitOptions(
-              unitsSnap.docs.map(doc => ({ value: (doc.data() as UnitDocument).name, label: (doc.data() as UnitDocument).name }))
-            );
-            setDivisionOptions(
-                divisionsSnap.docs.map(doc => ({ value: (doc.data() as DivisionDocument).name, label: (doc.data() as DivisionDocument).name }))
-            );
-        } catch (error) {
-            console.error("Error fetching HRM options: ", error);
-            Swal.fire("Error", "Could not load required form options.", "error");
-        } finally {
-            setIsLoadingDesignations(false);
-            setIsLoadingHrmOptions(false);
-        }
-    };
-    fetchHrmOptions();
-  }, []);
-
   const { salaryAmount, increasedAmount, totalAmount } = React.useMemo(() => {
     let salary = 0;
     let increased = 0;
@@ -256,7 +236,7 @@ export function AddEmployeeForm() {
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Designation*</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingDesignations}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingDesignations}>
                     <FormControl>
                         <SelectTrigger>
                         <SelectValue placeholder={isLoadingDesignations ? "Loading..." : "Select designation"} />

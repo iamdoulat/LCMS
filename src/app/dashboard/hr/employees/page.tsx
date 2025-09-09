@@ -25,6 +25,8 @@ import { format, parseISO, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+
 
 const formatDisplayDate = (dateString?: string) => {
     if (!dateString || !isValid(parseISO(dateString))) return 'N/A';
@@ -63,30 +65,11 @@ export default function EmployeesListPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
 
-  const [employees, setEmployees] = React.useState<EmployeeDocument[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [fetchError, setFetchError] = React.useState<string | null>(null);
-
-  const fetchEmployees = React.useCallback(async () => {
-    setIsLoading(true);
-    setFetchError(null);
-    try {
-        const employeesCollectionRef = collection(firestore, "employees");
-        const q = query(employeesCollectionRef, orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
-        const fetchedEmployees = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as EmployeeDocument));
-        setEmployees(fetchedEmployees);
-    } catch (error: any) {
-        setFetchError(`Error fetching employees: ${error.message}`);
-        Swal.fire("Error", "Could not fetch employee data. Please check console and Firestore rules.", "error");
-    } finally {
-        setIsLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    fetchEmployees();
-  }, [fetchEmployees]);
+  const { data: employees, isLoading, error: fetchError, refetch } = useFirestoreQuery<EmployeeDocument[]>(
+    query(collection(firestore, "employees"), orderBy("createdAt", "desc")),
+    undefined,
+    ['employees']
+  );
 
 
   const handleDeleteEmployee = (employeeId: string, employeeName?: string) => {
@@ -102,7 +85,7 @@ export default function EmployeesListPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "employees", employeeId));
-          setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
+          refetch(); // Refetch data after deletion
           Swal.fire('Deleted!', 'The employee has been removed.', 'success');
         } catch (error: any) {
           Swal.fire("Error", `Could not delete employee: ${error.message}`, "error");
@@ -165,10 +148,10 @@ export default function EmployeesListPage() {
                 ) : fetchError ? (
                    <TableRow>
                     <TableCell colSpan={9} className="h-24 text-center text-destructive">
-                      {fetchError}
+                      {fetchError.message}
                     </TableCell>
                   </TableRow>
-                ) : employees.length > 0 ? (
+                ) : employees && employees.length > 0 ? (
                   employees.map((employee) => (
                     <TableRow key={employee.id}>
                       <TableCell>{employee.employeeCode}</TableCell>
@@ -232,4 +215,3 @@ export default function EmployeesListPage() {
     </div>
   );
 }
-
