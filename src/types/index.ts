@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -1549,3 +1550,15 @@ export interface DesignationDocument {
   createdAt: any;
 }
 // --- END Employee Types ---
+// --- Division Types ---
+export const DivisionSchema = z.object({
+  name: z.string().min(2, "Division name must be at least 2 characters long."),
+});
+export type DivisionFormValues = z.infer<typeof DivisionSchema>;
+
+export interface DivisionDocument {
+  id: string;
+  name: string;
+  createdAt: any;
+}
+// --- END Division Types ---

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { firestore } from '@/lib/firebase/config';
 import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import type { HrmSettingDocument, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument } from '@/types';
+import type { HrmSettingDocument, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { format, parseISO, isValid } from 'date-fns';
@@ -37,6 +37,8 @@ import { AddDepartmentForm } from '@/components/forms/AddDepartmentForm';
 import { EditDepartmentForm } from '@/components/forms/EditDepartmentForm';
 import { AddUnitForm } from '@/components/forms/AddUnitForm';
 import { EditUnitForm } from '@/components/forms/EditUnitForm';
+import { AddDivisionForm } from '@/components/forms/AddDivisionForm';
+import { EditDivisionForm } from '@/components/forms/EditDivisionForm';
 
 const formatDisplayDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -56,6 +58,7 @@ export default function HrmSettingsPage() {
     const [branches, setBranches] = React.useState<BranchDocument[]>([]);
     const [departments, setDepartments] = React.useState<DepartmentDocument[]>([]);
     const [units, setUnits] = React.useState<UnitDocument[]>([]);
+    const [divisions, setDivisions] = React.useState<DivisionDocument[]>([]);
 
     const [isLoading, setIsLoading] = React.useState(true);
     const [fetchError, setFetchError] = React.useState<string | null>(null);
@@ -64,6 +67,7 @@ export default function HrmSettingsPage() {
     const [isAddBranchDialogOpen, setIsAddBranchDialogOpen] = React.useState(false);
     const [isAddDepartmentDialogOpen, setIsAddDepartmentDialogOpen] = React.useState(false);
     const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = React.useState(false);
+    const [isAddDivisionDialogOpen, setIsAddDivisionDialogOpen] = React.useState(false);
 
     const [editingDesignation, setEditingDesignation] = React.useState<DesignationDocument | null>(null);
     const [isEditDesignationDialogOpen, setIsEditDesignationDialogOpen] = React.useState(false);
@@ -76,6 +80,10 @@ export default function HrmSettingsPage() {
 
     const [editingUnit, setEditingUnit] = React.useState<UnitDocument | null>(null);
     const [isEditUnitDialogOpen, setIsEditUnitDialogOpen] = React.useState(false);
+
+    const [editingDivision, setEditingDivision] = React.useState<DivisionDocument | null>(null);
+    const [isEditDivisionDialogOpen, setIsEditDivisionDialogOpen] = React.useState(false);
+
 
     React.useEffect(() => {
         const createSubscription = (collectionName: string, setData: React.Dispatch<any>, setError: React.Dispatch<React.SetStateAction<string | null>>) => {
@@ -92,12 +100,15 @@ export default function HrmSettingsPage() {
         const unsubBranches = createSubscription('branches', setBranches, setFetchError);
         const unsubDepartments = createSubscription('departments', setDepartments, setFetchError);
         const unsubUnits = createSubscription('units', setUnits, setFetchError);
+        const unsubDivisions = createSubscription('divisions', setDivisions, setFetchError);
+
 
         Promise.all([
           new Promise(resolve => onSnapshot(query(collection(firestore, "designations")), () => resolve(true), () => resolve(false))),
           new Promise(resolve => onSnapshot(query(collection(firestore, "branches")), () => resolve(true), () => resolve(false))),
           new Promise(resolve => onSnapshot(query(collection(firestore, "departments")), () => resolve(true), () => resolve(false))),
           new Promise(resolve => onSnapshot(query(collection(firestore, "units")), () => resolve(true), () => resolve(false))),
+          new Promise(resolve => onSnapshot(query(collection(firestore, "divisions")), () => resolve(true), () => resolve(false))),
         ]).then(() => setIsLoading(false));
 
         return () => {
@@ -105,6 +116,7 @@ export default function HrmSettingsPage() {
             unsubBranches();
             unsubDepartments();
             unsubUnits();
+            unsubDivisions();
         };
     }, []);
 
@@ -196,6 +208,17 @@ export default function HrmSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <Dialog open={isAddDivisionDialogOpen} onOpenChange={setIsAddDivisionDialogOpen}>
+                        <DialogTrigger asChild>{renderTableSection("Divisions", "Manage company divisions.", divisions, () => setIsAddDivisionDialogOpen(true), (item) => handleEdit(item, setEditingDivision, setIsEditDivisionDialogOpen), "divisions")}</DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Add New Division</DialogTitle>
+                                <DialogDescription>Create a new company division.</DialogDescription>
+                            </DialogHeader>
+                            <AddDivisionForm onFormSubmit={() => setIsAddDivisionDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+                    
                     <Dialog open={isAddBranchDialogOpen} onOpenChange={setIsAddBranchDialogOpen}>
                         <DialogTrigger asChild>{renderTableSection("Branches", "Manage company branches.", branches, () => setIsAddBranchDialogOpen(true), (item) => handleEdit(item, setEditingBranch, setIsEditBranchDialogOpen), "branches")}</DialogTrigger>
                         <DialogContent className="sm:max-w-md">
@@ -241,6 +264,21 @@ export default function HrmSettingsPage() {
                     </Dialog>
                 </CardContent>
             </Card>
+
+            {editingDivision && (
+                <Dialog open={isEditDivisionDialogOpen} onOpenChange={setIsEditDivisionDialogOpen}>
+                     <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Edit Division</DialogTitle>
+                            <DialogDescription>Update the details for this division.</DialogDescription>
+                        </DialogHeader>
+                        <EditDivisionForm 
+                          initialData={editingDivision} 
+                          onFormSubmit={() => setIsEditDivisionDialogOpen(false)} 
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
             
             {editingBranch && (
                 <Dialog open={isEditBranchDialogOpen} onOpenChange={setIsEditBranchDialogOpen}>
