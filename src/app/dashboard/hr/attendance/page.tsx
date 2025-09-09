@@ -24,6 +24,8 @@ import Swal from 'sweetalert2';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import type { DateRange } from 'react-day-picker';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+
 
 const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
 const ALL_UNITS_VALUE = "__ALL_UNITS_ATTENDANCE__";
@@ -197,6 +199,7 @@ export default function DailyAttendancePage() {
     const [selectedBranch, setSelectedBranch] = React.useState('');
     const [selectedUnit, setSelectedUnit] = React.useState('');
     const [selectedDept, setSelectedDept] = React.useState('');
+    const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
     
     const filteredEmployees = React.useMemo(() => {
         if (!employees) return [];
@@ -225,7 +228,7 @@ export default function DailyAttendancePage() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
                                 <Input placeholder="Employee name or code" className="pl-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
-                           <DatePickerWithRange className="h-10"/>
+                           <DatePickerWithRange onDateChange={setDateRange} className="h-10"/>
                             <Select value={selectedBranch} onValueChange={(value) => setSelectedBranch(value === ALL_BRANCHES_VALUE ? '' : value)}>
                                 <SelectTrigger><SelectValue placeholder="Select Branch"/></SelectTrigger>
                                 <SelectContent>
@@ -263,48 +266,4 @@ export default function DailyAttendancePage() {
             </Card>
         </div>
     );
-}
-
-const DatePickerWithRange = ({ className }: { className?: string }) => {
-    const [date, setDate] = React.useState<DateRange | undefined>(undefined);
-    return (
-        <div className={cn("grid gap-2", className)}>
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                        id="date"
-                        variant={"outline"}
-                        className={cn(
-                            "w-full justify-start text-left font-normal h-10",
-                            !date && "text-muted-foreground"
-                        )}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date?.from ? (
-                            date.to ? (
-                                <>
-                                    {format(date.from, "LLL dd, y")} -{" "}
-                                    {format(date.to, "LLL dd, y")}
-                                </>
-                            ) : (
-                                format(date.from, "LLL dd, y")
-                            )
-                        ) : (
-                            <span>Pick a date</span>
-                        )}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={date?.from}
-                        selected={date}
-                        onSelect={setDate}
-                        numberOfMonths={2}
-                    />
-                </PopoverContent>
-            </Popover>
-        </div>
-    )
 }

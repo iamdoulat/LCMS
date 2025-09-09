@@ -89,7 +89,17 @@ export default function LeaveManagementPage() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     <FormField control={form.control} name="employeeId" render={({ field }) => (<FormItem><FormLabel>Employee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Employee" /></SelectTrigger></FormControl><SelectContent><SelectItem value="EMP001">John Doe</SelectItem><SelectItem value="EMP002">Jane Smith</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                     <FormField control={form.control} name="leaveType" render={({ field }) => (<FormItem><FormLabel>Leave Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Leave Type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Annual">Annual Leave</SelectItem><SelectItem value="Sick">Sick Leave</SelectItem><SelectItem value="Paternity">Paternity Leave</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                    <FormField control={form.control} name="dateRange" render={({ field }) => (<FormItem><FormLabel>Date Range</FormLabel><DatePickerWithRange onDateChange={field.onChange} /></FormItem>)} />
+                    <FormField
+                        control={form.control}
+                        name="dateRange"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                            <FormLabel>Date Range</FormLabel>
+                            <DatePickerWithRange onDateChange={field.onChange} />
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                     <FormField control={form.control} name="reason" render={({ field }) => (<FormItem><FormLabel>Reason</FormLabel><FormControl><Textarea placeholder="Please provide a reason for your leave..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <DialogFooter>
                         <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
