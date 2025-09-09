@@ -21,6 +21,7 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { format } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const toComboboxOptions = (data: any[] | undefined, labelKey: string, valueKey: string = 'id'): ComboboxOption[] => {
     if (!data) return [];
@@ -166,6 +167,9 @@ export default function SalaryGenerationPage() {
                     grossSalary: grossSalary,
                     totalDeductions: deductions,
                     netSalary: grossSalary - deductions,
+                    basicSalary: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Basic')?.amount,
+                    houseRent: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'House Rent')?.amount,
+                    medicalAllowance: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Medical Allowance')?.amount,
                     taxDeduction,
                     providentFund,
                     createdAt: serverTimestamp(),
@@ -281,7 +285,7 @@ export default function SalaryGenerationPage() {
                                          <Alert variant="destructive" className="mt-4">
                                             <AlertTriangle className="h-4 w-4" />
                                             <AlertTitle>Important</AlertTitle>
-                                            <p className="text-xs">Ensure employee salary structures are correctly configured before generating payroll to avoid errors.</p>
+                                            <AlertDescription className="text-xs">Ensure employee salary structures are correctly configured before generating payroll to avoid errors.</AlertDescription>
                                         </Alert>
                                     </CardContent>
                                 </Card>
