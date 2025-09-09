@@ -865,7 +865,6 @@ export const QuoteSchema = z.object({
   globalTaxRate: z.string().optional(), // For future use
   comments: z.string().optional(),
   privateComments: z.string().optional(),
-  // Calculated fields, not part of the form for direct input but needed for schema
   subtotal: z.number().optional(),
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
@@ -1474,7 +1473,7 @@ export const EmployeeSchema = z.object({
 export type EmployeeFormValues = z.infer<typeof EmployeeSchema>;
 
 export interface Employee {
-  id?: string;
+  id: string;
   employeeCode: string;
   fullName: string;
   email: string;
@@ -1516,7 +1515,7 @@ export interface Employee {
   };
 }
 
-export type EmployeeDocument = Employee & { id: string };
+export type EmployeeDocument = Employee;
 
 export const BranchSchema = z.object({
   name: z.string().min(2, "Branch name must be at least 2 characters long."),
@@ -1582,7 +1581,7 @@ export interface Payroll {
     totalGrossSalary: number;
     totalDeductions: number;
     totalNetSalary: number;
-    status: 'Pending' | 'Approved' | 'Paid';
+    status: 'Generated' | 'Approved' | 'Paid';
 }
 
 export interface Payslip {
@@ -1595,19 +1594,21 @@ export interface Payslip {
     payPeriod: string; // "August, 2024"
     grossSalary: number;
     // Breakdowns
-    basicSalary: number;
-    houseRent: number;
-    medicalAllowance: number;
+    basicSalary?: number;
+    houseRent?: number;
+    medicalAllowance?: number;
     // ... other earnings
     // Deductions
-    taxDeduction: number;
-    providentFund: number;
-    leaveDeduction: number;
+    taxDeduction?: number;
+    providentFund?: number;
+    leaveDeduction?: number;
     // ... other deductions
-    totalEarnings: number;
     totalDeductions: number;
     netSalary: number;
+    createdAt?: any; // Timestamp
+    updatedAt?: any; // Timestamp
     paymentDate?: any; // Timestamp
     paymentMethod?: string;
 }
 // --- END Payroll Types ---
+
