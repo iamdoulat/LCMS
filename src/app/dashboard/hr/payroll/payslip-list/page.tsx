@@ -60,38 +60,43 @@ export default function PayslipListPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-           {isLoading ? (
-                <div className="flex items-center justify-center h-64">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary"/>
-                    <p className="ml-3 text-muted-foreground">Loading payslips...</p>
-                </div>
-           ) : error ? (
-                <Alert variant="destructive">
-                    <AlertTitle>Error Loading Data</AlertTitle>
-                    <AlertDescription>{error.message}</AlertDescription>
-                </Alert>
-           ) : !currentPayslips || currentPayslips.length === 0 ? (
-                <Alert>
-                    <AlertTitle>No Payslips Found</AlertTitle>
-                    <AlertDescription>No payslips have been generated yet. Please go to the Salary Generation page to create them.</AlertDescription>
-                </Alert>
-           ) : (
-             <>
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
+           <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Pay Period</TableHead>
+                            <TableHead>Employee Name</TableHead>
+                            <TableHead>Designation</TableHead>
+                            <TableHead>Gross Salary</TableHead>
+                            <TableHead>Total Deductions</TableHead>
+                            <TableHead>Net Salary</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
                             <TableRow>
-                                <TableHead>Pay Period</TableHead>
-                                <TableHead>Employee Name</TableHead>
-                                <TableHead>Designation</TableHead>
-                                <TableHead>Gross Salary</TableHead>
-                                <TableHead>Total Deductions</TableHead>
-                                <TableHead>Net Salary</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                                <TableCell colSpan={7} className="h-24 text-center">
+                                    <div className="flex items-center justify-center">
+                                        <Loader2 className="h-6 w-6 animate-spin text-primary"/>
+                                        <p className="ml-3 text-muted-foreground">Loading payslips...</p>
+                                    </div>
+                                </TableCell>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {currentPayslips.map(p => (
+                        ) : error ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-24 text-center text-destructive">
+                                    Error: {error.message}
+                                </TableCell>
+                            </TableRow>
+                        ) : !currentPayslips || currentPayslips.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                    No payslips have been generated yet.
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            currentPayslips.map(p => (
                                 <TableRow key={p.id}>
                                     <TableCell>{p.payPeriod}</TableCell>
                                     <TableCell>{p.employeeName}</TableCell>
@@ -105,22 +110,21 @@ export default function PayslipListPage() {
                                         </Button>
                                     </TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                         <TableCaption>
-                            Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, payslips?.length || 0)} of {payslips?.length || 0} payslips.
-                        </TableCaption>
-                    </Table>
+                            ))
+                        )}
+                    </TableBody>
+                     <TableCaption>
+                        {payslips && `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} - ${Math.min(currentPage * ITEMS_PER_PAGE, payslips.length)} of ${payslips.length} payslips.`}
+                    </TableCaption>
+                </Table>
+            </div>
+            {totalPages > 1 && (
+                    <div className="flex items-center justify-center space-x-2 py-4 mt-4">
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Prev</Button>
+                    <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4" /></Button>
                 </div>
-                {totalPages > 1 && (
-                     <div className="flex items-center justify-center space-x-2 py-4 mt-4">
-                        <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Prev</Button>
-                        <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
-                        <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4" /></Button>
-                    </div>
-                )}
-             </>
-           )}
+            )}
         </CardContent>
       </Card>
     </div>
