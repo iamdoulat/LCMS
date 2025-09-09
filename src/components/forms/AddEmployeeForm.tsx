@@ -9,7 +9,7 @@ import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, 
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { EmployeeFormValues, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument } from '@/types';
+import type { EmployeeFormValues, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
@@ -27,16 +27,6 @@ import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import type { ComboboxOption } from '@/components/ui/combobox';
 
-const divisionOptions = [
-    { value: "Technical", label: "Technical" },
-    { value: "Sales", label: "Sales" },
-    { value: "Commercial", label: "Commercial" },
-    { value: "Accounts", label: "Accounts" },
-    { value: "HR", label: "HR" },
-    { value: "Admin", label: "Admin" },
-    { value: "Not Defined", label: "Not Defined" },
-];
-
 export function AddEmployeeForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [designationOptions, setDesignationOptions] = React.useState<ComboboxOption[]>([]);
@@ -44,6 +34,7 @@ export function AddEmployeeForm() {
   const [branchOptions, setBranchOptions] = React.useState<ComboboxOption[]>([]);
   const [departmentOptions, setDepartmentOptions] = React.useState<ComboboxOption[]>([]);
   const [unitOptions, setUnitOptions] = React.useState<ComboboxOption[]>([]);
+  const [divisionOptions, setDivisionOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingHrmOptions, setIsLoadingHrmOptions] = React.useState(true);
 
   
@@ -68,8 +59,8 @@ export function AddEmployeeForm() {
       photoURL: '',
       status: 'Active',
       division: 'Not Defined',
-      branch: 'Chattogram',
-      department: 'SALES & MARKI',
+      branch: 'Not Defined',
+      department: 'Not Defined',
       unit: 'Not Defined',
       remarksDivision: '',
       jobStatus: 'Active',
@@ -118,11 +109,12 @@ export function AddEmployeeForm() {
         setIsLoadingDesignations(true);
         setIsLoadingHrmOptions(true);
         try {
-            const [designationsSnap, branchesSnap, departmentsSnap, unitsSnap] = await Promise.all([
+            const [designationsSnap, branchesSnap, departmentsSnap, unitsSnap, divisionsSnap] = await Promise.all([
                 getDocs(collection(firestore, "designations")),
                 getDocs(collection(firestore, "branches")),
                 getDocs(collection(firestore, "departments")),
                 getDocs(collection(firestore, "units")),
+                getDocs(collection(firestore, "divisions")),
             ]);
             setDesignationOptions(
               designationsSnap.docs.map(doc => ({ value: (doc.data() as DesignationDocument).name, label: (doc.data() as DesignationDocument).name }))
@@ -135,6 +127,9 @@ export function AddEmployeeForm() {
             );
             setUnitOptions(
               unitsSnap.docs.map(doc => ({ value: (doc.data() as UnitDocument).name, label: (doc.data() as UnitDocument).name }))
+            );
+            setDivisionOptions(
+                divisionsSnap.docs.map(doc => ({ value: (doc.data() as DivisionDocument).name, label: (doc.data() as DivisionDocument).name }))
             );
         } catch (error) {
             console.error("Error fetching HRM options: ", error);
