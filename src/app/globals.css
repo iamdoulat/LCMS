@@ -198,6 +198,10 @@
     size: A4;
     margin: 0;
   }
+  @page a5-page {
+    size: A5;
+    margin: 10mm;
+  }
 
   /* Ensure text colors are black for readability */
   .text-foreground, .text-muted-foreground, .text-primary, h1, h2, h3, p, span, div, td, th {

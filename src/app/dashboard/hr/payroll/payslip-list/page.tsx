@@ -108,7 +108,7 @@ export default function PayslipListPage() {
                             ))}
                         </TableBody>
                          <TableCaption>
-                            Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, payslips.length)} of {payslips.length} payslips.
+                            Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, payslips?.length || 0)} of {payslips?.length || 0} payslips.
                         </TableCaption>
                     </Table>
                 </div>
@@ -126,4 +126,3 @@ export default function PayslipListPage() {
     </div>
   );
 }
-
