@@ -9,7 +9,7 @@ import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, 
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { EmployeeFormValues, Education, BankDetails, SalaryBreakup, DesignationDocument } from '@/types';
+import type { EmployeeFormValues, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 
 import { Button } from '@/components/ui/button';
@@ -27,10 +27,24 @@ import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import type { ComboboxOption } from '@/components/ui/combobox';
 
+const divisionOptions = [
+    { value: "Technical", label: "Technical" },
+    { value: "Sales", label: "Sales" },
+    { value: "Commercial", label: "Commercial" },
+    { value: "Accounts", label: "Accounts" },
+    { value: "HR", label: "HR" },
+    { value: "Admin", label: "Admin" },
+    { value: "Not Defined", label: "Not Defined" },
+];
+
 export function AddEmployeeForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [designationOptions, setDesignationOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingDesignations, setIsLoadingDesignations] = React.useState(true);
+  const [branchOptions, setBranchOptions] = React.useState<ComboboxOption[]>([]);
+  const [departmentOptions, setDepartmentOptions] = React.useState<ComboboxOption[]>([]);
+  const [unitOptions, setUnitOptions] = React.useState<ComboboxOption[]>([]);
+  const [isLoadingHrmOptions, setIsLoadingHrmOptions] = React.useState(true);
 
   
   const form = useForm<EmployeeFormValues>({
@@ -100,24 +114,37 @@ export function AddEmployeeForm() {
   const watchSalaryBreakup = watch("salaryStructure.salaryBreakup");
   
   React.useEffect(() => {
-    const fetchDesignations = async () => {
-      setIsLoadingDesignations(true);
-      try {
-        const designationsSnapshot = await getDocs(collection(firestore, "designations"));
-        setDesignationOptions(
-          designationsSnapshot.docs.map(doc => {
-            const data = doc.data() as DesignationDocument;
-            return { value: data.name, label: data.name };
-          })
-        );
-      } catch (error) {
-        console.error("Error fetching designations: ", error);
-        Swal.fire("Error", "Could not load designations.", "error");
-      } finally {
-        setIsLoadingDesignations(false);
-      }
+    const fetchHrmOptions = async () => {
+        setIsLoadingDesignations(true);
+        setIsLoadingHrmOptions(true);
+        try {
+            const [designationsSnap, branchesSnap, departmentsSnap, unitsSnap] = await Promise.all([
+                getDocs(collection(firestore, "designations")),
+                getDocs(collection(firestore, "branches")),
+                getDocs(collection(firestore, "departments")),
+                getDocs(collection(firestore, "units")),
+            ]);
+            setDesignationOptions(
+              designationsSnap.docs.map(doc => ({ value: (doc.data() as DesignationDocument).name, label: (doc.data() as DesignationDocument).name }))
+            );
+            setBranchOptions(
+              branchesSnap.docs.map(doc => ({ value: (doc.data() as BranchDocument).name, label: (doc.data() as BranchDocument).name }))
+            );
+            setDepartmentOptions(
+              departmentsSnap.docs.map(doc => ({ value: (doc.data() as DepartmentDocument).name, label: (doc.data() as DepartmentDocument).name }))
+            );
+            setUnitOptions(
+              unitsSnap.docs.map(doc => ({ value: (doc.data() as UnitDocument).name, label: (doc.data() as UnitDocument).name }))
+            );
+        } catch (error) {
+            console.error("Error fetching HRM options: ", error);
+            Swal.fire("Error", "Could not load required form options.", "error");
+        } finally {
+            setIsLoadingDesignations(false);
+            setIsLoadingHrmOptions(false);
+        }
     };
-    fetchDesignations();
+    fetchHrmOptions();
   }, []);
 
   const { salaryAmount, increasedAmount, totalAmount } = React.useMemo(() => {
@@ -148,7 +175,6 @@ export function AddEmployeeForm() {
       fullName: fullName,
       dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
       joinedDate: data.joinedDate ? data.joinedDate.toISOString() : null,
-      effectiveDate: data.effectiveDate ? data.effectiveDate.toISOString() : null,
       jobStatusEffectiveDate: data.jobStatusEffectiveDate ? data.jobStatusEffectiveDate.toISOString() : null,
       jobBaseEffectiveDate: data.jobBaseEffectiveDate ? data.jobBaseEffectiveDate.toISOString() : null,
       educationDetails: data.educationDetails?.map(edu => ({
@@ -278,21 +304,21 @@ export function AddEmployeeForm() {
         <Separator />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="md:col-span-1 p-4">
+            <Card className="p-4">
                 <CardHeader className="p-2 pt-0">
                     <CardTitle className="text-lg flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Division, Department...</CardTitle>
                     <CardDescription className="text-xs">Setup division, branch etc.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-2 space-y-4">
-                    <FormField control={control} name="division" render={({ field }) => (<FormItem><FormLabel>Division*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="division" render={({ field }) => (<FormItem><FormLabel>Division*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Division" /></SelectTrigger></FormControl><SelectContent>{divisionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Branch"} /></SelectTrigger></FormControl><SelectContent>{branchOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Department"} /></SelectTrigger></FormControl><SelectContent>{departmentOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Unit"} /></SelectTrigger></FormControl><SelectContent>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
                     <FormField control={control} name="remarksDivision" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </CardContent>
             </Card>
 
-            <Card className="md:col-span-1 p-4">
+            <Card className="p-4">
                 <CardHeader className="p-2 pt-0">
                     <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Base Setup</CardTitle>
                 </CardHeader>
