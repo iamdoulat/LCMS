@@ -196,8 +196,8 @@ export default function HrmSettingsPage() {
     );
 
     return (
-        <div className="py-8">
-            <Card className="shadow-xl">
+        <div className="container mx-auto py-8">
+            <Card className="shadow-xl max-w-7xl mx-auto">
                 <CardHeader>
                     <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                         <Settings className="h-7 w-7 text-primary" />
