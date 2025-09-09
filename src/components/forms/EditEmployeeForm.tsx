@@ -257,7 +257,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <FormField control={control} name="gender" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Gender*</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select gender" />
@@ -324,7 +324,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
           <FormField control={control} name="maritalStatus" render={({ field }) => (
             <FormItem>
               <FormLabel>Marital Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
@@ -342,7 +342,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
           <FormField control={control} name="bloodGroup" render={({ field }) => (
             <FormItem>
               <FormLabel>Blood Group</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select blood group" />
@@ -416,7 +416,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         <FormField control={control} name="status" render={({ field }) => (
           <FormItem>
             <FormLabel>Employee Status</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
@@ -498,7 +498,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                   <CardTitle className="text-lg flex items-center gap-2"><History className="h-5 w-5 text-primary"/>Job Base Setup</CardTitle>
               </CardHeader>
               <CardContent className="p-2 space-y-4">
-                  <FormField control={control} name="jobBase" render={({ field }) => (<FormItem><FormLabel>Job Base*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Base" /></SelectTrigger></FormControl><SelectContent>{jobBaseOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                  <FormField control={control} name="jobBase" render={({ field }) => (<FormItem><FormLabel>Job Base*</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Base" /></SelectTrigger></FormControl><SelectContent>{jobBaseOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
                   <FormField control={control} name="jobBaseEffectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Job Base Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
                   <FormField control={control} name="remarksJobBase" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
               </CardContent>
@@ -515,8 +515,8 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 {eduFields.map((field, index) => (
                     <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
                         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                            <FormField control={control} name={`educationDetails.${index}.education`} render={({ field }) => (<FormItem><FormLabel>Education*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Education" /></SelectTrigger></FormControl><SelectContent>{educationLevelOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                            <FormField control={control} name={`educationDetails.${index}.gradeDivision`} render={({ field }) => (<FormItem><FormLabel>Grade/Division</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger></FormControl><SelectContent>{gradeDivisionOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            <FormField control={control} name={`educationDetails.${index}.education`} render={({ field }) => (<FormItem><FormLabel>Education*</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Education" /></SelectTrigger></FormControl><SelectContent>{educationLevelOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            <FormField control={control} name={`educationDetails.${index}.gradeDivision`} render={({ field }) => (<FormItem><FormLabel>Grade/Division</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Grade" /></SelectTrigger></FormControl><SelectContent>{gradeDivisionOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
                             <FormField control={control} name={`educationDetails.${index}.passedYear`} render={({ field }) => (<FormItem><FormLabel>Passed Year*</FormLabel><FormControl><Input placeholder="YYYY" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                             <FormField control={control} name={`educationDetails.${index}.scale`} render={({ field }) => (<FormItem><FormLabel>Scale</FormLabel><FormControl><Input type="number" placeholder="4" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                             <FormField control={control} name={`educationDetails.${index}.cgpa`} render={({ field }) => (<FormItem><FormLabel>CGPA</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Enter CGPA" {...field} /></FormControl><FormMessage /></FormItem>)}/>
@@ -575,7 +575,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                  {bankFields.map((field, index) => (
                     <div key={field.id} className="p-4 border rounded-lg space-y-4 relative">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <FormField control={control} name={`bankDetails.${index}.bankName`} render={({ field }) => (<FormItem><FormLabel>Bank*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Bank" /></SelectTrigger></FormControl><SelectContent>{bankNameOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            <FormField control={control} name={`bankDetails.${index}.bankName`} render={({ field }) => (<FormItem><FormLabel>Bank*</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Bank" /></SelectTrigger></FormControl><SelectContent>{bankNameOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
                             <FormField control={control} name={`bankDetails.${index}.accountNo`} render={({ field }) => (<FormItem><FormLabel>Account No*</FormLabel><FormControl><Input placeholder="Enter Number" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                             <FormField control={control} name={`bankDetails.${index}.accountRoutingNo`} render={({ field }) => (<FormItem><FormLabel>Account Routing No</FormLabel><FormControl><Input placeholder="Enter Number" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                         </div>
@@ -629,9 +629,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
                     <FormField control={control} name="salaryStructure.isConsolidate" render={({ field }) => (
                          <FormItem>
-                            <div className="mb-3">
-                                <FormLabel>Is Consolidate*</FormLabel>
-                            </div>
+                            <FormLabel>Is Consolidate*</FormLabel>
                             <FormControl>
                                  <RadioGroup onValueChange={(val) => field.onChange(val === 'true')} value={String(field.value)} className="flex items-center space-x-4 pt-2">
                                    <div className="flex items-center space-x-2"><RadioGroupItem value="true" id="isConsolidateYesEdit" /><Label htmlFor="isConsolidateYesEdit">Yes</Label></div>
@@ -643,9 +641,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     )}/>
                     <FormField control={control} name="salaryStructure.paymentType" render={({ field }) => (
                          <FormItem>
-                            <div className="mb-3">
-                                <FormLabel>Payment Type*</FormLabel>
-                            </div>
+                            <FormLabel>Payment Type*</FormLabel>
                             <FormControl>
                                 <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center space-x-4 pt-2">
                                   <div className="flex items-center space-x-2"><RadioGroupItem value="Bank" id="paymentTypeBankEdit" /><Label htmlFor="paymentTypeBankEdit">Bank</Label></div>
@@ -660,7 +656,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                         <FormItem>
                             <FormLabel>Payment Frequency*</FormLabel>
                             <div>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select frequency" />
