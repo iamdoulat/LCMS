@@ -358,13 +358,14 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Designation*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingDesignations}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingDesignations ? "Loading..." : "Select designation"} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
+                    <SelectItem value="Not Defined">Not Defined</SelectItem>
                     {designationOptions.map(option => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -415,10 +416,10 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     <CardDescription className="text-xs">Setup division, branch etc.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-2 space-y-4">
-                    <FormField control={control} name="division" render={({ field }) => (<FormItem><FormLabel>Division*</FormLabel><Select onValueChange={field.onChange} value={field.value || 'Not Defined'}><FormControl><SelectTrigger><SelectValue placeholder="Select Division" /></SelectTrigger></FormControl><SelectContent>{divisionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><Select onValueChange={field.onChange} value={field.value || 'Not Defined'} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Branch"} /></SelectTrigger></FormControl><SelectContent>{branchOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><Select onValueChange={field.onChange} value={field.value || 'Not Defined'} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Department"} /></SelectTrigger></FormControl><SelectContent>{departmentOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><Select onValueChange={field.onChange} value={field.value || 'Not Defined'} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Unit"} /></SelectTrigger></FormControl><SelectContent>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="division" render={({ field }) => (<FormItem><FormLabel>Division*</FormLabel><Select onValueChange={field.onChange} value={field.value || 'Not Defined'}><FormControl><SelectTrigger><SelectValue placeholder="Select Division" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{divisionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><Select onValueChange={field.onChange} value={field.value || 'Not Defined'} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Branch"} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{branchOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><Select onValueChange={field.onChange} value={field.value || 'Not Defined'} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Department"} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{departmentOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><Select onValueChange={field.onChange} value={field.value || 'Not Defined'} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Unit"} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
                     <FormField control={control} name="remarksDivision" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </CardContent>
             </Card>
