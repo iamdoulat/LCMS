@@ -1496,7 +1496,6 @@ export interface Employee {
   branch?: string;
   department?: string;
   unit?: string;
-  effectiveDate?: string; // ISO string
   remarksDivision?: string;
   jobStatus?: (typeof jobStatusOptions)[number];
   jobStatusEffectiveDate?: string; // ISO string

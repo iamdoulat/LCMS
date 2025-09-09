@@ -57,7 +57,6 @@ export function AddEmployeeForm() {
       branch: 'Chattogram',
       department: 'SALES & MARKI',
       unit: 'Not Defined',
-      effectiveDate: undefined,
       remarksDivision: '',
       jobStatus: 'Active',
       jobStatusEffectiveDate: undefined,
@@ -278,48 +277,6 @@ export function AddEmployeeForm() {
 
         <Separator />
 
-        <Card className="p-4">
-          <CardHeader className="p-2 pt-0">
-            <CardTitle>Present Address</CardTitle>
-          </CardHeader>
-          <CardContent className="p-2 space-y-4">
-            <FormField control={control} name="presentAddress.address" render={({ field }) => (<FormItem><FormLabel>Address</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <FormField control={control} name="presentAddress.country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="Country" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="presentAddress.state" render={({ field }) => (<FormItem><FormLabel>State</FormLabel><FormControl><Input placeholder="State" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="presentAddress.city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input placeholder="City" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="presentAddress.zipCode" render={({ field }) => (<FormItem><FormLabel>Zip Code</FormLabel><FormControl><Input placeholder="Zip Code" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="p-4">
-          <CardHeader className="p-2 pt-0 flex flex-row items-center justify-between">
-            <CardTitle>Permanent Address</CardTitle>
-            <FormField
-              control={control}
-              name="sameAsPresentAddress"
-              render={({ field }) => (
-                <FormItem className="flex items-center space-x-2">
-                  <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="sameAsPresent" /></FormControl>
-                  <Label htmlFor="sameAsPresent" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Same as present address</Label>
-                </FormItem>
-              )}
-            />
-          </CardHeader>
-          <CardContent className="p-2 space-y-4">
-            <FormField control={control} name="permanentAddress.address" render={({ field }) => (<FormItem><FormLabel>Address</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <FormField control={control} name="permanentAddress.country" render={({ field }) => (<FormItem><FormLabel>Country</FormLabel><FormControl><Input placeholder="Country" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="permanentAddress.state" render={({ field }) => (<FormItem><FormLabel>State</FormLabel><FormControl><Input placeholder="State" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="permanentAddress.city" render={({ field }) => (<FormItem><FormLabel>City</FormLabel><FormControl><Input placeholder="City" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
-              <FormField control={control} name="permanentAddress.zipCode" render={({ field }) => (<FormItem><FormLabel>Zip Code</FormLabel><FormControl><Input placeholder="Zip Code" {...field} value={field.value || ''} disabled={watchSameAsPresent} /></FormControl><FormMessage /></FormItem>)} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Separator />
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="md:col-span-1 p-4">
                 <CardHeader className="p-2 pt-0">
@@ -331,7 +288,6 @@ export function AddEmployeeForm() {
                     <FormField control={control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
                     <FormField control={control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
                     <FormField control={control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="effectiveDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Effective Date*</FormLabel><DatePickerField field={field} placeholder="Select date" /><FormMessage /></FormItem>)} />
                     <FormField control={control} name="remarksDivision" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </CardContent>
             </Card>
