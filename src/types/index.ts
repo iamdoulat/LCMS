@@ -1571,6 +1571,20 @@ export interface DivisionDocument {
 // --- END Employee Types ---
 
 // --- Payroll Types ---
+export const SalaryGenerationPolicySchema = z.object({
+  dayConsideration: z.enum(['Actual Days', 'Fixed Days']).default('Actual Days'),
+  fixedDaysInMonth: z.preprocess(
+    (val) => (String(val).trim() === "" ? 30 : Number(String(val).trim())),
+    z.number().int().min(28).max(31, "Fixed days must be between 28 and 31.")
+  ).optional().default(30),
+  includeWeeklyHoliday: z.boolean().default(false),
+  includeGovtHoliday: z.boolean().default(false),
+  includeFestivalHoliday: z.boolean().default(false),
+  considerJoiningDate: z.boolean().default(false),
+  salaryRounding: z.enum(['No Rounding', 'Round to Nearest', 'Round Up', 'Round Down']).default('No Rounding'),
+});
+export type SalaryGenerationPolicy = z.infer<typeof SalaryGenerationPolicySchema>;
+
 export interface Payroll {
     id: string; // e.g., PAYROLL-2024-08
     month: string;
@@ -1613,3 +1627,25 @@ export interface Payslip {
 // --- END Payroll Types ---
 
 
+// --- Attendance Types ---
+export const attendanceFlagOptions = ['P', 'A', 'L', 'W'] as const;
+export type AttendanceFlag = (typeof attendanceFlagOptions)[number];
+
+export const AttendanceSchema = z.object({
+  employeeId: z.string(),
+  date: z.string(), // YYYY-MM-DD
+  flag: z.enum(attendanceFlagOptions),
+  inTime: z.string().optional(),
+  outTime: z.string().optional(),
+  inTimeRemarks: z.string().optional(),
+  outTimeRemarks: z.string().optional(),
+  workingHours: z.number().optional(), // In hours
+  updatedBy: z.string(),
+  updatedAt: z.any(),
+});
+export type Attendance = z.infer<typeof AttendanceSchema>;
+
+export interface AttendanceDocument extends Attendance {
+  id: string; // Composite key like {employeeId}_{YYYY-MM-DD}
+}
+// --- END Attendance Types ---
