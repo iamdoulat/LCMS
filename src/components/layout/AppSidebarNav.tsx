@@ -76,6 +76,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import type { UserRole } from '@/types';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 
 interface NavItem {
@@ -244,8 +245,9 @@ export function AppSidebarNav() {
             {displayCompanyNameFromSettings}
           </span>
         </Link>
-        <SidebarTrigger className="group-data-[collapsible=icon]:hidden ml-auto" />
+        <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
       </SidebarHeader>
+
       <SidebarContent className="p-0">
           <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
                   {mainNavItems.map(subLink => (
