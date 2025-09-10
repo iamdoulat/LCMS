@@ -75,7 +75,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import type { UserRole } from '@/types';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 
 interface NavItem {
@@ -226,7 +226,7 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex items-center gap-2 border-b p-2">
+      <SidebarHeader className="flex items-center justify-between gap-2 border-b p-2">
         <Link href="/dashboard" className="flex flex-1 items-center gap-2">
             <Image
                 src={companyLogoUrlFromSettings}
@@ -243,9 +243,13 @@ export function AppSidebarNav() {
                 "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
             >
-             SMART SOLUTION
+            {displayCompanyNameFromSettings}
             </span>
         </Link>
+        <SidebarTrigger
+            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
+            aria-label="Collapse Sidebar"
+        />
       </SidebarHeader>
 
       <SidebarContent className="p-0">
