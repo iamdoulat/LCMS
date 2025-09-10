@@ -227,10 +227,10 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex items-center gap-2 border-b p-2">
+      <SidebarHeader className="flex items-center justify-between gap-2 border-b p-2">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 rounded-lg text-sidebar-foreground outline-none ring-sidebar-ring focus-visible:ring-2"
+          className="flex flex-1 items-center gap-2 rounded-lg text-sidebar-foreground outline-none ring-sidebar-ring focus-visible:ring-2"
         >
           <Avatar className="size-8">
             <AvatarImage
@@ -352,3 +352,5 @@ export function AppSidebarNav() {
     </>
   );
 }
+
+    
