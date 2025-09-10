@@ -69,6 +69,7 @@ import {
   Banknote,
   Calendar,
   Calculator,
+  Mailbox,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
