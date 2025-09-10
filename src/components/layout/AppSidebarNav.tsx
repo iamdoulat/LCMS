@@ -241,7 +241,11 @@ export function AppSidebarNav() {
               {displayCompanyNameFromSettings.charAt(0)}
             </AvatarFallback>
           </Avatar>
-          <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">
+          <span
+            className={cn(
+              "font-bold text-md bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text transition-all duration-300 ease-in-out group-data-[collapsible=icon]:hidden"
+            )}
+          >
             {displayCompanyNameFromSettings}
           </span>
         </Link>
