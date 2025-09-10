@@ -230,26 +230,31 @@ export function AppSidebarNav() {
       <SidebarHeader className="flex items-center justify-between gap-2 border-b p-2">
         <Link
           href="/dashboard"
-          className="flex flex-1 items-center gap-2 rounded-lg text-sidebar-foreground outline-none ring-sidebar-ring focus-visible:ring-2"
+          className="flex items-center gap-2"
         >
-          <Avatar className="size-8">
-            <AvatarImage
-              src={companyLogoUrlFromSettings}
-              alt={displayCompanyNameFromSettings}
-            />
-            <AvatarFallback>
-              {displayCompanyNameFromSettings.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
+          <Image
+            src={companyLogoUrlFromSettings}
+            alt={displayCompanyNameFromSettings}
+            width={32}
+            height={32}
+            className="rounded-sm object-contain"
+            data-ai-hint="company logo"
+          />
           <span
             className={cn(
-              "font-bold text-md bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text transition-all duration-300 ease-in-out group-data-[collapsible=icon]:hidden"
+              "font-bold text-base group-data-[collapsible=icon]:hidden",
+              "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
           >
-            {displayCompanyNameFromSettings}
+            SMART SOLUTION 
           </span>
         </Link>
-        <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
+        <SidebarTrigger
+            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
+            aria-label="Collapse Sidebar"
+        >
+            <PanelLeftClose className="h-5 w-5" />
+        </SidebarTrigger>
       </SidebarHeader>
 
       <SidebarContent className="p-0">
@@ -352,5 +357,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
-    
