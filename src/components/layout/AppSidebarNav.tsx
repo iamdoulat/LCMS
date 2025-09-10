@@ -67,9 +67,6 @@ import {
   BarChart3,
   Wallet,
   Banknote,
-  CalendarDays,
-  Calculator,
-  Mailbox,
   Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -233,14 +230,14 @@ export function AppSidebarNav() {
             href="/dashboard"
             className="flex items-center gap-2"
           >
-            <Image
-              src={companyLogoUrlFromSettings}
-              alt={displayCompanyNameFromSettings}
-              width={32}
-              height={32}
-              className="rounded-sm object-contain"
-              data-ai-hint="company logo"
-            />
+            <Avatar className="size-8">
+                <AvatarImage
+                    src={companyLogoUrlFromSettings}
+                    alt={displayCompanyNameFromSettings}
+                    data-ai-hint="company logo"
+                />
+                <AvatarFallback>{displayCompanyNameFromSettings.slice(0, 1)}</AvatarFallback>
+            </Avatar>
             <span
               className={cn(
                 "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
