@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from 'next/link';
@@ -76,6 +75,8 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import type { UserRole } from '@/types';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+
 
 interface NavItem {
   href: string;
@@ -126,7 +127,7 @@ const commissionManagementNavItems: NavItem[] = [
 const lcManagementNavItems: NavItem[] = [
     { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks, iconColorClass: 'bg-icon-lc' },
     { href: '/dashboard/reports', label: 'Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
-    { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming L/C Shipments', icon: CalendarClock, iconColorClass: 'bg-icon-upcoming' },
+    { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming Shipments', icon: CalendarClock, iconColorClass: 'bg-icon-upcoming' },
     { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment Done', icon: PackageCheck, iconColorClass: 'bg-icon-shipment-done' },
     { href: '/dashboard/shipments/lc-payment-pending', label: 'Payment Pending', icon: DollarSign, iconColorClass: 'bg-icon-payment-pending' },
     { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign, iconColorClass: 'bg-icon-payment-done' },
@@ -217,55 +218,19 @@ export function AppSidebarNav() {
     if (activeGroup) {
       setOpenAccordions([activeGroup.groupLabel]);
     } else if (filteredNavGroups.length > 0) {
-      // Default to opening the first group if no route is active
       setOpenAccordions([filteredNavGroups[0].groupLabel]);
     } else {
       setOpenAccordions([]);
     }
   }, [pathname, filteredNavGroups]);
 
-  const canViewDashboard = userRole && !userRole.includes('DemoManager') && !userRole.includes('Accounts') && !userRole.includes('Service');
-
   return (
     <>
-      <SidebarHeader className="border-b">
-        <div className="flex items-center justify-between p-2">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <Image
-              src={companyLogoUrlFromSettings}
-              alt="Company Logo"
-              width={32}
-              height={32}
-              className="rounded-sm object-contain"
-              priority
-              data-ai-hint="company logo"
-            />
-            <span
-              className={cn(
-                "font-bold text-base group-data-[collapsible=icon]:hidden",
-                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-              )}
-            >
-              {displayCompanyNameFromSettings}
-            </span>
-          </Link>
-          {!sidebar.isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                onClick={sidebar.toggleSidebar}
-                aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
-              >
-                {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
-                <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
-            </Button>
-          )}
-        </div>
+      <SidebarHeader className="border-b p-0">
+        {/* Header content moved to AppHeader */}
       </SidebarHeader>
       <SidebarContent className="p-0">
-          {canViewDashboard && (
-            <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
+          <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
                   {mainNavItems.map(subLink => (
                       <SidebarMenuItem key={subLink.href}>
                           <Link href={subLink.href} passHref>
@@ -283,7 +248,6 @@ export function AppSidebarNav() {
                       </SidebarMenuItem>
                   ))}
             </SidebarMenu>
-          )}
           <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
             {filteredNavGroups.map((group) => {
               const IconComponent = group.icon;

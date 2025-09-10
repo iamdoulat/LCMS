@@ -54,10 +54,13 @@ export function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 w-full items-center gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
+    <header className="sticky top-0 z-40 flex h-16 w-full items-center gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden" />
-        <Link
+      </div>
+
+      <div className="flex-1 text-center">
+         <Link
           href="/dashboard"
           className={cn(
             "text-lg md:text-xl whitespace-nowrap",
@@ -68,7 +71,8 @@ export function AppHeader() {
         </Link>
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
+
+      <div className="flex items-center gap-2">
         <Popover open={isSearchPopoverOpen} onOpenChange={setIsSearchPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Search">

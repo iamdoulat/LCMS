@@ -13,12 +13,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
     <SidebarProvider>
       <div className="relative flex min-h-screen flex-col bg-background">
-        <AppHeader />
         <div className="flex flex-1">
           <Sidebar>
             <AppSidebarNav />
           </Sidebar>
           <SidebarInset>
+            <AppHeader />
             <main className="w-full flex-1 px-4 sm:px-6 lg:px-8">
               {children}
             </main>
