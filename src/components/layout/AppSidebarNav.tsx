@@ -230,11 +230,8 @@ export function AppSidebarNav() {
                     priority
                     data-ai-hint="company logo"
                 />
-                <span className={cn("font-bold text-base group-data-[collapsible=icon]:hidden truncate", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                    {displayCompanyNameFromSettings}
-                </span>
             </Link>
-             <SidebarTrigger
+            <SidebarTrigger
                 className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
                 aria-label="Collapse Sidebar"
                 />
