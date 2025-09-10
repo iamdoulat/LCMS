@@ -12,6 +12,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -75,7 +76,6 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import type { UserRole } from '@/types';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 
 
 interface NavItem {
@@ -226,8 +226,25 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="border-b p-0">
-        {/* Header content moved to AppHeader */}
+      <SidebarHeader className="flex items-center gap-2 border-b p-2">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 rounded-lg text-sidebar-foreground outline-none ring-sidebar-ring focus-visible:ring-2"
+        >
+          <Avatar className="size-8">
+            <AvatarImage
+              src={companyLogoUrlFromSettings}
+              alt={displayCompanyNameFromSettings}
+            />
+            <AvatarFallback>
+              {displayCompanyNameFromSettings.charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">
+            {displayCompanyNameFromSettings}
+          </span>
+        </Link>
+        <SidebarTrigger className="group-data-[collapsible=icon]:hidden ml-auto" />
       </SidebarHeader>
       <SidebarContent className="p-0">
           <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
