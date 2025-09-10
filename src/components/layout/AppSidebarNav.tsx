@@ -21,6 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   LayoutDashboard,
@@ -217,10 +218,6 @@ export function AppSidebarNav() {
     const activeGroup = filteredNavGroups.find(group => isGroupActive(group.subLinks));
     if (activeGroup) {
       setOpenAccordions([activeGroup.groupLabel]);
-    } else if (filteredNavGroups.length > 0) {
-      setOpenAccordions([filteredNavGroups[0].groupLabel]);
-    } else {
-      setOpenAccordions([]);
     }
   }, [pathname, filteredNavGroups]);
 
@@ -238,15 +235,15 @@ export function AppSidebarNav() {
                 data-ai-hint="company logo"
             />
             <span
-            className={cn(
-                "font-bold text-lg group-data-[collapsible=icon]:hidden truncate",
-                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-            )}
+                className={cn(
+                    "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
+                    "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                )}
             >
-            {displayCompanyNameFromSettings}
+                {displayCompanyNameFromSettings}
             </span>
         </Link>
-        <SidebarTrigger
+         <SidebarTrigger
             className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
             aria-label="Collapse Sidebar"
         />
@@ -276,30 +273,47 @@ export function AppSidebarNav() {
               const IconComponent = group.icon;
               return (
                 <AccordionItem value={group.groupLabel} key={group.groupLabel} className="border-none">
-                  <TooltipProvider delayDuration={0}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                          <AccordionTrigger
-                            className={cn(
-                              "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
-                              "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                              "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
-                               openAccordions.includes(group.groupLabel) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground font-medium'
-                            )}
-                          >
-                            <span className="flex items-center gap-2">
-                               <div className={cn("flex h-6 w-6 items-center justify-center rounded-md", group.iconColorClass || "bg-gray-200 text-gray-700")}>
-                                <IconComponent className="h-4 w-4" />
-                               </div>
-                              <span className="group-data-[collapsible=icon]:hidden">{group.groupLabel}</span>
-                            </span>
-                          </AccordionTrigger>
-                      </TooltipTrigger>
-                       <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
-                        <p>{group.groupLabel}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <AccordionTrigger
+                        className={cn(
+                          "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+                          "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
+                          "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
+                           openAccordions.includes(group.groupLabel) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground font-medium'
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                           <div className={cn("flex h-6 w-6 items-center justify-center rounded-md", group.iconColorClass || "bg-gray-200 text-gray-700")}>
+                            <IconComponent className="h-4 w-4" />
+                           </div>
+                          <span className="group-data-[collapsible=icon]:hidden">{group.groupLabel}</span>
+                        </span>
+                      </AccordionTrigger>
+                    </PopoverTrigger>
+                    <PopoverContent side="right" align="start" className="ml-1 p-1 w-auto group-data-[collapsible=expanded]:hidden">
+                      <SidebarMenu className="gap-0">
+                          <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group.groupLabel}</p>
+                          {group.subLinks.map((subLink) => (
+                            <SidebarMenuItem key={subLink.href}>
+                              <Link href={subLink.href} passHref>
+                                <SidebarMenuButton asChild isActive={isActive(subLink.href)} className="h-8 text-xs" disabled={subLink.disabled}>
+                                    <span className="flex items-center gap-2">
+                                      {subLink.icon && (
+                                        <div className={cn("flex h-5 w-5 items-center justify-center rounded-md text-sidebar-primary-foreground", subLink.iconColorClass)}>
+                                            <subLink.icon className="h-3 w-3" />
+                                        </div>
+                                      )}
+                                      <span className="">{subLink.label}</span>
+                                    </span>
+                                </SidebarMenuButton>
+                              </Link>
+                            </SidebarMenuItem>
+                          ))}
+                        </SidebarMenu>
+                    </PopoverContent>
+                  </Popover>
+
                   <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
                     <SidebarMenu className="gap-0 py-1">
                       {group.subLinks.map((subLink) => (
