@@ -223,32 +223,6 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex items-center justify-between gap-2 border-b p-2">
-        <Link href="/dashboard" className="flex flex-1 items-center gap-2">
-            <Image
-                src={companyLogoUrlFromSettings}
-                alt="Company Logo"
-                width={32}
-                height={32}
-                className="rounded-sm object-contain"
-                priority
-                data-ai-hint="company logo"
-            />
-            <span
-                className={cn(
-                    "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
-                    "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-                )}
-            >
-                {displayCompanyNameFromSettings}
-            </span>
-        </Link>
-         <SidebarTrigger
-            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
-            aria-label="Collapse Sidebar"
-        />
-      </SidebarHeader>
-
       <SidebarContent className="p-0">
           <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
                   {mainNavItems.map(subLink => (
