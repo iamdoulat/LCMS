@@ -227,36 +227,26 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="flex items-center justify-between gap-2 border-b p-2">
-        <div className="flex items-center gap-2">
-            <Link
-                href="/dashboard"
-                className="flex items-center gap-2"
+        <Link href="/dashboard" className="flex items-center gap-2">
+            <Image
+                src={companyLogoUrlFromSettings}
+                alt="Company Logo"
+                width={32}
+                height={32}
+                className="rounded-sm object-contain"
+                priority
+                data-ai-hint="company logo"
+            />
+            <span
+            className={cn(
+                "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
+                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+            )}
             >
-                <Image
-                    src={companyLogoUrlFromSettings}
-                    alt="Company Logo"
-                    width={32}
-                    height={32}
-                    className="rounded-sm object-contain"
-                    priority
-                    data-ai-hint="company logo"
-                />
-                <span
-                className={cn(
-                    "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
-                    "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-                )}
-                >
-                SMART SOLUTION
-                </span>
-            </Link>
-        </div>
-        <SidebarTrigger
-            className="group-data-[collapsible=icon]:hidden text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            aria-label="Collapse Sidebar"
-        >
-            <PanelLeftClose className="h-5 w-5" />
-        </SidebarTrigger>
+            SMART SOLUTION
+            </span>
+        </Link>
+        <SidebarTrigger className="group-data-[collapsible=icon]:hidden text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground p-0 m-0" />
       </SidebarHeader>
 
       <SidebarContent className="p-0">
