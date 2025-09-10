@@ -219,17 +219,17 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex h-16 items-center justify-start gap-2 border-b p-2">
-        <SidebarTrigger
-          className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=expanded]:hidden"
-          aria-label="Collapse Sidebar"
-        />
+      <SidebarHeader className="flex h-16 items-center justify-between gap-2 border-b p-2">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <Avatar className="h-8 w-8">
-              <AvatarImage src={companyLogoUrlFromSettings} alt={displayCompanyNameFromSettings} data-ai-hint="logo company"/>
-              <AvatarFallback>SS</AvatarFallback>
-          </Avatar>
+            <Avatar className="h-8 w-8">
+                <AvatarImage src={companyLogoUrlFromSettings} alt={displayCompanyNameFromSettings} data-ai-hint="logo company"/>
+                <AvatarFallback>SS</AvatarFallback>
+            </Avatar>
         </Link>
+        <SidebarTrigger
+            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            aria-label="Collapse Sidebar"
+        />
       </SidebarHeader>
 
       <SidebarContent className="p-0">
