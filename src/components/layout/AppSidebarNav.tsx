@@ -192,7 +192,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const { logout, userRole, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
   
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
@@ -228,33 +228,30 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="flex items-center justify-between gap-2 border-b p-2">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2"
-        >
-          <Image
-            src={companyLogoUrlFromSettings}
-            alt={displayCompanyNameFromSettings}
-            width={32}
-            height={32}
-            className="rounded-sm object-contain"
-            data-ai-hint="company logo"
-          />
-          <span
-            className={cn(
-              "font-bold text-base group-data-[collapsible=icon]:hidden",
-              "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-            )}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2"
           >
-            SMART SOLUTION 
-          </span>
-        </Link>
-        <SidebarTrigger
-            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
-            aria-label="Collapse Sidebar"
-        >
-            <PanelLeftClose className="h-5 w-5" />
-        </SidebarTrigger>
+            <Image
+              src={companyLogoUrlFromSettings}
+              alt={displayCompanyNameFromSettings}
+              width={32}
+              height={32}
+              className="rounded-sm object-contain"
+              data-ai-hint="company logo"
+            />
+            <span
+              className={cn(
+                "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
+                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+              )}
+            >
+              SMART SOLUTION 
+            </span>
+          </Link>
+        </div>
+        <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
       </SidebarHeader>
 
       <SidebarContent className="p-0">
