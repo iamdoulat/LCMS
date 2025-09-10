@@ -219,11 +219,22 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex items-center justify-between gap-2 border-b p-2">
-            <SidebarTrigger
-                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
-                aria-label="Collapse Sidebar"
-                />
+      <SidebarHeader className="flex h-16 items-center justify-between gap-2 border-b p-2">
+        <div className="flex flex-1 items-center gap-2">
+            <Link href="/dashboard" className="flex items-center gap-2">
+            <Avatar className="h-8 w-8">
+                <AvatarImage src={companyLogoUrlFromSettings} alt={displayCompanyNameFromSettings} data-ai-hint="logo company"/>
+                <AvatarFallback>SS</AvatarFallback>
+            </Avatar>
+            <span className="font-bold text-base group-data-[collapsible=icon]:hidden truncate bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
+                SMART SOLUTION
+            </span>
+            </Link>
+        </div>
+        <SidebarTrigger
+            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            aria-label="Collapse Sidebar"
+        />
       </SidebarHeader>
 
       <SidebarContent className="p-0">
@@ -257,7 +268,7 @@ export function AppSidebarNav() {
                           "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                           "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
                           "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
-                           openAccordions.includes(group.groupLabel) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground font-medium'
+                           openAccordions.includes(group.groupLabel) && 'bg-sidebar-accent text-sidebar-accent-foreground'
                         )}
                       >
                         <span className="flex items-center gap-2">
