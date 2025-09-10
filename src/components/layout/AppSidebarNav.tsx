@@ -226,8 +226,8 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex items-center justify-between gap-2 border-b p-2">
-        <Link href="/dashboard" className="flex items-center gap-2">
+      <SidebarHeader className="flex items-center gap-2 border-b p-2">
+        <Link href="/dashboard" className="flex flex-1 items-center gap-2">
             <Image
                 src={companyLogoUrlFromSettings}
                 alt="Company Logo"
