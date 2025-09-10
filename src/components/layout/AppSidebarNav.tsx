@@ -226,6 +226,9 @@ export function AppSidebarNav() {
                     <AvatarImage src={companyLogoUrlFromSettings} alt={displayCompanyNameFromSettings} data-ai-hint="logo company"/>
                     <AvatarFallback>SS</AvatarFallback>
                 </Avatar>
+                <span className="font-bold text-base group-data-[collapsible=icon]:hidden truncate bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
+                    {displayCompanyNameFromSettings}
+                </span>
             </Link>
         </div>
         <SidebarTrigger
