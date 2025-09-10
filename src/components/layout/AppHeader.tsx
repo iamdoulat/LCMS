@@ -59,7 +59,7 @@ export function AppHeader() {
         <SidebarTrigger className="md:hidden" />
       </div>
 
-      <div className="flex-1 text-center">
+      <div className="flex-1 text-left">
          <Link
           href="/dashboard"
           className={cn(
