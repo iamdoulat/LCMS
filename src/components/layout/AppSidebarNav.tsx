@@ -220,17 +220,6 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="flex items-center justify-between gap-2 border-b p-2">
-            <Link href="/dashboard" className="flex items-center gap-2 flex-shrink-0 mr-2">
-                <Image
-                    src={companyLogoUrlFromSettings}
-                    alt="Company Logo"
-                    width={32}
-                    height={32}
-                    className="rounded-sm object-contain"
-                    priority
-                    data-ai-hint="company logo"
-                />
-            </Link>
             <SidebarTrigger
                 className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
                 aria-label="Collapse Sidebar"
