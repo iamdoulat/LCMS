@@ -14,13 +14,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { User, LogOut, Settings, Loader2, Search } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton'; 
 import { cn } from '@/lib/utils';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 export function AppHeader() {
   const { user, logout, loading } = useAuth();
@@ -54,24 +54,24 @@ export function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 w-full items-center gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
-      <div className="flex items-center gap-2">
-        <SidebarTrigger className="md:hidden" />
-      </div>
+    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
+        {/* Left Aligned Title */}
+        <div className="flex items-center">
+             {/* Mobile Sidebar Trigger */}
+            <SidebarTrigger className="md:hidden mr-2" />
+            <Link
+                href="/dashboard"
+                className={cn(
+                    "text-lg md:text-xl whitespace-nowrap",
+                    "font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                )}
+                >
+                LC Management System
+            </Link>
+        </div>
 
-      <div className="flex-1 text-left">
-         <Link
-          href="/dashboard"
-          className={cn(
-            "text-lg md:text-xl whitespace-nowrap",
-            "font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-          )}
-        >
-          LC Management System
-        </Link>
-      </div>
 
-
+      {/* Right Aligned Controls */}
       <div className="flex items-center gap-2">
         <Popover open={isSearchPopoverOpen} onOpenChange={setIsSearchPopoverOpen}>
           <PopoverTrigger asChild>

@@ -67,9 +67,9 @@ import {
   BarChart3,
   Wallet,
   Banknote,
-  Calendar,
   Calculator,
   Mailbox,
+  Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -226,7 +226,7 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex items-center gap-2 border-b p-2">
+      <SidebarHeader className="flex items-center justify-between gap-2 border-b p-2">
         <Link href="/dashboard" className="flex flex-1 items-center gap-2">
             <Image
                 src={companyLogoUrlFromSettings}
@@ -243,10 +243,19 @@ export function AppSidebarNav() {
                 "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
             )}
             >
-            SMART SOLUTION
+             SMART SOLUTION
             </span>
         </Link>
-        <SidebarTrigger className="group-data-[collapsible=icon]:hidden text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground p-0 m-0" />
+        <SidebarTrigger
+            data-sidebar="trigger"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
+            aria-label="Collapse Sidebar"
+        >
+             <PanelLeftClose className="h-5 w-5" />
+             <span className="sr-only">Collapse Sidebar</span>
+        </SidebarTrigger>
       </SidebarHeader>
 
       <SidebarContent className="p-0">
