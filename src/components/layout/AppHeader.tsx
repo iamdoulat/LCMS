@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { User, LogOut, Settings, Loader2, Search } from 'lucide-react';
+import { User, LogOut, Settings, Loader2, Search, PanelLeftClose } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
@@ -56,10 +56,10 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
         {/* Left Aligned Title */}
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
              {/* Mobile Sidebar Trigger */}
-            <SidebarTrigger className="md:hidden mr-2" />
-            <Link
+            <SidebarTrigger className="md:hidden" />
+             <Link
                 href="/dashboard"
                 className={cn(
                     "text-lg md:text-xl whitespace-nowrap",

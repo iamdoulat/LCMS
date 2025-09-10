@@ -22,15 +22,12 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   LayoutDashboard,
   ListChecks,
-  FilePlus2,
   Ship,
   CalendarClock,
   PanelLeftClose,
-  PanelRightClose,
   Settings,
   LogOut,
   History,
@@ -193,7 +190,6 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { logout, userRole, loading: authLoading, companyName, companyLogoUrl } = useAuth();
-  const sidebar = useSidebar();
   
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
@@ -234,12 +230,12 @@ export function AppSidebarNav() {
                     priority
                     data-ai-hint="company logo"
                 />
-                <span className={cn("font-bold text-lg group-data-[collapsible=icon]:hidden truncate", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <span className={cn("font-bold text-xl group-data-[collapsible=icon]:hidden truncate", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                     {displayCompanyNameFromSettings}
                 </span>
             </Link>
-            <SidebarTrigger
-                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+             <SidebarTrigger
+                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
                 aria-label="Collapse Sidebar"
                 >
                 <PanelLeftClose className="h-5 w-5" />
@@ -324,7 +320,6 @@ export function AppSidebarNav() {
                                   isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                                   "h-8 text-xs"
                                 )}
-                                tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                               >
                                 <span className="flex items-center gap-2">
                                    {subLink.icon && (
