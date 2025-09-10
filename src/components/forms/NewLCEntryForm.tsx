@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -23,6 +22,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '../ui/RichTextEditor';
@@ -730,44 +730,38 @@ export function NewLCEntryForm() {
             control={control}
             name="status"
             render={() => (
-                <FormItem>
-                    <div className="mb-2">
-                        <FormLabel className="flex items-center font-semibold"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                        <FormDescription>Select one or more statuses that apply.</FormDescription>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {lcStatusOptions.map((item) => (
-                            <FormField
-                                key={item}
-                                control={control}
-                                name="status"
-                                render={({ field }) => {
-                                    return (
-                                        <FormItem key={item} className="flex flex-row items-center space-x-2 space-y-0">
-                                            <FormControl>
-                                                <Checkbox
-                                                    checked={field.value?.includes(item)}
-                                                    onCheckedChange={(checked) => {
-                                                        const currentValue = field.value || [];
-                                                        return checked
-                                                            ? field.onChange([...currentValue, item])
-                                                            : field.onChange(
-                                                                currentValue.filter(
-                                                                    (value) => value !== item
-                                                                )
-                                                            );
-                                                    }}
-                                                />
-                                            </FormControl>
-                                            <FormLabel className="text-sm font-normal">{item}</FormLabel>
-                                        </FormItem>
-                                    );
-                                }}
+              <FormItem>
+                <div className="mb-2">
+                  <FormLabel className="flex items-center font-semibold"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                  <FormDescription>Toggle the applicable statuses for this L/C entry.</FormDescription>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6">
+                  {lcStatusOptions.map((item) => (
+                    <FormField
+                      key={item}
+                      control={control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                          <FormLabel className="text-sm font-medium">{item}</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value?.includes(item)}
+                              onCheckedChange={(checked) => {
+                                const currentValue = field.value || [];
+                                return checked
+                                  ? field.onChange([...currentValue, item])
+                                  : field.onChange(currentValue.filter((value) => value !== item));
+                              }}
                             />
-                        ))}
-                    </div>
-                    <FormMessage />
-                </FormItem>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
+                <FormMessage />
+              </FormItem>
             )}
           />
         </div>
@@ -1676,5 +1670,3 @@ export function NewLCEntryForm() {
     </Form>
   );
 }
-
-
