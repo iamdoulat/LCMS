@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mailbox, PlusCircle, User, Calendar, FileText, CheckCircle, XCircle, MoreHorizontal } from 'lucide-react';
+import { Mailbox, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -19,9 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -30,16 +28,24 @@ import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { EmployeeDocument } from '@/types';
+import { Combobox } from '@/components/ui/combobox';
+import { DatePickerInput } from '@/components/ui/date-picker-input';
 
 
 const leaveApplicationSchema = z.object({
   employeeId: z.string().min(1, "Employee is required."),
   leaveType: z.string().min(1, "Leave type is required."),
-  dateRange: z.object({
-    from: z.date({ required_error: "Start date is required." }),
-    to: z.date({ required_error: "End date is required." }),
-  }),
+  fromDate: z.date({ required_error: "Start date is required." }),
+  toDate: z.date({ required_error: "End date is required." }),
   reason: z.string().min(10, "Reason must be at least 10 characters long."),
+}).refine(data => {
+    if(data.fromDate && data.toDate) {
+        return data.toDate >= data.fromDate;
+    }
+    return true;
+}, {
+    message: "End date cannot be before the start date.",
+    path: ["toDate"],
 });
 
 type LeaveApplicationFormValues = z.infer<typeof leaveApplicationSchema>;
@@ -63,6 +69,13 @@ export default function LeaveManagementPage() {
 
   const form = useForm<LeaveApplicationFormValues>({
     resolver: zodResolver(leaveApplicationSchema),
+    defaultValues: {
+      employeeId: '',
+      leaveType: undefined,
+      fromDate: undefined,
+      toDate: undefined,
+      reason: ''
+    }
   });
 
   const onSubmit = (data: LeaveApplicationFormValues) => {
@@ -99,33 +112,49 @@ export default function LeaveManagementPage() {
                     <FormField control={form.control} name="employeeId" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Employee</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingEmployees}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select Employee"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {!isLoadingEmployees && employees?.map(emp => (
-                              <SelectItem key={emp.id} value={emp.id}>{emp.fullName} ({emp.employeeCode})</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Combobox
+                          options={employees?.map(emp => ({ value: emp.id, label: `${emp.fullName} (${emp.employeeCode})`})) || []}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Search Employee..."
+                          selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
+                          disabled={isLoadingEmployees}
+                        />
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="leaveType" render={({ field }) => (<FormItem><FormLabel>Leave Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Leave Type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Annual">Annual Leave</SelectItem><SelectItem value="Sick">Sick Leave</SelectItem><SelectItem value="Paternity">Paternity Leave</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                    <FormField
-                        control={form.control}
-                        name="dateRange"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                            <FormLabel>Date Range</FormLabel>
-                            <DatePickerWithRange onDateChange={field.onChange} />
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="fromDate"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>From</FormLabel>
+                                <DatePickerInput
+                                    date={field.value}
+                                    setDate={field.onChange}
+                                />
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="toDate"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>To</FormLabel>
+                                <DatePickerInput
+                                    date={field.value}
+                                    setDate={field.onChange}
+                                    fromDate={form.getValues("fromDate")}
+                                />
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                     <FormField control={form.control} name="reason" render={({ field }) => (<FormItem><FormLabel>Reason</FormLabel><FormControl><Textarea placeholder="Please provide a reason for your leave..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                     <DialogFooter>
                         <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
@@ -134,6 +163,7 @@ export default function LeaveManagementPage() {
                 </form>
              </Form>
         </DialogContent>
+        </Dialog>
 
         <Card className="shadow-xl">
             <CardHeader>
@@ -163,7 +193,6 @@ export default function LeaveManagementPage() {
                                 <TableHead>To</TableHead>
                                 <TableHead>Duration</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -175,12 +204,6 @@ export default function LeaveManagementPage() {
                                     <TableCell>{leave.to}</TableCell>
                                     <TableCell>{leave.duration}</TableCell>
                                     <TableCell><Badge variant={getStatusBadgeVariant(leave.status)}>{leave.status}</Badge></TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="outline" size="sm">
-                                            <FileText className="mr-2 h-4 w-4"/>
-                                            Details
-                                        </Button>
-                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -189,7 +212,6 @@ export default function LeaveManagementPage() {
                 </div>
             </CardContent>
         </Card>
-      </Dialog>
     </div>
   );
 }
