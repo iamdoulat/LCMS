@@ -77,6 +77,16 @@ export default function LeaveManagementPage() {
       reason: ''
     }
   });
+  
+  React.useEffect(() => {
+    // Defer setting date values to the client to prevent hydration mismatch
+    form.reset({
+      ...form.getValues(),
+      fromDate: new Date(),
+      toDate: new Date(),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onSubmit = (data: LeaveApplicationFormValues) => {
     console.log(data);
