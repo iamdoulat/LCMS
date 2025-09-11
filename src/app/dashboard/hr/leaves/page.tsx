@@ -72,8 +72,6 @@ export default function LeaveManagementPage() {
     defaultValues: {
       employeeId: '',
       leaveType: undefined,
-      fromDate: undefined,
-      toDate: undefined,
       reason: ''
     }
   });
@@ -142,8 +140,7 @@ export default function LeaveManagementPage() {
                                 <FormItem>
                                 <FormLabel>From</FormLabel>
                                 <DatePickerInput
-                                    date={field.value}
-                                    setDate={field.onChange}
+                                    field={field}
                                 />
                                 <FormMessage />
                                 </FormItem>
@@ -156,8 +153,7 @@ export default function LeaveManagementPage() {
                                 <FormItem>
                                 <FormLabel>To</FormLabel>
                                 <DatePickerInput
-                                    date={field.value}
-                                    setDate={field.onChange}
+                                    field={field}
                                     fromDate={form.getValues("fromDate")}
                                 />
                                 <FormMessage />

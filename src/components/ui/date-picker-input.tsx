@@ -16,7 +16,7 @@ import {
 import type { ControllerRenderProps } from "react-hook-form";
 
 interface DatePickerInputProps {
-  field: ControllerRenderProps<any, any>;
+  field?: ControllerRenderProps<any, any>;
   placeholder?: string;
   className?: string;
   fromDate?: Date;
@@ -38,15 +38,15 @@ export function DatePickerInput({
   toDate,
 }: DatePickerInputProps) {
   const [open, setOpen] = React.useState(false);
-  const [inputValue, setInputValue] = React.useState(formatDate(field.value));
+  const [inputValue, setInputValue] = React.useState(formatDate(field?.value));
 
   React.useEffect(() => {
     // Update the input field when the form value changes externally
-    setInputValue(formatDate(field.value));
-  }, [field.value]);
+    setInputValue(formatDate(field?.value));
+  }, [field?.value]);
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
-    field.onChange(selectedDate);
+    field?.onChange(selectedDate);
     setInputValue(formatDate(selectedDate));
     setOpen(false);
   };
@@ -58,14 +58,14 @@ export function DatePickerInput({
     // Attempt to parse the date from input
     const parsedDate = parse(value, "PPP", new Date());
     if (isValidDate(parsedDate)) {
-      field.onChange(parsedDate);
+      field?.onChange(parsedDate);
     }
   };
 
   const handleClear = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    field.onChange(undefined);
+    field?.onChange(undefined);
     setInputValue("");
   };
 
@@ -80,7 +80,7 @@ export function DatePickerInput({
             className="pr-16" // Make space for buttons
           />
           <div className="absolute inset-y-0 right-0 flex items-center pr-1">
-            {field.value && (
+            {field?.value && (
               <Button
                 type="button"
                 variant="ghost"
@@ -108,7 +108,7 @@ export function DatePickerInput({
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="single"
-            selected={field.value}
+            selected={field?.value}
             onSelect={handleDateSelect}
             initialFocus
             fromDate={fromDate}
