@@ -244,7 +244,7 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex h-16 w-full items-center justify-start border-b p-0">
+      <SidebarHeader className="flex h-16 w-full items-center justify-start border-b px-2">
           <Button
             data-sidebar="trigger"
             variant="ghost"
@@ -254,7 +254,7 @@ export function AppSidebarNav() {
           >
               <PanelLeftClose className="h-5 w-5" />
           </Button>
-          <Link href="/dashboard" className="flex items-center">
+          <Link href="/dashboard" className="flex items-center gap-2">
             <Image
               src={companyLogoUrlFromSettings}
               alt="Company Logo"
@@ -264,7 +264,7 @@ export function AppSidebarNav() {
               priority
               data-ai-hint="company logo"
             />
-             <span className="ml-2 font-semibold text-xs group-data-[collapsible=icon]:hidden">
+             <span className="font-semibold text-xs group-data-[collapsible=icon]:hidden">
               {displayCompanyNameFromSettings}
             </span>
           </Link>
@@ -358,7 +358,7 @@ export function AppSidebarNav() {
             <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="flex-grow justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center">
                     <Avatar className="h-8 w-8">
-                        <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
+                        <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} data-ai-hint="profile avatar"/>
                         <AvatarFallback>{user?.displayName?.slice(0, 2).toUpperCase() || 'U'}</AvatarFallback>
                     </Avatar>
                     <span className="font-medium leading-none group-data-[collapsible=icon]:hidden">{user?.displayName || 'Guest'}</span>
