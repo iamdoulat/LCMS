@@ -14,7 +14,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Label } from "./label";
 
 interface DatePickerInputProps {
   date: Date | undefined;
@@ -41,54 +40,36 @@ export function DatePickerInput({ date, setDate, placeholder, className, fromDat
   }, [date]);
 
   return (
-    <div className={cn("relative flex items-center", className)}>
-      <Input
-        value={value}
-        placeholder={placeholder || "Select a date"}
-        className="pr-10"
-        onChange={(e) => {
-          const newDate = new Date(e.target.value);
-          setValue(e.target.value);
-          if (isValidDate(newDate)) {
-            setDate(newDate);
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowDown") {
-            e.preventDefault();
-            setOpen(true);
-          }
-        }}
-      />
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            className="absolute top-1/2 right-2 size-6 -translate-y-1/2 p-0"
-            aria-label="Select date"
-          >
-            <CalendarIcon className="size-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="w-auto overflow-hidden p-0"
-          align="start"
-          sideOffset={10}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant={"outline"}
+          className={cn(
+            "w-full justify-start text-left font-normal",
+            !date && "text-muted-foreground",
+            className
+          )}
         >
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={(selectedDate) => {
-              setDate(selectedDate);
-              setValue(formatDate(selectedDate));
-              setOpen(false);
-            }}
-            initialFocus
-            fromDate={fromDate}
-            toDate={toDate}
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {date ? format(date, "PPP") : <span>{placeholder || "Pick a date"}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(selectedDate) => {
+            setDate(selectedDate);
+            setOpen(false);
+          }}
+          initialFocus
+          fromDate={fromDate}
+          toDate={toDate}
+          disabled={(date) =>
+            date > new Date() || date < new Date("1900-01-01")
+          }
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
