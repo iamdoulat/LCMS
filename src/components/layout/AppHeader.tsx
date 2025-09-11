@@ -57,8 +57,6 @@ export function AppHeader() {
     <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between gap-4 border-b bg-card px-4 md:px-6 shadow-sm">
         {/* Left Aligned Title */}
         <div className="flex items-center gap-2">
-             {/* Mobile Sidebar Trigger */}
-            <SidebarTrigger className="lg:hidden" />
              <Link
                 href="/dashboard"
                 className="text-lg md:text-xl whitespace-nowrap font-bold"
