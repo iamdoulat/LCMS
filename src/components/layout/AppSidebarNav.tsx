@@ -229,31 +229,31 @@ export function AppSidebarNav() {
 
   return (
     <>
-        <SidebarHeader className="flex h-16 items-center justify-between gap-2 border-b p-2">
-            <Link href="/dashboard" className="flex items-center gap-2">
-                <Image
-                src={companyLogoUrlFromSettings}
-                alt="Company Logo"
-                width={32}
-                height={32}
-                className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
-                priority
-                data-ai-hint="company logo"
-                />
-            </Link>
-            {!sidebar.isMobile && (
-                <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                onClick={sidebar.toggleSidebar}
-                aria-label="Collapse Sidebar"
-                >
-                <PanelLeftClose className="h-5 w-5" />
-                <span className="sr-only">Toggle Sidebar</span>
-                </Button>
-            )}
-        </SidebarHeader>
+      <SidebarHeader className="flex h-16 w-full items-center justify-start gap-2 border-b p-2">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <Image
+            src={companyLogoUrlFromSettings}
+            alt="Company Logo"
+            width={32}
+            height={32}
+            className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
+            priority
+            data-ai-hint="company logo"
+          />
+        </Link>
+        {!sidebar.isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            onClick={sidebar.toggleSidebar}
+            aria-label="Collapse Sidebar"
+          >
+            <PanelLeftClose className="h-5 w-5" />
+            <span className="sr-only">Toggle Sidebar</span>
+          </Button>
+        )}
+      </SidebarHeader>
       <SidebarContent className="p-0">
           {canViewDashboard && (
             <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
