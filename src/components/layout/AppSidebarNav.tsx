@@ -12,7 +12,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -231,9 +230,8 @@ export function AppSidebarNav() {
   return (
     <>
         <SidebarHeader className="flex h-16 items-center justify-between gap-2 border-b p-2">
-            <div className='flex items-center gap-2'>
-                {!sidebar.isMobile && (
-                    <Button
+            <div className='flex flex-1 items-center gap-2'>
+                 <Button
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -243,7 +241,6 @@ export function AppSidebarNav() {
                       <PanelLeftClose className="h-5 w-5" />
                       <span className="sr-only">Toggle Sidebar</span>
                   </Button>
-                )}
                 <Link href="/dashboard" className="flex items-center gap-2">
                     <Image
                     src={companyLogoUrlFromSettings}
@@ -256,7 +253,6 @@ export function AppSidebarNav() {
                     />
                 </Link>
             </div>
-            <SidebarTrigger className="lg:hidden" />
         </SidebarHeader>
       <SidebarContent className="p-0">
           {canViewDashboard && (
