@@ -195,7 +195,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { logout, userRole, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const { user, logout, userRole, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
   
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
@@ -228,21 +228,18 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex h-16 w-full items-center justify-start gap-2 border-b p-2">
-           {!sidebar.isMobile && (
-              <Button
-                  data-sidebar="trigger"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  onClick={sidebar.toggleSidebar}
-                  aria-label="Collapse Sidebar"
-              >
-                  <PanelLeftClose className="h-5 w-5" />
-                  <span className="sr-only">Toggle Sidebar</span>
-              </Button>
-          )}
-          <Link href="/dashboard" className="flex items-center gap-2">
+      <SidebarHeader className="flex h-16 w-full items-center justify-start border-b">
+          <Button
+              data-sidebar="trigger"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              onClick={sidebar.toggleSidebar}
+              aria-label="Collapse Sidebar"
+          >
+              <PanelLeftClose className="h-5 w-5" />
+          </Button>
+          <Link href="/dashboard" className="flex items-center">
             <Image
               src={companyLogoUrlFromSettings}
               alt="Company Logo"
