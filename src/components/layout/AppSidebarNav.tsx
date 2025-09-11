@@ -90,6 +90,7 @@ import Image from 'next/image';
 import type { UserRole } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from '@/components/ui/skeleton';
+import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton';
 
 
 interface NavItem {
@@ -238,7 +239,7 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex h-16 w-full items-center justify-start gap-0 border-b p-0">
+      <SidebarHeader className="flex h-16 w-full items-center justify-start border-b p-0">
           {!sidebar.isMobile && (
               <Button
                 data-sidebar="trigger"
@@ -254,13 +255,13 @@ export function AppSidebarNav() {
             <Image
               src={companyLogoUrlFromSettings}
               alt="Company Logo"
-              width={28}
-              height={28}
+              width={32}
+              height={32}
               className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
               priority
               data-ai-hint="company logo"
             />
-             <span className="ml-2 font-semibold text-md group-data-[collapsible=icon]:hidden">
+             <span className="ml-2 font-semibold text-sm group-data-[collapsible=icon]:hidden">
               {displayCompanyNameFromSettings}
             </span>
           </Link>
