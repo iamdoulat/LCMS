@@ -228,8 +228,7 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex h-16 w-full items-center justify-between gap-2 border-b p-2">
-        <div className="flex items-center gap-2">
+      <SidebarHeader className="flex h-16 w-full items-center justify-start gap-2 border-b p-2">
            {!sidebar.isMobile && (
               <Button
                   data-sidebar="trigger"
@@ -249,12 +248,12 @@ export function AppSidebarNav() {
               alt="Company Logo"
               width={32}
               height={32}
-              className="rounded-sm object-contain"
+              className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
               priority
               data-ai-hint="company logo"
             />
+             <span className="font-bold text-lg group-data-[collapsible=icon]:hidden">{displayCompanyNameFromSettings}</span>
           </Link>
-        </div>
       </SidebarHeader>
       <SidebarContent className="p-0">
           {canViewDashboard && (
