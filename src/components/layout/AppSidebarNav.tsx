@@ -23,6 +23,12 @@ import {
 } from "@/components/ui/accordion";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   LayoutDashboard,
   ListChecks,
   Ship,
@@ -225,7 +231,7 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="flex h-16 items-center justify-between gap-2 border-b p-2">
-         <div className='flex items-center gap-2'>
+        <div className='flex flex-1 items-center gap-2 overflow-hidden'>
             <SidebarTrigger className="lg:hidden" />
             <Link href="/dashboard" className="flex items-center gap-2">
                 <Image
@@ -237,23 +243,20 @@ export function AppSidebarNav() {
                 priority
                 data-ai-hint="company logo"
                 />
-                <span className="font-bold text-base group-data-[collapsible=icon]:hidden truncate bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
-                  {displayCompanyNameFromSettings}
-                </span>
             </Link>
-          </div>
-          {!sidebar.isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                onClick={sidebar.toggleSidebar}
-                aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
-              >
-                {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
-                <span className="sr-only">Toggle Sidebar</span>
-            </Button>
-          )}
+        </div>
+        {!sidebar.isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden"
+              onClick={sidebar.toggleSidebar}
+              aria-label="Collapse Sidebar"
+            >
+              <PanelLeftClose className="h-5 w-5" />
+              <span className="sr-only">Toggle Sidebar</span>
+          </Button>
+        )}
       </SidebarHeader>
       <SidebarContent className="p-0">
           {canViewDashboard && (
