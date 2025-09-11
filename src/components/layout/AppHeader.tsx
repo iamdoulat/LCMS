@@ -59,7 +59,7 @@ export function AppHeader() {
         <div className="flex items-center gap-2">
              <Link
                 href="/dashboard"
-                className="text-lg md:text-xl whitespace-nowrap font-bold"
+                className={cn("text-lg md:text-xl whitespace-nowrap font-bold", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}
                 >
                 LC Management System
             </Link>
