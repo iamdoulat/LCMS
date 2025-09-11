@@ -26,6 +26,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Swal from 'sweetalert2';
+import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase/config';
+import type { EmployeeDocument } from '@/types';
 
 
 const leaveApplicationSchema = z.object({
@@ -51,6 +55,11 @@ const placeholderLeaves = [
 
 export default function LeaveManagementPage() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(
+    query(collection(firestore, "employees"), orderBy("fullName")),
+    undefined,
+    ['employees_for_leave']
+  );
 
   const form = useForm<LeaveApplicationFormValues>({
     resolver: zodResolver(leaveApplicationSchema),
@@ -87,7 +96,24 @@ export default function LeaveManagementPage() {
             </DialogHeader>
              <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField control={form.control} name="employeeId" render={({ field }) => (<FormItem><FormLabel>Employee</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Employee" /></SelectTrigger></FormControl><SelectContent><SelectItem value="EMP001">John Doe</SelectItem><SelectItem value="EMP002">Jane Smith</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                    <FormField control={form.control} name="employeeId" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Employee</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingEmployees}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={isLoadingEmployees ? "Loading employees..." : "Select Employee"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {!isLoadingEmployees && employees?.map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>{emp.fullName} ({emp.employeeCode})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
                     <FormField control={form.control} name="leaveType" render={({ field }) => (<FormItem><FormLabel>Leave Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Leave Type" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Annual">Annual Leave</SelectItem><SelectItem value="Sick">Sick Leave</SelectItem><SelectItem value="Paternity">Paternity Leave</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                     <FormField
                         control={form.control}
