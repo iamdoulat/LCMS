@@ -229,28 +229,28 @@ export function AppSidebarNav() {
   return (
     <>
       <SidebarHeader className="flex h-16 w-full items-center justify-start border-b">
-          <Button
-              data-sidebar="trigger"
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              onClick={sidebar.toggleSidebar}
-              aria-label="Collapse Sidebar"
-          >
-              <PanelLeftClose className="h-5 w-5" />
-          </Button>
-          <Link href="/dashboard" className="flex items-center">
-            <Image
-              src={companyLogoUrlFromSettings}
-              alt="Company Logo"
-              width={32}
-              height={32}
-              className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
-              priority
-              data-ai-hint="company logo"
-            />
-             <span className="font-bold text-lg group-data-[collapsible=icon]:hidden">{displayCompanyNameFromSettings}</span>
-          </Link>
+        <Button
+            data-sidebar="trigger"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            onClick={sidebar.toggleSidebar}
+            aria-label="Toggle Sidebar"
+        >
+            <PanelLeftClose className="h-5 w-5" />
+        </Button>
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <Image
+            src={companyLogoUrlFromSettings}
+            alt="Company Logo"
+            width={32}
+            height={32}
+            className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
+            priority
+            data-ai-hint="company logo"
+          />
+           <span className="font-bold text-lg group-data-[collapsible=icon]:hidden">{displayCompanyNameFromSettings}</span>
+        </Link>
       </SidebarHeader>
       <SidebarContent className="p-0">
           {canViewDashboard && (
@@ -336,20 +336,36 @@ export function AppSidebarNav() {
           </Accordion>
       </SidebarContent>
       <SidebarFooter className="mt-auto border-t p-2 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          className="flex-grow justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
-          onClick={logout}
-          disabled={authLoading}
-        >
-          {authLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <LogOut className="h-5 w-5" />
-          )}
-          <span className="group-data-[collapsible=icon]:hidden">Logout</span>
-        </Button>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex-grow justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || 'User'} />
+                        <AvatarFallback>{user?.displayName?.slice(0, 2).toUpperCase() || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium leading-none group-data-[collapsible=icon]:hidden">{user?.displayName || 'Guest'}</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" forceMount>
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                    <Link href="/dashboard/account-details"><UsersIcon className="mr-2 h-4 w-4" />Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                    <span className="mr-2">Role:</span>
+                    {authLoading ? <Skeleton className="h-4 w-20" /> : userRole ? userRole.join(', ') : 'Guest'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout}>
+                    <LogOut className="mr-2 h-4 w-4" />Sign Out
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+        <ThemeToggleButton />
       </SidebarFooter>
     </>
   );
 }
+
+    
