@@ -4,29 +4,25 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { EmployeeDocument } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { DatePickerInput } from '@/components/ui/date-picker-input';
-import { Mailbox, ArrowLeft } from 'lucide-react';
+import { Mailbox, ArrowLeft, Loader2, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import {
-  FormField,
-  FormControl,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { format } from 'date-fns';
 
 const leaveApplicationSchema = z.object({
   employeeId: z.string().min(1, "Employee is required."),
@@ -48,6 +44,9 @@ type LeaveApplicationFormValues = z.infer<typeof leaveApplicationSchema>;
 
 
 export default function AddLeavePage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(
     query(collection(firestore, "employees"), orderBy("fullName")),
     undefined,
@@ -64,7 +63,7 @@ export default function AddLeavePage() {
       reason: ''
     }
   });
-
+  
   React.useEffect(() => {
     form.reset({
       ...form.getValues(),
@@ -74,20 +73,49 @@ export default function AddLeavePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onSubmit = (data: LeaveApplicationFormValues) => {
-    console.log(data);
-    Swal.fire({
-        title: "Application Submitted!",
-        text: "Your leave application has been submitted for approval.",
-        icon: "success"
-    });
-    form.reset();
-  };
-
   const employeeOptions = React.useMemo(() => {
     if (!employees) return [];
     return employees.map(emp => ({ value: emp.id, label: `${emp.fullName} (${emp.employeeCode})` }));
   }, [employees]);
+
+  const onSubmit = async (data: LeaveApplicationFormValues) => {
+    if (!user) {
+        Swal.fire("Authentication Error", "You must be logged in to submit an application.", "error");
+        return;
+    }
+    setIsSubmitting(true);
+    
+    const selectedEmployee = employeeOptions.find(e => e.value === data.employeeId);
+
+    const dataToSave = {
+        ...data,
+        employeeName: selectedEmployee?.label || 'N/A', // Denormalize for easier display
+        fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+        toDate: format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+        status: 'Pending',
+        appliedBy: user.displayName || user.email,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+    };
+
+    try {
+        await addDoc(collection(firestore, "leave_applications"), dataToSave);
+        Swal.fire({
+            title: "Application Submitted!",
+            text: "Your leave application has been submitted for approval.",
+            icon: "success",
+            timer: 2000,
+            showConfirmButton: false,
+        }).then(() => {
+            router.push('/dashboard/hr/leaves');
+        });
+        form.reset();
+    } catch (error: any) {
+        Swal.fire("Submission Failed", `There was an error submitting your application: ${error.message}`, "error");
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
 
 
   return (
@@ -118,7 +146,7 @@ export default function AddLeavePage() {
                 render={({ field }) => (
                 <FormItem>
                   <FormLabel>Employee*</FormLabel>
-                  <Combobox
+                   <Combobox
                     options={employeeOptions}
                     value={field.value}
                     onValueChange={field.onChange}
@@ -145,6 +173,8 @@ export default function AddLeavePage() {
                         <SelectItem value="Annual">Annual Leave</SelectItem>
                         <SelectItem value="Sick">Sick Leave</SelectItem>
                         <SelectItem value="Paternity">Paternity Leave</SelectItem>
+                        <SelectItem value="Maternity">Maternity Leave</SelectItem>
+                        <SelectItem value="Unpaid">Unpaid Leave</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -189,7 +219,13 @@ export default function AddLeavePage() {
                 )}
               />
               <div className="flex justify-end pt-4">
-                <Button type="submit">Submit Application</Button>
+                <Button type="submit" disabled={isSubmitting || isLoadingEmployees}>
+                  {isSubmitting ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Submitting...</>
+                  ) : (
+                    <><Save className="mr-2 h-4 w-4"/>Submit Application</>
+                  )}
+                </Button>
               </div>
             </form>
           </Form>
