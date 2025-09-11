@@ -81,7 +81,7 @@ import {
   Calculator,
   Mailbox,
   Calendar,
-  PanelRightClose,
+  PanelRight,
   PanelLeftClose,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -244,31 +244,29 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex h-16 w-full items-center justify-start border-b px-2">
-          <Button
-            data-sidebar="trigger"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            aria-label="Collapse Sidebar"
+      <SidebarHeader className="flex h-16 w-full items-center justify-start border-b p-2">
+        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={sidebar.toggleSidebar}>
+            <PanelLeft className="h-5 w-5" />
+        </Button>
+        <Link href="/dashboard" className="flex items-center gap-1.5 min-w-0 flex-1">
+          <Image
+            src={companyLogoUrlFromSettings}
+            alt="Company Logo"
+            width={32}
+            height={32}
+            className="rounded-sm object-contain flex-shrink-0 group-data-[collapsible=icon]:hidden"
+            priority
+            data-ai-hint="company logo"
+          />
+          <span
+            className={cn(
+              "font-bold text-base truncate group-data-[collapsible=icon]:hidden",
+              "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+            )}
           >
-              <PanelLeftClose className="h-5 w-5" />
-          </Button>
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <Image
-              src={companyLogoUrlFromSettings}
-              alt="Company Logo"
-              width={24}
-              height={24}
-              className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
-              priority
-              data-ai-hint="company logo"
-            />
-             <span className="font-semibold text-xs group-data-[collapsible=icon]:hidden">
-              {displayCompanyNameFromSettings}
-            </span>
-          </Link>
-          
+            {displayCompanyNameFromSettings}
+          </span>
+        </Link>
       </SidebarHeader>
       <SidebarContent className="p-0">
           {canViewDashboard && (
@@ -380,7 +378,6 @@ export function AppSidebarNav() {
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
-        <ThemeToggleButton />
       </SidebarFooter>
     </>
   );
