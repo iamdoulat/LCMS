@@ -27,6 +27,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuShortcut,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   LayoutDashboard,
   ListChecks,
   Ship,
@@ -80,6 +89,7 @@ import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import type { UserRole } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface NavItem {
@@ -228,29 +238,32 @@ export function AppSidebarNav() {
 
   return (
     <>
-      <SidebarHeader className="flex h-16 w-full items-center justify-start border-b">
-        <Button
-            data-sidebar="trigger"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            onClick={sidebar.toggleSidebar}
-            aria-label="Toggle Sidebar"
-        >
-            <PanelLeftClose className="h-5 w-5" />
-        </Button>
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Image
-            src={companyLogoUrlFromSettings}
-            alt="Company Logo"
-            width={32}
-            height={32}
-            className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
-            priority
-            data-ai-hint="company logo"
-          />
-           <span className="font-bold text-lg group-data-[collapsible=icon]:hidden">{displayCompanyNameFromSettings}</span>
-        </Link>
+      <SidebarHeader className="flex h-16 w-full items-center justify-start gap-0 border-b p-0">
+          {!sidebar.isMobile && (
+              <Button
+                data-sidebar="trigger"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                aria-label="Collapse Sidebar"
+              >
+                  <PanelLeftClose className="h-5 w-5" />
+              </Button>
+          )}
+          <Link href="/dashboard" className="flex items-center">
+            <Image
+              src={companyLogoUrlFromSettings}
+              alt="Company Logo"
+              width={28}
+              height={28}
+              className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
+              priority
+              data-ai-hint="company logo"
+            />
+             <span className="ml-2 font-semibold text-md group-data-[collapsible=icon]:hidden">
+              {displayCompanyNameFromSettings}
+            </span>
+          </Link>
       </SidebarHeader>
       <SidebarContent className="p-0">
           {canViewDashboard && (
@@ -367,5 +380,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
-    
