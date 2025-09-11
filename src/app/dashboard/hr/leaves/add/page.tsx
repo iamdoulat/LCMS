@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -119,7 +120,8 @@ export default function AddLeavePage() {
                   <FormLabel>Employee*</FormLabel>
                   <Combobox
                     options={employeeOptions}
-                    {...field}
+                    value={field.value}
+                    onValueChange={field.onChange}
                     placeholder="Search Employee..."
                     selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
                     disabled={isLoadingEmployees}
