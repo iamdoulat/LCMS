@@ -206,7 +206,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
 
 export function AppSidebarNav() {
   const pathname = usePathname();
-  const { user, logout, userRole, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const { user, userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
   const sidebar = useSidebar();
   
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
@@ -232,39 +232,43 @@ export function AppSidebarNav() {
     const activeGroup = filteredNavGroups.find(group => isGroupActive(group.subLinks));
     if (activeGroup) {
       setOpenAccordions([activeGroup.groupLabel]);
+    } else if (filteredNavGroups.length > 0) {
+      // Default to opening the first group if no route is active
+      setOpenAccordions([filteredNavGroups[0].groupLabel]);
+    } else {
+      setOpenAccordions([]);
     }
   }, [pathname, filteredNavGroups]);
 
-  const canViewDashboard = userRole?.some(role => ["Super Admin", "Admin", "Viewer", "Commercial", "Accounts"].includes(role));
+  const canViewDashboard = userRole && !userRole.includes('DemoManager') && !userRole.includes('Accounts') && !userRole.includes('Service');
 
   return (
     <>
       <SidebarHeader className="flex h-16 w-full items-center justify-start border-b p-0">
-          {!sidebar.isMobile && (
-              <Button
-                data-sidebar="trigger"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                aria-label="Collapse Sidebar"
-              >
-                  <PanelLeftClose className="h-5 w-5" />
-              </Button>
-          )}
+          <Button
+            data-sidebar="trigger"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            aria-label="Collapse Sidebar"
+          >
+              <PanelLeftClose className="h-5 w-5" />
+          </Button>
           <Link href="/dashboard" className="flex items-center">
             <Image
               src={companyLogoUrlFromSettings}
               alt="Company Logo"
-              width={32}
-              height={32}
+              width={24}
+              height={24}
               className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
               priority
               data-ai-hint="company logo"
             />
-             <span className="ml-2 font-semibold text-sm group-data-[collapsible=icon]:hidden">
+             <span className="ml-2 font-semibold text-xs group-data-[collapsible=icon]:hidden">
               {displayCompanyNameFromSettings}
             </span>
           </Link>
+          
       </SidebarHeader>
       <SidebarContent className="p-0">
           {canViewDashboard && (
