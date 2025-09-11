@@ -820,7 +820,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               </FormItem>
             )}
           />
-           <FormField
+          <FormField
               control={control}
               name="status"
               render={() => (
@@ -1306,18 +1306,18 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           </div>
         </div>
 
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
           <FormField
             control={form.control}
             name="isFirstShipment"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
-                  1st shipment
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                <FormLabel className="text-sm font-normal text-foreground">
+                  1st Shipment
                 </FormLabel>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
               </FormItem>
             )}
           />
@@ -1325,13 +1325,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             control={form.control}
             name="isSecondShipment"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
-                  2nd shipment
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                <FormLabel className="text-sm font-normal text-foreground">
+                  2nd Shipment
                 </FormLabel>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
               </FormItem>
             )}
           />
@@ -1339,13 +1339,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             control={form.control}
             name="isThirdShipment"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
-                  3rd shipment
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                <FormLabel className="text-sm font-normal text-foreground">
+                  3rd Shipment
                 </FormLabel>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
               </FormItem>
             )}
           />
@@ -1751,7 +1751,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Entry...
+              Saving Changes...
             </>
           ) : (
             <>
@@ -1764,4 +1764,3 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
-

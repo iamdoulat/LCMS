@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -727,43 +728,43 @@ export function NewLCEntryForm() {
             )}
           />
           <FormField
-            control={control}
-            name="status"
-            render={() => (
-              <FormItem>
-                <div className="mb-2">
-                  <FormLabel className="flex items-center font-semibold"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                  <FormDescription>Toggle the applicable statuses for this L/C entry.</FormDescription>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6">
-                  {lcStatusOptions.map((item) => (
-                    <FormField
-                      key={item}
-                      control={control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                          <FormLabel className="text-sm font-medium">{item}</FormLabel>
-                          <FormControl>
-                            <Switch
-                              checked={field.value?.includes(item)}
-                              onCheckedChange={(checked) => {
-                                const currentValue = field.value || [];
-                                return checked
-                                  ? field.onChange([...currentValue, item])
-                                  : field.onChange(currentValue.filter((value) => value !== item));
-                              }}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  ))}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              control={control}
+              name="status"
+              render={() => (
+                <FormItem>
+                  <div className="mb-2">
+                    <FormLabel className="flex items-center font-semibold"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                    <FormDescription>Toggle the applicable statuses for this L/C entry.</FormDescription>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6">
+                    {lcStatusOptions.map((item) => (
+                      <FormField
+                        key={item}
+                        control={control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <FormLabel className="text-sm font-medium">{item}</FormLabel>
+                            <FormControl>
+                              <Switch
+                                checked={field.value?.includes(item)}
+                                onCheckedChange={(checked) => {
+                                  const currentValue = field.value || [];
+                                  return checked
+                                    ? field.onChange([...currentValue, item])
+                                    : field.onChange(currentValue.filter((value) => value !== item));
+                                }}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <FormField
@@ -1217,13 +1218,13 @@ export function NewLCEntryForm() {
             control={form.control}
             name="isFirstShipment"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
-                  1st shipment
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                <FormLabel className="text-sm font-normal text-foreground">
+                  1st Shipment
                 </FormLabel>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
               </FormItem>
             )}
           />
@@ -1231,13 +1232,13 @@ export function NewLCEntryForm() {
             control={form.control}
             name="isSecondShipment"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
-                  2nd shipment
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                <FormLabel className="text-sm font-normal text-foreground">
+                  2nd Shipment
                 </FormLabel>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
               </FormItem>
             )}
           />
@@ -1245,13 +1246,13 @@ export function NewLCEntryForm() {
             control={form.control}
             name="isThirdShipment"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                <FormLabel className="text-sm font-normal text-foreground hover:cursor-pointer">
-                  3rd shipment
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                <FormLabel className="text-sm font-normal text-foreground">
+                  3rd Shipment
                 </FormLabel>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
               </FormItem>
             )}
           />
