@@ -230,21 +230,29 @@ export function AppSidebarNav() {
   return (
     <>
         <SidebarHeader className="flex h-16 items-center justify-between gap-2 border-b p-2">
-            <Button data-sidebar="trigger" variant="ghost" size="icon" className="h-7 w-7" onClick={sidebar.toggleSidebar} aria-label="Collapse Sidebar">
-              <PanelLeftClose className="h-5 w-5" />
-              <span className="sr-only">Toggle Sidebar</span>
-            </Button>
-            <Link href="/dashboard" className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+            <Link href="/dashboard" className="flex items-center gap-2">
                 <Image
                 src={companyLogoUrlFromSettings}
                 alt="Company Logo"
                 width={32}
                 height={32}
-                className="rounded-sm object-contain"
+                className="rounded-sm object-contain group-data-[collapsible=icon]:hidden"
                 priority
                 data-ai-hint="company logo"
                 />
             </Link>
+            {!sidebar.isMobile && (
+                <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                onClick={sidebar.toggleSidebar}
+                aria-label="Collapse Sidebar"
+                >
+                <PanelLeftClose className="h-5 w-5" />
+                <span className="sr-only">Toggle Sidebar</span>
+                </Button>
+            )}
         </SidebarHeader>
       <SidebarContent className="p-0">
           {canViewDashboard && (
@@ -347,5 +355,3 @@ export function AppSidebarNav() {
     </>
   );
 }
-
-    
