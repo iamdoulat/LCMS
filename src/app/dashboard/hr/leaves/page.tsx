@@ -72,6 +72,8 @@ export default function LeaveManagementPage() {
     defaultValues: {
       employeeId: '',
       leaveType: undefined,
+      fromDate: undefined,
+      toDate: undefined,
       reason: ''
     }
   });
@@ -117,7 +119,10 @@ export default function LeaveManagementPage() {
             </DialogHeader>
              <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField control={form.control} name="employeeId" render={({ field }) => (
+                    <FormField
+                      control={form.control}
+                      name="employeeId"
+                      render={({ field }) => (
                       <FormItem>
                         <FormLabel>Employee</FormLabel>
                         <Combobox
