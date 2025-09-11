@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mailbox, PlusCircle } from 'lucide-react';
+import { Mailbox, PlusCircle, Loader2, AlertTriangle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -17,17 +17,76 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { firestore } from '@/lib/firebase/config';
+import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
+import type { LeaveApplicationDocument } from '@/types';
+import { format, parseISO, isValid, differenceInCalendarDays } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const formatDisplayDate = (dateString: string): string => {
+    try {
+        const date = parseISO(dateString);
+        return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    } catch {
+        return 'Invalid Date';
+    }
+};
+
+const calculateDuration = (from: string, to: string): string => {
+    try {
+        const fromDate = parseISO(from);
+        const toDate = parseISO(to);
+        if (isValid(fromDate) && isValid(toDate)) {
+            const days = differenceInCalendarDays(toDate, fromDate) + 1;
+            return `${days} day${days > 1 ? 's' : ''}`;
+        }
+    } catch {}
+    return 'N/A';
+};
 
 
-const placeholderLeaves = [
-    { id: '1', employeeName: 'John Doe', employeeId: 'EMP001', leaveType: 'Annual Leave', from: '2024-08-10', to: '2024-08-15', duration: '6 days', status: 'Approved' },
-    { id: '2', employeeName: 'Jane Smith', employeeId: 'EMP002', leaveType: 'Sick Leave', from: '2024-08-12', to: '2024-08-12', duration: '1 day', status: 'Approved' },
-    { id: '3', employeeName: 'Peter Jones', employeeId: 'EMP003', leaveType: 'Paternity Leave', from: '2024-09-01', to: '2024-09-15', duration: '15 days', status: 'Pending' },
-    { id: '4', employeeName: 'Mary Johnson', employeeId: 'EMP004', leaveType: 'Annual Leave', from: '2024-08-20', to: '2024-08-25', duration: '6 days', status: 'Rejected' },
-];
+const LeaveListSkeleton = () => (
+    <>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <TableRow key={i}>
+            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+        </TableRow>
+      ))}
+    </>
+);
 
 
 export default function LeaveManagementPage() {
+  const [leaves, setLeaves] = React.useState<LeaveApplicationDocument[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [fetchError, setFetchError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setIsLoading(true);
+    const leavesQuery = query(collection(firestore, "leave_applications"), orderBy("createdAt", "desc"));
+    
+    const unsubscribe = onSnapshot(leavesQuery, (snapshot) => {
+      const fetchedLeaves = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as LeaveApplicationDocument));
+      setLeaves(fetchedLeaves);
+      setIsLoading(false);
+      setFetchError(null);
+    }, (error) => {
+      console.error("Error fetching leave applications: ", error);
+      setFetchError(`Failed to load data. Check console and ensure you have permission to read 'leave_applications'. Error: ${error.message}`);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -60,7 +119,7 @@ export default function LeaveManagementPage() {
                 </div>
             </CardHeader>
             <CardContent>
-                <h3 className="text-lg font-semibold mb-4">Employees on Leave</h3>
+                <h3 className="text-lg font-semibold mb-4">Leave Application History</h3>
                 <div className="rounded-md border">
                     <Table>
                         <TableHeader>
@@ -74,18 +133,36 @@ export default function LeaveManagementPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {placeholderLeaves.map(leave => (
-                                <TableRow key={leave.id}>
-                                    <TableCell className="font-medium">{leave.employeeName}</TableCell>
-                                    <TableCell>{leave.leaveType}</TableCell>
-                                    <TableCell>{leave.from}</TableCell>
-                                    <TableCell>{leave.to}</TableCell>
-                                    <TableCell>{leave.duration}</TableCell>
-                                    <TableCell><Badge variant={getStatusBadgeVariant(leave.status)}>{leave.status}</Badge></TableCell>
+                            {isLoading ? (
+                                <LeaveListSkeleton />
+                            ) : fetchError ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center text-destructive">
+                                        <AlertTriangle className="mx-auto mb-2 h-8 w-8" />
+                                        {fetchError}
+                                    </TableCell>
                                 </TableRow>
-                            ))}
+                            ) : leaves.length > 0 ? (
+                                leaves.map(leave => (
+                                    <TableRow key={leave.id}>
+                                        <TableCell className="font-medium">{leave.employeeName}</TableCell>
+                                        <TableCell>{leave.leaveType}</TableCell>
+                                        <TableCell>{formatDisplayDate(leave.fromDate)}</TableCell>
+                                        <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
+                                        <TableCell>{calculateDuration(leave.fromDate, leave.toDate)}</TableCell>
+                                        <TableCell><Badge variant={getStatusBadgeVariant(leave.status)}>{leave.status}</Badge></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">
+                                        <Info className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                                        No leave applications have been submitted yet.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
-                         <TableCaption>This is a list of current and upcoming employee leaves.</TableCaption>
+                         <TableCaption>This is a list of all submitted leave applications.</TableCaption>
                     </Table>
                 </div>
             </CardContent>
