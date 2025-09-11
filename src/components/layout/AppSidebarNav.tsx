@@ -68,6 +68,8 @@ import {
   Calculator,
   Mailbox,
   Calendar,
+  PanelRightClose,
+  PanelLeftClose,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -190,6 +192,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
 export function AppSidebarNav() {
   const pathname = usePathname();
   const { logout, userRole, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const sidebar = useSidebar();
   
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
@@ -217,30 +220,44 @@ export function AppSidebarNav() {
     }
   }, [pathname, filteredNavGroups]);
 
+  const canViewDashboard = userRole?.some(role => ["Super Admin", "Admin", "Viewer", "Commercial", "Accounts"].includes(role));
+
   return (
     <>
       <SidebarHeader className="flex h-16 items-center justify-between gap-2 border-b p-2">
-        <div className="flex items-center gap-2">
+         <div className='flex items-center gap-2'>
+            <SidebarTrigger className="lg:hidden" />
             <Link href="/dashboard" className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                    <AvatarImage src={companyLogoUrlFromSettings} alt={displayCompanyNameFromSettings} data-ai-hint="logo company"/>
-                    <AvatarFallback>SS</AvatarFallback>
-                </Avatar>
+                <Image
+                src={companyLogoUrlFromSettings}
+                alt="Company Logo"
+                width={32}
+                height={32}
+                className="rounded-sm object-contain"
+                priority
+                data-ai-hint="company logo"
+                />
                 <span className="font-bold text-base group-data-[collapsible=icon]:hidden truncate bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
-                    {displayCompanyNameFromSettings}
+                  {displayCompanyNameFromSettings}
                 </span>
             </Link>
-        </div>
-        <SidebarTrigger
-            className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            aria-label="Collapse Sidebar"
-        >
-            <PanelLeft className="h-5 w-5" />
-        </SidebarTrigger>
+          </div>
+          {!sidebar.isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                onClick={sidebar.toggleSidebar}
+                aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
+              >
+                {sidebar.state === 'expanded' ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightClose className="h-5 w-5" />}
+                <span className="sr-only">Toggle Sidebar</span>
+            </Button>
+          )}
       </SidebarHeader>
-
       <SidebarContent className="p-0">
-          <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
+          {canViewDashboard && (
+            <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
                   {mainNavItems.map(subLink => (
                       <SidebarMenuItem key={subLink.href}>
                           <Link href={subLink.href} passHref>
@@ -258,52 +275,36 @@ export function AppSidebarNav() {
                       </SidebarMenuItem>
                   ))}
             </SidebarMenu>
+          )}
           <Accordion type="multiple" value={openAccordions} onValueChange={setOpenAccordions} className="w-full">
             {filteredNavGroups.map((group) => {
               const IconComponent = group.icon;
               return (
                 <AccordionItem value={group.groupLabel} key={group.groupLabel} className="border-none">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <AccordionTrigger
-                        className={cn(
-                          "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
-                          "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
-                          "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
-                           openAccordions.includes(group.groupLabel) && 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        )}
-                      >
-                        <span className="flex items-center gap-2">
-                           <div className={cn("flex h-6 w-6 items-center justify-center rounded-md", group.iconColorClass || "bg-gray-200 text-gray-700")}>
-                            <IconComponent className="h-4 w-4" />
-                           </div>
-                          <span className="group-data-[collapsible=icon]:hidden">{group.groupLabel}</span>
-                        </span>
-                      </AccordionTrigger>
-                    </PopoverTrigger>
-                    <PopoverContent side="right" align="start" className="ml-1 p-1 w-auto group-data-[collapsible=expanded]:hidden">
-                      <SidebarMenu className="gap-0">
-                          <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group.groupLabel}</p>
-                          {group.subLinks.map((subLink) => (
-                            <SidebarMenuItem key={subLink.href}>
-                              <Link href={subLink.href} passHref>
-                                <SidebarMenuButton asChild isActive={isActive(subLink.href)} className="h-8 text-xs" disabled={subLink.disabled}>
-                                    <span className="flex items-center gap-2">
-                                      {subLink.icon && (
-                                        <div className={cn("flex h-5 w-5 items-center justify-center rounded-md text-sidebar-primary-foreground", subLink.iconColorClass)}>
-                                            <subLink.icon className="h-3 w-3" />
-                                        </div>
-                                      )}
-                                      <span className="">{subLink.label}</span>
-                                    </span>
-                                </SidebarMenuButton>
-                              </Link>
-                            </SidebarMenuItem>
-                          ))}
-                        </SidebarMenu>
-                    </PopoverContent>
-                  </Popover>
-
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                          <AccordionTrigger
+                            className={cn(
+                              "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+                              "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
+                              "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
+                               openAccordions.includes(group.groupLabel) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground font-medium'
+                            )}
+                          >
+                            <span className="flex items-center gap-2">
+                               <div className={cn("flex h-6 w-6 items-center justify-center rounded-md", group.iconColorClass || "bg-gray-200 text-gray-700")}>
+                                <IconComponent className="h-4 w-4" />
+                               </div>
+                              <span className="group-data-[collapsible=icon]:hidden">{group.groupLabel}</span>
+                            </span>
+                          </AccordionTrigger>
+                      </TooltipTrigger>
+                       <TooltipContent side="right" className="ml-2 group-data-[collapsible=expanded]:hidden">
+                        <p>{group.groupLabel}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <AccordionContent className="pt-0 pb-0 pl-6 pr-2 group-data-[collapsible=icon]:hidden overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
                     <SidebarMenu className="gap-0 py-1">
                       {group.subLinks.map((subLink) => (
@@ -312,11 +313,11 @@ export function AppSidebarNav() {
                               <SidebarMenuButton
                                 asChild
                                 isActive={isActive(subLink.href)}
-                                disabled={subLink.disabled}
                                 className={cn(
                                   isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
                                   "h-8 text-xs"
                                 )}
+                                tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}
                               >
                                 <span className="flex items-center gap-2">
                                    {subLink.icon && (
