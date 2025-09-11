@@ -58,13 +58,10 @@ export function AppHeader() {
         {/* Left Aligned Title */}
         <div className="flex items-center gap-2">
              {/* Mobile Sidebar Trigger */}
-            <SidebarTrigger className="md:hidden" />
+            <SidebarTrigger className="lg:hidden" />
              <Link
                 href="/dashboard"
-                className={cn(
-                    "text-lg md:text-xl whitespace-nowrap",
-                    "font-bold"
-                )}
+                className="text-lg md:text-xl whitespace-nowrap font-bold"
                 >
                 LC Management System
             </Link>
