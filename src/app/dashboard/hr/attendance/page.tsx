@@ -9,10 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, Upload, PlusCircle } from 'lucide-react';
-import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceFlag } from '@/types';
+import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, Attendance, AttendanceDocument } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { format, differenceInMinutes, parse, isValid, eachDayOfInterval, startOfDay, endOfDay, subMonths } from 'date-fns';
@@ -44,52 +44,78 @@ const AttendanceSchema = z.object({
 });
 type AttendanceFormValues = z.infer<typeof AttendanceSchema>;
 
-const DailyAttendanceDataRow = ({ employee, attendanceDate }: { employee: EmployeeDocument, attendanceDate: Date }) => {
-    const [workingHours, setWorkingHours] = React.useState("0:0");
+const DailyAttendanceDataRow = ({ employee, attendanceDate, initialData }: { employee: EmployeeDocument, attendanceDate: Date, initialData?: Attendance | null }) => {
+    const [workingHours, setWorkingHours] = React.useState<string | null>(null);
 
     const form = useForm<AttendanceFormValues>({
         resolver: zodResolver(AttendanceSchema),
         defaultValues: {
-            flag: 'P',
-            inTime: '09:00',
-            outTime: '18:00',
-            inTimeRemarks: '',
-            outTimeRemarks: ''
+            flag: initialData?.flag || 'P',
+            inTime: initialData?.inTime || '09:00',
+            outTime: initialData?.outTime || '18:00',
+            inTimeRemarks: initialData?.inTimeRemarks || '',
+            outTimeRemarks: initialData?.outTimeRemarks || ''
         },
     });
+
+    React.useEffect(() => {
+        form.reset({
+            flag: initialData?.flag || 'P',
+            inTime: initialData?.inTime || '09:00',
+            outTime: initialData?.outTime || '18:00',
+            inTimeRemarks: initialData?.inTimeRemarks || '',
+            outTimeRemarks: initialData?.outTimeRemarks || ''
+        });
+    }, [initialData, form]);
 
     const { watch, control, handleSubmit } = form;
     const inTime = watch('inTime');
     const outTime = watch('outTime');
+    const flag = watch('flag');
     
     React.useEffect(() => {
-        if (inTime && outTime) {
-            try {
-                const inDate = parse(inTime, 'HH:mm', new Date());
-                const outDate = parse(outTime, 'HH:mm', new Date());
-                if(isValid(inDate) && isValid(outDate) && outDate > inDate) {
-                    const diffMins = differenceInMinutes(outDate, inDate);
-                    const hours = Math.floor(diffMins / 60);
-                    const minutes = diffMins % 60;
-                    setWorkingHours(`${hours}:${minutes.toString().padStart(2, '0')}`);
-                } else {
-                    setWorkingHours("0:0");
-                }
-            } catch {
-                setWorkingHours("0:0");
-            }
+        if (flag !== 'P' || !inTime || !outTime) {
+            setWorkingHours(null);
+            return;
         }
-    }, [inTime, outTime]);
 
-    const onSubmit = (data: AttendanceFormValues) => {
-        console.log({ employeeId: employee.id, attendanceDate, ...data });
-        // Here you would typically save the data to Firestore
-        // For now, we just log it.
-        Swal.fire("Saved", `Attendance recorded for ${employee.fullName} on ${format(attendanceDate, 'PPP')}`, "success");
+        try {
+            const inDate = parse(inTime, 'HH:mm', new Date());
+            const outDate = parse(outTime, 'HH:mm', new Date());
+            if(isValid(inDate) && isValid(outDate) && outDate > inDate) {
+                const diffMins = differenceInMinutes(outDate, inDate);
+                const hours = Math.floor(diffMins / 60);
+                const minutes = diffMins % 60;
+                setWorkingHours(`${hours}h ${minutes.toString().padStart(2, '0')}m`);
+            } else {
+                setWorkingHours("Invalid");
+            }
+        } catch {
+            setWorkingHours("Error");
+        }
+    }, [inTime, outTime, flag]);
+
+    const onSubmit = async (data: AttendanceFormValues) => {
+        const formattedDate = format(attendanceDate, 'yyyy-MM-dd');
+        const docId = `${employee.id}_${formattedDate}`;
+
+        const dataToSave = {
+            ...data,
+            employeeId: employee.id,
+            date: formattedDate,
+            workingHours: workingHours || undefined,
+            updatedAt: serverTimestamp(),
+            createdAt: initialData?.createdAt || serverTimestamp(), // Preserve original creation date
+        };
+
+        try {
+            await setDoc(doc(firestore, "attendance", docId), dataToSave, { merge: true });
+            Swal.fire("Saved", `Attendance updated for ${employee.fullName} on ${format(attendanceDate, 'PPP')}`, "success");
+        } catch (error: any) {
+             Swal.fire("Error", `Failed to save attendance: ${error.message}`, "error");
+        }
     };
     
-    const formattedOutTimeDate = format(attendanceDate, 'dd-MM-yyyy') + ', 06:00 PM';
-
     return (
         <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)}>
@@ -119,7 +145,12 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate }: { employee: Employ
                             )}/>
                     </TableCell>
                     <TableCell>
-                        <Input value={formattedOutTimeDate} readOnly className="h-9 w-[180px] bg-muted/20" />
+                            <FormField control={control} name="outTime" render={({ field }) => (
+                             <div className="relative">
+                                <Input type="time" {...field} className="h-9 w-[120px]"/>
+                                <Clock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                            </div>
+                            )}/>
                     </TableCell>
                     <TableCell>
                             <FormField control={control} name="outTimeRemarks" render={({ field }) => (
@@ -136,7 +167,7 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate }: { employee: Employ
     );
 };
 
-const EmployeeAttendanceRow = ({ employee, dateRange }: { employee: EmployeeDocument, dateRange: DateRange | undefined }) => {
+const EmployeeAttendanceRow = ({ employee, dateRange, attendanceRecords }: { employee: EmployeeDocument, dateRange: DateRange | undefined, attendanceRecords: AttendanceDocument[] }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
 
     const datesToDisplay = React.useMemo(() => {
@@ -151,7 +182,6 @@ const EmployeeAttendanceRow = ({ employee, dateRange }: { employee: EmployeeDocu
                 return [startOfDay(new Date())]; // Fallback
             }
         }
-        // Default to just today if no valid range is provided
         return [startOfDay(new Date())];
     }, [dateRange]);
     
@@ -185,16 +215,18 @@ const EmployeeAttendanceRow = ({ employee, dateRange }: { employee: EmployeeDocu
                                         <TableHead className="p-2">Flag</TableHead>
                                         <TableHead className="p-2">In Time</TableHead>
                                         <TableHead className="p-2">In Time Remarks</TableHead>
-                                        <TableHead className="p-2">Out Time & Date</TableHead>
+                                        <TableHead className="p-2">Out Time</TableHead>
                                         <TableHead className="p-2">Out Time Remarks</TableHead>
                                         <TableHead className="p-2">Working Hour</TableHead>
                                         <TableHead className="p-2">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {datesToDisplay.map(date => (
-                                        <DailyAttendanceDataRow key={date.toISOString()} employee={employee} attendanceDate={date} />
-                                    ))}
+                                    {datesToDisplay.map(date => {
+                                        const dateString = format(date, 'yyyy-MM-dd');
+                                        const record = attendanceRecords.find(r => r.date === dateString);
+                                        return <DailyAttendanceDataRow key={date.toISOString()} employee={employee} attendanceDate={date} initialData={record} />;
+                                    })}
                                 </TableBody>
                             </Table>
                         </div>
@@ -211,6 +243,7 @@ export default function DailyAttendancePage() {
     const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(query(collection(firestore, "branches")), undefined, ['branches']);
     const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(query(collection(firestore, "units")), undefined, ['units']);
     const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(query(collection(firestore, "departments")), undefined, ['departments']);
+    const { data: allAttendance, isLoading: isLoadingAttendance } = useFirestoreQuery<AttendanceDocument[]>(query(collection(firestore, "attendance")), undefined, ['attendance']);
     
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -233,7 +266,20 @@ export default function DailyAttendancePage() {
         );
     }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept]);
     
-    const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts;
+    const attendanceByEmployee = React.useMemo(() => {
+        const map = new Map<string, AttendanceDocument[]>();
+        if (allAttendance) {
+            allAttendance.forEach(att => {
+                if (!map.has(att.employeeId)) {
+                    map.set(att.employeeId, []);
+                }
+                map.get(att.employeeId)!.push(att);
+            });
+        }
+        return map;
+    }, [allAttendance]);
+
+    const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance;
 
     const handleImportCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -253,8 +299,6 @@ export default function DailyAttendancePage() {
                 Swal.fire("Error Reading File", "Could not read file content.", "error");
                 return;
             }
-            // TODO: Add robust parsing and Firestore update logic here.
-            // For now, we will just show an alert.
             console.log("CSV Content:", text);
             Swal.fire(
                 "Import Started",
@@ -339,7 +383,12 @@ export default function DailyAttendancePage() {
                     ) : (
                         <div className="space-y-2">
                            {filteredEmployees.map(emp => (
-                                <EmployeeAttendanceRow key={emp.id} employee={emp} dateRange={dateRange} />
+                                <EmployeeAttendanceRow 
+                                    key={emp.id} 
+                                    employee={emp} 
+                                    dateRange={dateRange}
+                                    attendanceRecords={attendanceByEmployee.get(emp.id) || []}
+                                />
                            ))}
                         </div>
                     )}
@@ -348,3 +397,5 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
+
+    
