@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -28,7 +29,8 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
     resolver: zodResolver(HolidaySchema),
     defaultValues: {
       name: '',
-      date: new Date(),
+      fromDate: new Date(),
+      toDate: undefined,
       type: 'Public Holiday',
     },
   });
@@ -37,9 +39,15 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
     setIsSubmitting(true);
     const dataToSave = {
       ...data,
-      date: format(data.date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      toDate: data.toDate ? format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       createdAt: serverTimestamp(),
     };
+
+    // Remove toDate if it's undefined
+    if (!dataToSave.toDate) {
+      delete (dataToSave as any).toDate;
+    }
 
     try {
       await addDoc(collection(firestore, "holidays"), dataToSave);
@@ -74,17 +82,34 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="date"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Date*</FormLabel>
-              <DatePickerField field={field} placeholder="Select holiday date" />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="fromDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>From*</FormLabel>
+                <DatePickerField field={field} placeholder="Select start date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="toDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>To (Optional)</FormLabel>
+                <DatePickerField
+                  field={field}
+                  placeholder="Select end date"
+                  fromDate={form.watch('fromDate')}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <FormField
           control={form.control}
           name="type"

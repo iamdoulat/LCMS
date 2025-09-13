@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -1574,8 +1575,17 @@ export type HolidayType = (typeof holidayTypeOptions)[number];
 
 export const HolidaySchema = z.object({
   name: z.string().min(2, "Holiday name is required."),
-  date: z.date({ required_error: "Holiday date is required." }),
+  fromDate: z.date({ required_error: "Start date is required." }),
+  toDate: z.date().optional(),
   type: z.enum(holidayTypeOptions, { required_error: "Holiday type is required." }),
+}).refine(data => {
+    if (data.fromDate && data.toDate) {
+      return data.toDate >= data.fromDate;
+    }
+    return true;
+}, {
+    message: "End date cannot be before the start date.",
+    path: ["toDate"],
 });
 
 export type HolidayFormValues = z.infer<typeof HolidaySchema>;
@@ -1583,7 +1593,8 @@ export type HolidayFormValues = z.infer<typeof HolidaySchema>;
 export interface HolidayDocument {
   id: string;
   name: string;
-  date: string; // ISO string
+  fromDate: string; // ISO string
+  toDate?: string; // ISO string
   type: HolidayType;
   createdAt: any;
 }

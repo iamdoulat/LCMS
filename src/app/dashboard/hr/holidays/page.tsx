@@ -21,7 +21,7 @@ export default function HolidaysPage() {
   const isReadOnly = userRole?.includes('Viewer');
 
   const { data: holidays, isLoading, error, refetch } = useFirestoreQuery<HolidayDocument[]>(
-    query(collection(firestore, 'holidays'), orderBy('date', 'asc')),
+    query(collection(firestore, 'holidays'), orderBy('fromDate', 'asc')),
     undefined,
     ['holidays']
   );
@@ -46,6 +46,15 @@ export default function HolidaysPage() {
         }
       }
     });
+  };
+
+  const formatHolidayDate = (holiday: HolidayDocument) => {
+    const fromDate = format(parseISO(holiday.fromDate), 'PPP');
+    if (holiday.toDate) {
+      const toDate = format(parseISO(holiday.toDate), 'PPP');
+      return fromDate === toDate ? fromDate : `${fromDate} - ${toDate}`;
+    }
+    return fromDate;
   };
 
   return (
@@ -97,7 +106,7 @@ export default function HolidaysPage() {
                     {holidays.map(holiday => (
                       <TableRow key={holiday.id}>
                         <TableCell>{holiday.name}</TableCell>
-                        <TableCell>{format(parseISO(holiday.date), 'PPP')}</TableCell>
+                        <TableCell>{formatHolidayDate(holiday)}</TableCell>
                         <TableCell>{holiday.type}</TableCell>
                         {!isReadOnly && (
                           <TableCell className="text-right">
