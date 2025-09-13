@@ -103,7 +103,7 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate, initialData, onRecor
             ...data,
             employeeId: employee.id,
             date: formattedDate,
-            workingHours: workingHours || undefined,
+            workingHours: workingHours,
             updatedAt: serverTimestamp(),
             createdAt: initialData?.createdAt || serverTimestamp(),
         };
@@ -151,7 +151,7 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate, initialData, onRecor
         <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)}>
                 <TableRow>
-                    <TableCell>{format(attendanceDate, 'E, dd-MM-yyyy')}</TableCell>
+                    <TableCell>{format(attendanceDate, 'EEE, dd-MM-yyyy')}</TableCell>
                     <TableCell>
                         <FormField control={control} name="flag" render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
@@ -242,7 +242,7 @@ const EmployeeAttendanceRow = ({ employee, dateRange, attendanceRecords, onRecor
                         <div className="p-4 bg-muted/50 overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="text-left text-muted-foreground">
+                                    <TableRow>
                                         <TableHead className="p-2">Attendance Date</TableHead>
                                         <TableHead className="p-2">Flag</TableHead>
                                         <TableHead className="p-2">In Time</TableHead>
@@ -430,7 +430,5 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
-
-    
 
     
