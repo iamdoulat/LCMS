@@ -21,20 +21,10 @@ interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> 
 }
 
 export function DatePickerWithRange({ className, date, onDateChange }: DatePickerWithRangeProps) {
-  const [open, setOpen] = React.useState(false);
-
-  const handleSelect = (newDate: DateRange | undefined) => {
-    onDateChange(newDate);
-    // You can decide if you want to close the popover automatically.
-    // For range selection, it might be better to let the user close it manually.
-    // if (newDate?.from && newDate?.to) {
-    //   setOpen(false);
-    // }
-  };
   
   return (
     <div className={cn("grid gap-2", className)}>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover>
         <PopoverTrigger asChild>
           <Button
             id="date"
@@ -65,7 +55,7 @@ export function DatePickerWithRange({ className, date, onDateChange }: DatePicke
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={handleSelect}
+            onSelect={onDateChange}
             numberOfMonths={1}
           />
         </PopoverContent>

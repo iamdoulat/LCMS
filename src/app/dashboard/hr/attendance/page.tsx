@@ -86,6 +86,8 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate }: { employee: Employ
         // For now, we just log it.
         Swal.fire("Saved", `Attendance recorded for ${employee.fullName} on ${format(attendanceDate, 'PPP')}`, "success");
     };
+    
+    const formattedOutTimeDate = format(attendanceDate, 'dd-MM-yyyy') + ', 06:00 PM';
 
     return (
         <Form {...form}>
@@ -116,7 +118,7 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate }: { employee: Employ
                             )}/>
                     </TableCell>
                     <TableCell>
-                        <Input value={`${format(attendanceDate, 'dd-MM-yyyy')}, 06:00 PM`} readOnly className="h-9 w-[180px] bg-muted/20" />
+                        <Input value={formattedOutTimeDate} readOnly className="h-9 w-[180px] bg-muted/20" />
                     </TableCell>
                     <TableCell>
                             <FormField control={control} name="outTimeRemarks" render={({ field }) => (
@@ -141,7 +143,12 @@ const EmployeeAttendanceRow = ({ employee, dateRange }: { employee: EmployeeDocu
         const to = dateRange?.to || from;
 
         if (from && to && isValid(from) && isValid(to) && to >= from) {
-            return eachDayOfInterval({ start: from, end: to });
+            try {
+              return eachDayOfInterval({ start: from, end: to });
+            } catch (error) {
+                console.error("Error creating date interval:", error);
+                return [startOfDay(new Date())]; // Fallback
+            }
         }
         // Default to just today if no valid range is provided
         return [startOfDay(new Date())];
