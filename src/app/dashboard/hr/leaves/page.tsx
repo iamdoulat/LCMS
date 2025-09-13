@@ -99,7 +99,7 @@ export default function LeaveManagementPage() {
       return;
     }
 
-    const { value: reason } = await Swal.fire({
+    Swal.fire({
       title: `Confirm ${newStatus}`,
       text: `Are you sure you want to ${newStatus.toLowerCase()} this leave application?`,
       input: newStatus === 'Rejected' ? 'textarea' : undefined,
@@ -113,22 +113,24 @@ export default function LeaveManagementPage() {
         if (newStatus === 'Rejected' && !Swal.getInput()?.value) {
           Swal.showValidationMessage('A reason is required for rejection');
         }
+        return Swal.getInput()?.value || '';
+      }
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        const reason = result.value;
+        try {
+          const leaveDocRef = doc(firestore, "leave_applications", leaveId);
+          await updateDoc(leaveDocRef, {
+            status: newStatus,
+            rejectionReason: newStatus === 'Rejected' ? reason : null,
+            updatedAt: serverTimestamp(),
+          });
+          Swal.fire('Success!', `The leave application has been ${newStatus.toLowerCase()}.`, 'success');
+        } catch (error: any) {
+          Swal.fire('Error!', `Could not update the status: ${error.message}`, 'error');
+        }
       }
     });
-
-    if (result.isConfirmed) {
-      try {
-        const leaveDocRef = doc(firestore, "leave_applications", leaveId);
-        await updateDoc(leaveDocRef, {
-          status: newStatus,
-          rejectionReason: newStatus === 'Rejected' ? reason : null,
-          updatedAt: serverTimestamp(),
-        });
-        Swal.fire('Success!', `The leave application has been ${newStatus.toLowerCase()}.`, 'success');
-      } catch (error: any) {
-        Swal.fire('Error!', `Could not update the status: ${error.message}`, 'error');
-      }
-    }
   };
 
 
