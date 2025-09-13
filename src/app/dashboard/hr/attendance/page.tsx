@@ -143,7 +143,7 @@ const EmployeeAttendanceRow = ({ employee, dateRange }: { employee: EmployeeDocu
 
     const datesToDisplay = React.useMemo(() => {
         const from = dateRange?.from ? startOfDay(dateRange.from) : startOfDay(new Date());
-        const to = dateRange?.to ? endOfDay(dateRange.to) : endOfDay(new Date());
+        const to = dateRange?.to ? endOfDay(dateRange.to) : from; // Default `to` to `from` if not specified
         if(isValid(from) && isValid(to) && to >= from) {
             return eachDayOfInterval({ start: from, end: to });
         }
