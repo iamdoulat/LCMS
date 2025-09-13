@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -1568,7 +1567,27 @@ export interface DivisionDocument {
   name: string;
   createdAt: any;
 }
-// --- END Employee Types ---
+
+// --- Holiday Types ---
+export const holidayTypeOptions = ['Public Holiday', 'Company Holiday'] as const;
+export type HolidayType = (typeof holidayTypeOptions)[number];
+
+export const HolidaySchema = z.object({
+  name: z.string().min(2, "Holiday name is required."),
+  date: z.date({ required_error: "Holiday date is required." }),
+  type: z.enum(holidayTypeOptions, { required_error: "Holiday type is required." }),
+});
+
+export type HolidayFormValues = z.infer<typeof HolidaySchema>;
+
+export interface HolidayDocument {
+  id: string;
+  name: string;
+  date: string; // ISO string
+  type: HolidayType;
+  createdAt: any;
+}
+// --- END Holiday Types ---
 
 // --- Payroll Types ---
 export const SalaryGenerationPolicySchema = z.object({
@@ -1649,3 +1668,28 @@ export interface AttendanceDocument extends Attendance {
   id: string; // Composite key like {employeeId}_{YYYY-MM-DD}
 }
 // --- END Attendance Types ---
+
+// --- Leave Types ---
+export const leaveTypeOptions = ['Annual', 'Sick', 'Paternity', 'Maternity', 'Unpaid'] as const;
+export const leaveStatusOptions = ['Pending', 'Approved', 'Rejected'] as const;
+
+export type LeaveType = (typeof leaveTypeOptions)[number];
+export type LeaveStatus = (typeof leaveStatusOptions)[number];
+
+export interface LeaveApplication {
+  id?: string;
+  employeeId: string;
+  employeeName: string;
+  leaveType: LeaveType;
+  fromDate: string; // ISO string
+  toDate: string; // ISO string
+  reason: string;
+  status: LeaveStatus;
+  appliedBy: string;
+  rejectionReason?: string;
+  createdAt: any;
+  updatedAt: any;
+}
+export type LeaveApplicationDocument = LeaveApplication & { id: string };
+
+// --- END Leave Types ---
