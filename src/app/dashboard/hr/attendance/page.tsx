@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, Upload } from 'lucide-react';
+import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, Upload, PlusCircle } from 'lucide-react';
 import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceFlag } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
@@ -24,6 +24,7 @@ import Swal from 'sweetalert2';
 import type { DateRange } from 'react-day-picker';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import Link from 'next/link';
 
 const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
 const ALL_UNITS_VALUE = "__ALL_UNITS_ATTENDANCE__";
@@ -281,7 +282,7 @@ export default function DailyAttendancePage() {
                                 Manage and view daily attendance records for employees.
                             </CardDescription>
                         </div>
-                         <div>
+                         <div className="flex gap-2">
                             <input
                                 type="file"
                                 accept=".csv"
@@ -291,8 +292,13 @@ export default function DailyAttendancePage() {
                                 id="csv-import-input-attendance"
                             />
                             <Button onClick={() => fileInputRef.current?.click()} variant="outline">
-                                <Upload className="mr-2 h-4 w-4" /> Import from CSV
+                                <Upload className="mr-2 h-4 w-4" /> Import CSV
                             </Button>
+                             <Link href="/dashboard/hr/attendance/add" passHref>
+                                <Button>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Record
+                                </Button>
+                            </Link>
                         </div>
                     </div>
                 </CardHeader>

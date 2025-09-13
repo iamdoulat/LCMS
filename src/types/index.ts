@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -1663,23 +1662,32 @@ export interface Payslip {
 export const attendanceFlagOptions = ['P', 'A', 'L', 'W'] as const;
 export type AttendanceFlag = (typeof attendanceFlagOptions)[number];
 
-export const AttendanceSchema = z.object({
-  employeeId: z.string(),
-  date: z.string(), // YYYY-MM-DD
+export const AttendanceFormSchema = z.object({
+  employeeId: z.string().min(1, "Employee is required."),
+  date: z.date({ required_error: "Date is required." }),
   flag: z.enum(attendanceFlagOptions),
   inTime: z.string().optional(),
   outTime: z.string().optional(),
   inTimeRemarks: z.string().optional(),
   outTimeRemarks: z.string().optional(),
-  workingHours: z.number().optional(), // In hours
-  updatedBy: z.string(),
-  updatedAt: z.any(),
 });
-export type Attendance = z.infer<typeof AttendanceSchema>;
+export type AttendanceFormValues = z.infer<typeof AttendanceFormSchema>;
 
-export interface AttendanceDocument extends Attendance {
-  id: string; // Composite key like {employeeId}_{YYYY-MM-DD}
+export interface Attendance {
+  id?: string; // Composite key like {employeeId}_{YYYY-MM-DD}
+  employeeId: string;
+  date: string; // YYYY-MM-DD
+  flag: AttendanceFlag;
+  inTime?: string;
+  outTime?: string;
+  inTimeRemarks?: string;
+  outTimeRemarks?: string;
+  workingHours?: number; // In hours
+  updatedBy: string;
+  updatedAt: any;
+  createdAt: any;
 }
+export type AttendanceDocument = Attendance & { id: string };
 // --- END Attendance Types ---
 
 // --- Leave Types ---
