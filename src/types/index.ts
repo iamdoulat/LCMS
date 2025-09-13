@@ -1578,6 +1578,7 @@ export const HolidaySchema = z.object({
   fromDate: z.date({ required_error: "Start date is required." }),
   toDate: z.date().optional(),
   type: z.enum(holidayTypeOptions, { required_error: "Holiday type is required." }),
+  message: z.string().optional(),
 }).refine(data => {
     if (data.fromDate && data.toDate) {
       return data.toDate >= data.fromDate;
@@ -1596,6 +1597,7 @@ export interface HolidayDocument {
   fromDate: string; // ISO string
   toDate?: string; // ISO string
   type: HolidayType;
+  message?: string;
   createdAt: any;
 }
 // --- END Holiday Types ---

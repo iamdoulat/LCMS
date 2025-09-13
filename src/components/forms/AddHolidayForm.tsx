@@ -18,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Save } from 'lucide-react';
+import { Textarea } from '../ui/textarea';
 
 interface AddHolidayFormProps {
   onFormSubmit: () => void;
@@ -32,6 +33,7 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
       fromDate: new Date(),
       toDate: undefined,
       type: 'Public Holiday',
+      message: '',
     },
   });
 
@@ -41,12 +43,16 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
       ...data,
       fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       toDate: data.toDate ? format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      message: data.message || undefined,
       createdAt: serverTimestamp(),
     };
 
     // Remove toDate if it's undefined
     if (!dataToSave.toDate) {
       delete (dataToSave as any).toDate;
+    }
+    if (!dataToSave.message) {
+      delete (dataToSave as any).message;
     }
 
     try {
@@ -128,6 +134,19 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+         <FormField
+          control={form.control}
+          name="message"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Message (Optional)</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Enter a message for the holiday announcement" {...field} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

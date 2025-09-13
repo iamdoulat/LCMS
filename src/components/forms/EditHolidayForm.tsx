@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -17,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Save } from 'lucide-react';
+import { Textarea } from '../ui/textarea';
 
 interface EditHolidayFormProps {
   initialData: HolidayDocument;
@@ -32,6 +34,7 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
         fromDate: parseISO(initialData.fromDate),
         toDate: initialData.toDate ? parseISO(initialData.toDate) : undefined,
         type: initialData.type,
+        message: initialData.message || '',
     },
   });
 
@@ -41,12 +44,16 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
       ...data,
       fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       toDate: data.toDate ? format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      message: data.message || undefined,
       updatedAt: serverTimestamp(),
     };
     
     // Ensure undefined fields are handled correctly for Firestore
     if (!dataToUpdate.toDate) {
       delete (dataToUpdate as any).toDate;
+    }
+    if (!dataToUpdate.message) {
+      delete (dataToUpdate as any).message;
     }
 
     try {
@@ -128,6 +135,19 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+         <FormField
+          control={form.control}
+          name="message"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Message (Optional)</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Enter a message for the holiday announcement" {...field} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
