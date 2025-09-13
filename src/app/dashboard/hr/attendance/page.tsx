@@ -116,12 +116,7 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate }: { employee: Employ
                             )}/>
                     </TableCell>
                     <TableCell>
-                            <FormField control={control} name="outTime" render={({ field }) => (
-                            <div className="relative">
-                                <Input type="time" {...field} className="h-9 w-[120px]"/>
-                                <Clock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
-                            </div>
-                            )}/>
+                        <Input value={`${format(attendanceDate, 'dd-MM-yyyy')}, 06:00 PM`} readOnly className="h-9 w-[180px] bg-muted/20" />
                     </TableCell>
                     <TableCell>
                             <FormField control={control} name="outTimeRemarks" render={({ field }) => (
@@ -182,7 +177,7 @@ const EmployeeAttendanceRow = ({ employee, dateRange }: { employee: EmployeeDocu
                                         <TableHead className="p-2">Flag</TableHead>
                                         <TableHead className="p-2">In Time</TableHead>
                                         <TableHead className="p-2">In Time Remarks</TableHead>
-                                        <TableHead className="p-2">Out Time</TableHead>
+                                        <TableHead className="p-2">Out Time & Date</TableHead>
                                         <TableHead className="p-2">Out Time Remarks</TableHead>
                                         <TableHead className="p-2">Working Hour</TableHead>
                                         <TableHead className="p-2">Action</TableHead>
@@ -238,6 +233,9 @@ export default function DailyAttendancePage() {
                     <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                         <CalendarIcon className="h-7 w-7 text-primary" /> Daily Attendance
                     </CardTitle>
+                    <CardDescription>
+                        Manage and view daily attendance records for employees.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="p-4 mb-6 rounded-lg border bg-card shadow-sm">

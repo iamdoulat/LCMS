@@ -25,10 +25,11 @@ export function DatePickerWithRange({ className, date, onDateChange }: DatePicke
 
   const handleSelect = (newDate: DateRange | undefined) => {
     onDateChange(newDate);
-    // Automatically close the popover if both dates are selected
-    if (newDate?.from && newDate?.to) {
-      setOpen(false);
-    }
+    // You can decide if you want to close the popover automatically.
+    // For range selection, it might be better to let the user close it manually.
+    // if (newDate?.from && newDate?.to) {
+    //   setOpen(false);
+    // }
   };
   
   return (
