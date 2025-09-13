@@ -56,6 +56,8 @@ const LeaveListSkeleton = () => (
             <TableCell><Skeleton className="h-5 w-28" /></TableCell>
             <TableCell><Skeleton className="h-5 w-28" /></TableCell>
             <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
             <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
             <TableCell><Skeleton className="h-8 w-24" /></TableCell>
         </TableRow>
@@ -180,6 +182,8 @@ export default function LeaveManagementPage() {
                                 <TableHead>From</TableHead>
                                 <TableHead>To</TableHead>
                                 <TableHead>Duration</TableHead>
+                                <TableHead>Apply Reason*</TableHead>
+                                <TableHead>Approver Comment</TableHead>
                                 <TableHead>Status</TableHead>
                                 {canApprove && <TableHead className="text-center">Actions</TableHead>}
                             </TableRow>
@@ -189,7 +193,7 @@ export default function LeaveManagementPage() {
                                 <LeaveListSkeleton />
                             ) : fetchError ? (
                                 <TableRow>
-                                    <TableCell colSpan={canApprove ? 7 : 6} className="h-24 text-center text-destructive">
+                                    <TableCell colSpan={canApprove ? 9 : 8} className="h-24 text-center text-destructive">
                                         <AlertTriangle className="mx-auto mb-2 h-8 w-8" />
                                         {fetchError}
                                     </TableCell>
@@ -202,6 +206,8 @@ export default function LeaveManagementPage() {
                                         <TableCell>{formatDisplayDate(leave.fromDate)}</TableCell>
                                         <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
                                         <TableCell>{calculateDuration(leave.fromDate, leave.toDate)}</TableCell>
+                                        <TableCell className="max-w-[200px] truncate" title={leave.reason}>{leave.reason}</TableCell>
+                                        <TableCell className="max-w-[200px] truncate text-destructive" title={leave.rejectionReason}>{leave.rejectionReason || 'N/A'}</TableCell>
                                         <TableCell><Badge variant={getStatusBadgeVariant(leave.status)}>{leave.status}</Badge></TableCell>
                                         {canApprove && (
                                             <TableCell className="text-center">
@@ -221,7 +227,7 @@ export default function LeaveManagementPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={canApprove ? 7 : 6} className="h-24 text-center">
+                                    <TableCell colSpan={canApprove ? 9 : 8} className="h-24 text-center">
                                         <Info className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                                         No leave applications have been submitted yet.
                                     </TableCell>
