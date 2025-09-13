@@ -122,7 +122,7 @@ export default function EditHolidayPage() {
             Edit Holiday
           </CardTitle>
           <CardDescription>
-            Modify the details for the holiday: <span className="font-semibold text-foreground">{initialData.name}</span>
+            Modify the details for the holiday: <span className="font-semibold text-foreground">{holidayData.name}</span>
           </CardDescription>
         </CardHeader>
         <CardContent>
