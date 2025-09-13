@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -114,7 +113,7 @@ export default function HolidaysPage() {
                       <TableHead>Holiday Name</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead className="w-1/4">Message</TableHead>
+                      <TableHead className="w-[30%]">Message</TableHead>
                       {!isReadOnly && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -122,9 +121,9 @@ export default function HolidaysPage() {
                     {holidays.map(holiday => (
                       <TableRow key={holiday.id}>
                         <TableCell>{holiday.name}</TableCell>
-                        <TableCell>{formatHolidayDate(holiday)}</TableCell>
+                        <TableCell className="min-w-[200px]">{formatHolidayDate(holiday)}</TableCell>
                         <TableCell>{holiday.type}</TableCell>
-                        <TableCell className="truncate" title={holiday.message}>{holiday.message || 'N/A'}</TableCell>
+                        <TableCell className="whitespace-pre-wrap">{holiday.message || 'N/A'}</TableCell>
                         {!isReadOnly && (
                           <TableCell className="text-right">
                              <DropdownMenu>
