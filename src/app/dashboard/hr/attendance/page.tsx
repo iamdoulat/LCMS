@@ -15,7 +15,7 @@ import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
-import { format, differenceInMinutes, parse, isValid, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, differenceInMinutes, parse, isValid, eachDayOfInterval, startOfDay, endOfDay, subMonths } from 'date-fns';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -213,7 +213,11 @@ export default function DailyAttendancePage() {
     const [selectedBranch, setSelectedBranch] = React.useState('');
     const [selectedUnit, setSelectedUnit] = React.useState('');
     const [selectedDept, setSelectedDept] = React.useState('');
-    const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
+    
+    const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
+        from: subMonths(new Date(), 1),
+        to: new Date(),
+    });
     
     const filteredEmployees = React.useMemo(() => {
         if (!employees) return [];
