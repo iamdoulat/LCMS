@@ -99,23 +99,28 @@ export default function LeaveManagementPage() {
       return;
     }
 
-    Swal.fire({
+    const swalConfig: any = {
       title: `Confirm ${newStatus}`,
-      text: `Are you sure you want to ${newStatus.toLowerCase()} this leave application?`,
-      input: newStatus === 'Rejected' ? 'textarea' : undefined,
-      inputLabel: newStatus === 'Rejected' ? 'Reason for Rejection' : undefined,
-      inputPlaceholder: newStatus === 'Rejected' ? 'Provide a reason...' : undefined,
+      text: `Are you sure you want to change the status to ${newStatus.toLowerCase()} for this leave application?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: `Yes, ${newStatus.toLowerCase()} it!`,
       confirmButtonColor: newStatus === 'Approved' ? 'hsl(var(--primary))' : 'hsl(var(--destructive))',
-      preConfirm: () => {
-        if (newStatus === 'Rejected' && !Swal.getInput()?.value) {
+    };
+    
+    if (newStatus === 'Rejected') {
+      swalConfig.input = 'textarea';
+      swalConfig.inputLabel = 'Reason for Rejection';
+      swalConfig.inputPlaceholder = 'Provide a reason...';
+      swalConfig.preConfirm = () => {
+        if (!Swal.getInput()?.value) {
           Swal.showValidationMessage('A reason is required for rejection');
         }
         return Swal.getInput()?.value || '';
       }
-    }).then(async (result) => {
+    }
+    
+    Swal.fire(swalConfig).then(async (result) => {
       if (result.isConfirmed) {
         const reason = result.value;
         try {
@@ -200,22 +205,16 @@ export default function LeaveManagementPage() {
                                         <TableCell><Badge variant={getStatusBadgeVariant(leave.status)}>{leave.status}</Badge></TableCell>
                                         {canApprove && (
                                             <TableCell className="text-center">
-                                                {leave.status === 'Pending' ? (
-                                                    <div className="flex justify-center gap-2">
-                                                        <Button variant="default" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={() => handleUpdateStatus(leave.id, 'Approved')}>
-                                                            <ThumbsUp className="h-4 w-4" />
-                                                            <span className="sr-only">Approve</span>
-                                                        </Button>
-                                                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleUpdateStatus(leave.id, 'Rejected')}>
-                                                            <ThumbsDown className="h-4 w-4" />
-                                                             <span className="sr-only">Reject</span>
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground italic">
-                                                        {leave.status}
-                                                    </span>
-                                                )}
+                                                <div className="flex justify-center gap-2">
+                                                    <Button variant="default" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={() => handleUpdateStatus(leave.id, 'Approved')}>
+                                                        <ThumbsUp className="h-4 w-4" />
+                                                        <span className="sr-only">Approve</span>
+                                                    </Button>
+                                                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleUpdateStatus(leave.id, 'Rejected')}>
+                                                        <ThumbsDown className="h-4 w-4" />
+                                                         <span className="sr-only">Reject</span>
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         )}
                                     </TableRow>
