@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mailbox, PlusCircle, Loader2, AlertTriangle, Info } from 'lucide-react';
+import { Mailbox, PlusCircle, Loader2, AlertTriangle, Info, Check, X, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -18,10 +18,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { firestore } from '@/lib/firebase/config';
-import { collection, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { LeaveApplicationDocument } from '@/types';
 import { format, parseISO, isValid, differenceInCalendarDays } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/context/AuthContext';
+import Swal from 'sweetalert2';
 
 const formatDisplayDate = (dateString: string): string => {
     try {
@@ -55,6 +57,7 @@ const LeaveListSkeleton = () => (
             <TableCell><Skeleton className="h-5 w-28" /></TableCell>
             <TableCell><Skeleton className="h-5 w-16" /></TableCell>
             <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+            <TableCell><Skeleton className="h-8 w-24" /></TableCell>
         </TableRow>
       ))}
     </>
@@ -62,9 +65,12 @@ const LeaveListSkeleton = () => (
 
 
 export default function LeaveManagementPage() {
+  const { userRole } = useAuth();
   const [leaves, setLeaves] = React.useState<LeaveApplicationDocument[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
+
+  const canApprove = userRole?.includes('Super Admin') || userRole?.includes('Admin');
 
   React.useEffect(() => {
     setIsLoading(true);
@@ -86,6 +92,44 @@ export default function LeaveManagementPage() {
 
     return () => unsubscribe();
   }, []);
+
+  const handleUpdateStatus = async (leaveId: string, newStatus: 'Approved' | 'Rejected') => {
+    if (!canApprove) {
+      Swal.fire("Permission Denied", "You do not have permission to perform this action.", "error");
+      return;
+    }
+
+    const { value: reason } = await Swal.fire({
+      title: `Confirm ${newStatus}`,
+      text: `Are you sure you want to ${newStatus.toLowerCase()} this leave application?`,
+      input: newStatus === 'Rejected' ? 'textarea' : undefined,
+      inputLabel: newStatus === 'Rejected' ? 'Reason for Rejection' : undefined,
+      inputPlaceholder: newStatus === 'Rejected' ? 'Provide a reason...' : undefined,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: `Yes, ${newStatus.toLowerCase()} it!`,
+      confirmButtonColor: newStatus === 'Approved' ? 'hsl(var(--primary))' : 'hsl(var(--destructive))',
+      preConfirm: () => {
+        if (newStatus === 'Rejected' && !Swal.getInput()?.value) {
+          Swal.showValidationMessage('A reason is required for rejection');
+        }
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const leaveDocRef = doc(firestore, "leave_applications", leaveId);
+        await updateDoc(leaveDocRef, {
+          status: newStatus,
+          rejectionReason: newStatus === 'Rejected' ? reason : null,
+          updatedAt: serverTimestamp(),
+        });
+        Swal.fire('Success!', `The leave application has been ${newStatus.toLowerCase()}.`, 'success');
+      } catch (error: any) {
+        Swal.fire('Error!', `Could not update the status: ${error.message}`, 'error');
+      }
+    }
+  };
 
 
   const getStatusBadgeVariant = (status: string) => {
@@ -130,6 +174,7 @@ export default function LeaveManagementPage() {
                                 <TableHead>To</TableHead>
                                 <TableHead>Duration</TableHead>
                                 <TableHead>Status</TableHead>
+                                {canApprove && <TableHead className="text-center">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -137,7 +182,7 @@ export default function LeaveManagementPage() {
                                 <LeaveListSkeleton />
                             ) : fetchError ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center text-destructive">
+                                    <TableCell colSpan={canApprove ? 7 : 6} className="h-24 text-center text-destructive">
                                         <AlertTriangle className="mx-auto mb-2 h-8 w-8" />
                                         {fetchError}
                                     </TableCell>
@@ -151,11 +196,31 @@ export default function LeaveManagementPage() {
                                         <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
                                         <TableCell>{calculateDuration(leave.fromDate, leave.toDate)}</TableCell>
                                         <TableCell><Badge variant={getStatusBadgeVariant(leave.status)}>{leave.status}</Badge></TableCell>
+                                        {canApprove && (
+                                            <TableCell className="text-center">
+                                                {leave.status === 'Pending' ? (
+                                                    <div className="flex justify-center gap-2">
+                                                        <Button variant="default" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={() => handleUpdateStatus(leave.id, 'Approved')}>
+                                                            <ThumbsUp className="h-4 w-4" />
+                                                            <span className="sr-only">Approve</span>
+                                                        </Button>
+                                                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleUpdateStatus(leave.id, 'Rejected')}>
+                                                            <ThumbsDown className="h-4 w-4" />
+                                                             <span className="sr-only">Reject</span>
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground italic">
+                                                        {leave.status}
+                                                    </span>
+                                                )}
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
+                                    <TableCell colSpan={canApprove ? 7 : 6} className="h-24 text-center">
                                         <Info className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                                         No leave applications have been submitted yet.
                                     </TableCell>
