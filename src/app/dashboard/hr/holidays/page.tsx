@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Calendar, PlusCircle, AlertTriangle, Info, Trash2 } from 'lucide-react';
+import { Loader2, Calendar, PlusCircle, AlertTriangle, Info, Trash2, Edit, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
@@ -15,10 +15,20 @@ import { useAuth } from '@/context/AuthContext';
 import type { HolidayDocument } from '@/types';
 import Swal from 'sweetalert2';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function HolidaysPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
+  const router = useRouter();
 
   const { data: holidays, isLoading, error, refetch } = useFirestoreQuery<HolidayDocument[]>(
     query(collection(firestore, 'holidays'), orderBy('fromDate', 'asc')),
@@ -46,6 +56,10 @@ export default function HolidaysPage() {
         }
       }
     });
+  };
+
+  const handleEdit = (id: string) => {
+    router.push(`/dashboard/hr/holidays/edit/${id}`);
   };
 
   const formatHolidayDate = (holiday: HolidayDocument) => {
@@ -110,9 +124,29 @@ export default function HolidaysPage() {
                         <TableCell>{holiday.type}</TableCell>
                         {!isReadOnly && (
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(holiday.id, holiday.name)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => handleEdit(holiday.id)}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        <span>Edit</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        onClick={() => handleDelete(holiday.id, holiday.name)}
+                                        className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <span>Delete</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         )}
                       </TableRow>
