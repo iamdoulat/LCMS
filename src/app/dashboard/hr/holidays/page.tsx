@@ -5,22 +5,20 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, CalendarPlus, Calendar, PlusCircle, AlertTriangle, Info, Trash2 } from 'lucide-react';
+import { Loader2, Calendar, PlusCircle, AlertTriangle, Info, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
-import { AddHolidayForm } from '@/components/forms/AddHolidayForm';
 import type { HolidayDocument } from '@/types';
 import Swal from 'sweetalert2';
+import Link from 'next/link';
 
 export default function HolidaysPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
-  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
 
   const { data: holidays, isLoading, error, refetch } = useFirestoreQuery<HolidayDocument[]>(
     query(collection(firestore, 'holidays'), orderBy('date', 'asc')),
@@ -52,7 +50,6 @@ export default function HolidaysPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <Card className="shadow-xl">
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -63,11 +60,11 @@ export default function HolidaysPage() {
                 </CardTitle>
                 <CardDescription>View, add, and manage company and public holidays.</CardDescription>
               </div>
-              <DialogTrigger asChild>
-                <Button disabled={isReadOnly}>
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Holiday
-                </Button>
-              </DialogTrigger>
+              <Button asChild disabled={isReadOnly}>
+                <Link href="/dashboard/hr/holidays/add">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Holiday
+                </Link>
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -100,7 +97,7 @@ export default function HolidaysPage() {
                     {holidays.map(holiday => (
                       <TableRow key={holiday.id}>
                         <TableCell>{holiday.name}</TableCell>
-                        <TableCell>{format(new Date(holiday.date), 'PPP')}</TableCell>
+                        <TableCell>{format(parseISO(holiday.date), 'PPP')}</TableCell>
                         <TableCell>{holiday.type}</TableCell>
                         {!isReadOnly && (
                           <TableCell className="text-right">
@@ -117,13 +114,6 @@ export default function HolidaysPage() {
             )}
           </CardContent>
         </Card>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><CalendarPlus className="h-6 w-6 text-primary"/>Add New Holiday</DialogTitle>
-          </DialogHeader>
-          <AddHolidayForm onFormSubmit={() => setIsAddDialogOpen(false)} />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

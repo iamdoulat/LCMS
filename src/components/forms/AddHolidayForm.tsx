@@ -50,7 +50,7 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
         showConfirmButton: false,
       });
       form.reset();
-      onFormSubmit();
+      onFormSubmit(); // Callback to navigate after success
     } catch (error: any) {
       Swal.fire("Save Failed", `Failed to add holiday: ${error.message}`, "error");
     } finally {
