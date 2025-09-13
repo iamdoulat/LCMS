@@ -142,12 +142,14 @@ const EmployeeAttendanceRow = ({ employee, dateRange }: { employee: EmployeeDocu
     const [isExpanded, setIsExpanded] = React.useState(false);
 
     const datesToDisplay = React.useMemo(() => {
-        const from = dateRange?.from ? startOfDay(dateRange.from) : startOfDay(new Date());
-        const to = dateRange?.to ? endOfDay(dateRange.to) : from; // Default `to` to `from` if not specified
-        if(isValid(from) && isValid(to) && to >= from) {
+        const from = dateRange?.from;
+        const to = dateRange?.to || from;
+
+        if (from && to && isValid(from) && isValid(to) && to >= from) {
             return eachDayOfInterval({ start: from, end: to });
         }
-        return [from]; // Default to today if range is invalid
+        // Default to just today if no valid range is provided
+        return [startOfDay(new Date())];
     }, [dateRange]);
     
     return (
@@ -240,7 +242,7 @@ export default function DailyAttendancePage() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
                                 <Input placeholder="Employee name or code" className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
-                           <DatePickerWithRange onDateChange={setDateRange} className="h-10"/>
+                           <DatePickerWithRange date={dateRange} onDateChange={setDateRange} className="h-10"/>
                             <Select value={selectedBranch} onValueChange={(value) => setSelectedBranch(value === ALL_BRANCHES_VALUE ? '' : value)}>
                                 <SelectTrigger className="h-10"><SelectValue placeholder="Select Branch"/></SelectTrigger>
                                 <SelectContent>
