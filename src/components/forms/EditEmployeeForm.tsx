@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -220,7 +219,11 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         let photoDownloadURL = employee.photoURL || '';
 
         if (selectedFile) {
-            const photoRef = ref(storage, `employeeImages/${employee.id}/profile.jpg`);
+            // Use the employee's auth UID for the storage path
+            if (!employee.uid) {
+                throw new Error("Cannot upload photo: Employee Authentication UID is missing.");
+            }
+            const photoRef = ref(storage, `employeeImages/${employee.uid}/profile.jpg`);
             await uploadBytes(photoRef, selectedFile);
             photoDownloadURL = await getDownloadURL(photoRef);
         }
@@ -649,3 +652,4 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     </Form>
   );
 }
+    
