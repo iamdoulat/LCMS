@@ -216,6 +216,10 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
 
 
   async function onSubmit(data: EmployeeFormValues) {
+    if (!user?.uid) {
+        Swal.fire("Authentication Error", "Cannot update employee without a logged-in user.", "error");
+        return;
+    }
     setIsSubmitting(true);
     
     try {
@@ -225,7 +229,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
             // Use the employee's document ID for the path, which is always available.
             const storageRef = ref(storage, `employeeImages/${employee.id}/profile.jpg`);
             await uploadBytes(storageRef, selectedFile);
-            photoDownloadURL = await getDownloadURL(photoRef);
+            photoDownloadURL = await getDownloadURL(storageRef);
         }
 
         const fullName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ');
@@ -285,7 +289,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
 
         <div className="flex items-center gap-6">
             <div className="w-32 h-40 rounded-md border-2 border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                <Image src={photoPreview || "https://placehold.co/128x160/e2e8f0/e2e8f0"} width={128} height={160} alt="Profile image placeholder" data-ai-hint="employee photo placeholder"/>
+                <Image src={photoPreview || "https://placehold.co/128x160/e2e8f0/e2e8f0"} width={128} height={160} alt="Profile image placeholder" data-ai-hint="employee photo"/>
             </div>
             <div className="flex-1 space-y-6">
                  <FormItem>
