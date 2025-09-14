@@ -5,13 +5,16 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload } from 'lucide-react';
+import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query as firestoreQuery, orderBy, setDoc, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +31,8 @@ import { Label } from '../ui/label';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import type { ComboboxOption } from '@/components/ui/combobox';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { getCroppedImg } from '@/lib/image-utils';
 
 
 // Helper to transform Firestore documents into Combobox options
@@ -39,8 +44,16 @@ const toComboboxOptions = (data: any[], labelKey: string): ComboboxOption[] => {
 
 export function AddEmployeeForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [photoFile, setPhotoFile] = React.useState<File | null>(null);
+
+  // States for image cropping
+  const [imgSrc, setImgSrc] = React.useState('');
+  const [crop, setCrop] = React.useState<Crop>();
+  const [completedCrop, setCompletedCrop] = React.useState<PixelCrop>();
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [isCroppingDialogOpen, setIsCroppingDialogOpen] = React.useState(false);
+  const imgRef = React.useRef<HTMLImageElement>(null);
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
+
 
   // Use the hook to fetch data
   const { data: designations, isLoading: isLoadingDesignations } = useFirestoreQuery<DesignationDocument[]>(firestoreQuery(collection(firestore, "designations"), orderBy("name")), undefined, ['designations']);
@@ -142,11 +155,43 @@ export function AddEmployeeForm() {
     }
   }, [watchSameAsPresent, watchPresentAddress, setValue]);
   
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
+      setCrop(undefined); // Reset crop state
       const file = e.target.files[0];
-      setPhotoFile(file);
-      setPhotoPreview(URL.createObjectURL(file));
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setImgSrc(reader.result?.toString() || '');
+        setIsCroppingDialogOpen(true);
+      });
+      reader.readAsDataURL(file);
+      e.target.value = ''; // Reset file input
+    }
+  };
+
+  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const { width, height } = e.currentTarget;
+    const crop = centerCrop(
+      makeAspectCrop({ unit: '%', width: 90 }, 1, width, height),
+      width, height
+    );
+    setCrop(crop);
+  }
+
+  const handleSetCroppedImage = async () => {
+    const image = imgRef.current;
+    if (!completedCrop || !image || !selectedFile) {
+      Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
+      return;
+    }
+    const croppedImageBlob = await getCroppedImg(image, completedCrop, selectedFile.name, 256, 256);
+    if (croppedImageBlob) {
+      setPhotoPreview(URL.createObjectURL(croppedImageBlob));
+      setSelectedFile(croppedImageBlob);
+      setIsCroppingDialogOpen(false);
+      Swal.fire("Photo Staged", "New photo is ready. Click 'Save Employee' to upload it.", "info");
+    } else {
+      Swal.fire("Error", "Failed to create cropped image.", "error");
     }
   };
 
@@ -159,9 +204,9 @@ export function AddEmployeeForm() {
         const employeeId = newEmployeeDocRef.id;
         let photoDownloadURL = '';
 
-        if (photoFile) {
+        if (selectedFile) {
             const photoRef = ref(storage, `employeeImages/${employeeId}/profile.jpg`);
-            await uploadBytes(photoRef, photoFile);
+            await uploadBytes(photoRef, selectedFile);
             photoDownloadURL = await getDownloadURL(photoRef);
         }
 
@@ -204,8 +249,9 @@ export function AddEmployeeForm() {
         });
         
         form.reset();
-        setPhotoFile(null);
+        setSelectedFile(null);
         setPhotoPreview(null);
+        setImgSrc('');
     } catch (error) {
         console.error("Error adding employee: ", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -229,25 +275,19 @@ export function AddEmployeeForm() {
                 <Image src={photoPreview || "https://placehold.co/128x160/e2e8f0/e2e8f0"} width={128} height={160} alt="Profile image placeholder" data-ai-hint="employee photo placeholder"/>
             </div>
             <div className="flex-1 space-y-6">
-                 <FormField
-                    control={form.control}
-                    name="photoURL"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Photo</FormLabel>
-                            <FormControl>
-                                <div className="flex items-center gap-2">
-                                <Input type="file" accept="image/*" onChange={handlePhotoChange} />
-                                <Button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); }} variant="outline" size="icon" title="Clear Photo">
-                                    <Trash2 className="h-4 w-4 text-destructive"/>
-                                </Button>
-                                </div>
-                            </FormControl>
-                            <FormDescription>Upload a clear photo of the employee.</FormDescription>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                 <FormItem>
+                    <FormLabel>Photo</FormLabel>
+                    <FormControl>
+                        <div className="flex items-center gap-2">
+                        <Input type="file" accept="image/png, image/jpeg" onChange={onFileSelect} />
+                        <Button type="button" onClick={() => { setSelectedFile(null); setPhotoPreview(null); }} variant="outline" size="icon" title="Clear Photo">
+                            <Trash2 className="h-4 w-4 text-destructive"/>
+                        </Button>
+                        </div>
+                    </FormControl>
+                    <FormDescription>Upload a clear photo of the employee.</FormDescription>
+                    <FormMessage />
+                </FormItem>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <FormField control={control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name*</FormLabel><FormControl><Input placeholder="Mohammed Swaif" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                      <FormField control={control} name="middleName" render={({ field }) => (<FormItem><FormLabel>Middle Name</FormLabel><FormControl><Input placeholder="Enter here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
@@ -255,6 +295,30 @@ export function AddEmployeeForm() {
                 </div>
             </div>
         </div>
+
+        <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
+            <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>Crop Your Image</DialogTitle></DialogHeader>
+                {imgSrc && (
+                    <ReactCrop
+                        crop={crop}
+                        onChange={(_, percentCrop) => setCrop(percentCrop)}
+                        onComplete={(c) => setCompletedCrop(c)}
+                        aspect={1}
+                        circularCrop
+                        minWidth={100}
+                    >
+                        <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
+                    </ReactCrop>
+                )}
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={handleSetCroppedImage} disabled={!completedCrop?.width}>
+                        <CropIcon className="mr-2 h-4 w-4" />Set Photo
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
              <FormField control={control} name="gender" render={({ field }) => (<FormItem><FormLabel>Gender*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl><SelectContent>{genderOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
@@ -333,9 +397,9 @@ export function AddEmployeeForm() {
                 </CardHeader>
                 <CardContent className="p-2 space-y-4">
                     <FormField control={control} name="division" render={({ field }) => (<FormItem><FormLabel>Division*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Division" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{divisionOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Branch"} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{branchOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Department"} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{departmentOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                    <FormField control={control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Unit"} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Branch"} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{branchOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="department" render={({ field }) => (<FormItem><FormLabel>Department*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Department"} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{departmentOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                    <FormField control={control} name="unit" render={({ field }) => (<FormItem><FormLabel>Unit*</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingHrmOptions}><FormControl><SelectTrigger><SelectValue placeholder={isLoadingHrmOptions ? "Loading..." : "Select Unit"} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Not Defined">Not Defined</SelectItem>{unitOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
                     <FormField control={control} name="remarksDivision" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea placeholder="Enter Here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </CardContent>
             </Card>
