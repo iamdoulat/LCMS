@@ -109,7 +109,7 @@ export function AddEmployeeForm() {
       salaryStructure: {
         isConsolidate: false,
         paymentType: 'Bank',
-        structureDate: new Date(),
+        structureDate: undefined,
         paymentFrequency: 'Monthly',
         salaryBreakup: [],
       },
@@ -117,11 +117,15 @@ export function AddEmployeeForm() {
   });
   
   React.useEffect(() => {
-    // This effect runs only on the client side after hydration.
-    // It sets a default date if one wasn't provided, fixing the hydration mismatch.
-    if (form.getValues('salaryStructure.structureDate') === undefined) {
-      form.setValue('salaryStructure.structureDate', new Date());
-    }
+    const now = new Date();
+    form.reset({
+      ...form.getValues(),
+      jobBaseEffectiveDate: now,
+      salaryStructure: {
+          ...form.getValues('salaryStructure'),
+          structureDate: now
+      }
+    });
   }, [form]);
 
 
@@ -167,6 +171,7 @@ export function AddEmployeeForm() {
     if (e.target.files && e.target.files.length > 0) {
       setCrop(undefined); // Reset crop state
       const file = e.target.files[0];
+      setSelectedFile(file); // Store the original file
       const reader = new FileReader();
       reader.addEventListener('load', () => {
         setImgSrc(reader.result?.toString() || '');
@@ -189,17 +194,24 @@ export function AddEmployeeForm() {
   const handleSetCroppedImage = async () => {
     const image = imgRef.current;
     if (!completedCrop || !image || !selectedFile) {
-      Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
-      return;
+        Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
+        return;
     }
-    const croppedImageBlob = await getCroppedImg(image, completedCrop, selectedFile.name, 256, 256);
+    const croppedImageBlob = await getCroppedImg(
+        image,
+        completedCrop,
+        selectedFile.name,
+        256, // target width
+        256  // target height
+    );
     if (croppedImageBlob) {
-      setPhotoPreview(URL.createObjectURL(croppedImageBlob));
-      setSelectedFile(croppedImageBlob);
-      setIsCroppingDialogOpen(false);
-      Swal.fire("Photo Staged", "New photo is ready. Click 'Save Employee' to upload it.", "info");
+        const tempUrl = URL.createObjectURL(croppedImageBlob);
+        setPhotoPreview(tempUrl); // Set a temporary URL for preview
+        setSelectedFile(croppedImageBlob); // Replace the original file with the cropped blob
+        setIsCroppingDialogOpen(false);
+        Swal.fire("Photo Staged", "New photo is ready. Click 'Save Employee' to upload it.", "info");
     } else {
-      Swal.fire("Error", "Failed to create cropped image.", "error");
+        Swal.fire("Error", "Failed to create cropped image.", "error");
     }
   };
 
@@ -647,3 +659,4 @@ export function AddEmployeeForm() {
     </Form>
   );
 }
+
