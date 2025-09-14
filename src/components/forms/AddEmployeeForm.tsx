@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon } from 'lucide-react';
+import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon, Image as ImageIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query as firestoreQuery, orderBy, setDoc, doc } from 'firebase/firestore';
@@ -106,7 +106,6 @@ export function AddEmployeeForm() {
       presentAddress: { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
       permanentAddress: { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
       sameAsPresentAddress: false,
-      bankDetails: [],
       salaryStructure: {
         isConsolidate: false,
         paymentType: 'Bank',
@@ -116,6 +115,15 @@ export function AddEmployeeForm() {
       },
     },
   });
+  
+  React.useEffect(() => {
+    // This effect runs only on the client side after hydration.
+    // It sets a default date if one wasn't provided, fixing the hydration mismatch.
+    if (form.getValues('salaryStructure.structureDate') === undefined) {
+      form.setValue('salaryStructure.structureDate', new Date());
+    }
+  }, [form]);
+
 
   const { control, handleSubmit, reset, watch, setValue } = form;
 

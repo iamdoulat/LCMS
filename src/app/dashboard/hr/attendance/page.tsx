@@ -57,7 +57,7 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate, initialData, onRecor
             outTimeRemarks: initialData?.outTimeRemarks || ''
         },
     });
-
+    
     React.useEffect(() => {
         form.reset({
             flag: initialData?.flag || 'P',
@@ -283,10 +283,15 @@ export default function DailyAttendancePage() {
     const [selectedUnit, setSelectedUnit] = React.useState('');
     const [selectedDept, setSelectedDept] = React.useState('');
     
-    const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
-        from: subMonths(new Date(), 1),
-        to: new Date(),
-    });
+    const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
+
+    React.useEffect(() => {
+        // Set default date range on the client side to avoid hydration mismatch
+        setDateRange({
+            from: subMonths(new Date(), 1),
+            to: new Date(),
+        });
+    }, []);
     
     const filteredEmployees = React.useMemo(() => {
         if (!employees) return [];
@@ -430,5 +435,3 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
-
-    
