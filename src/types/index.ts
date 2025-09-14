@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -1441,7 +1442,7 @@ export const EmployeeSchema = z.object({
   religion: z.string().optional(),
   nationalId: z.string().optional(),
   bloodGroup: z.enum(bloodGroupOptions).optional(),
-  photoURL: z.string().url().optional().or(z.literal('')),
+  photoURL: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
   status: z.enum(employeeStatusOptions).default('Active'),
   // New Fields
   division: z.string().optional(),

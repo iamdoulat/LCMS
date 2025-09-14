@@ -5,10 +5,11 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UserPlus, Save, Building, History, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign } from 'lucide-react';
+import { Loader2, UserPlus, Save, Building, History, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { firestore } from '@/lib/firebase/config';
+import { firestore, storage } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, updateDoc, doc, query as firestoreQuery, orderBy } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 
@@ -41,6 +42,8 @@ const toComboboxOptions = (data: any[], labelKey: string): ComboboxOption[] => {
 
 export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [photoFile, setPhotoFile] = React.useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = React.useState<string | null>(employee.photoURL || null);
 
   // Use the hook to fetch data
   const { data: designations, isLoading: isLoadingDesignations } = useFirestoreQuery<DesignationDocument[]>(firestoreQuery(collection(firestore, "designations"), orderBy("name")), undefined, ['designations']);
@@ -134,69 +137,107 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       setValue("permanentAddress", watchPresentAddress);
     }
   }, [watchSameAsPresent, watchPresentAddress, setValue]);
+  
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
+  };
 
 
   async function onSubmit(data: EmployeeFormValues) {
     setIsSubmitting(true);
-
-    const fullName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ');
-
-    const dataToSave = {
-      ...data,
-      fullName: fullName,
-      dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
-      joinedDate: data.joinedDate ? data.joinedDate.toISOString() : null,
-      jobStatusEffectiveDate: data.jobStatusEffectiveDate ? data.jobStatusEffectiveDate.toISOString() : null,
-      jobBaseEffectiveDate: data.jobBaseEffectiveDate ? data.jobBaseEffectiveDate.toISOString() : null,
-      educationDetails: data.educationDetails?.map(edu => ({
-          ...edu,
-          scale: Number(edu.scale) || undefined,
-          cgpa: Number(edu.cgpa) || undefined,
-      })),
-      salaryStructure: data.salaryStructure ? {
-        ...data.salaryStructure,
-        structureDate: data.salaryStructure.structureDate ? data.salaryStructure.structureDate.toISOString() : null,
-      } : undefined,
-      updatedAt: serverTimestamp(),
-    };
-
-    delete (dataToSave as any).firstName;
-    delete (dataToSave as any).middleName;
-    delete (dataToSave as any).lastName;
-    delete (dataToSave as any).sameAsPresentAddress;
-
-
+    
     try {
-      await updateDoc(doc(firestore, "employees", employee.id as string), dataToSave);
-      Swal.fire({
-        title: "Employee Updated!",
-        text: `Employee ${fullName} has been successfully updated.`,
-        icon: "success",
-        timer: 3000,
-        showConfirmButton: true,
-      });
+        let photoDownloadURL = initialData.photoURL || '';
+
+        if (photoFile) {
+            const photoRef = ref(storage, `employeeImages/${employee.id}/profile.jpg`);
+            await uploadBytes(photoRef, photoFile);
+            photoDownloadURL = await getDownloadURL(photoRef);
+        }
+
+        const fullName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ');
+
+        const dataToSave = {
+            ...data,
+            fullName: fullName,
+            photoURL: photoDownloadURL,
+            dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
+            joinedDate: data.joinedDate ? data.joinedDate.toISOString() : null,
+            jobStatusEffectiveDate: data.jobStatusEffectiveDate ? data.jobStatusEffectiveDate.toISOString() : null,
+            jobBaseEffectiveDate: data.jobBaseEffectiveDate ? data.jobBaseEffectiveDate.toISOString() : null,
+            educationDetails: data.educationDetails?.map(edu => ({
+                ...edu,
+                scale: Number(edu.scale) || undefined,
+                cgpa: Number(edu.cgpa) || undefined,
+            })),
+            salaryStructure: data.salaryStructure ? {
+                ...data.salaryStructure,
+                structureDate: data.salaryStructure.structureDate ? data.salaryStructure.structureDate.toISOString() : null,
+            } : undefined,
+            updatedAt: serverTimestamp(),
+        };
+
+        delete (dataToSave as any).firstName;
+        delete (dataToSave as any).middleName;
+        delete (dataToSave as any).lastName;
+        delete (dataToSave as any).sameAsPresentAddress;
+
+        await updateDoc(doc(firestore, "employees", employee.id), dataToSave);
+        
+        Swal.fire({
+            title: "Employee Updated!",
+            text: `Employee ${fullName} has been successfully updated.`,
+            icon: "success",
+            timer: 3000,
+            showConfirmButton: true,
+        });
+
     } catch (error) {
-      console.error("Error updating employee: ", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      Swal.fire({
-        title: "Update Failed",
-        text: `Failed to update employee: ${errorMessage}`,
-        icon: "error",
-      });
+        console.error("Error updating employee: ", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        Swal.fire({
+            title: "Update Failed",
+            text: `Failed to update employee: ${errorMessage}`,
+            icon: "error",
+        });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
-  }
+}
+
 
   return (
     <Form {...form}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
 
         <div className="flex items-center gap-6">
-          <div className="w-32 h-40 rounded-md border-2 border-dashed flex items-center justify-center bg-muted/50">
-            <Image src={employee.photoURL || "https://placehold.co/128x160/e2e8f0/e2e8f0"} width={128} height={160} alt="Profile image" data-ai-hint="employee photo"/>
+          <div className="w-32 h-40 rounded-md border-2 border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+            <Image src={photoPreview || "https://placehold.co/128x160/e2e8f0/e2e8f0"} width={128} height={160} alt="Profile image" data-ai-hint="employee photo placeholder"/>
           </div>
           <div className="flex-1 space-y-6">
+             <FormField
+                control={form.control}
+                name="photoURL"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Photo</FormLabel>
+                        <FormControl>
+                            <div className="flex items-center gap-2">
+                            <Input type="file" accept="image/*" onChange={handlePhotoChange} />
+                            <Button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(null); setValue('photoURL', ''); }} variant="outline" size="icon" title="Clear Photo">
+                                <Trash2 className="h-4 w-4 text-destructive"/>
+                            </Button>
+                            </div>
+                        </FormControl>
+                        <FormDescription>Upload a clear photo of the employee.</FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField control={control} name="firstName" render={({ field }) => (
                 <FormItem>
@@ -226,9 +267,11 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                 </FormItem>
               )}/>
             </div>
+          </div>
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField control={control} name="gender" render={({ field }) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <FormField control={control} name="gender" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Gender*</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
@@ -260,8 +303,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                   <FormMessage />
                 </FormItem>
               )}/>
-            </div>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
