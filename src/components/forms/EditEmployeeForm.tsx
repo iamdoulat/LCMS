@@ -95,10 +95,9 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       presentAddress: employee.presentAddress || { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
       permanentAddress: employee.permanentAddress || { address: '', country: 'Bangladesh', state: '', city: '', zipCode: '' },
       sameAsPresentAddress: false,
-      bankDetails: employee.bankDetails || [],
       salaryStructure: employee.salaryStructure ? {
         ...employee.salaryStructure,
-        structureDate: employee.salaryStructure.structureDate ? new Date(employee.salaryStructure.structureDate) : new Date(),
+        structureDate: employee.salaryStructure.structureDate ? new Date(employee.salaryStructure.structureDate) : undefined,
         salaryBreakup: employee.salaryStructure.salaryBreakup?.map(sb => ({
           ...sb,
           amount: sb.amount || 0,
@@ -107,12 +106,21 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       } : {
         isConsolidate: false,
         paymentType: 'Bank',
-        structureDate: new Date(),
+        structureDate: undefined,
         paymentFrequency: 'Monthly',
         salaryBreakup: [],
       },
     },
   });
+
+  React.useEffect(() => {
+    // This effect runs only on the client side after hydration.
+    // It sets a default date if one wasn't provided, fixing the hydration mismatch.
+    if (form.getValues('salaryStructure.structureDate') === undefined) {
+      form.setValue('salaryStructure.structureDate', new Date());
+    }
+  }, [form]);
+
 
   const { control, handleSubmit, watch, setValue } = form;
 
