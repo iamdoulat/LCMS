@@ -183,7 +183,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     }
   };
   
-  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
     const crop = centerCrop(
       makeAspectCrop({ unit: '%', width: 90 }, 1, width, height),
@@ -217,7 +217,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     setIsSubmitting(true);
     
     try {
-        let photoDownloadURL = initialData.photoURL || '';
+        let photoDownloadURL = employee.photoURL || '';
 
         if (selectedFile) {
             const photoRef = ref(storage, `employeeImages/${employee.id}/profile.jpg`);
@@ -649,4 +649,3 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     </Form>
   );
 }
-
