@@ -42,9 +42,11 @@ const roleAllowedPaths: Record<string, UserRole[]> = {
   "/dashboard/suppliers": ["Super Admin", "Admin", "Viewer", "Commercial"],
   "/dashboard/customers": ["Super Admin", "Admin", "Viewer", "Commercial"],
   "/dashboard/petty-cash": ["Super Admin", "Admin", "Accounts", "Viewer"],
+  "/dashboard/petty_cash": ["Super Admin", "Admin", "Accounts", "Viewer"],
   "/dashboard/google-sheets": ["Super Admin", "Admin", "Viewer", "Commercial"],
   "/dashboard/google-drive": ["Super Admin", "Admin", "Viewer", "Commercial"],
   "/dashboard/settings": ["Super Admin", "Admin", "Viewer"],
+  "/dashboard/hr": ["Super Admin", "Admin", "Viewer"],
 };
 
 // Define default redirect paths for restricted roles

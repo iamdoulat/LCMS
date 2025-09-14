@@ -1449,7 +1449,6 @@ export const EmployeeSchema = z.object({
   branch: z.string().optional(),
   department: z.string().optional(),
   unit: z.string().optional(),
-  effectiveDate: z.date().optional(),
   remarksDivision: z.string().optional(),
   jobStatus: z.enum(jobStatusOptions).optional(),
   jobStatusEffectiveDate: z.date().optional(),
@@ -1474,6 +1473,7 @@ export type EmployeeFormValues = z.infer<typeof EmployeeSchema>;
 
 export interface Employee {
   id: string;
+  uid?: string; // Firebase Auth UID
   employeeCode: string;
   fullName: string;
   email: string;

@@ -33,6 +33,7 @@ import type { ComboboxOption } from '@/components/ui/combobox';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
+import { useAuth } from '@/context/AuthContext';
 
 
 // Helper to transform Firestore documents into Combobox options
@@ -43,6 +44,7 @@ const toComboboxOptions = (data: any[], labelKey: string): ComboboxOption[] => {
 
 
 export function AddEmployeeForm() {
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // States for image cropping
@@ -117,16 +119,17 @@ export function AddEmployeeForm() {
   });
   
   React.useEffect(() => {
-    const now = new Date();
+    // Set default dates on the client side to prevent hydration mismatch
     form.reset({
       ...form.getValues(),
-      jobBaseEffectiveDate: now,
+      jobBaseEffectiveDate: new Date(),
       salaryStructure: {
           ...form.getValues('salaryStructure'),
-          structureDate: now
+          structureDate: new Date()
       }
     });
-  }, [form]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   const { control, handleSubmit, reset, watch, setValue } = form;
@@ -217,6 +220,10 @@ export function AddEmployeeForm() {
 
 
   async function onSubmit(data: EmployeeFormValues) {
+    if (!user?.uid) {
+        Swal.fire("Authentication Error", "Cannot create employee without a logged-in user.", "error");
+        return;
+    }
     setIsSubmitting(true);
     
     try {
@@ -225,7 +232,7 @@ export function AddEmployeeForm() {
         let photoDownloadURL = '';
 
         if (selectedFile) {
-            const photoRef = ref(storage, `employeeImages/${employeeId}/profile.jpg`);
+            const photoRef = ref(storage, `employeeImages/${user.uid}/profile.jpg`);
             await uploadBytes(photoRef, selectedFile);
             photoDownloadURL = await getDownloadURL(photoRef);
         }
@@ -234,6 +241,7 @@ export function AddEmployeeForm() {
 
         const dataToSave = {
             ...data,
+            uid: user.uid, // Add the authentication UID
             fullName: fullName,
             photoURL: photoDownloadURL,
             dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,

@@ -1,10 +1,11 @@
+
 "use client";
 
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UserPlus, Save, Building, History, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon, Image as ImageIcon } from 'lucide-react';
+import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon, Image as ImageIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, updateDoc, doc, query as firestoreQuery, orderBy } from 'firebase/firestore';
@@ -46,7 +47,6 @@ const toComboboxOptions = (data: any[], labelKey: string): ComboboxOption[] => {
 
 export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const isInitialMountRef = React.useRef(true);
 
   // States for image cropping
   const [imgSrc, setImgSrc] = React.useState('');
@@ -149,6 +149,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const watchSameAsPresent = watch("sameAsPresentAddress");
   const watchPresentAddress = watch("presentAddress");
   const watchSalaryBreakup = watch("salaryStructure.salaryBreakup");
+  const currentPhotoUrl = watch("photoURL");
 
   const { salaryAmount, increasedAmount, totalAmount } = React.useMemo(() => {
     let salary = 0;
@@ -194,20 +195,20 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const handleSetCroppedImage = async () => {
     const image = imgRef.current;
     if (!completedCrop || !image || !selectedFile) {
-      Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
-      return;
+        Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
+        return;
     }
     setIsUploading(true);
     const croppedImageBlob = await getCroppedImg(image, completedCrop, selectedFile.name, 256, 256);
     if (croppedImageBlob) {
-      setPhotoPreview(URL.createObjectURL(croppedImageBlob));
-      setSelectedFile(croppedImageBlob);
-      setIsCroppingDialogOpen(false);
-      setIsUploading(false);
-      Swal.fire("Photo Staged", "New photo is ready. Click 'Update Employee' to upload it.", "info");
+        setPhotoPreview(URL.createObjectURL(croppedImageBlob));
+        setSelectedFile(croppedImageBlob);
+        setIsCroppingDialogOpen(false);
+        setIsUploading(false);
+        Swal.fire("Photo Staged", "New photo is ready. Click 'Update Employee' to upload it.", "info");
     } else {
-      setIsUploading(false);
-      Swal.fire("Error", "Failed to create cropped image.", "error");
+        setIsUploading(false);
+        Swal.fire("Error", "Failed to create cropped image.", "error");
     }
   };
 
@@ -219,7 +220,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         let photoDownloadURL = employee.photoURL || '';
 
         if (selectedFile) {
-            // Use the employee's auth UID for the storage path
             if (!employee.uid) {
                 throw new Error("Cannot upload photo: Employee Authentication UID is missing.");
             }
