@@ -111,31 +111,38 @@ export default function SalaryGenerationPage() {
         const baseQuery = collection(firestore, "employees");
 
         switch(data.generationType) {
-            case 'Branch Wise':
-                if (!data.branch) {
-                     Swal.fire("Validation Error", "Please select a branch.", "error");
+            case 'Branch Wise': {
+                const selectedBranch = branchOptions.find(b => b.value === data.branch);
+                if (!selectedBranch) {
+                     Swal.fire("Validation Error", "Please select a valid branch.", "error");
                      setIsGenerating(false);
                      return;
                 }
-                employeesToProcessQuery = query(baseQuery, where("branch", "==", data.branch));
+                employeesToProcessQuery = query(baseQuery, where("branch", "==", selectedBranch.label));
                 break;
-            case 'Department Wise':
-                if (!data.department) {
-                     Swal.fire("Validation Error", "Please select a department.", "error");
+            }
+            case 'Department Wise': {
+                const selectedDept = departmentOptions.find(d => d.value === data.department);
+                if (!selectedDept) {
+                     Swal.fire("Validation Error", "Please select a valid department.", "error");
                      setIsGenerating(false);
                      return;
                 }
-                 employeesToProcessQuery = query(baseQuery, where("department", "==", data.department));
+                 employeesToProcessQuery = query(baseQuery, where("department", "==", selectedDept.label));
                 break;
-            case 'Department Unit Wise':
-                 if (!data.department || !data.unit) {
-                     Swal.fire("Validation Error", "Please select a department and a unit.", "error");
+            }
+            case 'Department Unit Wise': {
+                 const selectedDept = departmentOptions.find(d => d.value === data.department);
+                 const selectedUnit = unitOptions.find(u => u.value === data.unit);
+                 if (!selectedDept || !selectedUnit) {
+                     Swal.fire("Validation Error", "Please select a valid department and unit.", "error");
                      setIsGenerating(false);
                      return;
                  }
-                 employeesToProcessQuery = query(baseQuery, where("department", "==", data.department), where("unit", "==", data.unit));
+                 employeesToProcessQuery = query(baseQuery, where("department", "==", selectedDept.label), where("unit", "==", selectedUnit.label));
                 break;
-            case 'Employee Wise':
+            }
+            case 'Employee Wise': {
                  if (!data.employee) {
                      Swal.fire("Validation Error", "Please select an employee.", "error");
                      setIsGenerating(false);
@@ -143,6 +150,7 @@ export default function SalaryGenerationPage() {
                  }
                 employeesToProcessQuery = query(baseQuery, where("id", "==", data.employee));
                 break;
+            }
             default:
                 Swal.fire("Error", "Invalid generation type selected.", "error");
                 setIsGenerating(false);
@@ -162,7 +170,7 @@ export default function SalaryGenerationPage() {
             let totalDeductions = 0;
             
             employeesSnapshot.docs.forEach(empDoc => {
-                const employee = empDoc.data() as EmployeeDocument;
+                const employee = {id: empDoc.id, ...empDoc.data()} as EmployeeDocument;
                 if (!employee.salaryStructure) return; // Skip if no salary structure
 
                 const payslipId = `PAYSLIP-${data.year}-${data.month.toUpperCase()}-${employee.id}`;
@@ -324,4 +332,3 @@ export default function SalaryGenerationPage() {
         </div>
     );
 }
-
