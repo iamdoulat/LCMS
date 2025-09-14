@@ -1,8 +1,11 @@
 
+"use client";
+
 import { CreateInvoiceForm } from '@/components/forms/CreateInvoiceForm'; // Import the new form
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FilePlus2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import * as React from 'react';
 
 export default function CreateNewInvoicePage() {
   return (
