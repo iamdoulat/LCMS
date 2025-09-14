@@ -47,6 +47,7 @@ const toComboboxOptions = (data: any[], labelKey: string): ComboboxOption[] => {
 
 export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isInitialMountRef = React.useRef(true);
 
   // States for image cropping
   const [imgSrc, setImgSrc] = React.useState('');
@@ -57,7 +58,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const imgRef = React.useRef<HTMLImageElement>(null);
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(employee.photoURL || null);
   const [isUploading, setIsUploading] = React.useState(false);
-
 
   // Use the hook to fetch data
   const { data: designations, isLoading: isLoadingDesignations } = useFirestoreQuery<DesignationDocument[]>(firestoreQuery(collection(firestore, "designations"), orderBy("name")), undefined, ['designations']);
@@ -114,6 +114,8 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   });
 
   React.useEffect(() => {
+    // This effect runs only on the client-side after initial render.
+    // It safely sets dates, preventing hydration mismatches.
     form.reset({
       ...form.getValues(),
       dateOfBirth: employee.dateOfBirth ? new Date(employee.dateOfBirth) : undefined,
@@ -170,6 +172,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     if (e.target.files && e.target.files.length > 0) {
       setCrop(undefined); // Reset crop state
       const file = e.target.files[0];
+      setSelectedFile(file); // Store the original file
       const reader = new FileReader();
       reader.addEventListener('load', () => {
         setImgSrc(reader.result?.toString() || '');
