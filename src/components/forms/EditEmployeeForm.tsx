@@ -33,6 +33,7 @@ import type { ComboboxOption } from '@/components/ui/combobox';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
+import { useAuth } from '@/context/AuthContext';
 
 
 interface EditEmployeeFormProps {
@@ -46,6 +47,7 @@ const toComboboxOptions = (data: any[], labelKey: string): ComboboxOption[] => {
 
 
 export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // States for image cropping
@@ -182,7 +184,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       e.target.value = ''; // Reset file input
     }
   };
-  
+
   const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
     const crop = centerCrop(
@@ -220,11 +222,9 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         let photoDownloadURL = employee.photoURL || '';
 
         if (selectedFile) {
-            if (!employee.uid) {
-                throw new Error("Cannot upload photo: Employee Authentication UID is missing.");
-            }
-            const photoRef = ref(storage, `employeeImages/${employee.uid}/profile.jpg`);
-            await uploadBytes(photoRef, selectedFile);
+            // Use the employee's document ID for the path, which is always available.
+            const storageRef = ref(storage, `employeeImages/${employee.id}/profile.jpg`);
+            await uploadBytes(storageRef, selectedFile);
             photoDownloadURL = await getDownloadURL(photoRef);
         }
 
@@ -652,4 +652,6 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     </Form>
   );
 }
+    
+
     
