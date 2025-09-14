@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UserPlus, Save, Building, History, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon } from 'lucide-react';
+import { Loader2, UserPlus, Save, Building, History, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon, Image as ImageIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, updateDoc, doc, query as firestoreQuery, orderBy } from 'firebase/firestore';
@@ -82,10 +82,10 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       firstName: employee.fullName?.split(' ')[0] || '',
       middleName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ')[1] : '',
       lastName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ').slice(2).join(' ') : (employee.fullName?.split(' ')[1] || ''),
-      dateOfBirth: employee.dateOfBirth ? new Date(employee.dateOfBirth) : undefined,
-      joinedDate: employee.joinedDate ? new Date(employee.joinedDate) : undefined,
-      jobStatusEffectiveDate: employee.jobStatusEffectiveDate ? new Date(employee.jobStatusEffectiveDate) : undefined,
-      jobBaseEffectiveDate: employee.jobBaseEffectiveDate ? new Date(employee.jobBaseEffectiveDate) : undefined,
+      dateOfBirth: undefined,
+      joinedDate: undefined,
+      jobStatusEffectiveDate: undefined,
+      jobBaseEffectiveDate: undefined,
       educationDetails: employee.educationDetails?.map(edu => ({
         ...edu,
         passedYear: String(edu.passedYear || ''),
@@ -97,7 +97,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       sameAsPresentAddress: false,
       salaryStructure: employee.salaryStructure ? {
         ...employee.salaryStructure,
-        structureDate: employee.salaryStructure.structureDate ? new Date(employee.salaryStructure.structureDate) : undefined,
+        structureDate: undefined,
         salaryBreakup: employee.salaryStructure.salaryBreakup?.map(sb => ({
           ...sb,
           amount: sb.amount || 0,
@@ -114,13 +114,19 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   });
 
   React.useEffect(() => {
-    // This effect runs only on the client side after hydration.
-    // It sets a default date if one wasn't provided, fixing the hydration mismatch.
-    if (form.getValues('salaryStructure.structureDate') === undefined) {
-      form.setValue('salaryStructure.structureDate', new Date());
-    }
-  }, [form]);
-
+    form.reset({
+      ...form.getValues(),
+      dateOfBirth: employee.dateOfBirth ? new Date(employee.dateOfBirth) : undefined,
+      joinedDate: employee.joinedDate ? new Date(employee.joinedDate) : undefined,
+      jobStatusEffectiveDate: employee.jobStatusEffectiveDate ? new Date(employee.jobStatusEffectiveDate) : undefined,
+      jobBaseEffectiveDate: employee.jobBaseEffectiveDate ? new Date(employee.jobBaseEffectiveDate) : new Date(),
+      salaryStructure: {
+          ...form.getValues('salaryStructure'),
+          structureDate: employee.salaryStructure?.structureDate ? new Date(employee.salaryStructure.structureDate) : new Date()
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee]);
 
   const { control, handleSubmit, watch, setValue } = form;
 
@@ -273,7 +279,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
 
         <div className="flex items-center gap-6">
             <div className="w-32 h-40 rounded-md border-2 border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                <Image src={photoPreview || "https://placehold.co/128x160/e2e8f0/e2e8f0"} width={128} height={160} alt="Profile image" data-ai-hint="employee photo placeholder"/>
+                <Image src={photoPreview || "https://placehold.co/128x160/e2e8f0/e2e8f0"} width={128} height={160} alt="Profile image placeholder" data-ai-hint="employee photo placeholder"/>
             </div>
             <div className="flex-1 space-y-6">
                  <FormItem>
@@ -640,3 +646,4 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     </Form>
   );
 }
+
