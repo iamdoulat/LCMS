@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -61,9 +60,16 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
         const employeesQuery = query(collection(firestore, "employees"), orderBy("fullName"));
         const snapshot = await getDocs(employeesQuery);
         setEmployeeOptions(
-          snapshot.docs.map(doc => ({ value: doc.id, label: `${(doc.data() as EmployeeDocument).fullName} (${(doc.data() as EmployeeDocument).employeeCode})` }))
+          snapshot.docs.map(doc => {
+            const data = doc.data() as EmployeeDocument;
+            return { 
+              value: doc.id, 
+              label: `${data.fullName} (${data.employeeCode})` 
+            };
+          })
         );
       } catch (error) {
+        console.error("Error fetching employees:", error);
         Swal.fire("Error", "Could not load employees.", "error");
       } finally {
         setIsLoadingEmployees(false);
@@ -94,158 +100,240 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
     }
   }, [inTime, outTime, selectedFlag]);
 
-
   async function onSubmit(data: AttendanceFormValues) {
     if (!user) {
       Swal.fire("Authentication Error", "You must be logged in.", "error");
       return;
     }
+    
+    if (!data.employeeId || data.employeeId === PLACEHOLDER_EMPLOYEE_VALUE) {
+      Swal.fire("Validation Error", "Please select an employee.", "error");
+      return;
+    }
+
     setIsSubmitting(true);
     const formattedDate = format(data.date, 'yyyy-MM-dd');
     const docId = `${data.employeeId}_${formattedDate}`;
 
     const dataToSave: Record<string, any> = {
-      ...data,
+      employeeId: data.employeeId,
       date: formattedDate,
-      workingHours: workingHours,
+      flag: data.flag,
       updatedBy: user.uid,
       updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(), // Included for new records
+      createdAt: serverTimestamp(),
     };
     
-    // Clean up optional fields
-    if (data.flag !== 'P') {
-        delete dataToSave.inTime;
-        delete dataToSave.outTime;
-        delete dataToSave.workingHours;
+    // Only add time fields if flag is 'P'
+    if (data.flag === 'P') {
+      dataToSave.inTime = data.inTime;
+      dataToSave.outTime = data.outTime;
+      dataToSave.workingHours = workingHours;
+      if (data.inTimeRemarks) dataToSave.inTimeRemarks = data.inTimeRemarks;
+      if (data.outTimeRemarks) dataToSave.outTimeRemarks = data.outTimeRemarks;
     }
 
     try {
       await setDoc(doc(firestore, "attendance", docId), dataToSave, { merge: true });
       Swal.fire({
         title: "Attendance Saved!",
+        text: `Attendance record saved successfully.`,
         icon: "success",
         timer: 1500,
         showConfirmButton: false,
       });
       reset();
-      onFormSubmit(); // Call the callback which triggers router.push
-    } catch (error: any) {
-      Swal.fire("Save Failed", `Failed to save attendance record: ${error.message}`, "error");
-    } finally {
-      setIsSubmitting(false);
+      onFormSubmit();    } catch (error: any) {
+        console.error("Error saving attendance:", error);
+        Swal.fire("Save Failed", `Failed to save attendance record: ${error.message}`, "error");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
+  
+    return (
+      <Form {...form}>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+              <FormField
+                control={control}
+                name="employeeId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center">
+                      <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                      Employee*
+                    </FormLabel>
+                    <Combobox
+                      options={employeeOptions}
+                      value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
+                      onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
+                      placeholder="Search Employee..."
+                      selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
+                      disabled={isLoadingEmployees}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel className="flex items-center">
+                      <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                      Attendance Date*
+                    </FormLabel>
+                    <DatePickerField field={field} />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+          </div>
+          
+          <FormField
+              control={control}
+              name="flag"
+              render={({ field }) => (
+              <FormItem>
+                  <FormLabel>Attendance Flag*</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Select Flag"/>
+                          </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                          {attendanceFlagOptions.map(opt => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+                  <FormMessage />
+              </FormItem>
+              )}
+          />
+          
+          {selectedFlag === 'P' && (
+              <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                      <div>
+                          <FormField 
+                              control={control} 
+                              name="inTime" 
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel className="flex items-center">
+                                          <Clock className="mr-2 h-4 w-4 text-muted-foreground"/>
+                                          In Time
+                                      </FormLabel>
+                                      <FormControl>
+                                          <Input type="time" {...field} value={field.value ?? ''} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField 
+                              control={control} 
+                              name="inTimeRemarks" 
+                              render={({ field }) => (
+                                  <FormItem className="mt-4">
+                                      <FormLabel className="flex items-center">
+                                          <MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>
+                                          In Time Remarks
+                                      </FormLabel>
+                                      <FormControl>
+                                          <Input 
+                                              placeholder="Optional remarks..." 
+                                              {...field} 
+                                              value={field.value ?? ''} 
+                                          />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                      </div>
+                      <div>
+                          <FormField 
+                              control={control} 
+                              name="outTime" 
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel className="flex items-center">
+                                          <Clock className="mr-2 h-4 w-4 text-muted-foreground"/>
+                                          Out Time
+                                      </FormLabel>
+                                      <FormControl>
+                                          <Input type="time" {...field} value={field.value ?? ''} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                          <FormField 
+                              control={control} 
+                              name="outTimeRemarks" 
+                              render={({ field }) => (
+                                  <FormItem className="mt-4">
+                                      <FormLabel className="flex items-center">
+                                          <MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>
+                                          Out Time Remarks
+                                      </FormLabel>
+                                      <FormControl>
+                                          <Input 
+                                              placeholder="Optional remarks..." 
+                                              {...field} 
+                                              value={field.value ?? ''} 
+                                          />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                      </div>
+                  </div>
+  
+                  {workingHours && (
+                      <Alert>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Calculated Working Hours</AlertTitle>
+                          <AlertDescription>
+                              Total working hours: {workingHours}
+                          </AlertDescription>
+                      </Alert>
+                  )}
+              </>
+          )}
+  
+          <div className="flex justify-end gap-4 pt-4">
+              <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => router.push('/dashboard/hr/attendance')}
+              >
+                  Cancel
+              </Button>
+              <Button 
+                  type="submit" 
+                  disabled={isSubmitting || isLoadingEmployees}
+              >
+                  {isSubmitting ? (
+                      <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving Attendance...
+                      </>
+                  ) : (
+                      <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Attendance
+                      </>
+                  )}
+              </Button>
+          </div>
+        </form>
+      </Form>
+    );
   }
-
-  return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-            <FormField
-              control={control}
-              name="employeeId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
-                  <Combobox
-                    options={employeeOptions}
-                    value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
-                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
-                    placeholder="Search Employee..."
-                    selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
-                    disabled={isLoadingEmployees}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Attendance Date*</FormLabel>
-                  <DatePickerField field={field} />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-        </div>
-        
-        <FormField
-            control={control}
-            name="flag"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Flag*</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select Flag"/></SelectTrigger></FormControl>
-                    <SelectContent>
-                        {attendanceFlagOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
-        
-        {selectedFlag === 'P' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                <div>
-                    <FormField control={control} name="inTime" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center"><Clock className="mr-2 h-4 w-4 text-muted-foreground"/>In Time</FormLabel>
-                            <FormControl><Input type="time" {...field} value={field.value ?? ''} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}/>
-                     <FormField control={control} name="inTimeRemarks" render={({ field }) => (
-                        <FormItem className="mt-4">
-                            <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>In Time Remarks</FormLabel>
-                            <FormControl><Input placeholder="Remarks..." {...field} value={field.value ?? ''} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}/>
-                </div>
-                 <div>
-                    <FormField control={control} name="outTime" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center"><Clock className="mr-2 h-4 w-4 text-muted-foreground"/>Out Time</FormLabel>
-                            <FormControl><Input type="time" {...field} value={field.value ?? ''} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}/>
-                    <FormField control={control} name="outTimeRemarks" render={({ field }) => (
-                        <FormItem className="mt-4">
-                            <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>Out Time Remarks</FormLabel>
-                            <FormControl><Input placeholder="Remarks..." {...field} value={field.value ?? ''} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}/>
-                </div>
-            </div>
-        )}
-
-        {workingHours && (
-            <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Calculated Working Hours</AlertTitle>
-                <AlertDescription>
-                    {workingHours}
-                </AlertDescription>
-            </Alert>
-        )}
-
-        <div className="flex justify-end pt-4">
-            <Button type="submit" disabled={isSubmitting || isLoadingEmployees}>
-            {isSubmitting ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Attendance...</>
-            ) : (
-                <><Save className="mr-2 h-4 w-4" />Save Attendance</>
-            )}
-            </Button>
-        </div>
-      </form>
-    </Form>
-  );
-}

@@ -15,7 +15,7 @@ import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, getDocs, doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
-import { format, differenceInMinutes, parse, isValid, eachDayOfInterval, startOfDay, endOfDay, subDays } from 'date-fns';
+import { format, differenceInMinutes, parse, isValid, eachDayOfInterval, startOfDay, endOfDay, subMonths } from 'date-fns';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,7 +26,6 @@ import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-
 
 const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
 const ALL_UNITS_VALUE = "__ALL_UNITS_ATTENDANCE__";
@@ -46,7 +45,17 @@ const AttendanceSchema = z.object({
 });
 type AttendanceFormValues = z.infer<typeof AttendanceSchema>;
 
-const DailyAttendanceDataRow = ({ employee, attendanceDate, initialData, onRecordChange }: { employee: EmployeeDocument, attendanceDate: Date, initialData?: Attendance | null, onRecordChange: () => void }) => {
+const DailyAttendanceDataRow = ({ 
+    employee, 
+    attendanceDate, 
+    initialData, 
+    onRecordChange 
+}: { 
+    employee: EmployeeDocument, 
+    attendanceDate: Date, 
+    initialData?: Attendance | null, 
+    onRecordChange: () => void 
+}) => {
     const [workingHours, setWorkingHours] = React.useState<string | null>(null);
 
     const form = useForm<AttendanceFormValues>({
@@ -171,35 +180,47 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate, initialData, onRecor
                         )}/>
                     </TableCell>
                     <TableCell>
+                        {flag === 'P' && (
                             <FormField control={control} name="inTime" render={({ field }) => (
                             <div className="relative">
                                 <Input type="time" {...field} className="h-9 w-[120px]"/>
                                 <Clock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
                             </div>
                             )}/>
+                        )}
                     </TableCell>
                     <TableCell>
+                        {flag === 'P' && (
                             <FormField control={control} name="inTimeRemarks" render={({ field }) => (
                             <Input placeholder="Enter remarks" {...field} className="h-9"/>
                             )}/>
+                        )}
                     </TableCell>
                     <TableCell>
+                        {flag === 'P' && (
                             <FormField control={control} name="outTime" render={({ field }) => (
                              <div className="relative">
                                 <Input type="time" {...field} className="h-9 w-[120px]"/>
                                 <Clock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
                             </div>
                             )}/>
+                        )}
                     </TableCell>
                     <TableCell>
+                        {flag === 'P' && (
                             <FormField control={control} name="outTimeRemarks" render={({ field }) => (
                             <Input placeholder="Enter remarks" {...field} className="h-9"/>
                             )}/>
+                        )}
                     </TableCell>
-                    <TableCell>{workingHours}</TableCell>
+                    <TableCell>{flag === 'P' ? workingHours : '-'}</TableCell>
                     <TableCell className="flex gap-2">
                         <Button type="submit" size="icon" className="h-8 w-8"><Save className="h-4 w-4"/></Button>
-                        <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleDelete}><Trash2 className="h-4 w-4"/></Button>
+                        {initialData && (
+                            <Button type="button" variant="destructive" size="icon" className="h-8 w-8" onClick={handleDelete}>
+                                <Trash2 className="h-4 w-4"/>
+                            </Button>
+                        )}
                     </TableCell>
                 </TableRow>
             </form>
@@ -207,7 +228,17 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate, initialData, onRecor
     );
 };
 
-const EmployeeAttendanceRow = ({ employee, dateRange, attendanceRecords, onRecordChange }: { employee: EmployeeDocument, dateRange: DateRange | undefined, attendanceRecords: AttendanceDocument[], onRecordChange: () => void }) => {
+const EmployeeAttendanceRow = ({ 
+    employee, 
+    dateRange, 
+    attendanceRecords, 
+    onRecordChange 
+}: { 
+    employee: EmployeeDocument, 
+    dateRange: DateRange | undefined, 
+    attendanceRecords: AttendanceDocument[], 
+    onRecordChange: () => void 
+}) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
 
     const datesToDisplay = React.useMemo(() => {
@@ -219,7 +250,7 @@ const EmployeeAttendanceRow = ({ employee, dateRange, attendanceRecords, onRecor
               return eachDayOfInterval({ start: from, end: to });
             } catch (error) {
                 console.error("Error creating date interval:", error);
-                return [startOfDay(new Date())]; // Fallback
+                return [startOfDay(new Date())];
             }
         }
         return [startOfDay(new Date())];
@@ -232,7 +263,7 @@ const EmployeeAttendanceRow = ({ employee, dateRange, attendanceRecords, onRecor
                     <AccordionTrigger className="p-4 hover:no-underline">
                         <div className="flex items-center gap-4 w-full">
                             <Avatar>
-                                <AvatarImage src={employee.photoURL} alt={employee.fullName} data-ai-hint="employee photo"/>
+                                <AvatarImage src={employee.photoURL} alt={employee.fullName} />
                                 <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 text-left">
@@ -266,13 +297,13 @@ const EmployeeAttendanceRow = ({ employee, dateRange, attendanceRecords, onRecor
                                         const dateString = format(date, 'yyyy-MM-dd');
                                         const record = attendanceRecords.find(r => r.date === dateString);
                                         return (
-                                          <DailyAttendanceDataRow 
-                                            key={date.toISOString()} 
-                                            employee={employee} 
-                                            attendanceDate={date} 
-                                            initialData={record} 
-                                            onRecordChange={onRecordChange} 
-                                          />
+                                            <DailyAttendanceDataRow 
+                                                key={date.toISOString()} 
+                                                employee={employee} 
+                                                attendanceDate={date} 
+                                                initialData={record} 
+                                                onRecordChange={onRecordChange} 
+                                            />
                                         );
                                     })}
                                 </TableBody>
@@ -285,175 +316,197 @@ const EmployeeAttendanceRow = ({ employee, dateRange, attendanceRecords, onRecor
     );
 };
 
-
 export default function DailyAttendancePage() {
     const router = useRouter();
-    const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(query(collection(firestore, "employees"), orderBy("fullName")), undefined, ['employees']);
-    const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(query(collection(firestore, "branches")), undefined, ['branches']);
-    const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(query(collection(firestore, "units")), undefined, ['units']);
-    const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(query(collection(firestore, "departments")), undefined, ['departments']);
-    const { data: allAttendance, isLoading: isLoadingAttendance, refetch: refetchAttendance } = useFirestoreQuery<AttendanceDocument[]>(query(collection(firestore, "attendance")), undefined, ['attendance']);
-    
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const [searchTerm, setSearchTerm] = React.useState('');
-    const [selectedBranch, setSelectedBranch] = React.useState('');
-    const [selectedUnit, setSelectedUnit] = React.useState('');
-    const [selectedDept, setSelectedDept] = React.useState('');
-    
-    const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
-
-    React.useEffect(() => {
-        // Set default date range on the client side to avoid hydration mismatch
-        setDateRange({
-            from: subDays(startOfDay(new Date()), 30),
-            to: endOfDay(new Date()),
-        });
-    }, []);
-    
-    const filteredEmployees = React.useMemo(() => {
-        if (!employees) return [];
-        return employees.filter(emp => 
-            (emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || emp.employeeCode.includes(searchTerm)) &&
-            (!selectedBranch || emp.branch === selectedBranch) &&
-            (!selectedUnit || emp.unit === selectedUnit) &&
-            (!selectedDept || emp.department === selectedDept)
-        );
-    }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept]);
-    
-    const attendanceByEmployee = React.useMemo(() => {
-        const map = new Map<string, AttendanceDocument[]>();
-        if (allAttendance && dateRange?.from && dateRange?.to) {
-            const fromDateStr = format(dateRange.from, 'yyyy-MM-dd');
-            const toDateStr = format(dateRange.to, 'yyyy-MM-dd');
-            
-            allAttendance.forEach(att => {
-                if (att.date >= fromDateStr && att.date <= toDateStr) {
-                    if (!map.has(att.employeeId)) {
-                        map.set(att.employeeId, []);
-                    }
-                    map.get(att.employeeId)!.push(att);
-                }
-            });
-        }
-        return map;
-    }, [allAttendance, dateRange]);
-
-    const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance;
-
-    const handleImportCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) {
-          return;
-        }
-        if (file.type !== "text/csv") {
-          Swal.fire("Invalid File Type", "Please upload a .csv file.", "error");
-          if (fileInputRef.current) fileInputRef.current.value = "";
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const text = e.target?.result as string;
-            if (!text) {
-                Swal.fire("Error Reading File", "Could not read file content.", "error");
-                return;
-            }
-            console.log("CSV Content:", text);
-            Swal.fire(
-                "Import Started",
-                "CSV file is being processed. (Note: This is a placeholder; data is not yet saved to the database).",
-                "info"
-            );
-        };
-        reader.onerror = () => {
-          Swal.fire("File Read Error", "Error reading the selected file.", "error");
-          if (fileInputRef.current) fileInputRef.current.value = "";
-        };
-        reader.readAsText(file);
-    };
-
-    return (
-        <div className="container mx-auto py-8">
-            <Card className="shadow-xl">
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                                <CalendarIcon className="h-7 w-7 text-primary" /> Daily Attendance
-                            </CardTitle>
-                            <CardDescription>
-                                Manage and view daily attendance records for employees.
-                            </CardDescription>
-                        </div>
-                         <div className="flex gap-2">
-                            <input
-                                type="file"
-                                accept=".csv"
-                                ref={fileInputRef}
-                                onChange={handleImportCsv}
-                                className="hidden"
-                                id="csv-import-input-attendance"
-                            />
-                            <Button onClick={() => fileInputRef.current?.click()} variant="outline">
-                                <Upload className="mr-2 h-4 w-4" /> Import CSV
-                            </Button>
-                             <Link href="/dashboard/hr/attendance/add" passHref>
-                                <Button>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Record
-                                </Button>
-                            </Link>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="p-4 mb-6 rounded-lg border bg-card shadow-sm">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                            <div className="relative lg:col-span-2">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
-                                <Input placeholder="Employee name or code" className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                            </div>
-                           <DatePickerWithRange date={dateRange} onDateChange={setDateRange} className="h-10"/>
-                            <Select value={selectedBranch} onValueChange={(value) => setSelectedBranch(value === ALL_BRANCHES_VALUE ? '' : value)}>
-                                <SelectTrigger className="h-10"><SelectValue placeholder="Select Branch"/></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={ALL_BRANCHES_VALUE}>All Branches</SelectItem>
-                                    {branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <Select value={selectedUnit} onValueChange={(value) => setSelectedUnit(value === ALL_UNITS_VALUE ? '' : value)}>
-                                <SelectTrigger className="h-10"><SelectValue placeholder="Select Unit"/></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={ALL_UNITS_VALUE}>All Units</SelectItem>
-                                    {units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <Select value={selectedDept} onValueChange={(value) => setSelectedDept(value === ALL_DEPTS_VALUE ? '' : value)}>
-                                <SelectTrigger className="h-10"><SelectValue placeholder="Select Department"/></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={ALL_DEPTS_VALUE}>All Departments</SelectItem>
-                                    {departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    {isLoading ? (
-                        <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>
-                    ) : (
-                        <div className="space-y-2">
-                           {filteredEmployees.map(emp => (
-                                <EmployeeAttendanceRow 
-                                    key={emp.id} 
-                                    employee={emp} 
-                                    dateRange={dateRange}
-                                    attendanceRecords={attendanceByEmployee.get(emp.id) || []}
-                                    onRecordChange={refetchAttendance}
-                                />
-                           ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
+    const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(
+        query(collection(firestore, "employees"), orderBy("fullName")), 
+        undefined, 
+        ['employees']
     );
-}
+    const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(
+        query(collection(firestore, "branches")), 
+        undefined, 
+        ['branches']    );
+        const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(
+            query(collection(firestore, "units")), 
+            undefined, 
+            ['units']
+        );
+        const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(
+            query(collection(firestore, "departments")), 
+            undefined, 
+            ['departments']
+        );
+        const { data: allAttendance, isLoading: isLoadingAttendance, refetch: refetchAttendance } = useFirestoreQuery<AttendanceDocument[]>(
+            query(collection(firestore, "attendance")), 
+            undefined, 
+            ['attendance']
+        );
+        
+        const fileInputRef = React.useRef<HTMLInputElement>(null);
+        const [searchTerm, setSearchTerm] = React.useState('');
+        const [selectedBranch, setSelectedBranch] = React.useState('');
+        const [selectedUnit, setSelectedUnit] = React.useState('');
+        const [selectedDept, setSelectedDept] = React.useState('');
+        
+        const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
+            from: subMonths(new Date(), 1),
+            to: new Date(),
+        });
+    
+        const filteredEmployees = React.useMemo(() => {
+            if (!employees) return [];
+            return employees.filter(emp => 
+                (emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || emp.employeeCode.includes(searchTerm)) &&
+                (!selectedBranch || emp.branch === selectedBranch) &&
+                (!selectedUnit || emp.unit === selectedUnit) &&
+                (!selectedDept || emp.department === selectedDept)
+            );
+        }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept]);
+        
+        const attendanceByEmployee = React.useMemo(() => {
+            const map = new Map<string, AttendanceDocument[]>();
+            if (allAttendance && dateRange?.from) {
+                const fromDate = startOfDay(dateRange.from);
+                const toDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+                
+                allAttendance.forEach(att => {
+                    const attDate = parseISO(att.date);
+                    if (isValid(attDate) && attDate >= fromDate && attDate <= toDate) {
+                        if (!map.has(att.employeeId)) {
+                            map.set(att.employeeId, []);
+                        }
+                        map.get(att.employeeId)!.push(att);
+                    }
+                });
+            }
+            return map;
+        }, [allAttendance, dateRange]);
+    
+        const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance;
+    
+        const handleImportCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
+            const file = event.target.files?.[0];
+            if (!file) {
+              return;
+            }
+            if (file.type !== "text/csv") {
+              Swal.fire("Invalid File Type", "Please upload a .csv file.", "error");
+              if (fileInputRef.current) fileInputRef.current.value = "";
+              return;
+            }
+    
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target?.result as string;
+                if (!text) {
+                    Swal.fire("Error Reading File", "Could not read file content.", "error");
+                    return;
+                }
+                console.log("CSV Content:", text);
+                Swal.fire(
+                    "Import Started",
+                    "CSV file is being processed. (Note: This is a placeholder; data is not yet saved to the database).",
+                    "info"
+                );
+            };
+            reader.onerror = () => {
+              Swal.fire("File Read Error", "Error reading the selected file.", "error");
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            };
+            reader.readAsText(file);
+        };
+    
+        return (
+            <div className="container mx-auto py-8">
+                <Card className="shadow-xl">
+                    <CardHeader>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                                    <CalendarIcon className="h-7 w-7 text-primary" /> Daily Attendance
+                                </CardTitle>
+                                <CardDescription>
+                                    Manage and view daily attendance records for employees.
+                                </CardDescription>
+                            </div>
+                             <div className="flex gap-2">
+                                <input
+                                    type="file"
+                                    accept=".csv"
+                                    ref={fileInputRef}
+                                    onChange={handleImportCsv}
+                                    className="hidden"
+                                    id="csv-import-input-attendance"
+                                />
+                                <Button onClick={() => fileInputRef.current?.click()} variant="outline">
+                                    <Upload className="mr-2 h-4 w-4" /> Import CSV
+                                </Button>
+                                 <Link href="/dashboard/hr/attendance/add" passHref>
+                                    <Button>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Record
+                                    </Button>
+                                </Link>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="p-4 mb-6 rounded-lg border bg-card shadow-sm">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                <div className="relative lg:col-span-2">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
+                                    <Input placeholder="Employee name or code" className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                </div>
+                               <DatePickerWithRange date={dateRange} onDateChange={setDateRange} className="h-10"/>
+                                <Select value={selectedBranch} onValueChange={(value) => setSelectedBranch(value === ALL_BRANCHES_VALUE ? '' : value)}>
+                                    <SelectTrigger className="h-10"><SelectValue placeholder="Select Branch"/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={ALL_BRANCHES_VALUE}>All Branches</SelectItem>
+                                        {branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={selectedUnit} onValueChange={(value) => setSelectedUnit(value === ALL_UNITS_VALUE ? '' : value)}>
+                                    <SelectTrigger className="h-10"><SelectValue placeholder="Select Unit"/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={ALL_UNITS_VALUE}>All Units</SelectItem>
+                                        {units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={selectedDept} onValueChange={(value) => setSelectedDept(value === ALL_DEPTS_VALUE ? '' : value)}>
+                                    <SelectTrigger className="h-10"><SelectValue placeholder="Select Department"/></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={ALL_DEPTS_VALUE}>All Departments</SelectItem>
+                                        {departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+    
+                        {isLoading ? (
+                            <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>
+                        ) : (
+                            <div className="space-y-2">
+                               {filteredEmployees.length === 0 ? (
+                                   <div className="text-center py-8 text-muted-foreground">
+                                       No employees found matching your criteria.
+                                   </div>
+                               ) : (
+                                   filteredEmployees.map(emp => (
+                                        <EmployeeAttendanceRow 
+                                            key={emp.id} 
+                                            employee={emp} 
+                                            dateRange={dateRange}
+                                            attendanceRecords={attendanceByEmployee.get(emp.id) || []}
+                                            onRecordChange={refetchAttendance}
+                                        />
+                                   ))
+                               )}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    
