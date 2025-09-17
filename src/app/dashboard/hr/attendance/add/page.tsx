@@ -7,8 +7,11 @@ import { CalendarCheck, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 export default function AddAttendancePage() {
+  const router = useRouter();
+
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
@@ -30,7 +33,7 @@ export default function AddAttendancePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AddAttendanceForm />
+          <AddAttendanceForm onFormSubmit={() => router.push('/dashboard/hr/attendance')} />
         </CardContent>
       </Card>
     </div>

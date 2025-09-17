@@ -20,11 +20,17 @@ import { Loader2, Save, User, Calendar, Clock, MessageSquare, AlertCircle } from
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { useRouter } from 'next/navigation';
 
 const PLACEHOLDER_EMPLOYEE_VALUE = "__ADD_ATTENDANCE_EMPLOYEE__";
 
-export function AddAttendanceForm() {
+interface AddAttendanceFormProps {
+  onFormSubmit: () => void;
+}
+
+export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [employeeOptions, setEmployeeOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = React.useState(true);
@@ -127,6 +133,7 @@ export function AddAttendanceForm() {
         showConfirmButton: false,
       });
       reset();
+      onFormSubmit(); // Call the callback
     } catch (error: any) {
       Swal.fire("Save Failed", `Failed to save attendance record: ${error.message}`, "error");
     } finally {
