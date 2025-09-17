@@ -249,5 +249,3 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
     </Form>
   );
 }
-
-    
