@@ -118,7 +118,13 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate, initialData, onRecor
 
         try {
             await setDoc(doc(firestore, "attendance", docId), dataToSave, { merge: true });
-            Swal.fire("Saved", `Attendance updated for ${employee.fullName} on ${format(attendanceDate, 'PPP')}`, "success");
+            Swal.fire({
+                title: "Saved", 
+                text: `Attendance updated for ${employee.fullName} on ${format(attendanceDate, 'PPP')}`,
+                icon: "success",
+                timer: 1500,
+                showConfirmButton: false,
+            });
             onRecordChange();
         } catch (error: any) {
              Swal.fire("Error", `Failed to save attendance: ${error.message}`, "error");
@@ -291,8 +297,8 @@ export default function DailyAttendancePage() {
     React.useEffect(() => {
         // Set default date range on the client side to avoid hydration mismatch
         setDateRange({
-            from: subMonths(new Date(), 1),
-            to: new Date(),
+            from: startOfDay(new Date()),
+            to: startOfDay(new Date()),
         });
     }, []);
     
@@ -438,4 +444,3 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
-
