@@ -240,6 +240,11 @@ const EmployeeAttendanceRow = ({
     onRecordChange: () => void 
 }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
+    
+    // Filter records for the specific employee
+    const employeeAttendanceRecords = React.useMemo(() => {
+        return attendanceRecords.filter(record => record.employeeId === employee.id);
+    }, [attendanceRecords, employee.id]);
 
     const datesToDisplay = React.useMemo(() => {
         const from = dateRange?.from;
@@ -295,7 +300,7 @@ const EmployeeAttendanceRow = ({
                                 <TableBody>
                                     {datesToDisplay.map(date => {
                                         const dateString = format(date, 'yyyy-MM-dd');
-                                        const record = attendanceRecords.find(r => r.date === dateString);
+                                        const record = employeeAttendanceRecords.find(r => r.date === dateString);
                                         return (
                                             <DailyAttendanceDataRow 
                                                 key={date.toISOString()} 
@@ -364,23 +369,14 @@ export default function DailyAttendancePage() {
             );
         }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept]);
         
-        const attendanceByEmployee = React.useMemo(() => {
-            const map = new Map<string, AttendanceDocument[]>();
-            if (allAttendance && dateRange?.from) {
-                const fromDate = startOfDay(dateRange.from);
-                const toDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
-                
-                allAttendance.forEach(att => {
-                    const attDate = parseISO(att.date);
-                    if (isValid(attDate) && attDate >= fromDate && attDate <= toDate) {
-                        if (!map.has(att.employeeId)) {
-                            map.set(att.employeeId, []);
-                        }
-                        map.get(att.employeeId)!.push(att);
-                    }
-                });
-            }
-            return map;
+        const filteredAttendance = React.useMemo(() => {
+            if (!allAttendance || !dateRange?.from) return [];
+            const fromDateStr = format(dateRange.from, 'yyyy-MM-dd');
+            const toDateStr = format(dateRange.to || dateRange.from, 'yyyy-MM-dd');
+            
+            return allAttendance.filter(att => {
+                return att.date >= fromDateStr && att.date <= toDateStr;
+            });
         }, [allAttendance, dateRange]);
     
         const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance;
@@ -496,7 +492,7 @@ export default function DailyAttendancePage() {
                                             key={emp.id} 
                                             employee={emp} 
                                             dateRange={dateRange}
-                                            attendanceRecords={attendanceByEmployee.get(emp.id) || []}
+                                            attendanceRecords={filteredAttendance}
                                             onRecordChange={refetchAttendance}
                                         />
                                    ))
