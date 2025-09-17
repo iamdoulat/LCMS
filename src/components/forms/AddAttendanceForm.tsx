@@ -73,28 +73,24 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
   }, []);
 
   React.useEffect(() => {
-    if (selectedFlag !== 'P') {
+    if (selectedFlag !== 'P' || !inTime || !outTime) {
       setWorkingHours(null);
       return;
     }
 
-    if (inTime && outTime) {
-      try {
-        const inDate = parse(inTime, 'HH:mm', new Date());
-        const outDate = parse(outTime, 'HH:mm', new Date());
-        if (isValid(inDate) && isValid(outDate) && outDate > inDate) {
-          const diffMins = differenceInMinutes(outDate, inDate);
-          const hours = Math.floor(diffMins / 60);
-          const minutes = diffMins % 60;
-          setWorkingHours(`${hours}h ${minutes.toString().padStart(2, '0')}m`);
-        } else {
-          setWorkingHours("Invalid time range");
-        }
-      } catch {
-        setWorkingHours("Calculation error");
+    try {
+      const inDate = parse(inTime, 'HH:mm', new Date());
+      const outDate = parse(outTime, 'HH:mm', new Date());
+      if(isValid(inDate) && isValid(outDate) && outDate >= inDate) {
+        const diffMins = differenceInMinutes(outDate, inDate);
+        const hours = Math.floor(diffMins / 60);
+        const minutes = diffMins % 60;
+        setWorkingHours(`${hours}h ${minutes.toString().padStart(2, '0')}m`);
+      } else {
+        setWorkingHours("Invalid");
       }
-    } else {
-      setWorkingHours(null);
+    } catch {
+      setWorkingHours("Error");
     }
   }, [inTime, outTime, selectedFlag]);
 
@@ -108,10 +104,10 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
     const formattedDate = format(data.date, 'yyyy-MM-dd');
     const docId = `${data.employeeId}_${formattedDate}`;
 
-    const dataToSave = {
+    const dataToSave: Record<string, any> = {
       ...data,
       date: formattedDate,
-      workingHours: workingHours ? parseFloat(workingHours.replace('h', '.').replace('m', '')) : undefined,
+      workingHours: workingHours,
       updatedBy: user.uid,
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp(), // Included for new records
@@ -119,9 +115,9 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
     
     // Clean up optional fields
     if (data.flag !== 'P') {
-        delete (dataToSave as any).inTime;
-        delete (dataToSave as any).outTime;
-        delete (dataToSave as any).workingHours;
+        delete dataToSave.inTime;
+        delete dataToSave.outTime;
+        delete dataToSave.workingHours;
     }
 
     try {
@@ -133,7 +129,7 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
         showConfirmButton: false,
       });
       reset();
-      onFormSubmit(); // Call the callback
+      onFormSubmit(); // Call the callback which triggers router.push
     } catch (error: any) {
       Swal.fire("Save Failed", `Failed to save attendance record: ${error.message}`, "error");
     } finally {
