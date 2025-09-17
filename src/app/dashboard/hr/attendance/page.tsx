@@ -15,7 +15,7 @@ import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, getDocs, doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
-import { format, differenceInMinutes, parse, isValid, eachDayOfInterval, startOfDay, endOfDay, subMonths } from 'date-fns';
+import { format, differenceInMinutes, parse, isValid, eachDayOfInterval, startOfDay, endOfDay, subDays } from 'date-fns';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -210,6 +210,11 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate, initialData, onRecor
 const EmployeeAttendanceRow = ({ employee, dateRange, attendanceRecords, onRecordChange }: { employee: EmployeeDocument, dateRange: DateRange | undefined, attendanceRecords: AttendanceDocument[], onRecordChange: () => void }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
 
+    // Filter attendance records for this specific employee
+    const employeeAttendanceRecords = React.useMemo(() => {
+        return attendanceRecords.filter(record => record.employeeId === employee.id);
+    }, [attendanceRecords, employee.id]);
+
     const datesToDisplay = React.useMemo(() => {
         const from = dateRange?.from;
         const to = dateRange?.to || from;
@@ -264,8 +269,16 @@ const EmployeeAttendanceRow = ({ employee, dateRange, attendanceRecords, onRecor
                                 <TableBody>
                                     {datesToDisplay.map(date => {
                                         const dateString = format(date, 'yyyy-MM-dd');
-                                        const record = attendanceRecords.find(r => r.date === dateString);
-                                        return <DailyAttendanceDataRow key={date.toISOString()} employee={employee} attendanceDate={date} initialData={record} onRecordChange={onRecordChange} />;
+                                        const record = employeeAttendanceRecords.find(r => r.date === dateString);
+                                        return (
+                                          <DailyAttendanceDataRow 
+                                            key={date.toISOString()} 
+                                            employee={employee} 
+                                            attendanceDate={date} 
+                                            initialData={record} 
+                                            onRecordChange={onRecordChange} 
+                                          />
+                                        );
                                     })}
                                 </TableBody>
                             </Table>
@@ -297,8 +310,8 @@ export default function DailyAttendancePage() {
     React.useEffect(() => {
         // Set default date range on the client side to avoid hydration mismatch
         setDateRange({
-            from: startOfDay(new Date()),
-            to: startOfDay(new Date()),
+            from: subDays(startOfDay(new Date()), 30),
+            to: endOfDay(new Date()),
         });
     }, []);
     
@@ -312,18 +325,17 @@ export default function DailyAttendancePage() {
         );
     }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept]);
     
-    const attendanceByEmployee = React.useMemo(() => {
-        const map = new Map<string, AttendanceDocument[]>();
-        if (allAttendance) {
-            allAttendance.forEach(att => {
-                if (!map.has(att.employeeId)) {
-                    map.set(att.employeeId, []);
-                }
-                map.get(att.employeeId)!.push(att);
-            });
+    const filteredAttendanceData = React.useMemo(() => {
+        if (!allAttendance || !dateRange?.from || !dateRange?.to) {
+            return [];
         }
-        return map;
-    }, [allAttendance]);
+        const fromDateStr = format(dateRange.from, 'yyyy-MM-dd');
+        const toDateStr = format(dateRange.to, 'yyyy-MM-dd');
+
+        return allAttendance.filter(att => {
+            return att.date >= fromDateStr && att.date <= toDateStr;
+        });
+    }, [allAttendance, dateRange]);
 
     const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance;
 
@@ -433,7 +445,7 @@ export default function DailyAttendancePage() {
                                     key={emp.id} 
                                     employee={emp} 
                                     dateRange={dateRange}
-                                    attendanceRecords={attendanceByEmployee.get(emp.id) || []}
+                                    attendanceRecords={filteredAttendanceData.filter(att => att.employeeId === emp.id)}
                                     onRecordChange={refetchAttendance}
                                 />
                            ))}
@@ -444,3 +456,5 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
+
+    
