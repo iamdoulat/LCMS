@@ -25,6 +25,8 @@ import type { DateRange } from 'react-day-picker';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
 
 const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
 const ALL_UNITS_VALUE = "__ALL_UNITS_ATTENDANCE__";
@@ -50,11 +52,11 @@ const DailyAttendanceDataRow = ({ employee, attendanceDate, initialData, onRecor
     const form = useForm<AttendanceFormValues>({
         resolver: zodResolver(AttendanceSchema),
         defaultValues: {
-            flag: initialData?.flag || 'P',
-            inTime: initialData?.inTime || '09:00',
-            outTime: initialData?.outTime || '18:00',
-            inTimeRemarks: initialData?.inTimeRemarks || '',
-            outTimeRemarks: initialData?.outTimeRemarks || ''
+            flag: 'P',
+            inTime: '09:00',
+            outTime: '18:00',
+            inTimeRemarks: '',
+            outTimeRemarks: ''
         },
     });
     
@@ -271,6 +273,7 @@ const EmployeeAttendanceRow = ({ employee, dateRange, attendanceRecords, onRecor
 
 
 export default function DailyAttendancePage() {
+    const router = useRouter();
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(query(collection(firestore, "employees"), orderBy("fullName")), undefined, ['employees']);
     const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(query(collection(firestore, "branches")), undefined, ['branches']);
     const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(query(collection(firestore, "units")), undefined, ['units']);
@@ -435,3 +438,4 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
+
