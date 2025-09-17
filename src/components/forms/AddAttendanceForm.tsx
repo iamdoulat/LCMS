@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -12,14 +13,15 @@ import { format, differenceInMinutes, parse, isValid } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Save, User, Calendar, Clock, MessageSquare, AlertCircle } from 'lucide-react';
+import { Loader2, Save, User, Calendar, Clock, MessageSquare, AlertCircle, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { useRouter } from 'next/navigation';
+import { Switch } from '../ui/switch';
 
 const PLACEHOLDER_EMPLOYEE_VALUE = "__ADD_ATTENDANCE_EMPLOYEE__";
 
@@ -41,6 +43,8 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
       employeeId: '',
       date: new Date(),
       flag: 'P',
+      enableInTime: true,
+      enableOutTime: true,
       inTime: '09:00',
       outTime: '18:00',
       inTimeRemarks: '',
@@ -52,6 +56,9 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
   const inTime = watch('inTime');
   const outTime = watch('outTime');
   const selectedFlag = watch('flag');
+  const enableInTime = watch('enableInTime');
+  const enableOutTime = watch('enableOutTime');
+
 
   React.useEffect(() => {
     const fetchEmployees = async () => {
@@ -79,7 +86,7 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
   }, []);
 
   React.useEffect(() => {
-    if (selectedFlag !== 'P' || !inTime || !outTime) {
+    if (selectedFlag !== 'P' || !enableInTime || !enableOutTime || !inTime || !outTime) {
       setWorkingHours(null);
       return;
     }
@@ -98,7 +105,7 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
     } catch {
       setWorkingHours("Error");
     }
-  }, [inTime, outTime, selectedFlag]);
+  }, [inTime, outTime, selectedFlag, enableInTime, enableOutTime]);
 
   async function onSubmit(data: AttendanceFormValues) {
     if (!user) {
@@ -116,21 +123,24 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
     const docId = `${data.employeeId}_${formattedDate}`;
 
     const dataToSave: Record<string, any> = {
-      employeeId: data.employeeId,
+      ...data,
       date: formattedDate,
-      flag: data.flag,
+      workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
       updatedBy: user.uid,
       updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
+      createdAt: serverTimestamp(), // Included for new records
     };
     
-    // Only add time fields if flag is 'P'
-    if (data.flag === 'P') {
-      dataToSave.inTime = data.inTime;
-      dataToSave.outTime = data.outTime;
-      dataToSave.workingHours = workingHours;
-      if (data.inTimeRemarks) dataToSave.inTimeRemarks = data.inTimeRemarks;
-      if (data.outTimeRemarks) dataToSave.outTimeRemarks = data.outTimeRemarks;
+    if (data.flag !== 'P' || !data.enableInTime) {
+      delete dataToSave.inTime;
+      delete dataToSave.inTimeRemarks;
+    }
+    if (data.flag !== 'P' || !data.enableOutTime) {
+        delete dataToSave.outTime;
+        delete dataToSave.outTimeRemarks;
+    }
+     if (data.flag !== 'P' || !data.enableInTime || !data.enableOutTime) {
+        delete dataToSave.workingHours;
     }
 
     try {
@@ -216,85 +226,72 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
           />
           
           {selectedFlag === 'P' && (
-              <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                      <div>
-                          <FormField 
-                              control={control} 
-                              name="inTime" 
-                              render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel className="flex items-center">
-                                          <Clock className="mr-2 h-4 w-4 text-muted-foreground"/>
-                                          In Time
-                                      </FormLabel>
-                                      <FormControl>
-                                          <Input type="time" {...field} value={field.value ?? ''} />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                          <FormField 
-                              control={control} 
-                              name="inTimeRemarks" 
-                              render={({ field }) => (
-                                  <FormItem className="mt-4">
-                                      <FormLabel className="flex items-center">
-                                          <MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>
-                                          In Time Remarks
-                                      </FormLabel>
-                                      <FormControl>
-                                          <Input 
-                                              placeholder="Optional remarks..." 
-                                              {...field} 
-                                              value={field.value ?? ''} 
-                                          />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                      </div>
-                      <div>
-                          <FormField 
-                              control={control} 
-                              name="outTime" 
-                              render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel className="flex items-center">
-                                          <Clock className="mr-2 h-4 w-4 text-muted-foreground"/>
-                                          Out Time
-                                      </FormLabel>
-                                      <FormControl>
-                                          <Input type="time" {...field} value={field.value ?? ''} />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                          <FormField 
-                              control={control} 
-                              name="outTimeRemarks" 
-                              render={({ field }) => (
-                                  <FormItem className="mt-4">
-                                      <FormLabel className="flex items-center">
-                                          <MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>
-                                          Out Time Remarks
-                                      </FormLabel>
-                                      <FormControl>
-                                          <Input 
-                                              placeholder="Optional remarks..." 
-                                              {...field} 
-                                              value={field.value ?? ''} 
-                                          />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                      </div>
-                  </div>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="enableInTime"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="text-base flex items-center gap-2"><ToggleRight /> Enable In Time</FormLabel>
+                                </div>
+                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="enableOutTime"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="text-base flex items-center gap-2"><ToggleLeft /> Enable Out Time</FormLabel>
+                                </div>
+                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    {enableInTime && (
+                         <div>
+                            <FormField control={control} name="inTime" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center"><Clock className="mr-2 h-4 w-4 text-muted-foreground"/>In Time</FormLabel>
+                                    <FormControl><Input type="time" {...field} value={field.value ?? ''} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={control} name="inTimeRemarks" render={({ field }) => (
+                                <FormItem className="mt-4">
+                                    <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>In Time Remarks</FormLabel>
+                                    <FormControl><Input placeholder="Optional remarks..." {...field} value={field.value ?? ''} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                        </div>
+                    )}
+                     {enableOutTime && (
+                         <div>
+                            <FormField control={control} name="outTime" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center"><Clock className="mr-2 h-4 w-4 text-muted-foreground"/>Out Time</FormLabel>
+                                    <FormControl><Input type="time" {...field} value={field.value ?? ''} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={control} name="outTimeRemarks" render={({ field }) => (
+                                <FormItem className="mt-4">
+                                    <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground"/>Out Time Remarks</FormLabel>
+                                    <FormControl><Input placeholder="Optional remarks..." {...field} value={field.value ?? ''} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                        </div>
+                    )}
+                </div>
   
                   {workingHours && (
                       <Alert>
@@ -305,7 +302,7 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
                           </AlertDescription>
                       </Alert>
                   )}
-              </>
+              </div>
           )}
   
           <div className="flex justify-end gap-4 pt-4">

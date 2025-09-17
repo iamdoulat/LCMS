@@ -1667,6 +1667,8 @@ export const AttendanceFormSchema = z.object({
   employeeId: z.string().min(1, "Employee is required."),
   date: z.date({ required_error: "Date is required." }),
   flag: z.enum(attendanceFlagOptions),
+  enableInTime: z.boolean().optional(),
+  enableOutTime: z.boolean().optional(),
   inTime: z.string().optional(),
   outTime: z.string().optional(),
   inTimeRemarks: z.string().optional(),
@@ -1679,6 +1681,8 @@ export interface Attendance {
   employeeId: string;
   date: string; // YYYY-MM-DD
   flag: AttendanceFlag;
+  enableInTime?: boolean;
+  enableOutTime?: boolean;
   inTime?: string;
   outTime?: string;
   inTimeRemarks?: string;
