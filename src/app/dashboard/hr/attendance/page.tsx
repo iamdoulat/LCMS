@@ -42,6 +42,8 @@ const AttendanceSchema = z.object({
     inTimeRemarks: z.string().optional(),
     outTime: z.string().optional(),
     outTimeRemarks: z.string().optional(),
+    enableInTime: z.boolean().optional(),
+    enableOutTime: z.boolean().optional(),
 });
 type AttendanceFormValues = z.infer<typeof AttendanceSchema>;
 
@@ -65,7 +67,9 @@ const DailyAttendanceDataRow = ({
             inTime: '09:00',
             outTime: '18:00',
             inTimeRemarks: '',
-            outTimeRemarks: ''
+            outTimeRemarks: '',
+            enableInTime: true,
+            enableOutTime: true,
         },
     });
     
@@ -75,7 +79,9 @@ const DailyAttendanceDataRow = ({
             inTime: initialData?.inTime || '09:00',
             outTime: initialData?.outTime || '18:00',
             inTimeRemarks: initialData?.inTimeRemarks || '',
-            outTimeRemarks: initialData?.outTimeRemarks || ''
+            outTimeRemarks: initialData?.outTimeRemarks || '',
+            enableInTime: initialData?.enableInTime ?? true,
+            enableOutTime: initialData?.enableOutTime ?? true,
         });
     }, [initialData, form]);
 
@@ -83,9 +89,11 @@ const DailyAttendanceDataRow = ({
     const inTime = watch('inTime');
     const outTime = watch('outTime');
     const flag = watch('flag');
+    const enableInTime = watch('enableInTime');
+    const enableOutTime = watch('enableOutTime');
     
     React.useEffect(() => {
-        if (flag !== 'P' || !inTime || !outTime) {
+        if (flag !== 'P' || !enableInTime || !enableOutTime || !inTime || !outTime) {
             setWorkingHours(null);
             return;
         }
@@ -104,7 +112,7 @@ const DailyAttendanceDataRow = ({
         } catch {
             setWorkingHours("Error");
         }
-    }, [inTime, outTime, flag]);
+    }, [inTime, outTime, flag, enableInTime, enableOutTime]);
 
     const onSubmit = async (data: AttendanceFormValues) => {
         const formattedDate = format(attendanceDate, 'yyyy-MM-dd');
@@ -114,14 +122,20 @@ const DailyAttendanceDataRow = ({
             ...data,
             employeeId: employee.id,
             date: formattedDate,
-            workingHours: workingHours,
+            workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
             updatedAt: serverTimestamp(),
             createdAt: initialData?.createdAt || serverTimestamp(),
         };
 
-        if (data.flag !== 'P') {
-            delete dataToSave.inTime;
+        if (data.flag !== 'P' || !data.enableInTime) {
+          delete dataToSave.inTime;
+          delete dataToSave.inTimeRemarks;
+        }
+        if (data.flag !== 'P' || !data.enableOutTime) {
             delete dataToSave.outTime;
+            delete dataToSave.outTimeRemarks;
+        }
+         if (data.flag !== 'P' || !data.enableInTime || !data.enableOutTime) {
             delete dataToSave.workingHours;
         }
 
@@ -180,7 +194,7 @@ const DailyAttendanceDataRow = ({
                         )}/>
                     </TableCell>
                     <TableCell>
-                        {flag === 'P' && (
+                        {flag === 'P' && enableInTime && (
                             <FormField control={control} name="inTime" render={({ field }) => (
                             <div className="relative">
                                 <Input type="time" {...field} className="h-9 w-[120px]"/>
@@ -190,14 +204,14 @@ const DailyAttendanceDataRow = ({
                         )}
                     </TableCell>
                     <TableCell>
-                        {flag === 'P' && (
+                        {flag === 'P' && enableInTime && (
                             <FormField control={control} name="inTimeRemarks" render={({ field }) => (
                             <Input placeholder="Enter remarks" {...field} className="h-9"/>
                             )}/>
                         )}
                     </TableCell>
                     <TableCell>
-                        {flag === 'P' && (
+                        {flag === 'P' && enableOutTime && (
                             <FormField control={control} name="outTime" render={({ field }) => (
                              <div className="relative">
                                 <Input type="time" {...field} className="h-9 w-[120px]"/>
@@ -207,13 +221,13 @@ const DailyAttendanceDataRow = ({
                         )}
                     </TableCell>
                     <TableCell>
-                        {flag === 'P' && (
+                        {flag === 'P' && enableOutTime && (
                             <FormField control={control} name="outTimeRemarks" render={({ field }) => (
                             <Input placeholder="Enter remarks" {...field} className="h-9"/>
                             )}/>
                         )}
                     </TableCell>
-                    <TableCell>{flag === 'P' ? workingHours : '-'}</TableCell>
+                    <TableCell>{flag === 'P' && enableInTime && enableOutTime ? workingHours : '-'}</TableCell>
                     <TableCell className="flex gap-2">
                         <Button type="submit" size="icon" className="h-8 w-8"><Save className="h-4 w-4"/></Button>
                         {initialData && (
@@ -268,7 +282,7 @@ const EmployeeAttendanceRow = ({
                     <AccordionTrigger className="p-4 hover:no-underline">
                         <div className="flex items-center gap-4 w-full">
                             <Avatar>
-                                <AvatarImage src={employee.photoURL} alt={employee.fullName} />
+                                <AvatarImage src={employee.photoURL} alt={employee.fullName} data-ai-hint="employee photo"/>
                                 <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 text-left">
@@ -371,11 +385,16 @@ export default function DailyAttendancePage() {
         
         const filteredAttendance = React.useMemo(() => {
             if (!allAttendance || !dateRange?.from) return [];
-            const fromDateStr = format(dateRange.from, 'yyyy-MM-dd');
-            const toDateStr = format(dateRange.to || dateRange.from, 'yyyy-MM-dd');
+            const fromDate = startOfDay(dateRange.from);
+            const toDate = endOfDay(dateRange.to || dateRange.from);
             
             return allAttendance.filter(att => {
-                return att.date >= fromDateStr && att.date <= toDateStr;
+                try {
+                    const attDate = parseISO(att.date);
+                    return isValid(attDate) && attDate >= fromDate && attDate <= toDate;
+                } catch {
+                    return false;
+                }
             });
         }, [allAttendance, dateRange]);
     
