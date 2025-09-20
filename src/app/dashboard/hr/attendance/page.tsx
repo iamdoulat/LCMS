@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, Upload, PlusCircle, Trash2 } from 'lucide-react';
-import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, Attendance, AttendanceDocument } from '@/types';
+import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, Attendance, AttendanceDocument, AttendanceFlag } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, getDocs, doc, setDoc, serverTimestamp, deleteDoc, writeBatch, where } from 'firebase/firestore';
@@ -200,41 +201,51 @@ const DailyAttendanceDataRow = ({
                                 </Select>
                         )}/>
                     </TableCell>
-                    <TableCell>
-                        {flag === 'P' && enableInTime && (
-                            <FormField control={control} name="inTime" render={({ field }) => (
-                            <div className="relative">
-                                <Input type="time" {...field} className="h-9 w-[120px]"/>
-                                <Clock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                    {flag === 'P' ? (
+                        <>
+                        <TableCell>
+                            <div className='flex items-center gap-2'>
+                            {enableInTime && (
+                                <FormField control={control} name="inTime" render={({ field }) => (
+                                <div className="relative">
+                                    <Input type="time" {...field} className="h-9 w-[120px]"/>
+                                    <Clock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                                </div>
+                                )}/>
+                            )}
                             </div>
-                            )}/>
-                        )}
-                    </TableCell>
-                    <TableCell>
-                        {flag === 'P' && enableInTime && (
-                            <FormField control={control} name="inTimeRemarks" render={({ field }) => (
-                            <Input placeholder="Enter remarks" {...field} className="h-9"/>
-                            )}/>
-                        )}
-                    </TableCell>
-                    <TableCell>
-                        {flag === 'P' && enableOutTime && (
-                            <FormField control={control} name="outTime" render={({ field }) => (
-                             <div className="relative">
-                                <Input type="time" {...field} className="h-9 w-[120px]"/>
-                                <Clock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                        </TableCell>
+                        <TableCell>
+                            {enableInTime && (
+                                <FormField control={control} name="inTimeRemarks" render={({ field }) => (
+                                <Input placeholder="Enter remarks" {...field} className="h-9"/>
+                                )}/>
+                            )}
+                        </TableCell>
+                        <TableCell>
+                             <div className='flex items-center gap-2'>
+                            {enableOutTime && (
+                                <FormField control={control} name="outTime" render={({ field }) => (
+                                <div className="relative">
+                                    <Input type="time" {...field} className="h-9 w-[120px]"/>
+                                    <Clock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                                </div>
+                                )}/>
+                            )}
                             </div>
-                            )}/>
-                        )}
-                    </TableCell>
-                    <TableCell>
-                        {flag === 'P' && enableOutTime && (
-                            <FormField control={control} name="outTimeRemarks" render={({ field }) => (
-                            <Input placeholder="Enter remarks" {...field} className="h-9"/>
-                            )}/>
-                        )}
-                    </TableCell>
-                    <TableCell>{flag === 'P' && enableInTime && enableOutTime ? workingHours : '-'}</TableCell>
+                        </TableCell>
+                        <TableCell>
+                            {enableOutTime && (
+                                <FormField control={control} name="outTimeRemarks" render={({ field }) => (
+                                <Input placeholder="Enter remarks" {...field} className="h-9"/>
+                                )}/>
+                            )}
+                        </TableCell>
+                        <TableCell>{enableInTime && enableOutTime ? workingHours : '-'}</TableCell>
+                        </>
+                    ) : (
+                        <TableCell colSpan={5} className="text-center text-muted-foreground">Not applicable</TableCell>
+                    )}
                     <TableCell className="flex gap-2">
                         <Button type="submit" size="icon" className="h-8 w-8"><Save className="h-4 w-4"/></Button>
                         {initialData && (
@@ -403,10 +414,11 @@ export default function DailyAttendancePage() {
             const map = new Map<string, AttendanceDocument[]>();
             if (allAttendance) {
                 allAttendance.forEach(att => {
-                    if (!map.has(att.employeeId)) {
-                        map.set(att.employeeId, []);
+                    const employeeId = att.employeeId;
+                    if (!map.has(employeeId)) {
+                        map.set(employeeId, []);
                     }
-                    map.get(att.employeeId)!.push(att);
+                    map.get(employeeId)!.push(att);
                 });
             }
             return map;
@@ -458,8 +470,7 @@ export default function DailyAttendancePage() {
                         return;
                     }
 
-                    const formattedDateString = rowData.date.replace(/\//g, '-');
-                    const parsedDate = parse(formattedDateString, 'MM-dd-yyyy', new Date());
+                    const parsedDate = parse(rowData.date, 'MM/dd/yyyy', new Date());
 
                     if (!rowData.date || !isValid(parsedDate)) {
                         errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use MM/dd/yyyy format.`);
@@ -603,4 +614,3 @@ export default function DailyAttendancePage() {
             </div>
         );
     }
-
