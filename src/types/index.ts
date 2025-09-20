@@ -1108,7 +1108,7 @@ export const saleStatusOptions = ["Draft", "Cancelled", "Refunded", "Sent", "Par
 export type SaleStatus = (typeof saleStatusOptions)[number];
 
 export const SaleLineItemSchema = z.object({
-  itemId: z.string().min(1, "Item selection is required."),
+  itemId: z.string().optional(),
   itemCode: z.string().optional(),
   description: z.string().optional(),
   qty: z.preprocess(
@@ -1687,7 +1687,7 @@ export interface Attendance {
   outTime?: string;
   inTimeRemarks?: string;
   outTimeRemarks?: string;
-  workingHours?: number; // In hours
+  workingHours?: string; // Changed from number to string to store "HH:mm"
   updatedBy: string;
   updatedAt: any;
   createdAt: any;
@@ -1719,3 +1719,5 @@ export interface LeaveApplication {
 export type LeaveApplicationDocument = LeaveApplication & { id: string };
 
 // --- END Leave Types ---
+
+    

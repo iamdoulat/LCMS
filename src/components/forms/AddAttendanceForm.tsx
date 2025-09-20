@@ -153,7 +153,8 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
         showConfirmButton: false,
       });
       reset();
-      onFormSubmit();    } catch (error: any) {
+      onFormSubmit();
+    } catch (error: any) {
         console.error("Error saving attendance:", error);
         Swal.fire("Save Failed", `Failed to save attendance record: ${error.message}`, "error");
       } finally {
@@ -334,3 +335,5 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
       </Form>
     );
   }
+
+    
