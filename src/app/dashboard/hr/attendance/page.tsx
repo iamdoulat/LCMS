@@ -12,7 +12,7 @@ import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, Messa
 import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, Attendance, AttendanceDocument } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy, getDocs, doc, setDoc, serverTimestamp, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, setDoc, serverTimestamp, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { format, differenceInMinutes, parse, isValid, eachDayOfInterval, startOfDay, endOfDay, subMonths, parseISO } from 'date-fns';
@@ -150,7 +150,7 @@ const DailyAttendanceDataRow = ({
             await setDoc(doc(firestore, "attendance", docId), dataToSave, { merge: true });
             Swal.fire({
                 title: "Saved", 
-                text: `Attendance updated for ${employee.fullName} on ${format(attendanceDate, 'PPP')}`,
+                text: `Attendance updated for ${employee.fullName} on ${format(attendanceDate, 'dd/MM/yyyy')}`,
                 icon: "success",
                 timer: 1500,
                 showConfirmButton: false,
@@ -167,7 +167,7 @@ const DailyAttendanceDataRow = ({
         
         Swal.fire({
             title: 'Are you sure?',
-            text: `This will delete the attendance record for ${employee.fullName} on ${format(attendanceDate, 'PPP')}.`,
+            text: `This will delete the attendance record for ${employee.fullName} on ${format(attendanceDate, 'dd/MM/yyyy')}.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Yes, delete it!',
@@ -189,7 +189,7 @@ const DailyAttendanceDataRow = ({
         <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)}>
                 <TableRow>
-                    <TableCell>{format(attendanceDate, 'EEE, dd-MM-yyyy')}</TableCell>
+                    <TableCell>{format(attendanceDate, 'EEE, dd/MM/yyyy')}</TableCell>
                     <TableCell>
                         <FormField control={control} name="flag" render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
@@ -358,12 +358,7 @@ export default function DailyAttendancePage() {
             undefined, 
             ['departments']
         );
-        const { data: allAttendance, isLoading: isLoadingAttendance, refetch: refetchAttendance } = useFirestoreQuery<AttendanceDocument[]>(
-            query(collection(firestore, "attendance")), 
-            undefined, 
-            ['attendance']
-        );
-        
+
         const fileInputRef = React.useRef<HTMLInputElement>(null);
         const [searchTerm, setSearchTerm] = React.useState('');
         const [selectedBranch, setSelectedBranch] = React.useState('');
@@ -374,6 +369,25 @@ export default function DailyAttendancePage() {
             from: subMonths(new Date(), 1),
             to: new Date(),
         });
+
+        const attendanceQuery = React.useMemo(() => {
+            if (!dateRange?.from || !dateRange?.to) {
+                return null;
+            }
+            const fromDate = format(dateRange.from, 'yyyy-MM-dd');
+            const toDate = format(dateRange.to, 'yyyy-MM-dd');
+            return query(
+                collection(firestore, "attendance"),
+                where('date', '>=', fromDate),
+                where('date', '<=', toDate),
+            );
+        }, [dateRange]);
+
+        const { data: allAttendance, isLoading: isLoadingAttendance, refetch: refetchAttendance } = useFirestoreQuery<AttendanceDocument[]>(
+            attendanceQuery!,
+            undefined, 
+            ['attendance', dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
+        );
     
         const filteredEmployees = React.useMemo(() => {
             if (!employees) return [];
@@ -443,12 +457,16 @@ export default function DailyAttendancePage() {
                         errors.push(`Row ${index + 2}: Employee with code "${rowData.employeeCode}" not found.`);
                         return;
                     }
-                    if (!rowData.date || !isValid(parseISO(rowData.date))) {
-                        errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use YYYY-MM-DD.`);
+
+                    const formattedDateString = rowData.date.replace(/\//g, '-');
+                    const parsedDate = parse(formattedDateString, 'MM-dd-yyyy', new Date());
+
+                    if (!rowData.date || !isValid(parsedDate)) {
+                        errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use MM/dd/yyyy format.`);
                         return;
                     }
                     
-                    const formattedDate = format(parseISO(rowData.date), 'yyyy-MM-dd');
+                    const formattedDate = format(parsedDate, 'yyyy-MM-dd');
                     const docId = `${employeeId}_${formattedDate}`;
                     const docRef = doc(firestore, "attendance", docId);
                     
@@ -586,4 +604,3 @@ export default function DailyAttendancePage() {
         );
     }
 
-    
