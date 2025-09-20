@@ -12,7 +12,7 @@ import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, Messa
 import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, Attendance, AttendanceDocument } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy, getDocs, doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, setDoc, serverTimestamp, deleteDoc, writeBatch } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { format, differenceInMinutes, parse, isValid, eachDayOfInterval, startOfDay, endOfDay, subMonths, parseISO } from 'date-fns';
@@ -75,15 +75,18 @@ const DailyAttendanceDataRow = ({
     });
     
     React.useEffect(() => {
-        form.reset({
-            flag: initialData?.flag || 'P',
-            inTime: initialData?.inTime || '09:00',
-            outTime: initialData?.outTime || '18:00',
-            inTimeRemarks: initialData?.inTimeRemarks || '',
-            outTimeRemarks: initialData?.outTimeRemarks || '',
-            enableInTime: initialData?.enableInTime ?? true,
-            enableOutTime: initialData?.enableOutTime ?? true,
-        });
+        const resetForm = (data: Attendance | null | undefined) => {
+            form.reset({
+                flag: data?.flag || 'P',
+                inTime: data?.inTime || '09:00',
+                outTime: data?.outTime || '18:00',
+                inTimeRemarks: data?.inTimeRemarks || '',
+                outTimeRemarks: data?.outTimeRemarks || '',
+                enableInTime: data?.enableInTime ?? (data?.flag === 'P' ? true : false),
+                enableOutTime: data?.enableOutTime ?? (data?.flag === 'P' ? true : false),
+            });
+        };
+        resetForm(initialData);
     }, [initialData, form]);
 
     const { watch, control, handleSubmit } = form;
@@ -125,8 +128,11 @@ const DailyAttendanceDataRow = ({
             date: formattedDate,
             workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
             updatedAt: serverTimestamp(),
-            createdAt: initialData?.createdAt || serverTimestamp(),
         };
+
+        if(!initialData?.createdAt) {
+            dataToSave.createdAt = serverTimestamp();
+        }
 
         if (data.flag !== 'P' || !data.enableInTime) {
           delete dataToSave.inTime;
@@ -256,11 +262,6 @@ const EmployeeAttendanceRow = ({
 }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
     
-    // Filter records for the specific employee
-    const employeeAttendanceRecords = React.useMemo(() => {
-        return attendanceRecords.filter(record => record.employeeId === employee.id);
-    }, [attendanceRecords, employee.id]);
-
     const datesToDisplay = React.useMemo(() => {
         const from = dateRange?.from;
         const to = dateRange?.to || from;
@@ -315,7 +316,7 @@ const EmployeeAttendanceRow = ({
                                 <TableBody>
                                     {datesToDisplay.map(date => {
                                         const dateString = format(date, 'yyyy-MM-dd');
-                                        const record = employeeAttendanceRecords.find(r => r.date === dateString);
+                                        const record = attendanceRecords.find(r => r.date === dateString);
                                         return (
                                             <DailyAttendanceDataRow 
                                                 key={date.toISOString()} 
@@ -384,53 +385,113 @@ export default function DailyAttendancePage() {
             );
         }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept]);
         
-        const filteredAttendance = React.useMemo(() => {
-            if (!allAttendance || !dateRange?.from) return [];
-            const fromDate = startOfDay(dateRange.from);
-            const toDate = endOfDay(dateRange.to || dateRange.from);
-            
-            return allAttendance.filter(att => {
-                try {
-                    const attDate = parseISO(att.date);
-                    return isValid(attDate) && attDate >= fromDate && attDate <= toDate;
-                } catch {
-                    return false;
-                }
-            });
-        }, [allAttendance, dateRange]);
+        const attendanceByEmployee = React.useMemo(() => {
+            const map = new Map<string, AttendanceDocument[]>();
+            if (allAttendance) {
+                allAttendance.forEach(att => {
+                    if (!map.has(att.employeeId)) {
+                        map.set(att.employeeId, []);
+                    }
+                    map.get(att.employeeId)!.push(att);
+                });
+            }
+            return map;
+        }, [allAttendance]);
     
         const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance;
     
-        const handleImportCsv = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0];
-            if (!file) {
-              return;
-            }
+            if (!file) return;
             if (file.type !== "text/csv") {
-              Swal.fire("Invalid File Type", "Please upload a .csv file.", "error");
-              if (fileInputRef.current) fileInputRef.current.value = "";
-              return;
+                Swal.fire("Invalid File Type", "Please upload a .csv file.", "error");
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                return;
             }
-    
+
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 const text = e.target?.result as string;
                 if (!text) {
                     Swal.fire("Error Reading File", "Could not read file content.", "error");
                     return;
                 }
-                console.log("CSV Content:", text);
-                Swal.fire(
-                    "Import Started",
-                    "CSV file is being processed. (Note: This is a placeholder; data is not yet saved to the database).",
-                    "info"
-                );
-            };
-            reader.onerror = () => {
-              Swal.fire("File Read Error", "Error reading the selected file.", "error");
-              if (fileInputRef.current) fileInputRef.current.value = "";
+
+                const rows = text.split(/\r\n|\n/).filter(row => row.trim() !== '');
+                const header = rows[0]?.split(',').map(h => h.trim());
+                const requiredHeaders = ['employeeCode', 'date', 'flag', 'inTime', 'outTime'];
+                if (!header || !requiredHeaders.every(h => header.includes(h))) {
+                    Swal.fire("Invalid CSV Header", `CSV must contain the following headers: ${requiredHeaders.join(', ')}`, "error");
+                    return;
+                }
+
+                const employeeMap = new Map(employees?.map(emp => [emp.employeeCode, emp.id]));
+                const dataRows = rows.slice(1);
+                const batch = writeBatch(firestore);
+                let validRecordsCount = 0;
+                const errors: string[] = [];
+
+                dataRows.forEach((row, index) => {
+                    const values = row.split(',');
+                    const rowData: { [key: string]: string } = {};
+                    header.forEach((h, i) => {
+                        rowData[h] = values[i]?.trim();
+                    });
+
+                    const employeeId = employeeMap.get(rowData.employeeCode);
+                    if (!employeeId) {
+                        errors.push(`Row ${index + 2}: Employee with code "${rowData.employeeCode}" not found.`);
+                        return;
+                    }
+                    if (!rowData.date || !isValid(parseISO(rowData.date))) {
+                        errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use YYYY-MM-DD.`);
+                        return;
+                    }
+                    
+                    const formattedDate = format(parseISO(rowData.date), 'yyyy-MM-dd');
+                    const docId = `${employeeId}_${formattedDate}`;
+                    const docRef = doc(firestore, "attendance", docId);
+                    
+                    const attendanceData: Partial<Attendance> = {
+                        employeeId: employeeId,
+                        date: formattedDate,
+                        flag: rowData.flag as AttendanceFlag || 'P',
+                        updatedAt: serverTimestamp(),
+                    };
+
+                    if (attendanceData.flag === 'P') {
+                        attendanceData.inTime = rowData.inTime || '09:00';
+                        attendanceData.outTime = rowData.outTime || '18:00';
+                        attendanceData.inTimeRemarks = rowData.inTimeRemarks || '';
+                        attendanceData.outTimeRemarks = rowData.outTimeRemarks || '';
+                    }
+
+                    batch.set(docRef, attendanceData, { merge: true });
+                    validRecordsCount++;
+                });
+
+                if (errors.length > 0) {
+                    Swal.fire({
+                        title: "CSV Import Errors",
+                        html: `<div class="text-left max-h-48 overflow-y-auto">${errors.join('<br>')}</div>`,
+                        icon: "error"
+                    });
+                }
+                
+                if (validRecordsCount > 0) {
+                    try {
+                        await batch.commit();
+                        Swal.fire("Import Successful", `${validRecordsCount} attendance records have been successfully imported/updated.`, "success");
+                        refetchAttendance(); // Refresh data on the page
+                    } catch (error: any) {
+                        Swal.fire("Firestore Error", `An error occurred while saving to the database: ${error.message}`, "error");
+                    }
+                } else if (errors.length === 0) {
+                     Swal.fire("No Data", "No valid attendance records found to import.", "info");
+                }
             };
             reader.readAsText(file);
+             if (fileInputRef.current) fileInputRef.current.value = "";
         };
     
         return (
@@ -512,7 +573,7 @@ export default function DailyAttendancePage() {
                                             key={emp.id} 
                                             employee={emp} 
                                             dateRange={dateRange}
-                                            attendanceRecords={filteredAttendance}
+                                            attendanceRecords={attendanceByEmployee.get(emp.id) || []}
                                             onRecordChange={refetchAttendance}
                                         />
                                    ))
@@ -524,7 +585,5 @@ export default function DailyAttendancePage() {
             </div>
         );
     }
-
-    
 
     
