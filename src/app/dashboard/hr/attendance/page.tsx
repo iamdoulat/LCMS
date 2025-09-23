@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -310,7 +309,7 @@ const EmployeeAttendanceRow = ({
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <div className="p-4 bg-muted/50 overflow-x-auto">
+                       <div className="p-4 bg-muted/50 overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -470,7 +469,7 @@ export default function DailyAttendancePage() {
                         return;
                     }
                     
-                    const dateStr = rowData.date.replace(/-/g, '/');
+                    const dateStr = rowData.date.replace(/-/g, '/'); // Allow YYYY-MM-DD or YYYY/MM/DD
                     const parsedDate = parse(dateStr, 'MM/dd/yyyy', new Date());
 
                     if (!rowData.date || !isValid(parsedDate)) {
@@ -616,4 +615,5 @@ export default function DailyAttendancePage() {
         );
     }
 
+    
     
