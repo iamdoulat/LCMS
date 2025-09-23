@@ -471,10 +471,10 @@ export default function DailyAttendancePage() {
                     }
                     
                     const dateStr = rowData.date.replace(/-/g, '/');
-                    const parsedDate = parse(dateStr, 'dd/MM/yyyy', new Date());
+                    const parsedDate = parse(dateStr, 'MM/dd/yyyy', new Date());
 
                     if (!rowData.date || !isValid(parsedDate)) {
-                        errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use dd/MM/yyyy format.`);
+                        errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use MM/dd/yyyy format.`);
                         return;
                     }
                     
