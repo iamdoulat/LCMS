@@ -469,10 +469,10 @@ export default function DailyAttendancePage() {
                         return;
                     }
 
-                    const parsedDate = parse(rowData.date.replace(/\//g, '-'), 'MM-dd-yyyy', new Date());
+                    const parsedDate = parse(rowData.date.replace(/-/g, '/'), 'dd/MM/yyyy', new Date());
 
                     if (!rowData.date || !isValid(parsedDate)) {
-                        errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use MM/dd/yyyy format.`);
+                        errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use dd/MM/yyyy format.`);
                         return;
                     }
                     
@@ -613,3 +613,5 @@ export default function DailyAttendancePage() {
             </div>
         );
     }
+
+    
