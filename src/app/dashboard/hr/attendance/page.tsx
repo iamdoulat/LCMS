@@ -313,7 +313,10 @@ const EmployeeAttendanceRow = ({
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="p-2">Attendance Date</TableHead>
+                                        <TableHead className="p-2">
+                                          <div>Attendance Date</div>
+                                          <Input placeholder="Filter..." className="h-8 mt-1" />
+                                        </TableHead>
                                         <TableHead className="p-2">Flag</TableHead>
                                         <TableHead className="p-2">In Time</TableHead>
                                         <TableHead className="p-2">In Time Remarks</TableHead>
@@ -470,7 +473,7 @@ export default function DailyAttendancePage() {
                     }
                     
                     const dateStr = rowData.date.replace(/\//g, '-');
-                    const parsedDate = parse(dateStr, 'MM-dd-yyyy', new Date());
+                    const parsedDate = parse(dateStr, 'MM/dd/yyyy', new Date());
 
 
                     if (!rowData.date || !isValid(parsedDate)) {
