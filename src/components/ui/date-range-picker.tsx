@@ -38,11 +38,11 @@ export function DatePickerWithRange({ className, date, onDateChange }: DatePicke
             {date?.from ? (
               date.to ? (
                 <>
-                  {format(date.from, "LLL dd, y")} -{" "}
-                  {format(date.to, "LLL dd, y")}
+                  {format(date.from, "dd/MM/yyyy")} -{" "}
+                  {format(date.to, "dd/MM/yyyy")}
                 </>
               ) : (
-                format(date.from, "LLL dd, y")
+                format(date.from, "dd/MM/yyyy")
               )
             ) : (
               <span>Pick a date range</span>
@@ -56,7 +56,7 @@ export function DatePickerWithRange({ className, date, onDateChange }: DatePicke
             defaultMonth={date?.from}
             selected={date}
             onSelect={onDateChange}
-            numberOfMonths={1}
+            numberOfMonths={2}
           />
         </PopoverContent>
       </Popover>

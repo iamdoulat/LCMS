@@ -179,10 +179,10 @@ const hrNavItems: NavItem[] = [
   { href: '/dashboard/hr/employees', label: 'Employee List', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
   { href: '/dashboard/hr/payroll/salary-generation', label: 'Salary Generation', icon: Calculator, iconColorClass: 'bg-icon-payment' },
   { href: '/dashboard/hr/payroll/payslip-list', label: 'Payslip List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
-  { href: "/dashboard/hr/attendance", label: "Attendance", icon: Calendar, disabled: false, iconColorClass: 'bg-icon-reports' },
-  { href: "/dashboard/hr/leaves", label: "Leave Management", icon: Mailbox, disabled: false, iconColorClass: 'bg-icon-list' },
+  { href: "/dashboard/hr/attendance", label: "Attendance", icon: Calendar, iconColorClass: 'bg-icon-reports' },
+  { href: "/dashboard/hr/leaves", label: "Leave Management", icon: Mailbox, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/holidays", label: "Holidays", icon: CalendarPlus, iconColorClass: 'bg-icon-upcoming'},
-  { href: '/dashboard/hr/settings', label: 'HRM And Payroll Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
+  { href: '/dashboard/hr/settings', label: 'HRM Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 
 const settingsNavItems: NavItem[] = [
