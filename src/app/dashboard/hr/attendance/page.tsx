@@ -469,8 +469,9 @@ export default function DailyAttendancePage() {
                         return;
                     }
                     
-                    const dateStr = rowData.date.replace(/-/g, '/'); // Allow YYYY-MM-DD or YYYY/MM/DD
-                    const parsedDate = parse(dateStr, 'MM/dd/yyyy', new Date());
+                    const dateStr = rowData.date.replace(/\//g, '-');
+                    const parsedDate = parse(dateStr, 'MM-dd-yyyy', new Date());
+
 
                     if (!rowData.date || !isValid(parsedDate)) {
                         errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use MM/dd/yyyy format.`);
@@ -616,4 +617,6 @@ export default function DailyAttendancePage() {
     }
 
     
+    
+
     
