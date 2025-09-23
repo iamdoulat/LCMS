@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -468,8 +469,9 @@ export default function DailyAttendancePage() {
                         errors.push(`Row ${index + 2}: Employee with code "${rowData.employeeCode}" not found.`);
                         return;
                     }
-
-                    const parsedDate = parse(rowData.date.replace(/-/g, '/'), 'dd/MM/yyyy', new Date());
+                    
+                    const dateStr = rowData.date.replace(/-/g, '/');
+                    const parsedDate = parse(dateStr, 'dd/MM/yyyy', new Date());
 
                     if (!rowData.date || !isValid(parsedDate)) {
                         errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use dd/MM/yyyy format.`);
