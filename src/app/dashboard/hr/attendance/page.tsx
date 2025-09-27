@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, Upload, PlusCircle, Trash2, Calendar } from 'lucide-react';
+import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, Upload, PlusCircle, Trash2, Calendar, Filter } from 'lucide-react';
 import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, Attendance, AttendanceDocument, AttendanceFlag } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
@@ -27,6 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
 const ALL_UNITS_VALUE = "__ALL_UNITS_ATTENDANCE__";
@@ -473,11 +474,11 @@ export default function DailyAttendancePage() {
                     }
                     
                     const dateStr = rowData.date.replace(/\//g, '-');
-                    const parsedDate = parse(dateStr, 'MM/dd/yyyy', new Date());
+                    const parsedDate = parseISO(dateStr);
 
 
                     if (!rowData.date || !isValid(parsedDate)) {
-                        errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use MM/dd/yyyy format.`);
+                        errors.push(`Row ${index + 2}: Invalid date format for "${rowData.date}". Use YYYY-MM-DD format.`);
                         return;
                     }
                     
@@ -561,36 +562,56 @@ export default function DailyAttendancePage() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="p-4 mb-6 rounded-lg border bg-card shadow-sm">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                                <div className="relative lg:col-span-2">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
-                                    <Input placeholder="Employee name or code" className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                       <Card className="mb-6 shadow-md p-4">
+                            <CardHeader className="p-2 pb-4">
+                                <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-2 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                                    <div className="space-y-1 lg:col-span-2">
+                                        <Label htmlFor='search-term-employee-attendance'>Employee Name or Code</Label>
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
+                                            <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Date Range</Label>
+                                        <DatePickerWithRange date={dateRange} onDateChange={setDateRange} className="h-10"/>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Branch</Label>
+                                        <Select value={selectedBranch} onValueChange={(value) => setSelectedBranch(value === ALL_BRANCHES_VALUE ? '' : value)}>
+                                            <SelectTrigger className="h-10"><SelectValue placeholder="Select Branch"/></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={ALL_BRANCHES_VALUE}>All Branches</SelectItem>
+                                                {branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Unit</Label>
+                                        <Select value={selectedUnit} onValueChange={(value) => setSelectedUnit(value === ALL_UNITS_VALUE ? '' : value)}>
+                                            <SelectTrigger className="h-10"><SelectValue placeholder="Select Unit"/></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={ALL_UNITS_VALUE}>All Units</SelectItem>
+                                                {units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Department</Label>
+                                        <Select value={selectedDept} onValueChange={(value) => setSelectedDept(value === ALL_DEPTS_VALUE ? '' : value)}>
+                                            <SelectTrigger className="h-10"><SelectValue placeholder="Select Department"/></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={ALL_DEPTS_VALUE}>All Departments</SelectItem>
+                                                {departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
-                               <DatePickerWithRange date={dateRange} onDateChange={setDateRange} className="h-10"/>
-                                <Select value={selectedBranch} onValueChange={(value) => setSelectedBranch(value === ALL_BRANCHES_VALUE ? '' : value)}>
-                                    <SelectTrigger className="h-10"><SelectValue placeholder="Select Branch"/></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value={ALL_BRANCHES_VALUE}>All Branches</SelectItem>
-                                        {branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={selectedUnit} onValueChange={(value) => setSelectedUnit(value === ALL_UNITS_VALUE ? '' : value)}>
-                                    <SelectTrigger className="h-10"><SelectValue placeholder="Select Unit"/></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value={ALL_UNITS_VALUE}>All Units</SelectItem>
-                                        {units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={selectedDept} onValueChange={(value) => setSelectedDept(value === ALL_DEPTS_VALUE ? '' : value)}>
-                                    <SelectTrigger className="h-10"><SelectValue placeholder="Select Department"/></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value={ALL_DEPTS_VALUE}>All Departments</SelectItem>
-                                        {departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
+                            </CardContent>
+                        </Card>
     
                         {isLoading ? (
                             <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>
@@ -618,10 +639,5 @@ export default function DailyAttendancePage() {
             </div>
         );
     }
-
-    
-    
-
-    
 
     
