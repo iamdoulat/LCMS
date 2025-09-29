@@ -60,7 +60,7 @@ const DailyAttendanceDataRow = ({
 }: { 
     employee: EmployeeDocument, 
     attendanceDate: Date, 
-    initialData?: Attendance | null, 
+    initialData?: AttendanceDocument | null, 
     onRecordChange: () => void 
 }) => {
     const [workingHours, setWorkingHours] = React.useState<string | null>(null);
@@ -80,7 +80,7 @@ const DailyAttendanceDataRow = ({
     });
     
     React.useEffect(() => {
-        const resetForm = (data: Attendance | null | undefined) => {
+        const resetForm = (data: AttendanceDocument | null | undefined) => {
             form.reset({
                 flag: data?.flag || 'P',
                 inTime: data?.inTime || '09:00',
@@ -89,7 +89,7 @@ const DailyAttendanceDataRow = ({
                 outTimeRemarks: data?.outTimeRemarks || '',
                 enableInTime: data?.enableInTime ?? (data?.flag === 'P' ? true : false),
                 enableOutTime: data?.enableOutTime ?? (data?.flag === 'P' ? true : false),
-                imageUrl: (data as any)?.imageUrl || '',
+                imageUrl: data?.imageUrl || '',
             });
         };
         resetForm(initialData);
@@ -131,10 +131,11 @@ const DailyAttendanceDataRow = ({
         const dataToSave: Record<string, any> = {
             ...data,
             employeeId: employee.id,
+            employeeName: employee.fullName,
             date: formattedDate,
             workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
             updatedAt: serverTimestamp(),
-            imageUrl: data.imageUrl || initialData?.['imageUrl'] || '',
+            imageUrl: data.imageUrl || initialData?.imageUrl || '',
         };
 
         if(!initialData?.createdAt) {
@@ -584,7 +585,7 @@ export default function DailyAttendancePage() {
                             </CardHeader>
                             <CardContent className="p-2 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                                    <div className="space-y-1 lg:col-span-2">
+                                    <div className="space-y-1">
                                         <Label htmlFor='search-term-employee-attendance'>Employee Name or Code</Label>
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
@@ -658,5 +659,6 @@ export default function DailyAttendancePage() {
 
 
     
+
 
 
