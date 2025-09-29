@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, Upload, PlusCircle, Trash2, Calendar, Filter } from 'lucide-react';
+import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, Upload, PlusCircle, Trash2, Calendar, Filter, Image as ImageIcon } from 'lucide-react';
 import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, Attendance, AttendanceDocument, AttendanceFlag } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
@@ -28,6 +29,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { DatePickerField } from '@/components/forms/DatePickerField';
 
 const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
 const ALL_UNITS_VALUE = "__ALL_UNITS_ATTENDANCE__";
@@ -46,6 +48,7 @@ const AttendanceSchema = z.object({
     outTimeRemarks: z.string().optional(),
     enableInTime: z.boolean().optional(),
     enableOutTime: z.boolean().optional(),
+    imageUrl: z.string().optional(),
 });
 type AttendanceFormValues = z.infer<typeof AttendanceSchema>;
 
@@ -72,6 +75,7 @@ const DailyAttendanceDataRow = ({
             outTimeRemarks: '',
             enableInTime: true,
             enableOutTime: true,
+            imageUrl: '',
         },
     });
     
@@ -85,6 +89,7 @@ const DailyAttendanceDataRow = ({
                 outTimeRemarks: data?.outTimeRemarks || '',
                 enableInTime: data?.enableInTime ?? (data?.flag === 'P' ? true : false),
                 enableOutTime: data?.enableOutTime ?? (data?.flag === 'P' ? true : false),
+                imageUrl: (data as any)?.imageUrl || '',
             });
         };
         resetForm(initialData);
@@ -129,6 +134,7 @@ const DailyAttendanceDataRow = ({
             date: formattedDate,
             workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
             updatedAt: serverTimestamp(),
+            imageUrl: data.imageUrl || initialData?.['imageUrl'] || '',
         };
 
         if(!initialData?.createdAt) {
@@ -190,7 +196,7 @@ const DailyAttendanceDataRow = ({
         <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)}>
                 <TableRow>
-                    <TableCell>{format(attendanceDate, 'EEE, dd-MM-yyyy')}</TableCell>
+                    <TableCell>{format(attendanceDate, 'EEE, MM/dd/yyyy')}</TableCell>
                     <TableCell>
                         <FormField control={control} name="flag" render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
@@ -246,6 +252,11 @@ const DailyAttendanceDataRow = ({
                     ) : (
                         <TableCell colSpan={5} className="text-center text-muted-foreground">Not applicable</TableCell>
                     )}
+                     <TableCell>
+                        <Button type="button" size="icon" variant="ghost" className="h-8 w-8">
+                            <ImageIcon className="h-4 w-4" />
+                        </Button>
+                    </TableCell>
                     <TableCell className="flex gap-2">
                         <Button type="submit" size="icon" className="h-8 w-8"><Save className="h-4 w-4"/></Button>
                         {initialData && (
@@ -321,6 +332,7 @@ const EmployeeAttendanceRow = ({
                                         <TableHead>Out Time &amp; Date</TableHead>
                                         <TableHead>Out Time Remarks</TableHead>
                                         <TableHead>Working Hour</TableHead>
+                                        <TableHead>Image</TableHead>
                                         <TableHead>Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -639,3 +651,6 @@ export default function DailyAttendancePage() {
             </div>
         );
     }
+
+
+    
