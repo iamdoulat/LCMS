@@ -112,7 +112,7 @@ const DailyAttendanceDataRow = ({
                 const minutes = diffMins % 60;
                 setWorkingHours(`${hours}:${minutes.toString().padStart(2, '0')}`);
             } else {
-                setWorkingHours("Invalid");
+                setWorkingHours("0:00");
             }
         } catch {
             setWorkingHours("Error");
@@ -295,7 +295,7 @@ const EmployeeAttendanceRow = ({
                     <AccordionTrigger className="p-4 hover:no-underline">
                         <div className="flex items-center gap-4 w-full">
                             <Avatar>
-                                <AvatarImage src={employee.photoURL} alt={employee.fullName} data-ai-hint="employee photo"/>
+                                <AvatarImage src={employee.photoURL} alt={employee.fullName} data-ai-hint="employee photo" />
                                 <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 text-left">
@@ -314,26 +314,14 @@ const EmployeeAttendanceRow = ({
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="p-2">
-                                          <div>Attendance Date</div>
-                                        </TableHead>
-                                        <TableHead className="p-2">Flag</TableHead>
-                                        <TableHead className="p-2">In Time</TableHead>
-                                        <TableHead className="p-2">In Time Remarks</TableHead>
-                                        <TableHead className="p-2">Out Time &amp; Date</TableHead>
-                                        <TableHead className="p-2">Out Time Remarks</TableHead>
-                                        <TableHead className="p-2">Working Hour</TableHead>
-                                        <TableHead className="p-2">Action</TableHead>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
-                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
-                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
-                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
-                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
-                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
-                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
-                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
+                                        <TableHead>Attendance Date</TableHead>
+                                        <TableHead>Flag</TableHead>
+                                        <TableHead>In Time</TableHead>
+                                        <TableHead>In Time Remarks</TableHead>
+                                        <TableHead>Out Time &amp; Date</TableHead>
+                                        <TableHead>Out Time Remarks</TableHead>
+                                        <TableHead>Working Hour</TableHead>
+                                        <TableHead>Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -410,6 +398,9 @@ export default function DailyAttendancePage() {
             attendanceQuery!,
             undefined, 
             ['attendance', dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
+            {
+                enabled: !!attendanceQuery, // Only run if query is not null
+            }
         );
     
         const filteredEmployees = React.useMemo(() => {
@@ -648,5 +639,3 @@ export default function DailyAttendancePage() {
             </div>
         );
     }
-
-    
