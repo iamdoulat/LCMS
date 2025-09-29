@@ -190,7 +190,7 @@ const DailyAttendanceDataRow = ({
         <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)}>
                 <TableRow>
-                    <TableCell>{format(attendanceDate, 'EEE, dd/MM/yyyy')}</TableCell>
+                    <TableCell>{format(attendanceDate, 'EEE, dd-MM-yyyy')}</TableCell>
                     <TableCell>
                         <FormField control={control} name="flag" render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
@@ -316,7 +316,6 @@ const EmployeeAttendanceRow = ({
                                     <TableRow>
                                         <TableHead className="p-2">
                                           <div>Attendance Date</div>
-                                          <Input placeholder="Filter..." className="h-8 mt-1" />
                                         </TableHead>
                                         <TableHead className="p-2">Flag</TableHead>
                                         <TableHead className="p-2">In Time</TableHead>
@@ -639,5 +638,3 @@ export default function DailyAttendancePage() {
             </div>
         );
     }
-
-    
