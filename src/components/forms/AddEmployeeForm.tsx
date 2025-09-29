@@ -228,11 +228,11 @@ export function AddEmployeeForm() {
     
     try {
         const newEmployeeDocRef = doc(collection(firestore, 'employees'));
-        const employeeId = newEmployeeDocRef.id;
+        const employeeId = newEmployeeDocRef.id; // Correctly get the ID
         let photoDownloadURL = '';
 
         if (selectedFile) {
-            const photoRef = ref(storage, `employeeImages/${user.uid}/profile.jpg`);
+            const photoRef = ref(storage, `employeeImages/${employeeId}/profile.jpg`);
             await uploadBytes(photoRef, selectedFile);
             photoDownloadURL = await getDownloadURL(photoRef);
         }
@@ -241,6 +241,7 @@ export function AddEmployeeForm() {
 
         const dataToSave = {
             ...data,
+            id: employeeId, // Save the document ID within the document
             uid: user.uid, // Add the authentication UID
             fullName: fullName,
             photoURL: photoDownloadURL,
@@ -340,9 +341,9 @@ export function AddEmployeeForm() {
                     </ReactCrop>
                 )}
                 <DialogFooter>
-                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                    <Button onClick={handleSetCroppedImage} disabled={!completedCrop?.width}>
-                        <CropIcon className="mr-2 h-4 w-4" />Set Photo
+                    <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
+                    <Button onClick={handleSetCroppedImage} disabled={isUploading || !completedCrop?.width}>
+                        {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Set Photo</>}
                     </Button>
                 </DialogFooter>
             </DialogContent>
