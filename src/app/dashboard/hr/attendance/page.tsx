@@ -196,7 +196,7 @@ const DailyAttendanceDataRow = ({
         <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)}>
                 <TableRow>
-                    <TableCell className="font-semibold text-sm">
+                    <TableCell className="font-semibold text-sm whitespace-nowrap">
                         {format(attendanceDate, 'EEE, MM/dd/yyyy')}
                     </TableCell>
                     <TableCell>
@@ -325,7 +325,38 @@ const EmployeeAttendanceRow = ({
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                      
+                       <div className="p-4 bg-muted/50 overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Attendance Date</TableHead>
+                                        <TableHead>Flag</TableHead>
+                                        <TableHead>In Time</TableHead>
+                                        <TableHead>In Time Remarks</TableHead>
+                                        <TableHead>Out Time & Date</TableHead>
+                                        <TableHead>Out Time Remarks</TableHead>
+                                        <TableHead>Working Hour</TableHead>
+                                        <TableHead>Image</TableHead>
+                                        <TableHead>Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {datesToDisplay.map(date => {
+                                        const formattedDate = format(date, 'yyyy-MM-dd');
+                                        const attendanceData = attendanceRecords.find(rec => rec.date === formattedDate);
+                                        return (
+                                            <DailyAttendanceDataRow
+                                                key={date.toISOString()}
+                                                employee={employee}
+                                                attendanceDate={date}
+                                                initialData={attendanceData}
+                                                onRecordChange={onRecordChange}
+                                            />
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                       </div>
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
@@ -362,7 +393,7 @@ export default function DailyAttendancePage() {
         const [selectedDept, setSelectedDept] = React.useState('');
         
         const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
-            from: subMonths(new Date(), 1),
+            from: new Date(),
             to: new Date(),
         });
 
@@ -627,4 +658,3 @@ export default function DailyAttendancePage() {
 
 
     
-
