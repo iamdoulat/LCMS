@@ -55,6 +55,7 @@ export function AddEmployeeForm() {
   const [isCroppingDialogOpen, setIsCroppingDialogOpen] = React.useState(false);
   const imgRef = React.useRef<HTMLImageElement>(null);
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
+  const [isUploading, setIsUploading] = React.useState(false);
 
 
   // Use the hook to fetch data
@@ -200,20 +201,17 @@ export function AddEmployeeForm() {
         Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
         return;
     }
-    const croppedImageBlob = await getCroppedImg(
-        image,
-        completedCrop,
-        selectedFile.name,
-        256, // target width
-        256  // target height
-    );
+    setIsUploading(true);
+    const croppedImageBlob = await getCroppedImg(image, completedCrop, selectedFile.name, 256, 256);
     if (croppedImageBlob) {
         const tempUrl = URL.createObjectURL(croppedImageBlob);
         setPhotoPreview(tempUrl); // Set a temporary URL for preview
         setSelectedFile(croppedImageBlob); // Replace the original file with the cropped blob
         setIsCroppingDialogOpen(false);
+        setIsUploading(false);
         Swal.fire("Photo Staged", "New photo is ready. Click 'Save Employee' to upload it.", "info");
     } else {
+        setIsUploading(false);
         Swal.fire("Error", "Failed to create cropped image.", "error");
     }
   };
@@ -228,7 +226,7 @@ export function AddEmployeeForm() {
     
     try {
         const newEmployeeDocRef = doc(collection(firestore, 'employees'));
-        const employeeId = newEmployeeDocRef.id; // Correctly get the ID
+        const employeeId = newEmployeeDocRef.id;
         let photoDownloadURL = '';
 
         if (selectedFile) {
@@ -240,9 +238,9 @@ export function AddEmployeeForm() {
         const fullName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ');
 
         const dataToSave = {
+            id: employeeId,
+            uid: user.uid,
             ...data,
-            id: employeeId, // Save the document ID within the document
-            uid: user.uid, // Add the authentication UID
             fullName: fullName,
             photoURL: photoDownloadURL,
             dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
@@ -362,9 +360,9 @@ export function AddEmployeeForm() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FormField control={control} name="maritalStatus" render={({ field }) => (<FormItem><FormLabel>Marital Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl><SelectContent>{maritalStatusOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="bloodGroup" render={({ field }) => (<FormItem><FormLabel>Blood Group</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select blood group" /></SelectTrigger></FormControl><SelectContent>{bloodGroupOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="religion" render={({ field }) => (<FormItem><FormLabel>Religion</FormLabel><FormControl><Input placeholder="Islam" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+          <FormField control={control} name="maritalStatus" render={({ field }) => (<FormItem><FormLabel>Marital Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl><SelectContent>{maritalStatusOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+          <FormField control={control} name="bloodGroup" render={({ field }) => (<FormItem><FormLabel>Blood Group</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select blood group" /></SelectTrigger></FormControl><SelectContent>{bloodGroupOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+          <FormField control={control} name="religion" render={({ field }) => (<FormItem><FormLabel>Religion</FormLabel><FormControl><Input placeholder="Islam" {...field} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -596,7 +594,7 @@ export function AddEmployeeForm() {
                         <FormItem>
                             <FormLabel>Payment Frequency*</FormLabel>
                             <div>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select frequency" />
@@ -655,12 +653,12 @@ export function AddEmployeeForm() {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Employee...
+              Updating Employee...
             </>
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Save Employee
+              Update Employee
             </>
           )}
         </Button>
@@ -668,4 +666,7 @@ export function AddEmployeeForm() {
     </Form>
   );
 }
+    
+
+    
 
