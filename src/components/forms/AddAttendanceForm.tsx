@@ -127,7 +127,7 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
     const dataToSave: Record<string, any> = {
       ...data,
       employeeName: selectedEmployee?.label || 'N/A', // Add employeeName
-      date: formattedDate,
+      date: formattedDate, // Use YYYY-MM-DD format
       workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
       updatedBy: user.uid,
       updatedAt: serverTimestamp(),
@@ -338,3 +338,5 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
       </Form>
     );
   }
+
+    
