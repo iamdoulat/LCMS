@@ -320,16 +320,26 @@ const EmployeeAttendanceRow = ({
                                         <TableHead className="p-2">Flag</TableHead>
                                         <TableHead className="p-2">In Time</TableHead>
                                         <TableHead className="p-2">In Time Remarks</TableHead>
-                                        <TableHead className="p-2">Out Time</TableHead>
+                                        <TableHead className="p-2">Out Time &amp; Date</TableHead>
                                         <TableHead className="p-2">Out Time Remarks</TableHead>
                                         <TableHead className="p-2">Working Hour</TableHead>
                                         <TableHead className="p-2">Action</TableHead>
+                                    </TableRow>
+                                    <TableRow>
+                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
+                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
+                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
+                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
+                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
+                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
+                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
+                                        <TableCell className="p-1"><Input placeholder='Filter...' className='h-8 mt-1'/></TableCell>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {datesToDisplay.map(date => {
                                         const dateString = format(date, 'yyyy-MM-dd');
-                                        const record = attendanceRecords.find(r => r.date === dateString);
+                                        const record = attendanceRecords.find(r => r.date === dateString && r.employeeId === employee.id);
                                         return (
                                             <DailyAttendanceDataRow 
                                                 key={date.toISOString()} 
@@ -638,3 +648,5 @@ export default function DailyAttendancePage() {
             </div>
         );
     }
+
+    
