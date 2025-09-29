@@ -264,8 +264,16 @@ export function AddEmployeeForm() {
         delete (dataToSave as any).middleName;
         delete (dataToSave as any).lastName;
         delete (dataToSave as any).sameAsPresentAddress;
+        
+        const cleanedDataToSave: { [key: string]: any } = {};
+        for (const key in dataToSave) {
+          const value = (dataToSave as any)[key];
+          if (value !== undefined && value !== '' && value !== null) {
+            cleanedDataToSave[key] = value;
+          }
+        }
 
-        await setDoc(newEmployeeDocRef, dataToSave);
+        await setDoc(newEmployeeDocRef, cleanedDataToSave);
         
         Swal.fire({
             title: "Employee Added!",
@@ -669,4 +677,5 @@ export function AddEmployeeForm() {
     
 
     
+
 
