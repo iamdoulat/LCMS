@@ -31,7 +31,7 @@ import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 const formatDisplayDate = (dateString?: string) => {
     if (!dateString || !isValid(parseISO(dateString))) return 'N/A';
     try {
-        return format(parseISO(dateString), 'PPP');
+        return format(parseISO(dateString), 'MM/dd/yyyy');
     } catch {
         return 'Invalid Date';
     }

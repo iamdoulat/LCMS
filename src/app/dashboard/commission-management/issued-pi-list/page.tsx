@@ -34,7 +34,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
+    return isValid(date) ? format(date, 'MM/dd/yyyy') : 'Invalid Date';
   } catch (e) {
     return 'N/A';
   }
@@ -527,4 +527,3 @@ export default function IssuedPIListPage() {
     
 
     
-

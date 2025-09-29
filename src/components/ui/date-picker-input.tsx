@@ -27,7 +27,7 @@ const formatDate = (date: Date | undefined): string => {
   if (!date || !isValidDate(date)) {
     return "";
   }
-  return format(date, "PPP");
+  return format(date, "MM/dd/yyyy");
 };
 
 export function DatePickerInput({
@@ -56,7 +56,7 @@ export function DatePickerInput({
     setInputValue(value);
 
     // Attempt to parse the date from input
-    const parsedDate = parse(value, "PPP", new Date());
+    const parsedDate = parse(value, "MM/dd/yyyy", new Date());
     if (isValidDate(parsedDate)) {
       field?.onChange(parsedDate);
     }

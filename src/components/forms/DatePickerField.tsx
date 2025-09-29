@@ -14,9 +14,11 @@ interface DatePickerFieldProps {
   field: ControllerRenderProps<any, any>;
   placeholder?: string;
   disabled?: boolean;
+  fromDate?: Date;
+  toDate?: Date;
 }
 
-export function DatePickerField({ field, placeholder, disabled }: DatePickerFieldProps) {
+export function DatePickerField({ field, placeholder, disabled, fromDate, toDate }: DatePickerFieldProps) {
   const [date, setDate] = React.useState<Date | undefined>(field.value ? (isValid(new Date(field.value)) ? new Date(field.value) : undefined) : undefined);
   const [month, setMonth] = React.useState<Date | undefined>(date);
 
@@ -46,13 +48,13 @@ export function DatePickerField({ field, placeholder, disabled }: DatePickerFiel
         <Button
           variant={"outline"}
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "w-full justify-start text-left font-normal h-10",
             !date && "text-muted-foreground"
           )}
           disabled={disabled}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>{placeholder || "Pick a date"}</span>}
+          {date ? format(date, "MM/dd/yyyy") : <span>{placeholder || "Pick a date"}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
@@ -69,6 +71,8 @@ export function DatePickerField({ field, placeholder, disabled }: DatePickerFiel
           fromYear={1990}
           toYear={2040}
           initialFocus
+          fromDate={fromDate}
+          toDate={toDate}
         />
         <div className="p-2 border-t border-border">
             <Button variant="outline" size="sm" className="w-full" onClick={handleClear}>Clear</Button>

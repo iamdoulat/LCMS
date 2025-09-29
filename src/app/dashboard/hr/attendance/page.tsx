@@ -157,7 +157,7 @@ const DailyAttendanceDataRow = ({
             await setDoc(doc(firestore, "attendance", docId), dataToSave, { merge: true });
             Swal.fire({
                 title: "Saved", 
-                text: `Attendance updated for ${employee.fullName} on ${format(attendanceDate, 'dd/MM/yyyy')}`,
+                text: `Attendance updated for ${employee.fullName} on ${format(attendanceDate, 'MM/dd/yyyy')}`,
                 icon: "success",
                 timer: 1500,
                 showConfirmButton: false,
@@ -174,7 +174,7 @@ const DailyAttendanceDataRow = ({
         
         Swal.fire({
             title: 'Are you sure?',
-            text: `This will delete the attendance record for ${employee.fullName} on ${format(attendanceDate, 'dd/MM/yyyy')}.`,
+            text: `This will delete the attendance record for ${employee.fullName} on ${format(attendanceDate, 'MM/dd/yyyy')}.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Yes, delete it!',

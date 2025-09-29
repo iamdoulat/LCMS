@@ -38,11 +38,11 @@ export function DatePickerWithRange({ className, date, onDateChange }: DatePicke
             {date?.from ? (
               date.to ? (
                 <>
-                  {format(date.from, "MM/dd/yy")} -{" "}
-                  {format(date.to, "MM/dd/yy")}
+                  {format(date.from, "MM/dd/yyyy")} -{" "}
+                  {format(date.to, "MM/dd/yyyy")}
                 </>
               ) : (
-                format(date.from, "MM/dd/yy")
+                format(date.from, "MM/dd/yyyy")
               )
             ) : (
               <span>Pick a date range</span>
