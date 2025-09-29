@@ -585,18 +585,18 @@ export default function DailyAttendancePage() {
                             </CardHeader>
                             <CardContent className="p-2 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                                    <div className="space-y-1">
+                                    <div className="space-y-1 md:col-span-2 lg:col-span-1">
                                         <Label htmlFor='search-term-employee-attendance'>Employee Name or Code</Label>
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
-                                            <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                            <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                         </div>
                                     </div>
                                     <div className="space-y-1">
                                         <Label>Date Range</Label>
                                         <DatePickerWithRange date={dateRange} onDateChange={setDateRange} className="h-10"/>
                                     </div>
-                                    <div className="space-y-1">
+                                    <div className="space-y-1 lg:ml-8">
                                         <Label>Branch</Label>
                                         <Select value={selectedBranch} onValueChange={(value) => setSelectedBranch(value === ALL_BRANCHES_VALUE ? '' : value)}>
                                             <SelectTrigger className="h-10"><SelectValue placeholder="Select Branch"/></SelectTrigger>
@@ -659,6 +659,7 @@ export default function DailyAttendancePage() {
 
 
     
+
 
 
 
