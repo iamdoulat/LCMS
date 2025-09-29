@@ -47,7 +47,6 @@ const AttendanceSchema = z.object({
     outTimeRemarks: z.string().optional(),
     enableInTime: z.boolean().optional(),
     enableOutTime: z.boolean().optional(),
-    imageUrl: z.string().optional(),
 });
 type AttendanceFormValues = z.infer<typeof AttendanceSchema>;
 
@@ -74,7 +73,6 @@ const DailyAttendanceDataRow = ({
             outTimeRemarks: '',
             enableInTime: true,
             enableOutTime: true,
-            imageUrl: '',
         },
     });
     
@@ -88,7 +86,6 @@ const DailyAttendanceDataRow = ({
                 outTimeRemarks: data?.outTimeRemarks || '',
                 enableInTime: data?.enableInTime ?? (data?.flag === 'P' ? true : false),
                 enableOutTime: data?.enableOutTime ?? (data?.flag === 'P' ? true : false),
-                imageUrl: data?.imageUrl || '',
             });
         };
         resetForm(initialData);
@@ -134,7 +131,6 @@ const DailyAttendanceDataRow = ({
             date: formattedDate,
             workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
             updatedAt: serverTimestamp(),
-            imageUrl: data.imageUrl || initialData?.imageUrl || '',
         };
 
         if(!initialData?.createdAt) {
@@ -312,7 +308,7 @@ const EmployeeAttendanceRow = ({
                                 <p className="font-semibold">{employee.fullName}</p>
                                 <p className="text-sm text-muted-foreground">{employee.employeeCode}</p>
                             </div>
-                            <div className="text-sm text-muted-foreground text-left hidden md:block">
+                            <div className="text-sm text-muted-foreground text-left">
                                 <p>{employee.designation}</p>
                                 <p>{employee.branch}</p>
                             </div>
@@ -328,7 +324,7 @@ const EmployeeAttendanceRow = ({
                                         <TableHead>Flag</TableHead>
                                         <TableHead>In Time</TableHead>
                                         <TableHead>In Time Remarks</TableHead>
-                                        <TableHead>Out Time & Date</TableHead>
+                                        <TableHead>Out Time &amp; Date</TableHead>
                                         <TableHead>Out Time Remarks</TableHead>
                                         <TableHead>Working Hour</TableHead>
                                         <TableHead>Action</TableHead>
@@ -409,10 +405,7 @@ export default function DailyAttendancePage() {
             (snapshot) => {
                 return snapshot.docs.map(doc => {
                     const data = doc.data();
-                    // Ensure date is a string in the desired format
-                    const formattedDate = data.date instanceof Timestamp 
-                        ? format(data.date.toDate(), 'yyyy-MM-dd') 
-                        : (data.date || '');
+                    const formattedDate = format(parseISO(data.date), 'yyyy-MM-dd');
                     return {
                         id: doc.id,
                         ...data,
@@ -595,7 +588,7 @@ export default function DailyAttendancePage() {
                                         <Label htmlFor='search-term-employee-attendance'>Employee Name or Code</Label>
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
-                                            <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10 w-full lg:w-[250px]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                            <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                         </div>
                                     </div>
                                     <div className="space-y-1">
