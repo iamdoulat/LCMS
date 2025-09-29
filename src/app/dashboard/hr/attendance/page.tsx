@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -257,11 +256,6 @@ const DailyAttendanceDataRow = ({
                     ) : (
                         <TableCell colSpan={5} className="text-center text-muted-foreground">Not applicable</TableCell>
                     )}
-                     <TableCell>
-                        <Button type="button" size="icon" variant="ghost" className="h-8 w-8">
-                            <ImageIcon className="h-4 w-4" />
-                        </Button>
-                    </TableCell>
                     <TableCell className="flex gap-2">
                         <Button type="submit" size="icon" className="h-8 w-8"><Save className="h-4 w-4"/></Button>
                         {initialData && (
@@ -337,7 +331,6 @@ const EmployeeAttendanceRow = ({
                                         <TableHead>Out Time & Date</TableHead>
                                         <TableHead>Out Time Remarks</TableHead>
                                         <TableHead>Working Hour</TableHead>
-                                        <TableHead>Image</TableHead>
                                         <TableHead>Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -413,7 +406,20 @@ export default function DailyAttendancePage() {
 
         const { data: allAttendance, isLoading: isLoadingAttendance, refetch: refetchAttendance } = useFirestoreQuery<AttendanceDocument[]>(
             attendanceQuery!,
-            undefined, 
+            (snapshot) => {
+                return snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    // Ensure date is a string in the desired format
+                    const formattedDate = data.date instanceof Timestamp 
+                        ? format(data.date.toDate(), 'yyyy-MM-dd') 
+                        : (data.date || '');
+                    return {
+                        id: doc.id,
+                        ...data,
+                        date: formattedDate
+                    } as AttendanceDocument;
+                });
+            }, 
             ['attendance', dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
             {
                 enabled: !!attendanceQuery, // Only run if query is not null
@@ -589,7 +595,7 @@ export default function DailyAttendancePage() {
                                         <Label htmlFor='search-term-employee-attendance'>Employee Name or Code</Label>
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
-                                            <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                            <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10 w-full lg:w-[250px]" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                         </div>
                                     </div>
                                     <div className="space-y-1">
@@ -657,9 +663,4 @@ export default function DailyAttendancePage() {
         );
     }
 
-
     
-
-
-
-
