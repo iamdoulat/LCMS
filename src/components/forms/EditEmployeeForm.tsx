@@ -236,6 +236,8 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
 
         const dataToSave = {
             ...data,
+            id: employee.id, // Explicitly include the ID for consistency
+            uid: employee.uid || user.uid, // Retain original UID or set current user's
             fullName: fullName,
             photoURL: photoDownloadURL,
             dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
