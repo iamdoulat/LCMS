@@ -196,7 +196,9 @@ const DailyAttendanceDataRow = ({
         <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)}>
                 <TableRow>
-                    <TableCell>{format(attendanceDate, 'EEE, MM/dd/yyyy')}</TableCell>
+                    <TableCell className="font-semibold text-sm">
+                        {format(attendanceDate, 'EEE, MM/dd/yyyy')}
+                    </TableCell>
                     <TableCell>
                         <FormField control={control} name="flag" render={({ field }) => (
                                 <Select onValueChange={field.onChange} value={field.value}>
@@ -214,7 +216,7 @@ const DailyAttendanceDataRow = ({
                             {enableInTime && (
                                 <FormField control={control} name="inTime" render={({ field }) => (
                                 <div className="relative">
-                                    <Input type="time" {...field} className="h-9 w-[120px]"/>
+                                    <Input type="text" placeholder='09:00' {...field} className="h-9 w-[120px]"/>
                                     <Clock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
                                 </div>
                                 )}/>
@@ -229,11 +231,11 @@ const DailyAttendanceDataRow = ({
                             )}
                         </TableCell>
                         <TableCell>
-                             <div className='flex items-center gap-2'>
+                            <div className='flex items-center gap-2'>
                             {enableOutTime && (
                                 <FormField control={control} name="outTime" render={({ field }) => (
                                 <div className="relative">
-                                    <Input type="time" {...field} className="h-9 w-[120px]"/>
+                                    <Input type="text" placeholder='18:00' {...field} className="h-9 w-[120px] bg-sky-100 dark:bg-sky-900/40"/>
                                     <Clock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
                                 </div>
                                 )}/>
@@ -247,7 +249,9 @@ const DailyAttendanceDataRow = ({
                                 )}/>
                             )}
                         </TableCell>
-                        <TableCell>{enableInTime && enableOutTime ? workingHours : '-'}</TableCell>
+                        <TableCell className="text-center font-bold text-primary">
+                            {enableInTime && enableOutTime ? workingHours : '-'}
+                        </TableCell>
                         </>
                     ) : (
                         <TableCell colSpan={5} className="text-center text-muted-foreground">Not applicable</TableCell>
@@ -321,38 +325,7 @@ const EmployeeAttendanceRow = ({
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                       <div className="p-4 bg-muted/50 overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Attendance Date</TableHead>
-                                        <TableHead>Flag</TableHead>
-                                        <TableHead>In Time</TableHead>
-                                        <TableHead>In Time Remarks</TableHead>
-                                        <TableHead>Out Time &amp; Date</TableHead>
-                                        <TableHead>Out Time Remarks</TableHead>
-                                        <TableHead>Working Hour</TableHead>
-                                        <TableHead>Image</TableHead>
-                                        <TableHead>Action</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {datesToDisplay.map(date => {
-                                        const dateString = format(date, 'yyyy-MM-dd');
-                                        const record = attendanceRecords.find(r => r.date === dateString && r.employeeId === employee.id);
-                                        return (
-                                            <DailyAttendanceDataRow 
-                                                key={date.toISOString()} 
-                                                employee={employee} 
-                                                attendanceDate={date} 
-                                                initialData={record} 
-                                                onRecordChange={onRecordChange} 
-                                            />
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
+                      
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
@@ -654,3 +627,4 @@ export default function DailyAttendancePage() {
 
 
     
+
