@@ -13,6 +13,7 @@ import { collection, getDocs, query, where, doc, documentId, getDoc } from 'fire
 import { firestore } from '@/lib/firebase/config';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import Swal from 'sweetalert2';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -24,7 +25,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString || !isValid(parseISO(dateString))) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return format(date, 'MMM do, yyyy');
+    return format(date, 'MM/dd/yy');
   } catch (e) {
     return 'N/A';
   }
