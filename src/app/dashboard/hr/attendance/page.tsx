@@ -343,7 +343,7 @@ const EmployeeAttendanceRow = ({
                                 <TableBody>
                                     {datesToDisplay.map(date => {
                                         const formattedDate = format(date, 'yyyy-MM-dd');
-                                        const attendanceData = attendanceRecords.find(rec => rec.date === formattedDate);
+                                        const attendanceData = attendanceRecords.find(rec => rec.date === formattedDate && rec.employeeId === employee.id);
                                         return (
                                             <DailyAttendanceDataRow
                                                 key={date.toISOString()}
@@ -658,3 +658,4 @@ export default function DailyAttendancePage() {
 
 
     
+
