@@ -122,8 +122,11 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
     const formattedDate = format(data.date, 'yyyy-MM-dd');
     const docId = `${data.employeeId}_${formattedDate}`;
 
+    const selectedEmployee = employeeOptions.find(emp => emp.value === data.employeeId);
+
     const dataToSave: Record<string, any> = {
       ...data,
+      employeeName: selectedEmployee?.label || 'N/A', // Add employeeName
       date: formattedDate,
       workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
       updatedBy: user.uid,
@@ -335,5 +338,3 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
       </Form>
     );
   }
-
-    
