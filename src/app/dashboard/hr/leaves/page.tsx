@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mailbox, PlusCircle, Loader2, AlertTriangle, Info, Check, X, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Mailbox, PlusCircle, Loader2, AlertTriangle, Info, Check, X, ThumbsUp, ThumbsDown, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -24,6 +24,10 @@ import { format, parseISO, isValid, differenceInCalendarDays } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
 import Swal from 'sweetalert2';
+import { useRouter } from 'next/navigation';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal } from 'lucide-react';
+
 
 const formatDisplayDate = (dateString: string): string => {
     try {
@@ -68,11 +72,13 @@ const LeaveListSkeleton = () => (
 
 export default function LeaveManagementPage() {
   const { userRole } = useAuth();
+  const router = useRouter();
   const [leaves, setLeaves] = React.useState<LeaveApplicationDocument[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
 
   const canApprove = userRole?.includes('Super Admin') || userRole?.includes('Admin');
+  const canEdit = userRole?.some(role => ['Super Admin', 'Admin'].includes(role));
 
   React.useEffect(() => {
     setIsLoading(true);
@@ -211,16 +217,30 @@ export default function LeaveManagementPage() {
                                         <TableCell><Badge variant={getStatusBadgeVariant(leave.status)}>{leave.status}</Badge></TableCell>
                                         {canApprove && (
                                             <TableCell className="text-center">
-                                                <div className="flex justify-center gap-2">
-                                                    <Button variant="default" size="icon" className="h-8 w-8 bg-green-500 hover:bg-green-600" onClick={() => handleUpdateStatus(leave.id, 'Approved')}>
-                                                        <ThumbsUp className="h-4 w-4" />
-                                                        <span className="sr-only">Approve</span>
-                                                    </Button>
-                                                    <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => handleUpdateStatus(leave.id, 'Rejected')}>
-                                                        <ThumbsDown className="h-4 w-4" />
-                                                         <span className="sr-only">Reject</span>
-                                                    </Button>
-                                                </div>
+                                                 <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                                            <span className="sr-only">Open menu</span>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onSelect={() => handleUpdateStatus(leave.id, 'Approved')}>
+                                                            <ThumbsUp className="mr-2 h-4 w-4" />
+                                                            <span>Approve</span>
+                                                        </DropdownMenuItem>
+                                                         <DropdownMenuItem onSelect={() => handleUpdateStatus(leave.id, 'Rejected')} className="text-destructive focus:text-destructive">
+                                                            <ThumbsDown className="mr-2 h-4 w-4" />
+                                                            <span>Reject</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onSelect={() => router.push(`/dashboard/hr/leaves/edit/${leave.id}`)}>
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            <span>Edit</span>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         )}
                                     </TableRow>
