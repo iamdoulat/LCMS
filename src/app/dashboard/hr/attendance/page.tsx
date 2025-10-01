@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -298,7 +297,7 @@ const EmployeeAttendanceRow = ({
                                     <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
                                 </Avatar>
                                 <div className="text-left">
-                                    <p className="font-semibold truncate">{employee.fullName}</p>
+                                    <p className="font-semibold truncate text-black dark:text-white">{employee.fullName}</p>
                                     <p className="text-sm text-muted-foreground">{employee.employeeCode}</p>
                                 </div>
                             </div>
@@ -723,3 +722,6 @@ export default function DailyAttendancePage() {
 
 
 
+
+
+    
