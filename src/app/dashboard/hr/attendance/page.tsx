@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, User, Search, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, PlusCircle, Trash2, Calendar, Filter, Image as ImageIcon, XCircle, Save } from 'lucide-react';
+import { Loader2, User, Search, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, PlusCircle, Trash2, Calendar, Filter, XCircle, Save } from 'lucide-react';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
@@ -130,7 +130,7 @@ const AttendanceDayRow = ({
                 }
             } catch {}
         } else {
-            setValue('flag', defaultFlag);
+            setValue(defaultFlag);
         }
     }
   }, [inTime, getDefaultFlag, setValue, form]);
@@ -584,3 +584,4 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
+

@@ -1660,7 +1660,7 @@ export interface Payslip {
 
 
 // --- Attendance Types ---
-export const attendanceFlagOptions = ['P', 'A', 'L', 'W'] as const;
+export const attendanceFlagOptions = ['P', 'A', 'L', 'W', 'H', 'D'] as const;
 export type AttendanceFlag = (typeof attendanceFlagOptions)[number];
 
 export const AttendanceFormSchema = z.object({
