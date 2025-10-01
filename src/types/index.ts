@@ -1512,6 +1512,9 @@ export interface Employee {
     structureDate?: string; // ISO string
     paymentFrequency?: string;
     salaryBreakup?: SalaryBreakup[];
+    totalSalary?: number;
+    totalIncrement?: number;
+    grossSalary?: number;
   };
 }
 

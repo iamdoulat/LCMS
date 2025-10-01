@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -255,6 +256,9 @@ export function AddEmployeeForm() {
             salaryStructure: data.salaryStructure ? {
                 ...data.salaryStructure,
                 structureDate: data.salaryStructure.structureDate ? data.salaryStructure.structureDate.toISOString() : null,
+                totalSalary: salaryAmount,
+                totalIncrement: increasedAmount,
+                grossSalary: totalAmount,
             } : undefined,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
@@ -630,7 +634,7 @@ export function AddEmployeeForm() {
                    </div>
                 </FormItem>
                 <div className="space-y-3">
-                   <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-center mb-2">
+                    <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-center mb-2">
                         <Label className="text-sm font-medium">Salary Breakup</Label>
                         <Label className="text-sm font-medium">Salary Amount</Label>
                         <Label className="text-sm font-medium">Increment Amount</Label>
@@ -645,19 +649,23 @@ export function AddEmployeeForm() {
                         </div>
                     ))}
                 </div>
-                 <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                    <div className="flex items-center gap-2">
-                        <Label>Salary Amount</Label>
-                        <Input value={salaryAmount.toFixed(2)} readOnly disabled />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Label>Increased Amount</Label>
-                        <Input value={increasedAmount.toFixed(2)} readOnly disabled />
-                    </div>
-                     <div className="flex items-center gap-2">
-                        <Label>Gross Salary Amount</Label>
-                        <Input value={totalAmount.toFixed(2)} readOnly disabled className="font-bold text-primary" />
-                    </div>
+                <div className="rounded-md border mt-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Salary Amount</TableHead>
+                        <TableHead>Increased Amount</TableHead>
+                        <TableHead>Gross Salary Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>{salaryAmount.toFixed(2)}</TableCell>
+                        <TableCell>{increasedAmount.toFixed(2)}</TableCell>
+                        <TableCell className="font-bold text-primary">{totalAmount.toFixed(2)}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
             </CardContent>
         </Card>
@@ -683,6 +691,7 @@ export function AddEmployeeForm() {
     
 
     
+
 
 
 
