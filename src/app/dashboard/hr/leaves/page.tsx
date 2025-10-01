@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mailbox, PlusCircle, Loader2, AlertTriangle, Info, Check, X, ThumbsUp, ThumbsDown, Edit } from 'lucide-react';
+import { Mailbox, PlusCircle, Loader2, AlertTriangle, Info, Check, X, ThumbsUp, ThumbsDown, Edit, Filter, XCircle, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -19,14 +19,17 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { firestore } from '@/lib/firebase/config';
 import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type { LeaveApplicationDocument } from '@/types';
+import type { LeaveApplicationDocument, LeaveStatus, LeaveType } from '@/types';
+import { leaveStatusOptions, leaveTypeOptions } from '@/types';
 import { format, parseISO, isValid, differenceInCalendarDays } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const formatDisplayDate = (dateString: string): string => {
@@ -73,9 +76,17 @@ const LeaveListSkeleton = () => (
 export default function LeaveManagementPage() {
   const { userRole } = useAuth();
   const router = useRouter();
-  const [leaves, setLeaves] = React.useState<LeaveApplicationDocument[]>([]);
+  const [allLeaves, setAllLeaves] = React.useState<LeaveApplicationDocument[]>([]);
+  const [displayedLeaves, setDisplayedLeaves] = React.useState<LeaveApplicationDocument[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
+
+  // Filter states
+  const [filterEmployeeCode, setFilterEmployeeCode] = React.useState('');
+  const [filterEmployeeName, setFilterEmployeeName] = React.useState('');
+  const [filterLeaveType, setFilterLeaveType] = React.useState<LeaveType | ''>('');
+  const [filterStatus, setFilterStatus] = React.useState<LeaveStatus | ''>('');
+
 
   const canApprove = userRole?.includes('Super Admin') || userRole?.includes('Admin');
   const canEdit = userRole?.some(role => ['Super Admin', 'Admin'].includes(role));
@@ -89,7 +100,7 @@ export default function LeaveManagementPage() {
         id: doc.id,
         ...doc.data()
       } as LeaveApplicationDocument));
-      setLeaves(fetchedLeaves);
+      setAllLeaves(fetchedLeaves);
       setIsLoading(false);
       setFetchError(null);
     }, (error) => {
@@ -100,6 +111,39 @@ export default function LeaveManagementPage() {
 
     return () => unsubscribe();
   }, []);
+  
+  const getEmployeeDetails = (employeeName: string) => {
+    if (!employeeName) return { name: 'N/A', code: 'N/A' };
+    const match = employeeName.match(/(.*) \((.*)\)/);
+    if (match) {
+        return { name: match[1], code: match[2] };
+    }
+    return { name: employeeName, code: 'N/A' };
+  };
+
+  React.useEffect(() => {
+    let filtered = [...allLeaves];
+
+    if (filterEmployeeName) {
+        filtered = filtered.filter(leave => 
+            getEmployeeDetails(leave.employeeName).name.toLowerCase().includes(filterEmployeeName.toLowerCase())
+        );
+    }
+    if (filterEmployeeCode) {
+        filtered = filtered.filter(leave => 
+            getEmployeeDetails(leave.employeeName).code.toLowerCase().includes(filterEmployeeCode.toLowerCase())
+        );
+    }
+    if (filterLeaveType) {
+        filtered = filtered.filter(leave => leave.leaveType === filterLeaveType);
+    }
+    if (filterStatus) {
+        filtered = filtered.filter(leave => leave.status === filterStatus);
+    }
+
+    setDisplayedLeaves(filtered);
+  }, [allLeaves, filterEmployeeName, filterEmployeeCode, filterLeaveType, filterStatus]);
+
 
   const handleUpdateStatus = async (leaveId: string, newStatus: 'Approved' | 'Rejected') => {
     if (!canApprove) {
@@ -143,15 +187,6 @@ export default function LeaveManagementPage() {
     });
   };
 
-  const getEmployeeDetails = (employeeName: string) => {
-    if (!employeeName) return { name: 'N/A', code: 'N/A' };
-    const match = employeeName.match(/(.*) \((.*)\)/);
-    if (match) {
-        return { name: match[1], code: match[2] };
-    }
-    return { name: employeeName, code: 'N/A' };
-  };
-
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -161,6 +196,13 @@ export default function LeaveManagementPage() {
         default: return 'outline';
     }
   }
+
+  const clearFilters = () => {
+    setFilterEmployeeCode('');
+    setFilterEmployeeName('');
+    setFilterLeaveType('');
+    setFilterStatus('');
+  };
 
 
   return (
@@ -184,6 +226,47 @@ export default function LeaveManagementPage() {
                 </div>
             </CardHeader>
             <CardContent>
+                <Card className="mb-6 shadow-md p-4">
+                    <CardHeader className="p-2 pb-4">
+                        <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-2 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-end">
+                            <div className="space-y-1">
+                                <Label htmlFor="employeeCodeFilterLeave">Employee Code</Label>
+                                <Input id="employeeCodeFilterLeave" placeholder="Search Code..." value={filterEmployeeCode} onChange={(e) => setFilterEmployeeCode(e.target.value)} />
+                            </div>
+                             <div className="space-y-1">
+                                <Label htmlFor="employeeNameFilterLeave">Employee Name</Label>
+                                <Input id="employeeNameFilterLeave" placeholder="Search Name..." value={filterEmployeeName} onChange={(e) => setFilterEmployeeName(e.target.value)} />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="leaveTypeFilter">Leave Type</Label>
+                                <Select value={filterLeaveType} onValueChange={(value) => setFilterLeaveType(value === 'All' ? '' : value as LeaveType)}>
+                                    <SelectTrigger id="leaveTypeFilter"><SelectValue placeholder="All Types" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All Types</SelectItem>
+                                        {leaveTypeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div className="space-y-1">
+                                <Label htmlFor="statusFilterLeave">Status</Label>
+                                <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value === 'All' ? '' : value as LeaveStatus)}>
+                                    <SelectTrigger id="statusFilterLeave"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="All">All Statuses</SelectItem>
+                                        {leaveStatusOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                             <div className="pt-6">
+                                <Button onClick={clearFilters} variant="outline" className="w-full"><XCircle className="mr-2 h-4 w-4" /> Clear Filters</Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <h3 className="text-lg font-semibold mb-4">Leave Application History</h3>
                 <div className="rounded-md border">
                     <Table>
@@ -211,8 +294,8 @@ export default function LeaveManagementPage() {
                                         {fetchError}
                                     </TableCell>
                                 </TableRow>
-                            ) : leaves.length > 0 ? (
-                                leaves.map(leave => {
+                            ) : displayedLeaves.length > 0 ? (
+                                displayedLeaves.map(leave => {
                                     const { name, code } = getEmployeeDetails(leave.employeeName);
                                     return (
                                         <TableRow key={leave.id}>
@@ -273,3 +356,5 @@ export default function LeaveManagementPage() {
     </div>
   );
 }
+
+    
