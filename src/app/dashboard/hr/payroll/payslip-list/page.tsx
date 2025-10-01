@@ -2,17 +2,17 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ListChecks, Loader2, Printer, ChevronLeft, ChevronRight, MoreHorizontal, FileEdit, Trash2 } from 'lucide-react';
+import { ListChecks, Loader2, Printer, ChevronLeft, ChevronRight, MoreHorizontal, FileEdit, Trash2, Filter, XCircle, User, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, doc, deleteDoc, runTransaction, serverTimestamp, where, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { Payslip, PettyCashTransactionDocument, PettyCashAccountDocument } from '@/types';
+import type { Payslip, PettyCashTransactionDocument, PettyCashAccountDocument, DesignationDocument } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { format, parseISO, isValid } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import {
@@ -23,6 +23,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formatDisplayDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -39,6 +42,15 @@ const formatCurrency = (value?: number) => {
 
 const ITEMS_PER_PAGE = 20;
 
+const monthOptions = [
+    "All", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+];
+
+const currentSystemYear = new Date().getFullYear();
+const yearOptions = ["All", ...Array.from({ length: (currentSystemYear - 2020 + 6) }, (_, i) => (2020 + i).toString())];
+
+
 export default function PayslipListPage() {
   const router = useRouter();
   const { data: payslips, isLoading, error, refetch } = useFirestoreQuery<Payslip[]>(
@@ -46,8 +58,43 @@ export default function PayslipListPage() {
     undefined,
     ['payslips']
   );
+   const { data: designations, isLoading: isLoadingDesignations } = useFirestoreQuery<DesignationDocument[]>(
+    query(collection(firestore, 'designations'), orderBy('name')),
+    undefined,
+    ['designations_for_filter']
+  );
   
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterEmployeeCode, setFilterEmployeeCode] = useState('');
+  const [filterEmployeeName, setFilterEmployeeName] = useState('');
+  const [filterYear, setFilterYear] = useState('All');
+  const [filterMonth, setFilterMonth] = useState('All');
+  const [filterDesignation, setFilterDesignation] = useState('All');
+
+  const filteredPayslips = useMemo(() => {
+    if (!payslips) return [];
+    return payslips.filter(p => {
+      const payPeriodParts = p.payPeriod?.split(', ');
+      const monthMatch = filterMonth === 'All' || (payPeriodParts && payPeriodParts[0] === filterMonth);
+      const yearMatch = filterYear === 'All' || (payPeriodParts && payPeriodParts[1] === filterYear);
+      
+      return (
+        (!filterEmployeeCode || p.employeeCode?.toLowerCase().includes(filterEmployeeCode.toLowerCase())) &&
+        (!filterEmployeeName || p.employeeName?.toLowerCase().includes(filterEmployeeName.toLowerCase())) &&
+        monthMatch &&
+        yearMatch &&
+        (!filterDesignation || filterDesignation === 'All' || p.designation === filterDesignation)
+      )
+    });
+  }, [payslips, filterEmployeeCode, filterEmployeeName, filterYear, filterMonth, filterDesignation]);
+
+  const clearFilters = () => {
+    setFilterEmployeeCode('');
+    setFilterEmployeeName('');
+    setFilterYear('All');
+    setFilterMonth('All');
+    setFilterDesignation('All');
+  };
 
   const handlePreview = (payslipId: string) => {
     router.push(`/dashboard/hr/payroll/payslip-preview/${payslipId}`);
@@ -106,8 +153,8 @@ export default function PayslipListPage() {
     }
   };
   
-  const totalPages = payslips ? Math.ceil(payslips.length / ITEMS_PER_PAGE) : 0;
-  const currentPayslips = payslips?.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = filteredPayslips ? Math.ceil(filteredPayslips.length / ITEMS_PER_PAGE) : 0;
+  const currentPayslips = filteredPayslips?.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <div className="container mx-auto py-8">
@@ -122,6 +169,44 @@ export default function PayslipListPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+           <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
+                <div className="space-y-1">
+                  <Label htmlFor="employeeCodeFilter">Employee Code</Label>
+                  <Input id="employeeCodeFilter" placeholder="Search Code..." value={filterEmployeeCode} onChange={(e) => setFilterEmployeeCode(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="employeeNameFilter">Employee Name</Label>
+                  <Input id="employeeNameFilter" placeholder="Search Name..." value={filterEmployeeName} onChange={(e) => setFilterEmployeeName(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="yearFilter">Pay Year</Label>
+                  <Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{yearOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select>
+                </div>
+                 <div className="space-y-1">
+                  <Label htmlFor="monthFilter">Pay Month</Label>
+                  <Select value={filterMonth} onValueChange={setFilterMonth}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{monthOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select>
+                </div>
+                 <div className="space-y-1">
+                  <Label htmlFor="designationFilter">Designation</Label>
+                  <Select value={filterDesignation} onValueChange={setFilterDesignation} disabled={isLoadingDesignations}>
+                    <SelectTrigger><SelectValue placeholder="Select Designation"/></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Designations</SelectItem>
+                      {designations?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="pt-6">
+                  <Button onClick={clearFilters} variant="outline" className="w-full"><XCircle className="mr-2 h-4 w-4" /> Clear Filters</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
            <div className="rounded-md border">
                 <Table>
                     <TableHeader>
@@ -156,7 +241,7 @@ export default function PayslipListPage() {
                         ) : !currentPayslips || currentPayslips.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                                    No payslips have been generated yet.
+                                    No payslips found matching your criteria.
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -201,7 +286,7 @@ export default function PayslipListPage() {
                         )}
                     </TableBody>
                      <TableCaption>
-                        {payslips && `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} - ${Math.min(currentPage * ITEMS_PER_PAGE, payslips.length)} of ${payslips.length} payslips.`}
+                        {filteredPayslips && `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} - ${Math.min(currentPage * ITEMS_PER_PAGE, filteredPayslips.length)} of ${filteredPayslips.length} payslips.`}
                     </TableCaption>
                 </Table>
             </div>
