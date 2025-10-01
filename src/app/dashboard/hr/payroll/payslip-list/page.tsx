@@ -6,7 +6,7 @@ import { ListChecks, Loader2, Printer, ChevronLeft, ChevronRight, MoreHorizontal
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy, doc, deleteDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, deleteDoc, runTransaction, serverTimestamp, where, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { Payslip, PettyCashTransactionDocument, PettyCashAccountDocument } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
