@@ -125,6 +125,8 @@ export default function SalaryGenerationPage() {
             }
             case 'Employee Wise': {
                  if (!data.employee) { Swal.fire("Validation Error", "Please select an employee.", "error"); setIsGenerating(false); return; }
+                 // Note: Firestore does not support `where("id", "==", ...)` directly. Using document ID in a query requires `documentId()`.
+                 // Assuming 'id' field exists in your documents, otherwise adjust. If employee value is the doc ID, this is correct.
                 employeesToProcessQuery = query(baseQuery, where("id", "==", data.employee));
                 break;
             }
@@ -162,9 +164,9 @@ export default function SalaryGenerationPage() {
             const batch = writeBatch(firestore);
             let totalGrossSalary = 0, totalDeductions = 0, processedCount = 0;
             
-            employeesSnapshot.docs.forEach(empDoc => {
+            for (const empDoc of employeesSnapshot.docs) {
                 const employee = {id: empDoc.id, ...empDoc.data()} as EmployeeDocument;
-                if (!employee.salaryStructure || !employee.salaryStructure.salaryBreakup) return;
+                if (!employee.salaryStructure || !employee.salaryStructure.salaryBreakup) continue;
 
                 const daysInMonth = salaryPolicy.dayConsideration === 'Fixed Days' ? (salaryPolicy.fixedDaysInMonth || 30) : getDaysInMonth(startDate);
                 let absentDays = 0;
@@ -194,10 +196,7 @@ export default function SalaryGenerationPage() {
                 const deductionForAbsence = absentDays * perDaySalary;
                 const grossSalary = fullGrossSalary - deductionForAbsence;
 
-                // Placeholder for deduction logic
-                const taxDeduction = grossSalary * 0.05; // Example: 5% tax
-                const providentFund = grossSalary * 0.08; // Example: 8% PF
-                const deductions = taxDeduction + providentFund;
+                const deductions = 0; // Only absent days are deducted from gross. No other deductions for now.
                 
                 totalGrossSalary += grossSalary;
                 totalDeductions += deductions;
@@ -211,12 +210,10 @@ export default function SalaryGenerationPage() {
                     basicSalary: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Basic')?.amount ?? null,
                     houseRent: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'House Rent')?.amount ?? null,
                     medicalAllowance: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Medical Allowance')?.amount ?? null,
-                    taxDeduction: taxDeduction,
-                    providentFund: providentFund,
                     createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 };
                 batch.set(payslipDocRef, payslipData);
-            });
+            }
 
             if (processedCount > 0) {
                 const payrollDocRef = doc(firestore, 'payrolls', payrollId);
