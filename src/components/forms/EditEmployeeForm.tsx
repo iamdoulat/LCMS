@@ -639,7 +639,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                         <Input value={increasedAmount.toFixed(2)} readOnly disabled />
                     </div>
                      <div className="flex items-center gap-2">
-                        <Label>Total Amount</Label>
+                        <Label>Gross Salary Amount</Label>
                         <Input value={totalAmount.toFixed(2)} readOnly disabled className="font-bold text-primary" />
                     </div>
                 </div>
