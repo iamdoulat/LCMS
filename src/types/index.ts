@@ -1644,15 +1644,12 @@ export interface Payslip {
     designation: string; // Denormalized
     payPeriod: string; // "August, 2024"
     grossSalary: number;
-    // Breakdowns
-    basicSalary?: number | null;
-    houseRent?: number | null;
-    medicalAllowance?: number | null;
     salaryBreakup?: SalaryBreakup[];
     // Deductions
     taxDeduction?: number;
     providentFund?: number;
     absentDeduction?: number;
+    absentDays?: number; // New field to store absent days count
     // ... other deductions
     totalDeductions: number;
     netSalary: number;
