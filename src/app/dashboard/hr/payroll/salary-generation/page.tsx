@@ -202,14 +202,11 @@ export default function SalaryGenerationPage() {
                 const payslipData: Payslip = {
                     id: payslipId, payrollId, employeeId: employee.id, employeeName: employee.fullName, employeeCode: employee.employeeCode,
                     designation: employee.designation, payPeriod,
-                    grossSalary: fullGrossSalary,
+                    grossSalary: employee.salaryStructure.totalSalary || fullGrossSalary,
                     totalDeductions: deductionForAbsence,
-                    netSalary: fullGrossSalary - deductionForAbsence,
-                    basicSalary: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Basic')?.amount ?? null,
-                    houseRent: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'House Rent')?.amount ?? null,
-                    medicalAllowance: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Medical Allowance')?.amount ?? null,
+                    netSalary: (employee.salaryStructure.totalSalary || fullGrossSalary) - deductionForAbsence,
                     salaryBreakup: employee.salaryStructure.salaryBreakup || [],
-                    leaveDeduction: deductionForAbsence,
+                    absentDeduction: deductionForAbsence,
                     createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 };
                 batch.set(payslipDocRef, payslipData);
@@ -322,3 +319,5 @@ export default function SalaryGenerationPage() {
     
 
   
+
+    

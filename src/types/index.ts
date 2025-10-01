@@ -1648,17 +1648,11 @@ export interface Payslip {
     basicSalary?: number | null;
     houseRent?: number | null;
     medicalAllowance?: number | null;
-    entertainment?: number | null;
-    foodAllowance?: number | null;
-    conveyanceAllowance?: number | null;
-    utility?: number | null;
-    transportation?: number | null;
-    cash?: number | null;
     salaryBreakup?: SalaryBreakup[];
     // Deductions
     taxDeduction?: number;
     providentFund?: number;
-    leaveDeduction?: number;
+    absentDeduction?: number;
     // ... other deductions
     totalDeductions: number;
     netSalary: number;
@@ -1736,3 +1730,5 @@ export type LeaveApplicationDocument = LeaveApplication & { id: string };
 
 
   
+
+    

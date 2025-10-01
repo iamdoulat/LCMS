@@ -21,7 +21,7 @@ const PayslipEditSchema = z.object({
   grossSalary: z.number().nonnegative(),
   taxDeduction: z.number().nonnegative().optional(),
   providentFund: z.number().nonnegative().optional(),
-  leaveDeduction: z.number().nonnegative().optional(),
+  absentDeduction: z.number().nonnegative().optional(),
   // Add other editable fields here
 });
 
@@ -40,7 +40,7 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
       grossSalary: initialData.grossSalary || 0,
       taxDeduction: initialData.taxDeduction || 0,
       providentFund: initialData.providentFund || 0,
-      leaveDeduction: initialData.leaveDeduction || 0,
+      absentDeduction: initialData.absentDeduction || 0,
     },
   });
   
@@ -50,8 +50,8 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
     const gross = watchedFields.grossSalary || 0;
     const tax = watchedFields.taxDeduction || 0;
     const pf = watchedFields.providentFund || 0;
-    const leave = watchedFields.leaveDeduction || 0;
-    const deductions = tax + pf + leave;
+    const absent = watchedFields.absentDeduction || 0;
+    const deductions = tax + pf + absent;
     const net = gross - deductions;
     return { totalDeductions: deductions, netSalary: net };
   }, [watchedFields]);
@@ -66,7 +66,7 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
       grossSalary: data.grossSalary,
       taxDeduction: data.taxDeduction,
       providentFund: data.providentFund,
-      leaveDeduction: data.leaveDeduction,
+      absentDeduction: data.absentDeduction,
       totalDeductions: totalDeductions,
       netSalary: netSalary,
       updatedAt: serverTimestamp(),
@@ -173,10 +173,10 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
             />
             <FormField
               control={form.control}
-              name="leaveDeduction"
+              name="absentDeduction"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Leave/Absent Deduction</FormLabel>
+                  <FormLabel>Absent Deduction</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                   </FormControl>
@@ -221,3 +221,5 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
 }
 
   
+
+    
