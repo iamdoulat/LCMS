@@ -1713,6 +1713,7 @@ export interface LeaveApplication {
   status: LeaveStatus;
   appliedBy: string;
   rejectionReason?: string;
+  approverComment?: string; // Added field for approver's comments
   createdAt: any;
   updatedAt: any;
 }

@@ -26,6 +26,7 @@ const leaveApplicationSchema = z.object({
   fromDate: z.date({ required_error: "Start date is required." }),
   toDate: z.date({ required_error: "End date is required." }),
   reason: z.string().min(10, "Reason must be at least 10 characters long."),
+  approverComment: z.string().optional(),
 }).refine(data => {
     if(data.fromDate && data.toDate) {
         return data.toDate >= data.fromDate;
@@ -60,6 +61,7 @@ export function EditLeaveForm({ initialData, onFormSubmit }: EditLeaveFormProps)
       fromDate: parseISO(initialData.fromDate),
       toDate: parseISO(initialData.toDate),
       reason: initialData.reason,
+      approverComment: initialData.approverComment || '',
     }
   });
 
@@ -82,6 +84,7 @@ export function EditLeaveForm({ initialData, onFormSubmit }: EditLeaveFormProps)
         employeeName: selectedEmployee?.label || initialData.employeeName,
         fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
         toDate: format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+        approverComment: data.approverComment || '',
         updatedAt: serverTimestamp(),
     };
 
@@ -102,6 +105,7 @@ export function EditLeaveForm({ initialData, onFormSubmit }: EditLeaveFormProps)
         setIsSubmitting(false);
     }
   };
+
 
   return (
     <Form {...form}>
@@ -179,6 +183,19 @@ export function EditLeaveForm({ initialData, onFormSubmit }: EditLeaveFormProps)
               <FormLabel>Reason*</FormLabel>
               <FormControl>
                 <Textarea placeholder="Please provide a reason for your leave..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="approverComment"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Approver Comment</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Add a comment (e.g., reason for rejection)..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

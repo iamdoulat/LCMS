@@ -120,24 +120,21 @@ export default function LeaveManagementPage() {
       swalConfig.input = 'textarea';
       swalConfig.inputLabel = 'Reason for Rejection';
       swalConfig.inputPlaceholder = 'Provide a reason...';
-      swalConfig.preConfirm = () => {
-        if (!Swal.getInput()?.value) {
-          Swal.showValidationMessage('A reason is required for rejection');
-        }
-        return Swal.getInput()?.value || '';
-      }
     }
     
     Swal.fire(swalConfig).then(async (result) => {
       if (result.isConfirmed) {
-        const reason = result.value;
+        const comment = result.value || ''; // Get comment from Swal input if it exists
         try {
           const leaveDocRef = doc(firestore, "leave_applications", leaveId);
-          await updateDoc(leaveDocRef, {
+          const updateData: { status: 'Approved' | 'Rejected'; updatedAt: any; approverComment?: string } = {
             status: newStatus,
-            rejectionReason: newStatus === 'Rejected' ? reason : null,
             updatedAt: serverTimestamp(),
-          });
+          };
+          if (newStatus === 'Rejected' && comment) {
+            updateData.approverComment = comment;
+          }
+          await updateDoc(leaveDocRef, updateData);
           Swal.fire('Success!', `The leave application has been ${newStatus.toLowerCase()}.`, 'success');
         } catch (error: any) {
           Swal.fire('Error!', `Could not update the status: ${error.message}`, 'error');
@@ -213,7 +210,7 @@ export default function LeaveManagementPage() {
                                         <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
                                         <TableCell>{calculateDuration(leave.fromDate, leave.toDate)}</TableCell>
                                         <TableCell className="max-w-[200px] truncate" title={leave.reason}>{leave.reason}</TableCell>
-                                        <TableCell className="max-w-[200px] truncate text-destructive" title={leave.rejectionReason}>{leave.rejectionReason || 'N/A'}</TableCell>
+                                        <TableCell className="max-w-[200px] truncate text-muted-foreground" title={leave.approverComment}>{leave.approverComment || 'N/A'}</TableCell>
                                         <TableCell><Badge variant={getStatusBadgeVariant(leave.status)}>{leave.status}</Badge></TableCell>
                                         {canApprove && (
                                             <TableCell className="text-center">
