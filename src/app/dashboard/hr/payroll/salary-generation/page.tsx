@@ -191,8 +191,9 @@ export default function SalaryGenerationPage() {
                 
                 const fullGrossSalary = employee.salaryStructure.salaryBreakup.reduce((sum, item) => sum + (item.amount || 0) + (item.increaseAmount || 0), 0);
                 const perDaySalary = fullGrossSalary / daysInMonth;
-                const grossSalary = fullGrossSalary - (absentDays * perDaySalary);
-                
+                const deductionForAbsence = absentDays * perDaySalary;
+                const grossSalary = fullGrossSalary - deductionForAbsence;
+
                 // Placeholder for deduction logic
                 const taxDeduction = grossSalary * 0.05; // Example: 5% tax
                 const providentFund = grossSalary * 0.08; // Example: 8% PF
@@ -210,7 +211,8 @@ export default function SalaryGenerationPage() {
                     basicSalary: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Basic')?.amount ?? null,
                     houseRent: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'House Rent')?.amount ?? null,
                     medicalAllowance: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Medical Allowance')?.amount ?? null,
-                    taxDeduction, providentFund,
+                    taxDeduction: taxDeduction,
+                    providentFund: providentFund,
                     createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 };
                 batch.set(payslipDocRef, payslipData);
