@@ -88,16 +88,19 @@ const AttendanceDayRow = ({
 
   const form = useForm<AttendanceDayFormValues>({
     resolver: zodResolver(attendanceDaySchema),
+    defaultValues: {
+      flag: 'P',
+      inTime: '09:00',
+      outTime: '18:00',
+    }
   });
   
   React.useEffect(() => {
     const defaultFlag = getDefaultFlag();
-    const isPresentOrDelayed = defaultFlag === 'P' || defaultFlag === 'D';
-
     form.reset({
       flag: initialData?.flag || defaultFlag,
-      inTime: initialData?.inTime || (isPresentOrDelayed ? '09:00' : ''),
-      outTime: initialData?.outTime || (isPresentOrDelayed ? '18:00' : ''),
+      inTime: initialData?.inTime || (defaultFlag === 'P' || defaultFlag === 'D' ? '09:00' : ''),
+      outTime: initialData?.outTime || (defaultFlag === 'P' || defaultFlag === 'D' ? '18:00' : ''),
       inTimeRemarks: initialData?.inTimeRemarks || '',
       outTimeRemarks: initialData?.outTimeRemarks || '',
     });
@@ -110,14 +113,13 @@ const AttendanceDayRow = ({
   const flag = watch('flag');
   
   React.useEffect(() => {
-    // Only auto-update flag for new entries (no initialData)
-    if (!initialData && inTime) {
+    if (!initialData && inTime && flag === 'A') { // Only change if it's a new record and currently Absent
       try {
         const [hours, minutes] = inTime.split(':').map(Number);
         if (hours > 9 || (hours === 9 && minutes > 10)) {
-          if (flag !== 'D') setValue('flag', 'D');
+            setValue('flag', 'D', { shouldValidate: true });
         } else {
-          if (flag === 'A') setValue('flag', 'P'); // Only switch from Absent to Present
+            setValue('flag', 'P', { shouldValidate: true });
         }
       } catch {}
     }
@@ -293,20 +295,22 @@ const EmployeeAttendanceRow = ({
             <Accordion type="single" collapsible onValueChange={(value) => setIsExpanded(!!value)}>
                 <AccordionItem value={`item-${employee.id}`} className="border-b-0">
                     <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex items-center gap-4 w-full">
-                            <Avatar>
-                                <AvatarImage src={employee.photoURL} alt={employee.fullName} />
-                                <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
-                            </Avatar>
-                             <div className="flex-1 text-left">
-                                <p className="font-semibold">{employee.fullName}</p>
-                                <p className="text-sm text-muted-foreground">{employee.employeeCode}</p>
+                        <div className="flex items-center justify-between w-full gap-4">
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                <Avatar>
+                                    <AvatarImage src={employee.photoURL} alt={employee.fullName} />
+                                    <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
+                                </Avatar>
+                                <div className="text-left flex-1 truncate">
+                                    <p className="font-semibold truncate">{employee.fullName}</p>
+                                    <p className="text-sm text-muted-foreground">{employee.employeeCode}</p>
+                                </div>
                             </div>
-                            <div className="hidden sm:block text-sm text-muted-foreground text-left">
+                            <div className="hidden sm:block text-sm text-muted-foreground text-left flex-shrink-0">
                                 <p>{employee.designation}</p>
                                 <p>{employee.branch || 'N/A'}</p>
                             </div>
-                            {isExpanded ? <Minus className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
+                            {isExpanded ? <Minus className="h-5 w-5 text-primary flex-shrink-0" /> : <Plus className="h-5 w-5 text-primary flex-shrink-0" />}
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
@@ -466,7 +470,6 @@ export default function DailyAttendancePage() {
                 
                 let parsedDate;
                 if(rowData.date) {
-                    // Try parsing multiple common date formats
                     const dateFormats = ['M/d/yyyy', 'MM/dd/yyyy', 'yyyy-MM-dd'];
                     for (const dateFormat of dateFormats) {
                         parsedDate = parseDateFns(rowData.date, dateFormat, new Date());
@@ -720,5 +723,6 @@ export default function DailyAttendancePage() {
     
 
     
+
 
 
