@@ -614,6 +614,12 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                    </div>
                 </FormItem>
                 <div className="space-y-3">
+                    <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-center mb-2">
+                        <Label className="text-sm font-medium">Salary Breakup</Label>
+                        <Label className="text-sm font-medium">Salary Amount</Label>
+                        <Label className="text-sm font-medium">Increment Amount</Label>
+                        <div className="w-8"></div>
+                    </div>
                     {salaryFields.map((field, index) => (
                         <div key={field.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-center">
                             <FormField control={control} name={`salaryStructure.salaryBreakup.${index}.breakupName`} render={({ field }) => (<FormItem><FormLabel className="sr-only">Breakup Name</FormLabel><FormControl><Input readOnly disabled {...field} className="bg-muted/50 font-semibold" /></FormControl></FormItem>)}/>
@@ -661,3 +667,5 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     
 
     
+
+
