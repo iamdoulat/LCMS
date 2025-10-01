@@ -68,34 +68,28 @@ const AttendanceDayRow = ({
   const [workingHours, setWorkingHours] = React.useState<string | null>(null);
 
   const getDefaultFlag = React.useCallback((): AttendanceFlag => {
-    // If there is existing data, its flag is the default.
     if (initialData?.flag) {
         return initialData.flag;
     }
-
     const dayOfWeek = getDay(date);
-    if (dayOfWeek === 5) return 'W'; // Friday is Weekend
-
-    const isHoliday = holidays.some(h => 
+    if (dayOfWeek === 5) return 'W';
+    const isHoliday = holidays.some(h =>
         isWithinDateInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })
     );
     if (isHoliday) return 'H';
-
-    const isOnLeave = leaves.some(l => 
+    const isOnLeave = leaves.some(l =>
         l.employeeId === employee.id &&
         isWithinDateInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) &&
         l.status === 'Approved'
     );
     if (isOnLeave) return 'L';
-    
-    // The final fallback is 'Absent'
-    return 'A'; 
+    return 'A';
   }, [date, holidays, leaves, initialData, employee.id]);
 
   const form = useForm<AttendanceDayFormValues>({
     resolver: zodResolver(attendanceDaySchema),
     defaultValues: {
-      flag: 'A', // Default to A, will be overridden by useEffect
+      flag: 'A',
       inTime: '09:00',
       inTimeRemarks: '',
       outTime: '18:00',
@@ -104,7 +98,6 @@ const AttendanceDayRow = ({
   });
   
   React.useEffect(() => {
-    // This effect now correctly initializes or resets the form based on incoming data.
     const defaultFlag = getDefaultFlag();
     form.reset({
       flag: initialData?.flag || defaultFlag,
@@ -122,21 +115,19 @@ const AttendanceDayRow = ({
   const flag = watch('flag');
   
   React.useEffect(() => {
-    // This logic now only applies when there's NO initial data for the day
-    // and the flag is in its default 'A' state.
-    if (!initialData && form.getValues('flag') === 'A') {
-        if(inTime) {
+    if (!initialData) { // Only apply auto-flag logic for NEW entries
+        if (inTime) {
             try {
                 const [hours, minutes] = inTime.split(':').map(Number);
                 if ((hours > 9 || (hours === 9 && minutes > 10))) {
-                    setValue('flag', 'D');
+                    if (flag !== 'D') setValue('flag', 'D');
                 } else {
-                    setValue('flag', 'P');
+                    if (flag !== 'P') setValue('flag', 'P');
                 }
             } catch {}
         }
     }
-  }, [inTime, form, setValue, initialData]);
+  }, [inTime, flag, setValue, initialData]);
 
   React.useEffect(() => {
     if (flag !== 'P' && flag !== 'D') {
@@ -335,7 +326,7 @@ const EmployeeAttendanceRow = ({
                                         <TableHead>Flag</TableHead>
                                         <TableHead>In Time</TableHead>
                                         <TableHead>In Time Remarks</TableHead>
-                                        <TableHead>Out Time &amp; Date</TableHead>
+                                        <TableHead>Out Time & Date</TableHead>
                                         <TableHead>Out Time Remarks</TableHead>
                                         <TableHead>Working Hour</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
@@ -587,5 +578,7 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
+
+    
 
     
