@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -91,11 +92,13 @@ const AttendanceDayRow = ({
   
   React.useEffect(() => {
     const defaultFlag = getDefaultFlag();
+    const isPresentOrDelayed = defaultFlag === 'P' || defaultFlag === 'D';
+
     form.reset({
       flag: initialData?.flag || defaultFlag,
-      inTime: initialData?.inTime || (defaultFlag === 'P' || defaultFlag === 'D' ? '09:00' : ''),
+      inTime: initialData?.inTime || (isPresentOrDelayed ? '09:00' : ''),
       inTimeRemarks: initialData?.inTimeRemarks || '',
-      outTime: initialData?.outTime || (defaultFlag === 'P' || defaultFlag === 'D' ? '18:00' : ''),
+      outTime: initialData?.outTime || (isPresentOrDelayed ? '18:00' : ''),
       outTimeRemarks: initialData?.outTimeRemarks || '',
     });
   }, [initialData, getDefaultFlag, form]);
@@ -434,10 +437,16 @@ export default function DailyAttendancePage() {
             if (typeof text !== 'string') return;
 
             const rows = text.split('\n').filter(row => row.trim() !== '');
-            const header = rows.shift()?.trim().split(',');
+            const headerRow = rows.shift()?.trim();
+            if (!headerRow) {
+                 Swal.fire("Invalid CSV", "CSV file is empty or has no header.", "error");
+                 return;
+            }
+            const header = headerRow.split(',');
             
-            if (!header || !['employeeCode', 'date', 'flag', 'inTime', 'outTime'].every(h => header.includes(h))) {
-                Swal.fire("Invalid CSV Header", "CSV must contain columns: employeeCode, date, flag, inTime, outTime.", "error");
+            const requiredHeaders = ['employeeCode', 'date', 'flag'];
+            if (!requiredHeaders.every(h => header.includes(h))) {
+                Swal.fire("Invalid CSV Header", `CSV must contain columns: ${requiredHeaders.join(', ')}.`, "error");
                 return;
             }
 
@@ -445,51 +454,71 @@ export default function DailyAttendancePage() {
             const employeeMap = new Map(employees.map(emp => [emp.employeeCode, emp]));
 
             let processedCount = 0;
-            for (const row of rows) {
+            let errorRows = [];
+            for (const [index, row] of rows.entries()) {
                 const values = row.trim().split(',');
                 const rowData = header.reduce((obj, h, i) => ({ ...obj, [h.trim()]: values[i]?.trim() }), {} as any);
                 
                 const employee = employeeMap.get(rowData.employeeCode);
                 if (!employee) {
-                    console.warn(`Skipping row: Employee with code ${rowData.employeeCode} not found.`);
+                    console.warn(`Skipping row ${index + 2}: Employee with code ${rowData.employeeCode} not found.`);
+                    errorRows.push({row: index + 2, reason: `Employee code '${rowData.employeeCode}' not found.`});
                     continue;
                 }
-
-                if (!rowData.date || !isValid(parseISO(rowData.date))) {
-                    console.warn(`Skipping row: Invalid date format for ${rowData.employeeCode}. Use YYYY-MM-DD.`);
+                
+                let parsedDate;
+                if(rowData.date) {
+                    parsedDate = parseDateFns(rowData.date, 'M/d/yyyy', new Date());
+                    if (!isValid(parsedDate)) {
+                       parsedDate = parseISO(rowData.date);
+                    }
+                }
+                
+                if (!parsedDate || !isValid(parsedDate)) {
+                    console.warn(`Skipping row ${index + 2}: Invalid date format for ${rowData.employeeCode}. Use YYYY-MM-DD or M/D/YYYY.`);
+                    errorRows.push({row: index + 2, reason: `Invalid date format: '${rowData.date}'. Use YYYY-MM-DD or M/D/YYYY.`});
                     continue;
                 }
-
-                const docId = `${employee.id}_${rowData.date}`;
+                
+                const formattedDate = format(parsedDate, 'yyyy-MM-dd');
+                const docId = `${employee.id}_${formattedDate}`;
                 const docRef = doc(firestore, "attendance", docId);
                 
                 const dataToSave: Partial<AttendanceDocument> = {
                     employeeId: employee.id,
                     employeeName: `${employee.fullName} (${employee.employeeCode})`,
-                    date: format(parseISO(rowData.date), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                    date: format(parsedDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
                     flag: (attendanceFlagOptions.includes(rowData.flag) ? rowData.flag : 'A') as AttendanceFlag,
                     updatedBy: user.uid,
                     updatedAt: serverTimestamp(),
                 };
                 
                 if (['P', 'D'].includes(dataToSave.flag!) && rowData.inTime && rowData.outTime) {
-                    dataToSave.inTime = rowData.inTime;
-                    dataToSave.outTime = rowData.outTime;
-                    // Additional fields can be added here
+                    const parsedInTime = parseDateFns(rowData.inTime, 'H:mm', new Date());
+                    const parsedOutTime = parseDateFns(rowData.outTime, 'H:mm', new Date());
+
+                    if(isValid(parsedInTime)) dataToSave.inTime = format(parsedInTime, 'HH:mm');
+                    if(isValid(parsedOutTime)) dataToSave.outTime = format(parsedOutTime, 'HH:mm');
                 }
                 
                 batch.set(docRef, dataToSave, { merge: true });
                 processedCount++;
             }
-
-            try {
-                await batch.commit();
-                Swal.fire("Upload Complete", `${processedCount} records processed successfully.`, "success");
-                await refetchAttendance();
-            } catch (error: any) {
-                Swal.fire("Upload Failed", `An error occurred: ${error.message}`, "error");
-            } finally {
-                if (fileInputRef.current) fileInputRef.current.value = "";
+            
+            if (errorRows.length > 0) {
+                 Swal.fire("Upload Warning", `Processed ${processedCount} records, but skipped ${errorRows.length} rows due to errors. Check console for details.`, "warning");
+                 console.error("CSV Upload Errors:", errorRows);
+            }
+            if (processedCount === 0 && errorRows.length > 0) {
+                Swal.fire("Upload Failed", "No valid records were found to upload. Please check your file and the console for errors.", "error");
+            } else if (processedCount > 0) {
+                 try {
+                    await batch.commit();
+                    Swal.fire("Upload Complete", `${processedCount} records processed successfully.`, "success");
+                    await refetchAttendance();
+                } catch (error: any) {
+                    Swal.fire("Upload Failed", `An error occurred during database write: ${error.message}`, "error");
+                }
             }
         };
         reader.readAsText(file);
@@ -691,3 +720,4 @@ export default function DailyAttendancePage() {
     
 
     
+
