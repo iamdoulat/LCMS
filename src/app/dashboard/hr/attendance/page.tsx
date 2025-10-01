@@ -289,7 +289,7 @@ const EmployeeAttendanceRow = ({
         <Card className="mb-2">
             <Accordion type="single" collapsible onValueChange={(value) => setIsExpanded(!!value)}>
                 <AccordionItem value={`item-${employee.id}`} className="border-b-0">
-                    <AccordionTrigger className="p-4 hover:no-underline">
+                     <AccordionTrigger className="p-4 hover:no-underline">
                         <div className="flex items-center justify-between w-full gap-4">
                             <div className="flex items-center gap-4 flex-1 min-w-0">
                                 <Avatar>
@@ -640,7 +640,7 @@ export default function DailyAttendancePage() {
                             <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
                         </CardHeader>
                         <CardContent className="p-2 space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-end">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                                 <div className="space-y-1">
                                     <Label htmlFor='search-term-employee-attendance'>Employee Name or Code</Label>
                                     <div className="relative">
@@ -652,6 +652,8 @@ export default function DailyAttendancePage() {
                                     <Label>Date Range</Label>
                                     <DatePickerWithRange date={dateRange} onDateChange={setDateRange}/>
                                 </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-4">
                                 <div className="space-y-1">
                                     <Label>Branch</Label>
                                     <Select value={selectedBranch} onValueChange={(value) => setSelectedBranch(value === ALL_BRANCHES_VALUE ? '' : value)}>
@@ -723,5 +725,7 @@ export default function DailyAttendancePage() {
 
 
 
+
+    
 
     
