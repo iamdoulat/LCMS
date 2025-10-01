@@ -147,9 +147,9 @@ export default function PayslipPreviewPage() {
   ].filter(d => typeof d.value === 'number' && d.value > 0);
   
   const earnings: SalaryBreakup[] = payslip.salaryBreakup || [
-      { breakupName: 'Basic', amount: payslip.basicSalary || 0 },
-      { breakupName: 'House Rent', amount: payslip.houseRent || 0 },
-      { breakupName: 'Medical Allowance', amount: payslip.medicalAllowance || 0 },
+      { breakupName: 'Basic', amount: (payslip as any).basicSalary || 0 },
+      { breakupName: 'House Rent', amount: (payslip as any).houseRent || 0 },
+      { breakupName: 'Medical Allowance', amount: (payslip as any).medicalAllowance || 0 },
   ].filter(e => typeof e.amount === 'number' && e.amount > 0);
   
   const totalEarnings = payslip.grossSalary || 0;
