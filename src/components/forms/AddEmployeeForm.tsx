@@ -630,6 +630,12 @@ export function AddEmployeeForm() {
                    </div>
                 </FormItem>
                 <div className="space-y-3">
+                   <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-center mb-2">
+                        <Label className="text-sm font-medium">Salary Breakup</Label>
+                        <Label className="text-sm font-medium">Salary Amount</Label>
+                        <Label className="text-sm font-medium">Increment Amount</Label>
+                        <div className="w-8"></div>
+                    </div>
                     {salaryFields.map((field, index) => (
                         <div key={field.id} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-3 items-center">
                             <FormField control={control} name={`salaryStructure.salaryBreakup.${index}.breakupName`} render={({ field }) => (<FormItem><FormLabel className="sr-only">Breakup Name</FormLabel><FormControl><Input readOnly disabled {...field} className="bg-muted/50 font-semibold" /></FormControl></FormItem>)}/>
@@ -649,7 +655,7 @@ export function AddEmployeeForm() {
                         <Input value={increasedAmount.toFixed(2)} readOnly disabled />
                     </div>
                      <div className="flex items-center gap-2">
-                        <Label>Total Amount</Label>
+                        <Label>Gross Salary Amount</Label>
                         <Input value={totalAmount.toFixed(2)} readOnly disabled className="font-bold text-primary" />
                     </div>
                 </div>
@@ -677,5 +683,6 @@ export function AddEmployeeForm() {
     
 
     
+
 
 
