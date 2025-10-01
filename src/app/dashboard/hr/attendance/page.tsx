@@ -89,11 +89,11 @@ const AttendanceDayRow = ({
   const form = useForm<AttendanceDayFormValues>({
     resolver: zodResolver(attendanceDaySchema),
     defaultValues: {
-      flag: initialData?.flag || getDefaultFlag(),
-      inTime: initialData?.inTime || '09:00',
-      inTimeRemarks: initialData?.inTimeRemarks || '',
-      outTime: initialData?.outTime || '18:00',
-      outTimeRemarks: initialData?.outTimeRemarks || '',
+      flag: 'A', // Start with a safe default
+      inTime: '09:00',
+      inTimeRemarks: '',
+      outTime: '18:00',
+      outTimeRemarks: '',
     },
   });
   
@@ -116,12 +116,9 @@ const AttendanceDayRow = ({
   
   React.useEffect(() => {
     const defaultFlag = getDefaultFlag();
-    const currentFlag = form.getValues('flag');
-
-    if(currentFlag !== 'P' && currentFlag !== 'D' && currentFlag !== defaultFlag) {
-        // User has manually changed it, don't auto-update
-    } else {
-        if(inTime && defaultFlag === 'A') {
+    // Only auto-update flag if it's currently in a default state (A) or present-related states (P, D)
+    if (['A', 'P', 'D'].includes(form.getValues('flag'))) {
+        if(inTime) {
             try {
                 const [hours, minutes] = inTime.split(':').map(Number);
                 if ((hours > 9 || (hours === 9 && minutes > 10))) {
@@ -130,11 +127,14 @@ const AttendanceDayRow = ({
                     setValue('flag', 'P');
                 }
             } catch {}
-        } else if (!inTime) {
-            setValue('flag', defaultFlag);
+        } else {
+             // If no inTime, and no initial data, set to the calculated default (A, L, W, H)
+            if (!initialData) {
+                setValue('flag', defaultFlag);
+            }
         }
     }
-  }, [inTime, getDefaultFlag, setValue, form]);
+  }, [inTime, getDefaultFlag, setValue, form, initialData]);
 
   React.useEffect(() => {
     if (flag !== 'P' && flag !== 'D') {
