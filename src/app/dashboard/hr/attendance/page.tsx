@@ -7,12 +7,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag } from '@/types';
+import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { cn } from '@/lib/utils';
-import { format, isValid, eachDayOfInterval, startOfDay, endOfDay, parseISO, differenceInMinutes, parse } from 'date-fns';
+import { format, isValid, eachDayOfInterval, startOfDay, endOfDay, parseISO, differenceInMinutes, parse, getDay, isWithinInterval as isWithinDateInterval } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -53,35 +53,95 @@ const AttendanceDayRow = ({
   date,
   initialData,
   onRecordUpdate,
+  holidays,
+  leaves,
 }: {
   employee: EmployeeDocument;
   date: Date;
   initialData?: AttendanceDocument;
   onRecordUpdate: () => void;
+  holidays: HolidayDocument[];
+  leaves: LeaveApplicationDocument[];
 }) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [workingHours, setWorkingHours] = React.useState<string | null>(null);
 
+  const getDefaultFlag = React.useCallback((): AttendanceFlag => {
+    if (initialData?.flag) return initialData.flag;
+
+    const dayOfWeek = getDay(date);
+    if (dayOfWeek === 5) return 'W'; // Friday is Weekend
+
+    const isHoliday = holidays.some(h => 
+        isWithinDateInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })
+    );
+    if (isHoliday) return 'H';
+
+    const isOnLeave = leaves.some(l => 
+        isWithinDateInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) && l.status === 'Approved'
+    );
+    if (isOnLeave) return 'L';
+    
+    return 'A'; // Default to Absent
+  }, [date, holidays, leaves, initialData]);
+
   const form = useForm<AttendanceDayFormValues>({
     resolver: zodResolver(attendanceDaySchema),
     defaultValues: {
-      flag: initialData?.flag || 'P',
+      flag: initialData?.flag || getDefaultFlag(),
       inTime: initialData?.inTime || '09:00',
       inTimeRemarks: initialData?.inTimeRemarks || '',
       outTime: initialData?.outTime || '18:00',
       outTimeRemarks: initialData?.outTimeRemarks || '',
     },
   });
+  
+  React.useEffect(() => {
+    form.reset({
+      flag: initialData?.flag || getDefaultFlag(),
+      inTime: initialData?.inTime || '09:00',
+      inTimeRemarks: initialData?.inTimeRemarks || '',
+      outTime: initialData?.outTime || '18:00',
+      outTimeRemarks: initialData?.outTimeRemarks || '',
+    });
+  }, [initialData, getDefaultFlag, form]);
 
-  const { watch, control, handleSubmit } = form;
+
+  const { watch, control, handleSubmit, setValue } = form;
   const inTime = watch('inTime');
   const outTime = watch('outTime');
   const flag = watch('flag');
   
   React.useEffect(() => {
-    if (flag !== 'P' || !inTime || !outTime) {
+    const defaultFlag = getDefaultFlag();
+    const currentFlag = form.getValues('flag');
+
+    if(currentFlag !== 'P' && currentFlag !== 'D' && currentFlag !== defaultFlag) {
+        // User has manually changed it, don't auto-update
+    } else {
+        if(inTime) {
+            try {
+                const [hours, minutes] = inTime.split(':').map(Number);
+                if ((hours > 9 || (hours === 9 && minutes > 10)) && defaultFlag === 'A') {
+                    setValue('flag', 'D');
+                } else if(defaultFlag === 'A') {
+                    setValue('flag', 'P');
+                }
+            } catch {}
+        } else {
+            setValue('flag', defaultFlag);
+        }
+    }
+  }, [inTime, getDefaultFlag, setValue, form]);
+
+  React.useEffect(() => {
+    if (flag !== 'P' && flag !== 'D') {
       setWorkingHours(null);
+      return;
+    }
+    if (!inTime || !outTime) {
+      setWorkingHours("Invalid Time");
       return;
     }
     try {
@@ -93,7 +153,7 @@ const AttendanceDayRow = ({
         const minutes = diffMins % 60;
         setWorkingHours(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
       } else {
-        setWorkingHours("0:0");
+        setWorkingHours("0:00");
       }
     } catch {
       setWorkingHours("Error");
@@ -120,7 +180,7 @@ const AttendanceDayRow = ({
         updatedAt: serverTimestamp(),
     };
     
-    if (data.flag === 'P') {
+    if (data.flag === 'P' || data.flag === 'D') {
         dataToSave.inTime = data.inTime;
         dataToSave.inTimeRemarks = data.inTimeRemarks;
         dataToSave.outTime = data.outTime;
@@ -181,18 +241,18 @@ const AttendanceDayRow = ({
         />
       </TableCell>
       <TableCell>
-        <Controller control={control} name="inTime" render={({ field }) => <Input type="time" {...field} className="h-9" disabled={flag !== 'P'} />} />
+        <Controller control={control} name="inTime" render={({ field }) => <Input type="time" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
       </TableCell>
       <TableCell>
-        <Controller control={control} name="inTimeRemarks" render={({ field }) => <Input placeholder="Enter remarks" {...field} className="h-9" disabled={flag !== 'P'} />} />
+        <Controller control={control} name="inTimeRemarks" render={({ field }) => <Input placeholder="Enter remarks" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
       </TableCell>
       <TableCell>
-        <Controller control={control} name="outTime" render={({ field }) => <Input type="time" {...field} className="h-9" disabled={flag !== 'P'} />} />
+        <Controller control={control} name="outTime" render={({ field }) => <Input type="time" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
       </TableCell>
       <TableCell>
-        <Controller control={control} name="outTimeRemarks" render={({ field }) => <Input placeholder="Enter remarks" {...field} className="h-9" disabled={flag !== 'P'} />} />
+        <Controller control={control} name="outTimeRemarks" render={({ field }) => <Input placeholder="Enter remarks" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
       </TableCell>
-      <TableCell>{flag === 'P' ? workingHours : 'N/A'}</TableCell>
+      <TableCell>{(flag === 'P' || flag === 'D') ? workingHours : 'N/A'}</TableCell>
        <TableCell className="text-right">
         <div className="flex gap-1 justify-end">
             <Button type="button" variant="ghost" size="icon" onClick={handleSubmit(onSave)} disabled={isSubmitting}>
@@ -212,11 +272,15 @@ const EmployeeAttendanceRow = ({
     employee, 
     dateRange, 
     attendanceRecords,
+    holidays,
+    leaves,
     onRecordUpdate
 }: { 
     employee: EmployeeDocument, 
     dateRange: DateRange | undefined, 
     attendanceRecords: AttendanceDocument[],
+    holidays: HolidayDocument[],
+    leaves: LeaveApplicationDocument[],
     onRecordUpdate: () => void;
 }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
@@ -243,7 +307,7 @@ const EmployeeAttendanceRow = ({
                     <AccordionTrigger className="p-4 hover:no-underline">
                         <div className="flex items-center gap-4 w-full">
                             <Avatar>
-                                <AvatarImage src={employee.photoURL} alt={employee.fullName} data-ai-hint="employee photo" />
+                                <AvatarImage src={employee.photoURL} alt={employee.fullName} />
                                 <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 text-left grid grid-cols-1 sm:grid-cols-2 gap-x-4">
@@ -294,6 +358,8 @@ const EmployeeAttendanceRow = ({
                                                 date={date}
                                                 initialData={attendanceData}
                                                 onRecordUpdate={onRecordUpdate}
+                                                holidays={holidays}
+                                                leaves={leaves}
                                             />
                                         );
                                     })}
@@ -328,6 +394,16 @@ export default function DailyAttendancePage() {
         query(collection(firestore, "departments")), 
         undefined, 
         ['departments']
+    );
+     const { data: holidays, isLoading: isLoadingHolidays } = useFirestoreQuery<HolidayDocument[]>(
+        query(collection(firestore, "holidays")), 
+        undefined, 
+        ['holidays']
+    );
+    const { data: leaves, isLoading: isLoadingLeaves } = useFirestoreQuery<LeaveApplicationDocument[]>(
+        query(collection(firestore, "leave_applications"), where("status", "==", "Approved")), 
+        undefined, 
+        ['approved_leaves']
     );
 
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -404,7 +480,7 @@ export default function DailyAttendancePage() {
         return map;
     }, [allAttendance]);
 
-    const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance;
+    const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance || isLoadingHolidays || isLoadingLeaves;
 
     return (
         <div className="container mx-auto py-8">
@@ -442,7 +518,7 @@ export default function DailyAttendancePage() {
                                         <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                     </div>
                                 </div>
-                                <div className="space-y-1 lg:ml-8">
+                                <div className="space-y-1">
                                     <Label>Date Range</Label>
                                     <DatePickerWithRange date={dateRange} onDateChange={setDateRange} className="h-10"/>
                                 </div>
@@ -495,6 +571,8 @@ export default function DailyAttendancePage() {
                                         employee={emp} 
                                         dateRange={dateRange}
                                         attendanceRecords={attendanceByEmployee.get(emp.id) || []}
+                                        holidays={holidays || []}
+                                        leaves={leaves?.filter(l => l.employeeId === emp.id) || []}
                                         onRecordUpdate={refetchAttendance}
                                     />
                                ))
