@@ -1371,7 +1371,7 @@ export const bankNameOptions = [
   "State Bank of India", "Trust Bank", "United Commercial Bank", "Uttara Bank", "Woori Bank"
 ] as const;
 export const paymentFrequencyOptions = ["Monthly", "Weekly", "Bi-Weekly", "Annually"] as const;
-export const salaryBreakupOptions = ["Basic", "House Rent", "Entertainment", "Medical Allowance", "Conveyance Allowance", "Utility", "Transportation", "Food Allowance", "Cash"];
+export const salaryBreakupOptions = ["Basic", "House Rent", "Entertainment", "Medical Allowance", "Food Allowance", "Conveyance Allowance", "Utility", "Transportation", "Cash"];
 
 
 export const BankSchema = z.object({
@@ -1508,7 +1508,6 @@ export interface Employee {
   educationDetails?: Education[];
   presentAddress?: z.infer<typeof AddressSchema>;
   permanentAddress?: z.infer<typeof AddressSchema>;
-  bankDetails?: BankDetails[];
   salaryStructure?: {
     isConsolidate: boolean;
     paymentType?: "Bank" | "Cash";
@@ -1649,7 +1648,13 @@ export interface Payslip {
     basicSalary?: number | null;
     houseRent?: number | null;
     medicalAllowance?: number | null;
-    // ... other earnings
+    entertainment?: number | null;
+    foodAllowance?: number | null;
+    conveyanceAllowance?: number | null;
+    utility?: number | null;
+    transportation?: number | null;
+    cash?: number | null;
+    salaryBreakup?: SalaryBreakup[];
     // Deductions
     taxDeduction?: number;
     providentFund?: number;
@@ -1728,3 +1733,6 @@ export type LeaveApplicationDocument = LeaveApplication & { id: string };
 // --- END Leave Types ---
 
     
+
+
+  

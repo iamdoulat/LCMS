@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, where, getDocs, writeBatch, doc, serverTimestamp, getDoc, documentId } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { BranchDocument, DepartmentDocument, UnitDocument, EmployeeDocument, Payslip, AttendanceDocument, LeaveApplicationDocument, HolidayDocument, SalaryGenerationPolicy } from '@/types';
+import type { BranchDocument, DepartmentDocument, UnitDocument, EmployeeDocument, Payslip, AttendanceDocument, LeaveApplicationDocument, HolidayDocument, SalaryGenerationPolicy, SalaryBreakup } from '@/types';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
@@ -208,6 +208,7 @@ export default function SalaryGenerationPage() {
                     basicSalary: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Basic')?.amount ?? null,
                     houseRent: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'House Rent')?.amount ?? null,
                     medicalAllowance: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Medical Allowance')?.amount ?? null,
+                    salaryBreakup: employee.salaryStructure.salaryBreakup || [],
                     leaveDeduction: deductionForAbsence,
                     createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 };
@@ -319,3 +320,5 @@ export default function SalaryGenerationPage() {
 }
 
     
+
+  

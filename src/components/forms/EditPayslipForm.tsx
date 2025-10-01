@@ -8,7 +8,7 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, getDoc, runTransaction } from 'firebase/firestore';
-import type { Payslip } from '@/types';
+import type { Payslip, SalaryBreakup } from '@/types';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,12 +57,7 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
   }, [watchedFields]);
 
   // Prepare salary breakup data for display
-  const salaryBreakupForDisplay = [
-    { name: 'Basic Salary', amount: initialData.basicSalary },
-    { name: 'House Rent', amount: initialData.houseRent },
-    { name: 'Medical Allowance', amount: initialData.medicalAllowance },
-    // Add other potential earnings here if they get added to the Payslip type
-  ].filter(item => typeof item.amount === 'number');
+  const salaryBreakupForDisplay = initialData.salaryBreakup || [];
 
   async function onSubmit(data: PayslipEditFormValues) {
     setIsSubmitting(true);
@@ -116,12 +111,17 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {salaryBreakupForDisplay.map(item => (
-                    <TableRow key={item.name}>
-                      <TableCell>{item.name}</TableCell>
+                  {salaryBreakupForDisplay.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{item.breakupName}</TableCell>
                       <TableCell className="text-right">{item.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                     </TableRow>
                   ))}
+                   {salaryBreakupForDisplay.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={2} className="text-center text-muted-foreground">No earning breakdown available.</TableCell>
+                      </TableRow>
+                   )}
                 </TableBody>
               </Table>
             </div>
@@ -219,3 +219,5 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
     </Form>
   );
 }
+
+  
