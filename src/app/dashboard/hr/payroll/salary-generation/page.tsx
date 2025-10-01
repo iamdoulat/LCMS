@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -15,7 +14,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy, where, getDocs, writeBatch, doc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, where, getDocs, writeBatch, doc, serverTimestamp, getDoc, documentId } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { BranchDocument, DepartmentDocument, UnitDocument, EmployeeDocument, Payslip, AttendanceDocument, LeaveApplicationDocument, HolidayDocument, SalaryGenerationPolicy } from '@/types';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
@@ -127,7 +126,7 @@ export default function SalaryGenerationPage() {
             }
             case 'Employee Wise': {
                  if (!data.employee) { Swal.fire("Validation Error", "Please select an employee.", "error"); setIsGenerating(false); return; }
-                 employeesToProcessQuery = query(baseQuery, where(doc.id, "==", data.employee), where("status", "==", "Active"));
+                 employeesToProcessQuery = query(baseQuery, where(documentId(), "==", data.employee), where("status", "==", "Active"));
                 break;
             }
             default:
@@ -319,3 +318,4 @@ export default function SalaryGenerationPage() {
     );
 }
 
+    
