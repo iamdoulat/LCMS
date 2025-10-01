@@ -97,8 +97,8 @@ const AttendanceDayRow = ({
     form.reset({
       flag: initialData?.flag || defaultFlag,
       inTime: initialData?.inTime || (isPresentOrDelayed ? '09:00' : ''),
-      inTimeRemarks: initialData?.inTimeRemarks || '',
       outTime: initialData?.outTime || (isPresentOrDelayed ? '18:00' : ''),
+      inTimeRemarks: initialData?.inTimeRemarks || '',
       outTimeRemarks: initialData?.outTimeRemarks || '',
     });
   }, [initialData, getDefaultFlag, form]);
@@ -298,15 +298,13 @@ const EmployeeAttendanceRow = ({
                                 <AvatarImage src={employee.photoURL} alt={employee.fullName} />
                                 <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
                             </Avatar>
-                            <div className="flex-1 text-left grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-                                <div>
-                                    <p className="font-semibold">{employee.fullName}</p>
-                                    <p className="text-sm text-muted-foreground">{employee.employeeCode}</p>
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                    <p>{employee.designation}</p>
-                                    <p>{employee.branch || 'N/A'}</p>
-                                </div>
+                             <div className="flex-1 text-left">
+                                <p className="font-semibold">{employee.fullName}</p>
+                                <p className="text-sm text-muted-foreground">{employee.employeeCode}</p>
+                            </div>
+                            <div className="hidden sm:block text-sm text-muted-foreground text-left">
+                                <p>{employee.designation}</p>
+                                <p>{employee.branch || 'N/A'}</p>
                             </div>
                             {isExpanded ? <Minus className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
                         </div>
@@ -445,7 +443,7 @@ export default function DailyAttendancePage() {
             const header = headerRow.split(',');
             
             const requiredHeaders = ['employeeCode', 'date', 'flag'];
-            if (!requiredHeaders.every(h => header.includes(h))) {
+            if (!requiredHeaders.every(h => header.includes(h.trim()))) {
                 Swal.fire("Invalid CSV Header", `CSV must contain columns: ${requiredHeaders.join(', ')}.`, "error");
                 return;
             }
@@ -468,15 +466,17 @@ export default function DailyAttendancePage() {
                 
                 let parsedDate;
                 if(rowData.date) {
-                    parsedDate = parseDateFns(rowData.date, 'M/d/yyyy', new Date());
-                    if (!isValid(parsedDate)) {
-                       parsedDate = parseISO(rowData.date);
+                    // Try parsing multiple common date formats
+                    const dateFormats = ['M/d/yyyy', 'MM/dd/yyyy', 'yyyy-MM-dd'];
+                    for (const dateFormat of dateFormats) {
+                        parsedDate = parseDateFns(rowData.date, dateFormat, new Date());
+                        if (isValid(parsedDate)) break;
                     }
                 }
                 
                 if (!parsedDate || !isValid(parsedDate)) {
-                    console.warn(`Skipping row ${index + 2}: Invalid date format for ${rowData.employeeCode}. Use YYYY-MM-DD or M/D/YYYY.`);
-                    errorRows.push({row: index + 2, reason: `Invalid date format: '${rowData.date}'. Use YYYY-MM-DD or M/D/YYYY.`});
+                    console.warn(`Skipping row ${index + 2}: Invalid date format for ${rowData.employeeCode}. Use YYYY-MM-DD or MM/DD/YYYY.`);
+                    errorRows.push({row: index + 2, reason: `Invalid date format: '${rowData.date}'.`});
                     continue;
                 }
                 
@@ -493,12 +493,12 @@ export default function DailyAttendancePage() {
                     updatedAt: serverTimestamp(),
                 };
                 
-                if (['P', 'D'].includes(dataToSave.flag!) && rowData.inTime && rowData.outTime) {
-                    const parsedInTime = parseDateFns(rowData.inTime, 'H:mm', new Date());
-                    const parsedOutTime = parseDateFns(rowData.outTime, 'H:mm', new Date());
+                 if (['P', 'D'].includes(dataToSave.flag!)) {
+                    const parsedInTime = rowData.inTime ? parseDateFns(rowData.inTime, 'H:mm', new Date()) : null;
+                    const parsedOutTime = rowData.outTime ? parseDateFns(rowData.outTime, 'H:mm', new Date()) : null;
 
-                    if(isValid(parsedInTime)) dataToSave.inTime = format(parsedInTime, 'HH:mm');
-                    if(isValid(parsedOutTime)) dataToSave.outTime = format(parsedOutTime, 'HH:mm');
+                    if(parsedInTime && isValid(parsedInTime)) dataToSave.inTime = format(parsedInTime, 'HH:mm');
+                    if(parsedOutTime && isValid(parsedOutTime)) dataToSave.outTime = format(parsedOutTime, 'HH:mm');
                 }
                 
                 batch.set(docRef, dataToSave, { merge: true });
@@ -634,7 +634,7 @@ export default function DailyAttendancePage() {
                         <AlertTriangle className="h-4 w-4 !text-blue-600" />
                         <AlertTitle className="font-semibold !text-blue-700 dark:!text-blue-300">Bulk Upload CSV Format</AlertTitle>
                         <AlertDescription>
-                            The CSV file must have the following headers: <strong>employeeCode, date, flag, inTime, outTime, remarks</strong>. Date format must be YYYY-MM-DD. Time format must be HH:MM (24-hour).
+                            The CSV file must have the following headers: <strong>employeeCode, date, flag, inTime, outTime, remarks</strong>. Date format should be MM/DD/YYYY or YYYY-MM-DD. Time format must be HH:mm (24-hour).
                         </AlertDescription>
                     </Alert>
                    <Card className="mb-6 shadow-md p-4">
@@ -720,4 +720,5 @@ export default function DailyAttendancePage() {
     
 
     
+
 
