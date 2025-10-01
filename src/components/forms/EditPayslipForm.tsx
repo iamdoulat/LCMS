@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Loader2, Save, DollarSign } from 'lucide-react';
 import { Separator } from '../ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const PayslipEditSchema = z.object({
   grossSalary: z.number().nonnegative(),
@@ -55,6 +56,14 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
     return { totalDeductions: deductions, netSalary: net };
   }, [watchedFields]);
 
+  // Prepare salary breakup data for display
+  const salaryBreakupForDisplay = [
+    { name: 'Basic Salary', amount: initialData.basicSalary },
+    { name: 'House Rent', amount: initialData.houseRent },
+    { name: 'Medical Allowance', amount: initialData.medicalAllowance },
+    // Add other potential earnings here if they get added to the Payslip type
+  ].filter(item => typeof item.amount === 'number');
+
   async function onSubmit(data: PayslipEditFormValues) {
     setIsSubmitting(true);
 
@@ -90,11 +99,33 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="p-4 border rounded-md bg-muted/50">
             <h3 className="font-semibold text-lg">{initialData.employeeName}</h3>
-            <p className="text-sm text-muted-foreground">{initialData.payPeriod}</p>
+            <p className="text-sm text-muted-foreground">{initialData.designation}</p>
+            <p className="text-sm text-muted-foreground">Pay Period: {initialData.payPeriod}</p>
         </div>
         
+        <Separator />
+        <h4 className="text-md font-semibold">Earnings</h4>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Earning Component</TableHead>
+                    <TableHead className="text-right">Amount (BDT)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {salaryBreakupForDisplay.map(item => (
+                    <TableRow key={item.name}>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell className="text-right">{item.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+             <FormField
               control={form.control}
               name="grossSalary"
               render={({ field }) => (
@@ -103,6 +134,7 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
                   <FormControl>
                     <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                   </FormControl>
+                  <FormDescription>This is the total earnings before any deductions.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -144,7 +176,7 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
               name="leaveDeduction"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Leave Deduction</FormLabel>
+                  <FormLabel>Leave/Absent Deduction</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                   </FormControl>
