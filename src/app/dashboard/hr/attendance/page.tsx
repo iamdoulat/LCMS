@@ -93,7 +93,7 @@ const AttendanceDayRow = ({
   React.useEffect(() => {
     const defaultFlag = getDefaultFlag();
     form.reset({
-      flag: initialData?.flag || defaultFlag,
+      flag: defaultFlag,
       inTime: initialData?.inTime || '09:00',
       inTimeRemarks: initialData?.inTimeRemarks || '',
       outTime: initialData?.outTime || '18:00',
