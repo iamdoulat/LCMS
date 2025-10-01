@@ -1,9 +1,18 @@
 
+"use client";
+
 import { AppHeader } from '@/components/layout/AppHeader';
-import { AppSidebarNav } from '@/components/layout/AppSidebarNav';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import React from 'react';
+import dynamic from 'next/dynamic';
+import { Loader2 } from 'lucide-react';
+
+const AppSidebarNav = dynamic(() => import('@/components/layout/AppSidebarNav'), {
+  ssr: false,
+  loading: () => <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin" /></div>,
+});
+
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
