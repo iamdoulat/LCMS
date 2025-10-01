@@ -2,18 +2,27 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ListChecks, Loader2, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ListChecks, Loader2, Printer, ChevronLeft, ChevronRight, MoreHorizontal, FileEdit, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc, deleteDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { Payslip } from '@/types';
+import type { Payslip, PettyCashTransactionDocument, PettyCashAccountDocument } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { format, parseISO, isValid } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const formatDisplayDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
@@ -32,7 +41,7 @@ const ITEMS_PER_PAGE = 20;
 
 export default function PayslipListPage() {
   const router = useRouter();
-  const { data: payslips, isLoading, error } = useFirestoreQuery<Payslip[]>(
+  const { data: payslips, isLoading, error, refetch } = useFirestoreQuery<Payslip[]>(
     query(collection(firestore, 'payslips'), orderBy('createdAt', 'desc')),
     undefined,
     ['payslips']
@@ -42,6 +51,59 @@ export default function PayslipListPage() {
 
   const handlePreview = (payslipId: string) => {
     router.push(`/dashboard/hr/payroll/payslip-preview/${payslipId}`);
+  };
+
+  const handleEdit = (payslipId: string) => {
+    router.push(`/dashboard/hr/payroll/edit-payslip/${payslipId}`);
+  };
+
+  const handleDelete = async (payslipId: string) => {
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "This will delete the payslip and attempt to reverse the corresponding transaction from the petty cash account. This action cannot be undone.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      const payslipToDelete = payslips?.find(p => p.id === payslipId);
+      if (!payslipToDelete) {
+        Swal.fire("Error", "Could not find the payslip to delete.", "error");
+        return;
+      }
+      
+      try {
+        await runTransaction(firestore, async (transaction) => {
+          const payslipDocRef = doc(firestore, 'payslips', payslipId);
+          // Find the related petty cash transaction (assuming it was created)
+          const txQuery = query(collection(firestore, "petty_cash_transactions"), where("connectedSaleId", "==", `payslip_${payslipId}`));
+          const txSnapshot = await getDocs(txQuery);
+
+          if (!txSnapshot.empty) {
+            const txDoc = txSnapshot.docs[0];
+            const txData = txDoc.data() as PettyCashTransactionDocument;
+            const accountRef = doc(firestore, 'petty_cash_accounts', txData.accountId);
+            const accountSnap = await transaction.get(accountRef);
+
+            if (accountSnap.exists()) {
+              const accountData = accountSnap.data() as PettyCashAccountDocument;
+              const newBalance = accountData.balance + txData.amount; // Reverse the debit
+              transaction.update(accountRef, { balance: newBalance, updatedAt: serverTimestamp() });
+            }
+            transaction.delete(txDoc.ref); // Delete the transaction log
+          }
+
+          transaction.delete(payslipDocRef); // Finally delete the payslip
+        });
+
+        Swal.fire('Deleted!', 'The payslip and associated transaction have been deleted.', 'success');
+        refetch(); // Refetch the payslip list
+      } catch (e: any) {
+        Swal.fire('Error!', `Could not delete payslip: ${e.message}`, 'error');
+      }
+    }
   };
   
   const totalPages = payslips ? Math.ceil(payslips.length / ITEMS_PER_PAGE) : 0;
@@ -105,9 +167,30 @@ export default function PayslipListPage() {
                                     <TableCell>{formatCurrency(p.totalDeductions)}</TableCell>
                                     <TableCell className="font-semibold">{formatCurrency(p.netSalary)}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="outline" size="sm" onClick={() => handlePreview(p.id)}>
-                                            <Printer className="mr-2 h-4 w-4"/> View
-                                        </Button>
+                                       <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                    <span className="sr-only">Open menu</span>
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={() => handlePreview(p.id)}>
+                                                    <Printer className="mr-2 h-4 w-4" />
+                                                    <span>View</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleEdit(p.id)}>
+                                                    <FileEdit className="mr-2 h-4 w-4" />
+                                                    <span>Edit</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onClick={() => handleDelete(p.id)} className="text-destructive focus:text-destructive">
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    <span>Delete</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
                             ))
