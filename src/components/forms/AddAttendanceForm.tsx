@@ -86,7 +86,12 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
   }, []);
 
   React.useEffect(() => {
-    if (selectedFlag !== 'P' || !enableInTime || !enableOutTime || !inTime || !outTime) {
+    if (selectedFlag !== 'P' && selectedFlag !== 'D') {
+      setWorkingHours(null);
+      return;
+    }
+
+    if (!enableInTime || !enableOutTime || !inTime || !outTime) {
       setWorkingHours(null);
       return;
     }
@@ -128,21 +133,21 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
       ...data,
       employeeName: selectedEmployee?.label || 'N/A', // Add employeeName
       date: format(data.date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
+      workingHours: (data.flag === 'P' || data.flag === 'D') && data.enableInTime && data.enableOutTime ? workingHours : null,
       updatedBy: user.uid,
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
     };
     
-    if (data.flag !== 'P' || !data.enableInTime) {
+    if (data.flag !== 'P' && data.flag !== 'D' || !data.enableInTime) {
       delete dataToSave.inTime;
       delete dataToSave.inTimeRemarks;
     }
-    if (data.flag !== 'P' || !data.enableOutTime) {
+    if (data.flag !== 'P' && data.flag !== 'D' || !data.enableOutTime) {
         delete dataToSave.outTime;
         delete dataToSave.outTimeRemarks;
     }
-     if (data.flag !== 'P' || !data.enableInTime || !data.enableOutTime) {
+     if (data.flag !== 'P' && data.flag !== 'D' || !data.enableInTime || !data.enableOutTime) {
         delete dataToSave.workingHours;
     }
 
@@ -229,7 +234,7 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
               )}
           />
           
-          {selectedFlag === 'P' && (
+          {(selectedFlag === 'P' || selectedFlag === 'D') && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                     <FormField

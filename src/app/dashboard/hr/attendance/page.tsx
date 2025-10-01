@@ -510,8 +510,8 @@ export default function DailyAttendancePage() {
                             <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
                         </CardHeader>
                         <CardContent className="p-2 space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                                <div className="space-y-1 md:col-span-2 lg:col-span-1">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-end">
+                                <div className="space-y-1">
                                     <Label htmlFor='search-term-employee-attendance'>Employee Name or Code</Label>
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
@@ -584,4 +584,3 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
-
