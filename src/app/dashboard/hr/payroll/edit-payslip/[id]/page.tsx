@@ -71,7 +71,7 @@ export default function EditPayslipPage() {
   if (error) {
     return (
       <div className="container mx-auto py-8">
-        <Card className="max-w-2xl mx-auto shadow-xl border-destructive">
+        <Card className="max-w-5xl mx-auto shadow-xl border-destructive">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive">
               <AlertTriangle className="h-7 w-7" /> Error Loading Payslip
@@ -115,7 +115,7 @@ export default function EditPayslipPage() {
           </Button>
         </Link>
       </div>
-      <Card className="max-w-3xl mx-auto shadow-xl">
+      <Card className="max-w-5xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Edit className="h-7 w-7 text-primary" />
