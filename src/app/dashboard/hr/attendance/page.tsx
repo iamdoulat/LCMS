@@ -7,12 +7,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, getDocs, writeBatch } from 'firebase/firestore';
 import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { cn } from '@/lib/utils';
-import { format, isValid, eachDayOfInterval, startOfDay, endOfDay, parseISO, differenceInMinutes, parse, getDay, isWithinInterval as isWithinDateInterval } from 'date-fns';
+import { format, isValid, eachDayOfInterval, startOfDay, endOfDay, parseISO, differenceInMinutes, parse as parseDateFns, getDay, isWithinInterval as isWithinDateInterval } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -23,11 +23,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, User, Search, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, PlusCircle, Trash2, Calendar, Filter, XCircle, Save } from 'lucide-react';
+import { Loader2, User, Search, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, PlusCircle, Trash2, Calendar, Filter, XCircle, Save, Upload, AlertTriangle } from 'lucide-react';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
@@ -68,9 +69,7 @@ const AttendanceDayRow = ({
   const [workingHours, setWorkingHours] = React.useState<string | null>(null);
 
   const getDefaultFlag = React.useCallback((): AttendanceFlag => {
-    if (initialData?.flag) {
-        return initialData.flag;
-    }
+    if (initialData?.flag) return initialData.flag;
     const dayOfWeek = getDay(date);
     if (dayOfWeek === 5) return 'W'; // Friday
     const isHoliday = holidays.some(h =>
@@ -93,10 +92,10 @@ const AttendanceDayRow = ({
   React.useEffect(() => {
     const defaultFlag = getDefaultFlag();
     form.reset({
-      flag: defaultFlag,
-      inTime: initialData?.inTime || '09:00',
+      flag: initialData?.flag || defaultFlag,
+      inTime: initialData?.inTime || (defaultFlag === 'A' ? '' : '09:00'),
       inTimeRemarks: initialData?.inTimeRemarks || '',
-      outTime: initialData?.outTime || '18:00',
+      outTime: initialData?.outTime || (defaultFlag === 'A' ? '' : '18:00'),
       outTimeRemarks: initialData?.outTimeRemarks || '',
     });
   }, [initialData, getDefaultFlag, form]);
@@ -115,7 +114,7 @@ const AttendanceDayRow = ({
         if (hours > 9 || (hours === 9 && minutes > 10)) {
           if (flag !== 'D') setValue('flag', 'D');
         } else {
-          if (flag !== 'P') setValue('flag', 'P');
+          if (flag === 'A') setValue('flag', 'P'); // Only switch from Absent to Present
         }
       } catch {}
     }
@@ -131,8 +130,8 @@ const AttendanceDayRow = ({
       return;
     }
     try {
-      const inDate = parse(inTime, 'HH:mm', new Date());
-      const outDate = parse(outTime, 'HH:mm', new Date());
+      const inDate = parseDateFns(inTime, 'HH:mm', new Date());
+      const outDate = parseDateFns(outTime, 'HH:mm', new Date());
       if (isValid(inDate) && isValid(outDate) && outDate >= inDate) {
         const diffMins = differenceInMinutes(outDate, inDate);
         const hours = Math.floor(diffMins / 60);
@@ -361,6 +360,8 @@ const EmployeeAttendanceRow = ({
 
 export default function DailyAttendancePage() {
     const router = useRouter();
+    const { user } = useAuth();
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(
         query(collection(firestore, "employees"), orderBy("fullName")), 
         undefined, 
@@ -398,13 +399,87 @@ export default function DailyAttendancePage() {
     const [selectedDept, setSelectedDept] = React.useState('');
     
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
-        from: new Date(),
-        to: new Date(),
+        from: startOfDay(new Date()),
+        to: startOfDay(new Date()),
     });
 
     const [allAttendance, setAllAttendance] = React.useState<AttendanceDocument[]>([]);
     const [isLoadingAttendance, setIsLoadingAttendance] = React.useState(true);
     const isInitialMount = React.useRef(true);
+
+    const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !user || !employees) {
+            Swal.fire("Error", "File, user, or employee data is not available.", "error");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const text = e.target?.result;
+            if (typeof text !== 'string') return;
+
+            const rows = text.split('\n').filter(row => row.trim() !== '');
+            const header = rows.shift()?.trim().split(',');
+            
+            if (!header || !['employeeCode', 'date', 'flag', 'inTime', 'outTime'].every(h => header.includes(h))) {
+                Swal.fire("Invalid CSV Header", "CSV must contain columns: employeeCode, date, flag, inTime, outTime.", "error");
+                return;
+            }
+
+            const batch = writeBatch(firestore);
+            const employeeMap = new Map(employees.map(emp => [emp.employeeCode, emp]));
+
+            let processedCount = 0;
+            for (const row of rows) {
+                const values = row.trim().split(',');
+                const rowData = header.reduce((obj, h, i) => ({ ...obj, [h.trim()]: values[i]?.trim() }), {} as any);
+                
+                const employee = employeeMap.get(rowData.employeeCode);
+                if (!employee) {
+                    console.warn(`Skipping row: Employee with code ${rowData.employeeCode} not found.`);
+                    continue;
+                }
+
+                if (!rowData.date || !isValid(parseISO(rowData.date))) {
+                    console.warn(`Skipping row: Invalid date format for ${rowData.employeeCode}. Use YYYY-MM-DD.`);
+                    continue;
+                }
+
+                const docId = `${employee.id}_${rowData.date}`;
+                const docRef = doc(firestore, "attendance", docId);
+                
+                const dataToSave: Partial<AttendanceDocument> = {
+                    employeeId: employee.id,
+                    employeeName: `${employee.fullName} (${employee.employeeCode})`,
+                    date: format(parseISO(rowData.date), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                    flag: (attendanceFlagOptions.includes(rowData.flag) ? rowData.flag : 'A') as AttendanceFlag,
+                    updatedBy: user.uid,
+                    updatedAt: serverTimestamp(),
+                };
+                
+                if (['P', 'D'].includes(dataToSave.flag!) && rowData.inTime && rowData.outTime) {
+                    dataToSave.inTime = rowData.inTime;
+                    dataToSave.outTime = rowData.outTime;
+                    // Additional fields can be added here
+                }
+                
+                batch.set(docRef, dataToSave, { merge: true });
+                processedCount++;
+            }
+
+            try {
+                await batch.commit();
+                Swal.fire("Upload Complete", `${processedCount} records processed successfully.`, "success");
+                await refetchAttendance();
+            } catch (error: any) {
+                Swal.fire("Upload Failed", `An error occurred: ${error.message}`, "error");
+            } finally {
+                if (fileInputRef.current) fileInputRef.current.value = "";
+            }
+        };
+        reader.readAsText(file);
+    };
 
 
     const refetchAttendance = React.useCallback(async () => {
@@ -438,7 +513,6 @@ export default function DailyAttendancePage() {
     }, [dateRange]);
     
     React.useEffect(() => {
-        // Prevent fetching on initial mount before dateRange is stable
         if (isInitialMount.current) {
             isInitialMount.current = false;
             return;
@@ -491,6 +565,16 @@ export default function DailyAttendancePage() {
                             </CardDescription>
                         </div>
                          <div className="flex gap-2">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleBulkUpload}
+                                className="hidden"
+                                accept=".csv"
+                            />
+                            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                <Upload className="mr-2 h-4 w-4" /> Bulk Upload
+                            </Button>
                              <Link href="/dashboard/hr/attendance/add" passHref>
                                 <Button>
                                     <PlusCircle className="mr-2 h-4 w-4" /> Add Record
@@ -500,6 +584,13 @@ export default function DailyAttendancePage() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                   <Alert className="mb-6 border-blue-500/50 bg-blue-500/10 text-blue-800 dark:text-blue-200">
+                        <AlertTriangle className="h-4 w-4 !text-blue-600" />
+                        <AlertTitle className="font-semibold !text-blue-700 dark:!text-blue-300">Bulk Upload CSV Format</AlertTitle>
+                        <AlertDescription>
+                            The CSV file must have the following headers: <strong>employeeCode, date, flag, inTime, outTime, remarks</strong>. Date format must be YYYY-MM-DD. Time format must be HH:MM (24-hour).
+                        </AlertDescription>
+                    </Alert>
                    <Card className="mb-6 shadow-md p-4">
                         <CardHeader className="p-2 pb-4">
                             <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
@@ -515,7 +606,7 @@ export default function DailyAttendancePage() {
                                 </div>
                                 <div className="space-y-1">
                                     <Label>Date Range</Label>
-                                    <DatePickerWithRange date={dateRange} onDateChange={setDateRange} className="h-10"/>
+                                    <DatePickerWithRange date={dateRange} onDateChange={setDateRange}/>
                                 </div>
                                 <div className="space-y-1">
                                     <Label>Branch</Label>
@@ -579,9 +670,5 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
-
-    
-
-    
 
     
