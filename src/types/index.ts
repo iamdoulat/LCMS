@@ -1466,6 +1466,9 @@ export const EmployeeSchema = z.object({
     structureDate: z.date().optional(),
     paymentFrequency: z.string().optional(),
     salaryBreakup: z.array(SalaryBreakupSchema).optional(),
+    totalSalary: z.number().optional(),
+    totalIncrement: z.number().optional(),
+    grossSalary: z.number().optional(),
   }).optional(),
 });
 
@@ -1643,9 +1646,9 @@ export interface Payslip {
     payPeriod: string; // "August, 2024"
     grossSalary: number;
     // Breakdowns
-    basicSalary?: number;
-    houseRent?: number;
-    medicalAllowance?: number;
+    basicSalary?: number | null;
+    houseRent?: number | null;
+    medicalAllowance?: number | null;
     // ... other earnings
     // Deductions
     taxDeduction?: number;

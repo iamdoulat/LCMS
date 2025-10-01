@@ -63,13 +63,14 @@ export default function SalaryGenerationPage() {
     const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(query(collection(firestore, "branches"), orderBy("name")), undefined, ['branches']);
     const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(query(collection(firestore, "departments"), orderBy("name")), undefined, ['departments']);
     const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(query(collection(firestore, "units"), orderBy("name")), undefined, ['units']);
-    const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(query(collection(firestore, "employees"), orderBy("fullName")), undefined, ['employees']);
-
+    const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(query(collection(firestore, "employees"), where("status", "==", "Active")), undefined, ['employees_for_salary']);
+    
     const branchOptions = React.useMemo(() => toComboboxOptions(branches, 'name'), [branches]);
     const departmentOptions = React.useMemo(() => toComboboxOptions(departments, 'name'), [departments]);
     const unitOptions = React.useMemo(() => toComboboxOptions(units, 'name'), [units]);
-    const employeeOptions = React.useMemo(() => toComboboxOptions(employees, 'fullName'), [employees]);
+    const employeeOptions = React.useMemo(() => toComboboxOptions(employees, 'fullName', 'id'), [employees]);
     const isLoadingOptions = isLoadingBranches || isLoadingDepts || isLoadingUnits || isLoadingEmployees;
+
 
     const form = useForm<SalaryGenerationFormValues>({
         resolver: zodResolver(salaryGenerationSchema),
@@ -108,33 +109,30 @@ export default function SalaryGenerationPage() {
             case 'Branch Wise': {
                 const selectedBranch = branchOptions.find(b => b.value === data.branch);
                 if (!selectedBranch) { Swal.fire("Validation Error", "Please select a valid branch.", "error"); setIsGenerating(false); return; }
-                employeesToProcessQuery = query(baseQuery, where("branch", "==", selectedBranch.label));
+                employeesToProcessQuery = query(baseQuery, where("branch", "==", selectedBranch.label), where("status", "==", "Active"));
                 break;
             }
             case 'Department Wise': {
                 const selectedDept = departmentOptions.find(d => d.value === data.department);
                 if (!selectedDept) { Swal.fire("Validation Error", "Please select a valid department.", "error"); setIsGenerating(false); return; }
-                 employeesToProcessQuery = query(baseQuery, where("department", "==", selectedDept.label));
+                 employeesToProcessQuery = query(baseQuery, where("department", "==", selectedDept.label), where("status", "==", "Active"));
                 break;
             }
             case 'Department Unit Wise': {
                  const selectedDept = departmentOptions.find(d => d.value === data.department);
                  const selectedUnit = unitOptions.find(u => u.value === data.unit);
                  if (!selectedDept || !selectedUnit) { Swal.fire("Validation Error", "Please select a valid department and unit.", "error"); setIsGenerating(false); return; }
-                 employeesToProcessQuery = query(baseQuery, where("department", "==", selectedDept.label), where("unit", "==", selectedUnit.label));
+                 employeesToProcessQuery = query(baseQuery, where("department", "==", selectedDept.label), where("unit", "==", selectedUnit.label), where("status", "==", "Active"));
                 break;
             }
             case 'Employee Wise': {
                  if (!data.employee) { Swal.fire("Validation Error", "Please select an employee.", "error"); setIsGenerating(false); return; }
-                 // Note: Firestore does not support `where("id", "==", ...)` directly. Using document ID in a query requires `documentId()`.
-                 // Assuming 'id' field exists in your documents, otherwise adjust. If employee value is the doc ID, this is correct.
-                employeesToProcessQuery = query(baseQuery, where("id", "==", data.employee));
+                 employeesToProcessQuery = query(baseQuery, where(doc.id, "==", data.employee), where("status", "==", "Active"));
                 break;
             }
             default:
-                Swal.fire("Error", "Invalid generation type selected.", "error");
-                setIsGenerating(false);
-                return;
+                employeesToProcessQuery = query(baseQuery, where("status", "==", "Active"));
+                break;
         }
 
         try {
@@ -167,7 +165,7 @@ export default function SalaryGenerationPage() {
             
             for (const empDoc of employeesSnapshot.docs) {
                 const employee = {id: empDoc.id, ...empDoc.data()} as EmployeeDocument;
-                if (!employee.salaryStructure || !employee.salaryStructure.salaryBreakup) continue;
+                if (!employee.salaryStructure || !employee.salaryStructure.grossSalary) continue;
 
                 const daysInMonth = salaryPolicy.dayConsideration === 'Fixed Days' ? (salaryPolicy.fixedDaysInMonth || 30) : getDaysInMonth(startDate);
                 let absentDays = 0;
@@ -192,22 +190,22 @@ export default function SalaryGenerationPage() {
                     }
                 });
                 
-                const fullGrossSalary = employee.salaryStructure.salaryBreakup.reduce((sum, item) => sum + (item.amount || 0) + (item.increaseAmount || 0), 0);
+                const fullGrossSalary = employee.salaryStructure.grossSalary;
                 const perDaySalary = fullGrossSalary / daysInMonth;
                 const deductionForAbsence = absentDays * perDaySalary;
-                const grossSalary = fullGrossSalary - deductionForAbsence;
-
-                const deductions = deductionForAbsence; // Only absent days are deducted from gross.
                 
-                totalGrossSalary += grossSalary;
-                totalDeductions += deductions;
+                totalGrossSalary += fullGrossSalary;
+                totalDeductions += deductionForAbsence;
                 processedCount++;
 
                 const payslipId = `PAYSLIP-${data.year}-${data.month.toUpperCase()}-${employee.id}`;
                 const payslipDocRef = doc(firestore, 'payslips', payslipId);
                 const payslipData: Payslip = {
                     id: payslipId, payrollId, employeeId: employee.id, employeeName: employee.fullName, employeeCode: employee.employeeCode,
-                    designation: employee.designation, payPeriod, grossSalary, totalDeductions: deductions, netSalary: grossSalary - deductions,
+                    designation: employee.designation, payPeriod,
+                    grossSalary: fullGrossSalary,
+                    totalDeductions: deductionForAbsence,
+                    netSalary: fullGrossSalary - deductionForAbsence,
                     basicSalary: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Basic')?.amount ?? null,
                     houseRent: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'House Rent')?.amount ?? null,
                     medicalAllowance: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Medical Allowance')?.amount ?? null,
@@ -320,5 +318,4 @@ export default function SalaryGenerationPage() {
         </div>
     );
 }
-
 
