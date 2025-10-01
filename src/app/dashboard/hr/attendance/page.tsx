@@ -587,7 +587,7 @@ export default function DailyAttendancePage() {
                                 accept=".csv"
                             />
                             <Button variant="outline" onClick={handleDownloadSample}>
-                                <Download className="mr-2 h-4 w-4" /> Download Sample
+                                <Download className="mr-2 h-4 w-4" /> Sample
                             </Button>
                             <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                                 <Upload className="mr-2 h-4 w-4" /> Bulk Upload
