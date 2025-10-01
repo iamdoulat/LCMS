@@ -83,7 +83,7 @@ const AttendanceDayRow = ({
     );
     if (isOnLeave) return 'L';
     
-    return 'A'; // Default to Absent
+    return 'A'; // Default to Absent if no other condition is met
   }, [date, holidays, leaves, initialData]);
 
   const form = useForm<AttendanceDayFormValues>({
@@ -98,8 +98,9 @@ const AttendanceDayRow = ({
   });
   
   React.useEffect(() => {
+    const defaultFlag = getDefaultFlag();
     form.reset({
-      flag: initialData?.flag || getDefaultFlag(),
+      flag: initialData?.flag || defaultFlag,
       inTime: initialData?.inTime || '09:00',
       inTimeRemarks: initialData?.inTimeRemarks || '',
       outTime: initialData?.outTime || '18:00',
@@ -120,17 +121,17 @@ const AttendanceDayRow = ({
     if(currentFlag !== 'P' && currentFlag !== 'D' && currentFlag !== defaultFlag) {
         // User has manually changed it, don't auto-update
     } else {
-        if(inTime) {
+        if(inTime && defaultFlag === 'A') {
             try {
                 const [hours, minutes] = inTime.split(':').map(Number);
-                if ((hours > 9 || (hours === 9 && minutes > 10)) && defaultFlag === 'A') {
+                if ((hours > 9 || (hours === 9 && minutes > 10))) {
                     setValue('flag', 'D');
-                } else if(defaultFlag === 'A') {
+                } else {
                     setValue('flag', 'P');
                 }
             } catch {}
-        } else {
-            setValue(defaultFlag);
+        } else if (!inTime) {
+            setValue('flag', defaultFlag);
         }
     }
   }, [inTime, getDefaultFlag, setValue, form]);
