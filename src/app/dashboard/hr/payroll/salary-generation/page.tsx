@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Calculator, Users, Building, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Loader2, Calculator, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,11 +16,11 @@ import { cn } from '@/lib/utils';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, where, getDocs, writeBatch, doc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { BranchDocument, DepartmentDocument, UnitDocument, EmployeeDocument, Payslip } from '@/types';
+import type { BranchDocument, DepartmentDocument, UnitDocument, EmployeeDocument, Payslip, AttendanceDocument, LeaveApplicationDocument, HolidayDocument, SalaryGenerationPolicy } from '@/types';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { format } from 'date-fns';
+import { format, getDaysInMonth, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWithinInterval } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const toComboboxOptions = (data: any[] | undefined, labelKey: string, valueKey: string = 'id'): ComboboxOption[] => {
@@ -52,11 +52,9 @@ export default function SalaryGenerationPage() {
     const [generationDate, setGenerationDate] = React.useState<Date | null>(null);
 
     React.useEffect(() => {
-        // Defer date initialization to client-side
         const now = new Date();
         setCurrentTime(now);
         setGenerationDate(now);
-
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
@@ -87,21 +85,16 @@ export default function SalaryGenerationPage() {
 
     const onGenerateSalary = async (data: SalaryGenerationFormValues) => {
         setIsGenerating(true);
-        setGenerationDate(new Date()); // Refresh generation date on click
+        setGenerationDate(new Date());
 
         const payrollId = `PAYROLL-${data.year}-${data.month.toUpperCase()}`;
         const payPeriod = `${data.month}, ${data.year}`;
 
-        // Check if payroll for this period already exists
         if (!data.recalculate) {
             const payrollDocRef = doc(firestore, 'payrolls', payrollId);
             const payrollDoc = await getDoc(payrollDocRef);
             if (payrollDoc.exists()) {
-                Swal.fire({
-                    title: "Payroll Already Exists",
-                    text: `Payroll for ${payPeriod} has already been generated. To re-generate, please check the 'Recalculate Old' box.`,
-                    icon: "warning"
-                });
+                Swal.fire({ title: "Payroll Already Exists", text: `Payroll for ${payPeriod} has already been generated. To re-generate, please check the 'Recalculate Old' box.`, icon: "warning" });
                 setIsGenerating(false);
                 return;
             }
@@ -113,41 +106,25 @@ export default function SalaryGenerationPage() {
         switch(data.generationType) {
             case 'Branch Wise': {
                 const selectedBranch = branchOptions.find(b => b.value === data.branch);
-                if (!selectedBranch) {
-                     Swal.fire("Validation Error", "Please select a valid branch.", "error");
-                     setIsGenerating(false);
-                     return;
-                }
+                if (!selectedBranch) { Swal.fire("Validation Error", "Please select a valid branch.", "error"); setIsGenerating(false); return; }
                 employeesToProcessQuery = query(baseQuery, where("branch", "==", selectedBranch.label));
                 break;
             }
             case 'Department Wise': {
                 const selectedDept = departmentOptions.find(d => d.value === data.department);
-                if (!selectedDept) {
-                     Swal.fire("Validation Error", "Please select a valid department.", "error");
-                     setIsGenerating(false);
-                     return;
-                }
+                if (!selectedDept) { Swal.fire("Validation Error", "Please select a valid department.", "error"); setIsGenerating(false); return; }
                  employeesToProcessQuery = query(baseQuery, where("department", "==", selectedDept.label));
                 break;
             }
             case 'Department Unit Wise': {
                  const selectedDept = departmentOptions.find(d => d.value === data.department);
                  const selectedUnit = unitOptions.find(u => u.value === data.unit);
-                 if (!selectedDept || !selectedUnit) {
-                     Swal.fire("Validation Error", "Please select a valid department and unit.", "error");
-                     setIsGenerating(false);
-                     return;
-                 }
+                 if (!selectedDept || !selectedUnit) { Swal.fire("Validation Error", "Please select a valid department and unit.", "error"); setIsGenerating(false); return; }
                  employeesToProcessQuery = query(baseQuery, where("department", "==", selectedDept.label), where("unit", "==", selectedUnit.label));
                 break;
             }
             case 'Employee Wise': {
-                 if (!data.employee) {
-                     Swal.fire("Validation Error", "Please select an employee.", "error");
-                     setIsGenerating(false);
-                     return;
-                 }
+                 if (!data.employee) { Swal.fire("Validation Error", "Please select an employee.", "error"); setIsGenerating(false); return; }
                 employeesToProcessQuery = query(baseQuery, where("id", "==", data.employee));
                 break;
             }
@@ -165,75 +142,90 @@ export default function SalaryGenerationPage() {
                 return;
             }
             
+            const monthIndex = monthOptions.indexOf(data.month);
+            const year = parseInt(data.year);
+            const startDate = startOfMonth(new Date(year, monthIndex));
+            const endDate = endOfMonth(new Date(year, monthIndex));
+
+            const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, policySnapshot] = await Promise.all([
+                getDocs(query(collection(firestore, "attendance"), where("date", ">=", format(startDate, "yyyy-MM-dd'T'00:00:00.000xxx")), where("date", "<=", format(endDate, "yyyy-MM-dd'T'23:59:59.999xxx")))),
+                getDocs(query(collection(firestore, "leave_applications"), where("status", "==", "Approved"))),
+                getDocs(collection(firestore, "holidays")),
+                getDoc(doc(firestore, 'hrm_settings', 'salary_generation_policy'))
+            ]);
+            
+            const attendanceRecs = attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument);
+            const approvedLeaves = leavesSnapshot.docs.map(d => d.data() as LeaveApplicationDocument);
+            const holidays = holidaysSnapshot.docs.map(d => d.data() as HolidayDocument);
+            const salaryPolicy = policySnapshot.exists() ? policySnapshot.data() as SalaryGenerationPolicy : {};
+
             const batch = writeBatch(firestore);
-            let totalGrossSalary = 0;
-            let totalDeductions = 0;
+            let totalGrossSalary = 0, totalDeductions = 0, processedCount = 0;
             
             employeesSnapshot.docs.forEach(empDoc => {
                 const employee = {id: empDoc.id, ...empDoc.data()} as EmployeeDocument;
-                if (!employee.salaryStructure) return; // Skip if no salary structure
+                if (!employee.salaryStructure || !employee.salaryStructure.salaryBreakup) return;
 
-                const payslipId = `PAYSLIP-${data.year}-${data.month.toUpperCase()}-${employee.id}`;
-                const payslipDocRef = doc(firestore, 'payslips', payslipId);
+                const daysInMonth = salaryPolicy.dayConsideration === 'Fixed Days' ? (salaryPolicy.fixedDaysInMonth || 30) : getDaysInMonth(startDate);
+                let payableDays = 0;
 
-                let grossSalary = 0;
-                let deductions = 0;
-                
-                employee.salaryStructure.salaryBreakup?.forEach(item => {
-                    grossSalary += (item.amount || 0) + (item.increaseAmount || 0);
+                const daysInterval = eachDayOfInterval({ start: startDate, end: endDate });
+                daysInterval.forEach(day => {
+                    const attendance = attendanceRecs.find(a => a.employeeId === employee.id && format(new Date(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+                    if (attendance && (attendance.flag === 'P' || attendance.flag === 'D')) {
+                        payableDays++;
+                    } else {
+                        const dayOfWeek = getDay(day);
+                        const isWeeklyHoliday = dayOfWeek === 5 && salaryPolicy.includeWeeklyHoliday;
+                        const isGovtHoliday = holidays.some(h => h.type === 'Public Holiday' && isWithinInterval(day, { start: new Date(h.fromDate), end: new Date(h.toDate || h.fromDate) })) && salaryPolicy.includeGovtHoliday;
+                        const isFestivalHoliday = holidays.some(h => h.type === 'Company Holiday' && isWithinInterval(day, { start: new Date(h.fromDate), end: new Date(h.toDate || h.fromDate) })) && salaryPolicy.includeFestivalHoliday;
+                        const isOnLeave = approvedLeaves.some(l => l.employeeId === employee.id && isWithinInterval(day, { start: new Date(l.fromDate), end: new Date(l.toDate) }));
+
+                        if(isWeeklyHoliday || isGovtHoliday || isFestivalHoliday || isOnLeave) {
+                            payableDays++;
+                        }
+                    }
                 });
-
+                
+                const fullGrossSalary = employee.salaryStructure.salaryBreakup.reduce((sum, item) => sum + (item.amount || 0) + (item.increaseAmount || 0), 0);
+                const grossSalary = (fullGrossSalary / daysInMonth) * payableDays;
+                
                 // Placeholder for deduction logic
                 const taxDeduction = grossSalary * 0.05; // Example: 5% tax
                 const providentFund = grossSalary * 0.08; // Example: 8% PF
-                deductions = taxDeduction + providentFund;
+                const deductions = taxDeduction + providentFund;
                 
                 totalGrossSalary += grossSalary;
                 totalDeductions += deductions;
+                processedCount++;
 
+                const payslipId = `PAYSLIP-${data.year}-${data.month.toUpperCase()}-${employee.id}`;
+                const payslipDocRef = doc(firestore, 'payslips', payslipId);
                 const payslipData: Payslip = {
-                    id: payslipId,
-                    payrollId: payrollId,
-                    employeeId: employee.id,
-                    employeeName: employee.fullName,
-                    employeeCode: employee.employeeCode,
-                    designation: employee.designation,
-                    payPeriod: payPeriod,
-                    grossSalary: grossSalary,
-                    totalDeductions: deductions,
-                    netSalary: grossSalary - deductions,
+                    id: payslipId, payrollId, employeeId: employee.id, employeeName: employee.fullName, employeeCode: employee.employeeCode,
+                    designation: employee.designation, payPeriod, grossSalary, totalDeductions: deductions, netSalary: grossSalary - deductions,
                     basicSalary: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Basic')?.amount,
                     houseRent: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'House Rent')?.amount,
                     medicalAllowance: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Medical Allowance')?.amount,
-                    taxDeduction,
-                    providentFund,
-                    createdAt: serverTimestamp(),
-                    updatedAt: serverTimestamp(),
+                    taxDeduction, providentFund,
+                    createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 };
                 batch.set(payslipDocRef, payslipData);
             });
 
-            const payrollDocRef = doc(firestore, 'payrolls', payrollId);
-            batch.set(payrollDocRef, {
-                id: payrollId,
-                month: data.month,
-                year: parseInt(data.year),
-                generationDate: serverTimestamp(),
-                generatedBy: user?.displayName || user?.email,
-                totalEmployees: employeesSnapshot.size,
-                totalGrossSalary: totalGrossSalary,
-                totalDeductions: totalDeductions,
-                totalNetSalary: totalGrossSalary - totalDeductions,
-                status: 'Generated',
-            }, { merge: true });
+            if (processedCount > 0) {
+                const payrollDocRef = doc(firestore, 'payrolls', payrollId);
+                batch.set(payrollDocRef, {
+                    id: payrollId, month: data.month, year: parseInt(data.year),
+                    generationDate: serverTimestamp(), generatedBy: user?.displayName || user?.email,
+                    totalEmployees: processedCount, totalGrossSalary, totalDeductions, totalNetSalary: totalGrossSalary - totalDeductions,
+                    status: 'Generated',
+                }, { merge: true });
+            }
 
             await batch.commit();
 
-            Swal.fire({
-                title: "Salary Generation Complete!",
-                text: `Successfully generated payroll for ${employeesSnapshot.size} employees for ${payPeriod}.`,
-                icon: "success"
-            });
+            Swal.fire({ title: "Salary Generation Complete!", text: `Successfully generated payroll for ${processedCount} employees for ${payPeriod}.`, icon: "success" });
 
         } catch (error: any) {
              Swal.fire("Error", `Salary generation failed: ${error.message}`, "error");
@@ -251,35 +243,27 @@ export default function SalaryGenerationPage() {
                         Salary Generation
                     </CardTitle>
                     <CardDescription>
-                        Generate salaries for employees based on the selected criteria.
+                        Generate salaries for employees based on attendance and selected criteria.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onGenerateSalary)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <div className="lg:col-span-2 space-y-6">
-                                <FormField
-                                    control={form.control}
-                                    name="generationType"
-                                    render={({ field }) => (
-                                        <FormItem className="space-y-3">
-                                            <FormLabel>Generate Salary By</FormLabel>
-                                            <FormControl>
-                                                <RadioGroup
-                                                    onValueChange={field.onChange}
-                                                    defaultValue={field.value}
-                                                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                                                >
-                                                    <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="Branch Wise" /></FormControl><FormLabel className="font-normal">Branch Wise</FormLabel></FormItem>
-                                                    <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="Department Wise" /></FormControl><FormLabel className="font-normal">Department Wise</FormLabel></FormItem>
-                                                    <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="Department Unit Wise" /></FormControl><FormLabel className="font-normal">Unit Wise</FormLabel></FormItem>
-                                                    <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="Employee Wise" /></FormControl><FormLabel className="font-normal">Employee Wise</FormLabel></FormItem>
-                                                </RadioGroup>
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                <FormField control={form.control} name="generationType" render={({ field }) => (
+                                    <FormItem className="space-y-3">
+                                        <FormLabel>Generate Salary By</FormLabel>
+                                        <FormControl>
+                                            <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                                                <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="Branch Wise" /></FormControl><FormLabel className="font-normal">Branch Wise</FormLabel></FormItem>
+                                                <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="Department Wise" /></FormControl><FormLabel className="font-normal">Department Wise</FormLabel></FormItem>
+                                                <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="Department Unit Wise" /></FormControl><FormLabel className="font-normal">Unit Wise</FormLabel></FormItem>
+                                                <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="Employee Wise" /></FormControl><FormLabel className="font-normal">Employee Wise</FormLabel></FormItem>
+                                            </RadioGroup>
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                      {generationType === 'Branch Wise' && <FormField control={form.control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch</FormLabel><Combobox options={branchOptions} {...field} onValueChange={field.onChange} placeholder="Select Branch..." selectPlaceholder="Select Branch" disabled={isLoadingOptions} /></FormItem>)} />}
                                      {generationType === 'Department Wise' && <FormField control={form.control} name="department" render={({ field }) => (<FormItem><FormLabel>Department</FormLabel><Combobox options={departmentOptions} {...field} onValueChange={field.onChange} placeholder="Select Department..." selectPlaceholder="Select Department" disabled={isLoadingOptions} /></FormItem>)} />}
@@ -314,13 +298,13 @@ export default function SalaryGenerationPage() {
                                     </CardHeader>
                                     <CardContent className="space-y-4">
                                         <div className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>Fetch Employees based on criteria</span></div>
-                                        <div className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>Calculate Salary & Deductions</span></div>
+                                        <div className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>Calculate Salary & Deductions based on attendance</span></div>
                                         <div className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>Create individual Payslips</span></div>
                                         <div className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>Create master Payroll record</span></div>
                                          <Alert variant="destructive" className="mt-4">
                                             <AlertTriangle className="h-4 w-4" />
                                             <AlertTitle>Important</AlertTitle>
-                                            <AlertDescription className="text-xs">Ensure employee salary structures are correctly configured before generating payroll to avoid errors.</AlertDescription>
+                                            <AlertDescription className="text-xs">Ensure employee salary structures and attendance data are correctly configured before generating payroll to avoid errors.</AlertDescription>
                                         </Alert>
                                     </CardContent>
                                 </Card>
