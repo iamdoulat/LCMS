@@ -68,7 +68,10 @@ const AttendanceDayRow = ({
   const [workingHours, setWorkingHours] = React.useState<string | null>(null);
 
   const getDefaultFlag = React.useCallback((): AttendanceFlag => {
-    if (initialData?.flag) return initialData.flag;
+    // If there is existing data, its flag is the default.
+    if (initialData?.flag) {
+        return initialData.flag;
+    }
 
     const dayOfWeek = getDay(date);
     if (dayOfWeek === 5) return 'W'; // Friday is Weekend
@@ -79,17 +82,20 @@ const AttendanceDayRow = ({
     if (isHoliday) return 'H';
 
     const isOnLeave = leaves.some(l => 
-        isWithinDateInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) && l.status === 'Approved'
+        l.employeeId === employee.id &&
+        isWithinDateInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) &&
+        l.status === 'Approved'
     );
     if (isOnLeave) return 'L';
     
-    return 'A'; // Default to Absent if no other condition is met
-  }, [date, holidays, leaves, initialData]);
+    // The final fallback is 'Absent'
+    return 'A'; 
+  }, [date, holidays, leaves, initialData, employee.id]);
 
   const form = useForm<AttendanceDayFormValues>({
     resolver: zodResolver(attendanceDaySchema),
     defaultValues: {
-      flag: 'A', // Start with a safe default
+      flag: 'A', // Default to A, will be overridden by useEffect
       inTime: '09:00',
       inTimeRemarks: '',
       outTime: '18:00',
@@ -98,6 +104,7 @@ const AttendanceDayRow = ({
   });
   
   React.useEffect(() => {
+    // This effect now correctly initializes or resets the form based on incoming data.
     const defaultFlag = getDefaultFlag();
     form.reset({
       flag: initialData?.flag || defaultFlag,
@@ -115,9 +122,9 @@ const AttendanceDayRow = ({
   const flag = watch('flag');
   
   React.useEffect(() => {
-    const defaultFlag = getDefaultFlag();
-    // Only auto-update flag if it's currently in a default state (A) or present-related states (P, D)
-    if (['A', 'P', 'D'].includes(form.getValues('flag'))) {
+    // This logic now only applies when there's NO initial data for the day
+    // and the flag is in its default 'A' state.
+    if (!initialData && form.getValues('flag') === 'A') {
         if(inTime) {
             try {
                 const [hours, minutes] = inTime.split(':').map(Number);
@@ -127,14 +134,9 @@ const AttendanceDayRow = ({
                     setValue('flag', 'P');
                 }
             } catch {}
-        } else {
-             // If no inTime, and no initial data, set to the calculated default (A, L, W, H)
-            if (!initialData) {
-                setValue('flag', defaultFlag);
-            }
         }
     }
-  }, [inTime, getDefaultFlag, setValue, form, initialData]);
+  }, [inTime, form, setValue, initialData]);
 
   React.useEffect(() => {
     if (flag !== 'P' && flag !== 'D') {
@@ -329,12 +331,12 @@ const EmployeeAttendanceRow = ({
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Date</TableHead>
+                                        <TableHead>Attendance Date</TableHead>
                                         <TableHead>Flag</TableHead>
                                         <TableHead>In Time</TableHead>
-                                        <TableHead>In Remarks</TableHead>
-                                        <TableHead>Out Time</TableHead>
-                                        <TableHead>Out Remarks</TableHead>
+                                        <TableHead>In Time Remarks</TableHead>
+                                        <TableHead>Out Time &amp; Date</TableHead>
+                                        <TableHead>Out Time Remarks</TableHead>
                                         <TableHead>Working Hour</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
                                     </TableRow>
@@ -573,7 +575,7 @@ export default function DailyAttendancePage() {
                                         dateRange={dateRange}
                                         attendanceRecords={attendanceByEmployee.get(emp.id) || []}
                                         holidays={holidays || []}
-                                        leaves={leaves?.filter(l => l.employeeId === emp.id) || []}
+                                        leaves={leaves || []}
                                         onRecordUpdate={refetchAttendance}
                                     />
                                ))
@@ -585,3 +587,5 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
+
+    
