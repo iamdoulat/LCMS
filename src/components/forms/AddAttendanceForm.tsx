@@ -127,11 +127,11 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
     const dataToSave: Record<string, any> = {
       ...data,
       employeeName: selectedEmployee?.label || 'N/A', // Add employeeName
-      date: formattedDate, // Use YYYY-MM-DD format
+      date: format(data.date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
       updatedBy: user.uid,
       updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(), // Included for new records
+      createdAt: serverTimestamp(),
     };
     
     if (data.flag !== 'P' || !data.enableInTime) {
@@ -338,5 +338,3 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
       </Form>
     );
   }
-
-    
