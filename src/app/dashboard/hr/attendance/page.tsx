@@ -128,7 +128,7 @@ const DailyAttendanceDataRow = ({
             ...data,
             employeeId: employee.id,
             employeeName: employee.fullName,
-            date: format(attendanceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"), // Save in ISO format
+            date: formattedDate,
             workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
             updatedAt: serverTimestamp(),
         };
@@ -333,15 +333,8 @@ const EmployeeAttendanceRow = ({
                                 <TableBody>
                                     {datesToDisplay.map(date => {
                                         const formattedDate = format(date, 'yyyy-MM-dd');
-                                        const attendanceData = attendanceRecords.find(rec => {
-                                            if (!rec.date) return false;
-                                            try {
-                                                const recordDate = format(parseISO(rec.date), 'yyyy-MM-dd');
-                                                return recordDate === formattedDate;
-                                            } catch {
-                                                return false;
-                                            }
-                                        });
+                                        const attendanceData = attendanceRecords.find(rec => rec.employeeId === employee.id && rec.date === formattedDate);
+
                                         return (
                                             <DailyAttendanceDataRow
                                                 key={date.toISOString()}
@@ -397,9 +390,9 @@ export default function DailyAttendancePage() {
 
         const attendanceQuery = React.useMemo(() => {
             if (!dateRange?.from) return null;
-            const fromDate = format(startOfDay(dateRange.from), "yyyy-MM-dd'T'00:00:00.000'Z'");
-            const toDate = format(endOfDay(dateRange.to || dateRange.from), "yyyy-MM-dd'T'23:59:59.999'Z'");
-
+            const fromDate = format(startOfDay(dateRange.from), "yyyy-MM-dd");
+            const toDate = format(endOfDay(dateRange.to || dateRange.from), "yyyy-MM-dd");
+            
             return query(
                 collection(firestore, "attendance"),
                 where('date', '>=', fromDate),
@@ -501,7 +494,7 @@ export default function DailyAttendancePage() {
                     
                     const attendanceData: Partial<Attendance> = {
                         employeeId: employeeId,
-                        date: format(parsedDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                        date: formattedDate,
                         flag: rowData.flag as AttendanceFlag || 'P',
                         updatedAt: serverTimestamp(),
                     };
@@ -654,5 +647,6 @@ export default function DailyAttendancePage() {
     }
 
     
+
 
 
