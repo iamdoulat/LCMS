@@ -168,7 +168,6 @@ export default function SalaryGenerationPage() {
 
                 const daysInMonth = salaryPolicy.dayConsideration === 'Fixed Days' ? (salaryPolicy.fixedDaysInMonth || 30) : getDaysInMonth(startDate);
                 let absentDays = 0;
-                let workedDays = 0;
 
                 const daysInterval = eachDayOfInterval({ start: startDate, end: endDate });
                 
@@ -178,12 +177,10 @@ export default function SalaryGenerationPage() {
                     const isWeeklyHoliday = dayOfWeek === 5 && salaryPolicy.includeWeeklyHoliday;
                     const isGovtHoliday = holidays.some(h => h.type === 'Public Holiday' && isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })) && salaryPolicy.includeGovtHoliday;
                     const isFestivalHoliday = holidays.some(h => h.type === 'Company Holiday' && isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })) && salaryPolicy.includeFestivalHoliday;
-                    const isOnLeave = approvedLeaves.some(l => l.employeeId === employee.id && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+                    const isOnLeave = approvedLeaves.some(l => l.employeeId === employee.id && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) && l.status === 'Approved');
 
                     if (attendance) {
-                      if (attendance.flag === 'P' || attendance.flag === 'D') {
-                        workedDays++;
-                      } else if (attendance.flag === 'A') {
+                      if (attendance.flag === 'A') {
                         if (!isWeeklyHoliday && !isGovtHoliday && !isFestivalHoliday && !isOnLeave) {
                           absentDays++;
                         }
@@ -208,10 +205,10 @@ export default function SalaryGenerationPage() {
                 const payslipData: Payslip = {
                     id: payslipId, payrollId, employeeId: employee.id, employeeName: employee.fullName, employeeCode: employee.employeeCode,
                     designation: employee.designation, payPeriod,
-                    grossSalary: employee.salaryStructure.totalSalary || fullGrossSalary,
+                    grossSalary: employee.salaryStructure.grossSalary,
                     salaryBreakup: employee.salaryStructure.salaryBreakup,
                     totalDeductions: deductionForAbsence,
-                    netSalary: (employee.salaryStructure.grossSalary || fullGrossSalary) - deductionForAbsence,
+                    netSalary: fullGrossSalary - deductionForAbsence,
                     absentDeduction: deductionForAbsence,
                     absentDays: absentDays,
                     createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
@@ -255,7 +252,7 @@ export default function SalaryGenerationPage() {
                 <CardContent>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onGenerateSalary)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <div className="lg:col-span-2 space-y-6">
+                            <div className="lg:col-span-2 space-y-8">
                                 <FormField control={form.control} name="generationType" render={({ field }) => (
                                     <FormItem className="space-y-3">
                                         <FormLabel>Generate Salary By</FormLabel>
@@ -328,4 +325,5 @@ export default function SalaryGenerationPage() {
   
 
     
+
 
