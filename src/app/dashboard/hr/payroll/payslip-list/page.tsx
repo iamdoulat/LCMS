@@ -128,6 +128,7 @@ export default function PayslipListPage() {
                         <TableRow>
                             <TableHead>Pay Period</TableHead>
                             <TableHead>Employee Name</TableHead>
+                            <TableHead>Employee Code</TableHead>
                             <TableHead>Designation</TableHead>
                             <TableHead>Gross Salary</TableHead>
                             <TableHead>Advance Paid</TableHead>
@@ -139,7 +140,7 @@ export default function PayslipListPage() {
                     <TableBody>
                         {isLoading ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="h-24 text-center">
+                                <TableCell colSpan={9} className="h-24 text-center">
                                     <div className="flex items-center justify-center">
                                         <Loader2 className="h-6 w-6 animate-spin text-primary"/>
                                         <p className="ml-3 text-muted-foreground">Loading payslips...</p>
@@ -148,13 +149,13 @@ export default function PayslipListPage() {
                             </TableRow>
                         ) : error ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="h-24 text-center text-destructive">
+                                <TableCell colSpan={9} className="h-24 text-center text-destructive">
                                     Error: {error.message}
                                 </TableCell>
                             </TableRow>
                         ) : !currentPayslips || currentPayslips.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                                     No payslips have been generated yet.
                                 </TableCell>
                             </TableRow>
@@ -163,6 +164,7 @@ export default function PayslipListPage() {
                                 <TableRow key={p.id}>
                                     <TableCell>{p.payPeriod}</TableCell>
                                     <TableCell>{p.employeeName}</TableCell>
+                                    <TableCell>{p.employeeCode}</TableCell>
                                     <TableCell>{p.designation}</TableCell>
                                     <TableCell>{formatCurrency(p.grossSalary)}</TableCell>
                                     <TableCell>{formatCurrency(p.advanceDeduction)}</TableCell>
