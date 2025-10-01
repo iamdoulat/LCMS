@@ -22,7 +22,7 @@ const PayslipEditSchema = z.object({
   taxDeduction: z.number().nonnegative().optional(),
   providentFund: z.number().nonnegative().optional(),
   absentDeduction: z.number().nonnegative().optional(),
-  // Add other editable fields here
+  advanceDeduction: z.number().nonnegative().optional(),
 });
 
 type PayslipEditFormValues = z.infer<typeof PayslipEditSchema>;
@@ -41,6 +41,7 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
       taxDeduction: initialData.taxDeduction || 0,
       providentFund: initialData.providentFund || 0,
       absentDeduction: initialData.absentDeduction || 0,
+      advanceDeduction: initialData.advanceDeduction || 0,
     },
   });
   
@@ -51,12 +52,12 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
     const tax = watchedFields.taxDeduction || 0;
     const pf = watchedFields.providentFund || 0;
     const absent = watchedFields.absentDeduction || 0;
-    const deductions = tax + pf + absent;
+    const advance = watchedFields.advanceDeduction || 0;
+    const deductions = tax + pf + absent + advance;
     const net = gross - deductions;
     return { totalDeductions: deductions, netSalary: net };
   }, [watchedFields]);
 
-  // Prepare salary breakup data for display
   const salaryBreakupForDisplay = initialData.salaryBreakup || [];
 
   async function onSubmit(data: PayslipEditFormValues) {
@@ -67,6 +68,7 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
       taxDeduction: data.taxDeduction,
       providentFund: data.providentFund,
       absentDeduction: data.absentDeduction,
+      advanceDeduction: data.advanceDeduction,
       totalDeductions: totalDeductions,
       netSalary: netSalary,
       updatedAt: serverTimestamp(),
@@ -111,17 +113,18 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {salaryBreakupForDisplay.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{item.breakupName}</TableCell>
-                      <TableCell className="text-right">{item.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                    </TableRow>
-                  ))}
-                   {salaryBreakupForDisplay.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-center text-muted-foreground">No earning breakdown available.</TableCell>
+                  {salaryBreakupForDisplay.length > 0 ? (
+                    salaryBreakupForDisplay.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.breakupName}</TableCell>
+                        <TableCell className="text-right">{item.amount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                       </TableRow>
-                   )}
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center text-muted-foreground">No earning breakdown available.</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -144,8 +147,8 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
         <Separator />
         <h4 className="text-md font-semibold">Deductions</h4>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             <FormField
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <FormField
               control={form.control}
               name="taxDeduction"
               render={({ field }) => (
@@ -180,6 +183,20 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
                   <FormControl>
                     <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
                   </FormControl>
+                   <FormDescription>Calculated based on {initialData.absentDays || 0} absent days.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="advanceDeduction"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Advance Paid Deduction</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -198,7 +215,6 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
                 <span className="text-primary">BDT {netSalary.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
         </div>
-
 
         <div className="flex justify-end pt-4">
             <Button type="submit" disabled={isSubmitting}>
@@ -219,7 +235,3 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
     </Form>
   );
 }
-
-  
-
-    
