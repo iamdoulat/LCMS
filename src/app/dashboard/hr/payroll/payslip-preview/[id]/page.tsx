@@ -6,10 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { FileText, Loader2, Printer, AlertTriangle, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { Payslip, EmployeeDocument } from '@/types';
+import type { Payslip, EmployeeDocument, SalaryBreakup } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +17,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
+import { useParams } from 'next/navigation';
 
 
 const formatCurrency = (value?: number, showSign: boolean = false) => {
@@ -36,25 +36,59 @@ const formatDisplayDate = (dateString?: string) => {
     }
 };
 
-export default function PayslipPreviewPage({ params }: { params: { id: string } }) {
+export default function PayslipPreviewPage() {
   const { companyName, address, companyLogoUrl } = useAuth();
   const printContainerRef = React.useRef<HTMLDivElement>(null);
+  const params = useParams();
+  const id = params.id as string;
   
-  const { data: payslip, isLoading: isLoadingPayslip, error: payslipError } = useFirestoreQuery<Payslip>(
-    doc(firestore, 'payslips', params.id),
-    async (docSnap) => docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Payslip : null,
-    ['payslip', params.id]
-  );
-  
-  const { data: employee, isLoading: isLoadingEmployee, error: employeeError } = useFirestoreQuery<EmployeeDocument>(
-      payslip ? doc(firestore, 'employees', payslip.employeeId) : null,
-      async (docSnap) => docSnap?.exists() ? { id: docSnap.id, ...docSnap.data() } as EmployeeDocument : null,
-      ['employee_for_payslip', payslip?.employeeId],
-      !!payslip // Only run this query if `payslip` data exists
-  );
+  const [payslip, setPayslip] = React.useState<Payslip | null>(null);
+  const [employee, setEmployee] = React.useState<EmployeeDocument | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const isLoading = isLoadingPayslip || (payslip && isLoadingEmployee);
-  const error = payslipError || employeeError;
+
+  React.useEffect(() => {
+    if (!id) {
+        setError("No Payslip ID provided.");
+        setIsLoading(false);
+        return;
+    }
+
+    const fetchPayslipAndEmployee = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const payslipDocRef = doc(firestore, 'payslips', id);
+            const payslipSnap = await getDoc(payslipDocRef);
+
+            if (!payslipSnap.exists()) {
+                throw new Error("Payslip not found.");
+            }
+            
+            const payslipData = { id: payslipSnap.id, ...payslipSnap.data() } as Payslip;
+            setPayslip(payslipData);
+
+            if (payslipData.employeeId) {
+                const employeeDocRef = doc(firestore, 'employees', payslipData.employeeId);
+                const employeeSnap = await getDoc(employeeDocRef);
+                if (employeeSnap.exists()) {
+                    setEmployee({ id: employeeSnap.id, ...employeeSnap.data() } as EmployeeDocument);
+                } else {
+                    console.warn(`Employee not found for ID: ${payslipData.employeeId}`);
+                }
+            }
+        } catch (err: any) {
+            setError(err.message);
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    fetchPayslipAndEmployee();
+  }, [id]);
+
 
   const handleDownloadPdf = async () => {
     const input = printContainerRef.current;
@@ -99,7 +133,7 @@ export default function PayslipPreviewPage({ params }: { params: { id: string } 
              <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Error Loading Payslip</AlertTitle>
-                <AlertDescription>{error?.message || "The requested payslip could not be found."}</AlertDescription>
+                <AlertDescription>{error || "The requested payslip could not be found."}</AlertDescription>
             </Alert>
         </div>
     )
@@ -107,10 +141,16 @@ export default function PayslipPreviewPage({ params }: { params: { id: string } 
 
   const deductions = [
     { name: 'Absent Deduction', value: payslip.absentDeduction },
-    { name: 'Advance Paid Deduction', value: payslip.advanceDeduction },
+    { name: 'Advance Deduction', value: payslip.advanceDeduction },
     { name: 'Tax Deduction', value: payslip.taxDeduction },
     { name: 'Provident Fund', value: payslip.providentFund },
   ].filter(d => typeof d.value === 'number' && d.value > 0);
+  
+  const earnings: SalaryBreakup[] = payslip.salaryBreakup || [
+      { breakupName: 'Basic', amount: payslip.basicSalary || 0 },
+      { breakupName: 'House Rent', amount: payslip.houseRent || 0 },
+      { breakupName: 'Medical Allowance', amount: payslip.medicalAllowance || 0 },
+  ].filter(e => typeof e.amount === 'number' && e.amount > 0);
   
   const totalEarnings = payslip.grossSalary || 0;
   const totalDeductions = payslip.totalDeductions || 0;
@@ -167,7 +207,7 @@ export default function PayslipPreviewPage({ params }: { params: { id: string } 
                       <tr>
                           <td className="py-2 font-semibold text-gray-700" colSpan={3}>Salary Breakups</td>
                       </tr>
-                      {payslip.salaryBreakup?.map((item, index) => (
+                      {earnings.map((item, index) => (
                            <tr key={index} className="border-b">
                               <td className="py-1 pl-4">{item.breakupName}</td>
                               <td className="text-right pr-4">{formatCurrency(item.amount)}</td>
