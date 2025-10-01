@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, Upload, PlusCircle, Trash2, Calendar, Filter, Image as ImageIcon } from 'lucide-react';
+import { Loader2, User, Search, Save, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, Upload, PlusCircle, Trash2, Calendar, Filter, Image as ImageIcon, XCircle } from 'lucide-react';
 import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, Attendance, AttendanceDocument, AttendanceFlag } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
@@ -84,8 +84,8 @@ const DailyAttendanceDataRow = ({
                 outTime: data?.outTime || '18:00',
                 inTimeRemarks: data?.inTimeRemarks || '',
                 outTimeRemarks: data?.outTimeRemarks || '',
-                enableInTime: data?.enableInTime ?? (data?.flag === 'P' ? true : false),
-                enableOutTime: data?.enableOutTime ?? (data?.flag === 'P' ? true : false),
+                enableInTime: data?.enableInTime ?? (data?.flag === 'P' || !data?.flag ? true : false),
+                enableOutTime: data?.enableOutTime ?? (data?.flag === 'P' || !data?.flag ? true : false),
             });
         };
         resetForm(initialData);
@@ -128,7 +128,7 @@ const DailyAttendanceDataRow = ({
             ...data,
             employeeId: employee.id,
             employeeName: employee.fullName,
-            date: formattedDate,
+            date: format(attendanceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"), // Save in ISO format
             workingHours: (data.flag === 'P' && data.enableInTime && data.enableOutTime) ? workingHours : null,
             updatedAt: serverTimestamp(),
         };
@@ -324,7 +324,7 @@ const EmployeeAttendanceRow = ({
                                         <TableHead>Flag</TableHead>
                                         <TableHead>In Time</TableHead>
                                         <TableHead>In Time Remarks</TableHead>
-                                        <TableHead>Out Time &amp; Date</TableHead>
+                                        <TableHead>Out Time & Date</TableHead>
                                         <TableHead>Out Time Remarks</TableHead>
                                         <TableHead>Working Hour</TableHead>
                                         <TableHead>Action</TableHead>
@@ -333,7 +333,15 @@ const EmployeeAttendanceRow = ({
                                 <TableBody>
                                     {datesToDisplay.map(date => {
                                         const formattedDate = format(date, 'yyyy-MM-dd');
-                                        const attendanceData = attendanceRecords.find(rec => rec.date === formattedDate && rec.employeeId === employee.id);
+                                        const attendanceData = attendanceRecords.find(rec => {
+                                            if (!rec.date) return false;
+                                            try {
+                                                const recordDate = format(parseISO(rec.date), 'yyyy-MM-dd');
+                                                return recordDate === formattedDate;
+                                            } catch {
+                                                return false;
+                                            }
+                                        });
                                         return (
                                             <DailyAttendanceDataRow
                                                 key={date.toISOString()}
@@ -388,11 +396,10 @@ export default function DailyAttendancePage() {
         });
 
         const attendanceQuery = React.useMemo(() => {
-            if (!dateRange?.from || !dateRange?.to) {
-                return null;
-            }
-            const fromDate = format(dateRange.from, 'yyyy-MM-dd');
-            const toDate = format(dateRange.to, 'yyyy-MM-dd');
+            if (!dateRange?.from) return null;
+            const fromDate = format(startOfDay(dateRange.from), "yyyy-MM-dd'T'00:00:00.000'Z'");
+            const toDate = format(endOfDay(dateRange.to || dateRange.from), "yyyy-MM-dd'T'23:59:59.999'Z'");
+
             return query(
                 collection(firestore, "attendance"),
                 where('date', '>=', fromDate),
@@ -402,17 +409,7 @@ export default function DailyAttendancePage() {
 
         const { data: allAttendance, isLoading: isLoadingAttendance, refetch: refetchAttendance } = useFirestoreQuery<AttendanceDocument[]>(
             attendanceQuery!,
-            (snapshot) => {
-                return snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    const formattedDate = format(parseISO(data.date), 'yyyy-MM-dd');
-                    return {
-                        id: doc.id,
-                        ...data,
-                        date: formattedDate
-                    } as AttendanceDocument;
-                });
-            }, 
+            undefined, // Use default transformer which includes document ID
             ['attendance', dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
             {
                 enabled: !!attendanceQuery, // Only run if query is not null
@@ -504,7 +501,7 @@ export default function DailyAttendancePage() {
                     
                     const attendanceData: Partial<Attendance> = {
                         employeeId: employeeId,
-                        date: formattedDate,
+                        date: format(parsedDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
                         flag: rowData.flag as AttendanceFlag || 'P',
                         updatedAt: serverTimestamp(),
                     };
@@ -657,4 +654,5 @@ export default function DailyAttendancePage() {
     }
 
     
+
 
