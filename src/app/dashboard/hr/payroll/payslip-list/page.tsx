@@ -174,7 +174,7 @@ export default function PayslipListPage() {
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
             </CardHeader>
             <CardContent className="p-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
+              <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 items-end">
                 <div className="space-y-1">
                   <Label htmlFor="employeeCodeFilter">Employee Code</Label>
                   <Input id="employeeCodeFilter" placeholder="Search Code..." value={filterEmployeeCode} onChange={(e) => setFilterEmployeeCode(e.target.value)} />
