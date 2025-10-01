@@ -72,7 +72,7 @@ export default function HolidaysPage() {
   };
 
   return (
-    <div className="py-8">
+    <div className="py-8 w-full">
         <Card className="shadow-xl">
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
