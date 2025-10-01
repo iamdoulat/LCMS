@@ -143,6 +143,15 @@ export default function LeaveManagementPage() {
     });
   };
 
+  const getEmployeeDetails = (employeeName: string) => {
+    if (!employeeName) return { name: 'N/A', code: 'N/A' };
+    const match = employeeName.match(/(.*) \((.*)\)/);
+    if (match) {
+        return { name: match[1], code: match[2] };
+    }
+    return { name: employeeName, code: 'N/A' };
+  };
+
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -181,6 +190,7 @@ export default function LeaveManagementPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Employee Name</TableHead>
+                                <TableHead>Employee Code</TableHead>
                                 <TableHead>Leave Type</TableHead>
                                 <TableHead>From</TableHead>
                                 <TableHead>To</TableHead>
@@ -196,55 +206,59 @@ export default function LeaveManagementPage() {
                                 <LeaveListSkeleton />
                             ) : fetchError ? (
                                 <TableRow>
-                                    <TableCell colSpan={canApprove ? 9 : 8} className="h-24 text-center text-destructive">
+                                    <TableCell colSpan={canApprove ? 10 : 9} className="h-24 text-center text-destructive">
                                         <AlertTriangle className="mx-auto mb-2 h-8 w-8" />
                                         {fetchError}
                                     </TableCell>
                                 </TableRow>
                             ) : leaves.length > 0 ? (
-                                leaves.map(leave => (
-                                    <TableRow key={leave.id}>
-                                        <TableCell className="font-medium">{leave.employeeName}</TableCell>
-                                        <TableCell>{leave.leaveType}</TableCell>
-                                        <TableCell>{formatDisplayDate(leave.fromDate)}</TableCell>
-                                        <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
-                                        <TableCell>{calculateDuration(leave.fromDate, leave.toDate)}</TableCell>
-                                        <TableCell className="max-w-[200px] truncate" title={leave.reason}>{leave.reason}</TableCell>
-                                        <TableCell className="max-w-[200px] truncate text-muted-foreground" title={leave.approverComment}>{leave.approverComment || 'N/A'}</TableCell>
-                                        <TableCell><Badge variant={getStatusBadgeVariant(leave.status)}>{leave.status}</Badge></TableCell>
-                                        {canApprove && (
-                                            <TableCell className="text-center">
-                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                                            <span className="sr-only">Open menu</span>
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                        <DropdownMenuItem onSelect={() => handleUpdateStatus(leave.id, 'Approved')}>
-                                                            <ThumbsUp className="mr-2 h-4 w-4" />
-                                                            <span>Approve</span>
-                                                        </DropdownMenuItem>
-                                                         <DropdownMenuItem onSelect={() => handleUpdateStatus(leave.id, 'Rejected')} className="text-destructive focus:text-destructive">
-                                                            <ThumbsDown className="mr-2 h-4 w-4" />
-                                                            <span>Reject</span>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onSelect={() => router.push(`/dashboard/hr/leaves/edit/${leave.id}`)}>
-                                                            <Edit className="mr-2 h-4 w-4" />
-                                                            <span>Edit</span>
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
-                                ))
+                                leaves.map(leave => {
+                                    const { name, code } = getEmployeeDetails(leave.employeeName);
+                                    return (
+                                        <TableRow key={leave.id}>
+                                            <TableCell className="font-medium">{name}</TableCell>
+                                            <TableCell>{code}</TableCell>
+                                            <TableCell>{leave.leaveType}</TableCell>
+                                            <TableCell>{formatDisplayDate(leave.fromDate)}</TableCell>
+                                            <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
+                                            <TableCell>{calculateDuration(leave.fromDate, leave.toDate)}</TableCell>
+                                            <TableCell className="max-w-[200px] truncate" title={leave.reason}>{leave.reason}</TableCell>
+                                            <TableCell className="max-w-[200px] truncate text-muted-foreground" title={leave.approverComment}>{leave.approverComment || 'N/A'}</TableCell>
+                                            <TableCell><Badge variant={getStatusBadgeVariant(leave.status)}>{leave.status}</Badge></TableCell>
+                                            {canApprove && (
+                                                <TableCell className="text-center">
+                                                     <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                <span className="sr-only">Open menu</span>
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                            <DropdownMenuItem onSelect={() => handleUpdateStatus(leave.id, 'Approved')}>
+                                                                <ThumbsUp className="mr-2 h-4 w-4" />
+                                                                <span>Approve</span>
+                                                            </DropdownMenuItem>
+                                                             <DropdownMenuItem onSelect={() => handleUpdateStatus(leave.id, 'Rejected')} className="text-destructive focus:text-destructive">
+                                                                <ThumbsDown className="mr-2 h-4 w-4" />
+                                                                <span>Reject</span>
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onSelect={() => router.push(`/dashboard/hr/leaves/edit/${leave.id}`)}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                <span>Edit</span>
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            )}
+                                        </TableRow>
+                                    );
+                                })
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={canApprove ? 9 : 8} className="h-24 text-center">
+                                    <TableCell colSpan={canApprove ? 10 : 9} className="h-24 text-center">
                                         <Info className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                                         No leave applications have been submitted yet.
                                     </TableCell>
