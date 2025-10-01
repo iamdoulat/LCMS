@@ -29,6 +29,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { DatePickerField } from '@/components/forms/DatePickerField';
 
 
 const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
@@ -648,9 +649,22 @@ export default function DailyAttendancePage() {
                                         <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <Label>Date Range</Label>
-                                    <DatePickerWithRange date={dateRange} onDateChange={setDateRange}/>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-1">
+                                    <Label>From*</Label>
+                                    <DatePickerField
+                                        field={{ name: 'from', value: dateRange?.from, onChange: (date) => setDateRange(prev => ({...prev, from: date})) }}
+                                        placeholder="From Date"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label>To*</Label>
+                                     <DatePickerField
+                                        field={{ name: 'to', value: dateRange?.to, onChange: (date) => setDateRange(prev => ({...prev, to: date})) }}
+                                        placeholder="To Date"
+                                        fromDate={dateRange?.from}
+                                    />
+                                  </div>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-4">
@@ -725,6 +739,8 @@ export default function DailyAttendancePage() {
 
 
 
+
+    
 
     
 
