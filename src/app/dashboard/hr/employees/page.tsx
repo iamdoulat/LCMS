@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { Loader2, Users, FileEdit, Trash2, PlusCircle, MoreHorizontal } from 'lucide-react';
+import { Loader2, Users, FileEdit, Trash2, PlusCircle, MoreHorizontal, Filter, XCircle, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -16,7 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Swal from 'sweetalert2';
-import type { EmployeeDocument } from '@/types';
+import type { EmployeeDocument, DesignationDocument } from '@/types';
+import { employeeStatusOptions } from '@/types';
 import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,10 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 
 
 const formatDisplayDate = (dateString?: string) => {
@@ -65,11 +70,40 @@ export default function EmployeesListPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
 
-  const { data: employees, isLoading, error: fetchError, refetch } = useFirestoreQuery<EmployeeDocument[]>(
+  const [filterEmployeeCode, setFilterEmployeeCode] = React.useState('');
+  const [filterEmployeeName, setFilterEmployeeName] = React.useState('');
+  const [filterDesignation, setFilterDesignation] = React.useState('');
+  const [filterStatus, setFilterStatus] = React.useState('');
+
+  const { data: employees, isLoading: isLoadingEmployees, error: fetchError, refetch } = useFirestoreQuery<EmployeeDocument[]>(
     query(collection(firestore, "employees"), orderBy("createdAt", "desc")),
     undefined,
     ['employees']
   );
+  
+  const { data: designations, isLoading: isLoadingDesignations } = useFirestoreQuery<DesignationDocument[]>(
+    query(collection(firestore, "designations"), orderBy("name", "asc")),
+    undefined,
+    ['designations_for_filter']
+  );
+  
+  const isLoading = isLoadingEmployees || isLoadingDesignations;
+
+  const designationOptions = React.useMemo(() => {
+    if (!designations) return [];
+    return designations.map(d => ({ value: d.name, label: d.name }));
+  }, [designations]);
+
+  const displayedEmployees = React.useMemo(() => {
+    if (!employees) return [];
+    return employees.filter(emp => {
+      const codeMatch = !filterEmployeeCode || emp.employeeCode?.toLowerCase().includes(filterEmployeeCode.toLowerCase());
+      const nameMatch = !filterEmployeeName || emp.fullName?.toLowerCase().includes(filterEmployeeName.toLowerCase());
+      const designationMatch = !filterDesignation || emp.designation === filterDesignation;
+      const statusMatch = !filterStatus || emp.status === filterStatus;
+      return codeMatch && nameMatch && designationMatch && statusMatch;
+    });
+  }, [employees, filterEmployeeCode, filterEmployeeName, filterDesignation, filterStatus]);
 
 
   const handleDeleteEmployee = (employeeId: string, employeeName?: string) => {
@@ -102,6 +136,13 @@ export default function EmployeesListPage() {
       default: return 'secondary';
     }
   };
+  
+  const clearFilters = () => {
+    setFilterEmployeeCode('');
+    setFilterEmployeeName('');
+    setFilterDesignation('');
+    setFilterStatus('');
+  };
 
 
   return (
@@ -127,6 +168,48 @@ export default function EmployeesListPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                <div className="space-y-1">
+                  <Label htmlFor="employeeCodeFilter">Employee Code</Label>
+                  <Input id="employeeCodeFilter" placeholder="Search Code..." value={filterEmployeeCode} onChange={(e) => setFilterEmployeeCode(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="employeeNameFilter">Employee Name</Label>
+                  <Input id="employeeNameFilter" placeholder="Search Name..." value={filterEmployeeName} onChange={(e) => setFilterEmployeeName(e.target.value)} />
+                </div>
+                 <div className="space-y-1">
+                  <Label htmlFor="designationFilter">Designation</Label>
+                  <Combobox
+                    options={designationOptions}
+                    value={filterDesignation}
+                    onValueChange={setFilterDesignation}
+                    placeholder="Filter by Designation..."
+                    selectPlaceholder={isLoadingDesignations ? "Loading..." : "All Designations"}
+                    emptyStateMessage="No designation found."
+                    disabled={isLoadingDesignations}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="statusFilter">Status</Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger id="statusFilter"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Statuses</SelectItem>
+                      {employeeStatusOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="pt-6">
+                  <Button onClick={clearFilters} variant="outline" className="w-full"><XCircle className="mr-2 h-4 w-4" /> Clear Filters</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -151,8 +234,8 @@ export default function EmployeesListPage() {
                       {fetchError.message}
                     </TableCell>
                   </TableRow>
-                ) : employees && employees.length > 0 ? (
-                  employees.map((employee) => (
+                ) : displayedEmployees && displayedEmployees.length > 0 ? (
+                  displayedEmployees.map((employee) => (
                     <TableRow key={employee.id}>
                       <TableCell>{employee.employeeCode}</TableCell>
                       <TableCell>
@@ -173,14 +256,14 @@ export default function EmployeesListPage() {
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!employee.id || isReadOnly}>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!employee.id}>
                               <span className="sr-only">Open menu</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/hr/employees/edit/${employee.id}`)} disabled={isReadOnly}>
+                            <DropdownMenuItem onClick={() => router.push(`/dashboard/hr/employees/edit/${employee.id}`)}>
                               <FileEdit className="mr-2 h-4 w-4" />
                               <span>{isReadOnly ? 'View' : 'Edit'}</span>
                             </DropdownMenuItem>
@@ -200,7 +283,7 @@ export default function EmployeesListPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={9} className="h-24 text-center">
-                       No employees found.
+                       No employees found matching your criteria.
                     </TableCell>
                   </TableRow>
                 )}
