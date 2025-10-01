@@ -70,7 +70,6 @@ const AttendanceDayRow = ({
   const [workingHours, setWorkingHours] = React.useState<string | null>(null);
 
   const getDefaultFlag = React.useCallback((): AttendanceFlag => {
-    if (initialData?.flag) return initialData.flag;
     const dayOfWeek = getDay(date);
     if (dayOfWeek === 5) return 'W'; // Friday
     const isHoliday = holidays.some(h =>
@@ -83,24 +82,21 @@ const AttendanceDayRow = ({
         l.status === 'Approved'
     );
     if (isOnLeave) return 'L';
-    return 'A'; // Default to Absent
-  }, [date, holidays, leaves, initialData, employee.id]);
+    return 'A'; // Default to Absent if no other condition is met
+  }, [date, holidays, leaves, employee.id]);
 
   const form = useForm<AttendanceDayFormValues>({
     resolver: zodResolver(attendanceDaySchema),
-    defaultValues: {
-      flag: 'P',
-      inTime: '09:00',
-      outTime: '18:00',
-    }
+    // Default values are now more carefully handled in useEffect
   });
   
   React.useEffect(() => {
     const defaultFlag = getDefaultFlag();
+    const isPresent = initialData?.flag === 'P' || initialData?.flag === 'D';
     form.reset({
       flag: initialData?.flag || defaultFlag,
-      inTime: initialData?.inTime || (defaultFlag === 'P' || defaultFlag === 'D' ? '09:00' : ''),
-      outTime: initialData?.outTime || (defaultFlag === 'P' || defaultFlag === 'D' ? '18:00' : ''),
+      inTime: isPresent ? initialData?.inTime : '',
+      outTime: isPresent ? initialData?.outTime : '',
       inTimeRemarks: initialData?.inTimeRemarks || '',
       outTimeRemarks: initialData?.outTimeRemarks || '',
     });
@@ -301,12 +297,12 @@ const EmployeeAttendanceRow = ({
                                     <AvatarImage src={employee.photoURL} alt={employee.fullName} />
                                     <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
                                 </Avatar>
-                                <div className="text-left flex-1 truncate">
+                                <div className="text-left">
                                     <p className="font-semibold truncate">{employee.fullName}</p>
                                     <p className="text-sm text-muted-foreground">{employee.employeeCode}</p>
                                 </div>
                             </div>
-                            <div className="hidden sm:block text-sm text-muted-foreground text-left flex-shrink-0">
+                            <div className="hidden sm:block text-sm text-muted-foreground text-left flex-shrink-0 ml-auto mr-4">
                                 <p>{employee.designation}</p>
                                 <p>{employee.branch || 'N/A'}</p>
                             </div>
@@ -619,7 +615,7 @@ export default function DailyAttendancePage() {
                                 accept=".csv"
                             />
                             <Button variant="outline" onClick={handleDownloadSample}>
-                                <Download className="mr-2 h-4 w-4" /> Sample
+                                Sample
                             </Button>
                             <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                                 <Upload className="mr-2 h-4 w-4" /> Bulk Upload
@@ -723,6 +719,7 @@ export default function DailyAttendancePage() {
     
 
     
+
 
 
 
