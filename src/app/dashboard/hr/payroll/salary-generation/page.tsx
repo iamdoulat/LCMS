@@ -267,7 +267,7 @@ export default function SalaryGenerationPage() {
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                      {generationType === 'Branch Wise' && <FormField control={form.control} name="branch" render={({ field }) => (<FormItem><FormLabel>Branch</FormLabel><Combobox options={branchOptions} {...field} onValueChange={field.onChange} placeholder="Select Branch..." selectPlaceholder="Select Branch" disabled={isLoadingOptions} /></FormItem>)} />}
                                      {generationType === 'Department Wise' && <FormField control={form.control} name="department" render={({ field }) => (<FormItem><FormLabel>Department</FormLabel><Combobox options={departmentOptions} {...field} onValueChange={field.onChange} placeholder="Select Department..." selectPlaceholder="Select Department" disabled={isLoadingOptions} /></FormItem>)} />}
                                      {generationType === 'Department Unit Wise' && <>
@@ -327,3 +327,6 @@ export default function SalaryGenerationPage() {
     
 
 
+
+
+    
