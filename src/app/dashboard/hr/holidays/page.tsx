@@ -113,7 +113,7 @@ export default function HolidaysPage() {
                       <TableHead>Holiday Name</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead className="w-[30%]">Message</TableHead>
+                      <TableHead className="w-[50%]">Message</TableHead>
                       {!isReadOnly && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
