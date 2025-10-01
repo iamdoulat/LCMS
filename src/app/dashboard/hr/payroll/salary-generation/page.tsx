@@ -20,7 +20,7 @@ import type { BranchDocument, DepartmentDocument, UnitDocument, EmployeeDocument
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { format, getDaysInMonth, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWithinInterval } from 'date-fns';
+import { format, getDaysInMonth, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWithinInterval, parseISO } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const toComboboxOptions = (data: any[] | undefined, labelKey: string, valueKey: string = 'id'): ComboboxOption[] => {
@@ -167,32 +167,39 @@ export default function SalaryGenerationPage() {
                 if (!employee.salaryStructure || !employee.salaryStructure.salaryBreakup) return;
 
                 const daysInMonth = salaryPolicy.dayConsideration === 'Fixed Days' ? (salaryPolicy.fixedDaysInMonth || 30) : getDaysInMonth(startDate);
-                let payableDays = 0;
+                let absentDays = 0;
 
                 const daysInterval = eachDayOfInterval({ start: startDate, end: endDate });
+                
                 daysInterval.forEach(day => {
                     const attendance = attendanceRecs.find(a => a.employeeId === employee.id && format(new Date(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
-                    if (attendance && (attendance.flag === 'P' || attendance.flag === 'D')) {
-                        payableDays++;
-                    } else {
+                    if (attendance && attendance.flag === 'A') {
+                        absentDays++;
+                    } else if (!attendance) {
+                        // If no record, check if it was a paid day off
                         const dayOfWeek = getDay(day);
                         const isWeeklyHoliday = dayOfWeek === 5 && salaryPolicy.includeWeeklyHoliday;
                         const isGovtHoliday = holidays.some(h => h.type === 'Public Holiday' && isWithinInterval(day, { start: new Date(h.fromDate), end: new Date(h.toDate || h.fromDate) })) && salaryPolicy.includeGovtHoliday;
                         const isFestivalHoliday = holidays.some(h => h.type === 'Company Holiday' && isWithinInterval(day, { start: new Date(h.fromDate), end: new Date(h.toDate || h.fromDate) })) && salaryPolicy.includeFestivalHoliday;
                         const isOnLeave = approvedLeaves.some(l => l.employeeId === employee.id && isWithinInterval(day, { start: new Date(l.fromDate), end: new Date(l.toDate) }));
 
-                        if(isWeeklyHoliday || isGovtHoliday || isFestivalHoliday || isOnLeave) {
-                            payableDays++;
+                        // If it's not a present day and not any kind of paid day off, it's an absence
+                        if (!isWeeklyHoliday && !isGovtHoliday && !isFestivalHoliday && !isOnLeave) {
+                            absentDays++;
                         }
                     }
                 });
                 
-                const fullGrossSalary = employee.salaryStructure.salaryBreakup.reduce((sum, item) => sum + (item.amount || 0) + (item.increaseAmount || 0), 0);
-                const grossSalary = (fullGrossSalary / daysInMonth) * payableDays;
+                const payableDays = daysInMonth - absentDays;
                 
-                // Placeholder for deduction logic
+                const fullGrossSalary = employee.salaryStructure.salaryBreakup.reduce((sum, item) => sum + (item.amount || 0) + (item.increaseAmount || 0), 0);
+                const perDaySalary = fullGrossSalary / daysInMonth;
+                const grossSalary = perDaySalary * payableDays;
+                
+                // Placeholder for deduction logic (e.g., tax, advance payments)
                 const taxDeduction = grossSalary * 0.05; // Example: 5% tax
                 const providentFund = grossSalary * 0.08; // Example: 8% PF
+                // TODO: Fetch and deduct advance payments here
                 const deductions = taxDeduction + providentFund;
                 
                 totalGrossSalary += grossSalary;
