@@ -8,7 +8,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
 
-const AppSidebarNav = dynamic(() => import('@/components/layout/AppSidebarNav'), {
+const AppSidebarNav = dynamic(() => import('@/components/layout/AppSidebarNav').then(mod => mod.AppSidebarNav), {
   ssr: false,
   loading: () => <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin" /></div>,
 });
