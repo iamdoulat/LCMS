@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, User, Search, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, PlusCircle, Trash2, Calendar, Filter, XCircle, Save, Upload, AlertTriangle } from 'lucide-react';
+import { Loader2, User, Search, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, PlusCircle, Trash2, Calendar, Filter, XCircle, Save, Upload, AlertTriangle, Download } from 'lucide-react';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
@@ -93,9 +93,9 @@ const AttendanceDayRow = ({
     const defaultFlag = getDefaultFlag();
     form.reset({
       flag: initialData?.flag || defaultFlag,
-      inTime: initialData?.inTime || (defaultFlag === 'A' ? '' : '09:00'),
+      inTime: initialData?.inTime || (defaultFlag === 'P' || defaultFlag === 'D' ? '09:00' : ''),
       inTimeRemarks: initialData?.inTimeRemarks || '',
-      outTime: initialData?.outTime || (defaultFlag === 'A' ? '' : '18:00'),
+      outTime: initialData?.outTime || (defaultFlag === 'P' || defaultFlag === 'D' ? '18:00' : ''),
       outTimeRemarks: initialData?.outTimeRemarks || '',
     });
   }, [initialData, getDefaultFlag, form]);
@@ -317,7 +317,7 @@ const EmployeeAttendanceRow = ({
                                         <TableHead>Flag</TableHead>
                                         <TableHead>In Time</TableHead>
                                         <TableHead>In Time Remarks</TableHead>
-                                        <TableHead>Out Time & Date</TableHead>
+                                        <TableHead>Out Time &amp; Date</TableHead>
                                         <TableHead>Out Time Remarks</TableHead>
                                         <TableHead>Working Hour</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
@@ -406,6 +406,20 @@ export default function DailyAttendancePage() {
     const [allAttendance, setAllAttendance] = React.useState<AttendanceDocument[]>([]);
     const [isLoadingAttendance, setIsLoadingAttendance] = React.useState(true);
     const isInitialMount = React.useRef(true);
+    
+    const sampleCsvContent = "employeeCode,date,flag,inTime,outTime,remarks\nEMP001,2024-09-28,P,09:00,18:00,\nEMP002,2024-09-28,A,,,Late arrival";
+
+    const handleDownloadSample = () => {
+        const blob = new Blob([sampleCsvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "sample_attendance_upload.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     const handleBulkUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -572,6 +586,9 @@ export default function DailyAttendancePage() {
                                 className="hidden"
                                 accept=".csv"
                             />
+                            <Button variant="outline" onClick={handleDownloadSample}>
+                                <Download className="mr-2 h-4 w-4" /> Download Sample
+                            </Button>
                             <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                                 <Upload className="mr-2 h-4 w-4" /> Bulk Upload
                             </Button>
@@ -670,5 +687,7 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
+
+    
 
     
