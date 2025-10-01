@@ -100,8 +100,12 @@ const EmployeeAttendanceRow = ({
                                         const formattedDate = format(date, 'yyyy-MM-dd');
                                         const attendanceData = attendanceRecords.find(rec => {
                                             if (!rec.date) return false;
-                                            const recordDate = format(parseISO(rec.date), 'yyyy-MM-dd');
-                                            return recordDate === formattedDate;
+                                            try {
+                                                const recordDate = format(parseISO(rec.date), 'yyyy-MM-dd');
+                                                return recordDate === formattedDate;
+                                            } catch {
+                                                return false;
+                                            }
                                         });
 
                                         return (
@@ -161,8 +165,8 @@ export default function DailyAttendancePage() {
 
     const attendanceQuery = React.useMemo(() => {
         if (!dateRange?.from) return null;
-        const fromDate = format(startOfDay(dateRange.from), "yyyy-MM-dd");
-        const toDate = format(endOfDay(dateRange.to || dateRange.from), "yyyy-MM-dd");
+        const fromDate = format(startOfDay(dateRange.from), "yyyy-MM-dd'T'00:00:00.000'Z'");
+        const toDate = format(endOfDay(dateRange.to || dateRange.from), "yyyy-MM-dd'T'23:59:59.999'Z'");
         
         return query(
             collection(firestore, "attendance"),
