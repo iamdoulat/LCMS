@@ -40,6 +40,7 @@ interface EditEmployeeFormProps {
   employee: EmployeeDocument;
 }
 
+// Helper to transform Firestore documents into Combobox options
 const toComboboxOptions = (data: any[], labelKey: string): ComboboxOption[] => {
   if (!data) return [];
   return data.map(doc => ({ value: doc.name, label: doc.name }));
@@ -59,6 +60,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const imgRef = React.useRef<HTMLImageElement>(null);
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(employee.photoURL || null);
   const [isUploading, setIsUploading] = React.useState(false);
+
 
   // Use the hook to fetch data
   const { data: designations, isLoading: isLoadingDesignations } = useFirestoreQuery<DesignationDocument[]>(firestoreQuery(collection(firestore, "designations"), orderBy("name")), undefined, ['designations']);
@@ -235,9 +237,9 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         const fullName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ');
 
         const dataToSave = {
-            ...data,
             id: employee.id, // Explicitly include the ID for consistency
             uid: employee.uid || user.uid, // Retain original UID or set current user's
+            ...data,
             fullName: fullName,
             photoURL: photoDownloadURL,
             dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
@@ -252,6 +254,9 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
             salaryStructure: data.salaryStructure ? {
                 ...data.salaryStructure,
                 structureDate: data.salaryStructure.structureDate ? data.salaryStructure.structureDate.toISOString() : null,
+                totalSalary: salaryAmount,
+                totalIncrement: increasedAmount,
+                grossSalary: totalAmount,
             } : undefined,
             updatedAt: serverTimestamp(),
         };
@@ -629,19 +634,23 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                         </div>
                     ))}
                 </div>
-                 <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                    <div className="flex items-center gap-2">
-                        <Label>Salary Amount</Label>
-                        <Input value={salaryAmount.toFixed(2)} readOnly disabled />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Label>Increased Amount</Label>
-                        <Input value={increasedAmount.toFixed(2)} readOnly disabled />
-                    </div>
-                     <div className="flex items-center gap-2">
-                        <Label>Gross Salary Amount</Label>
-                        <Input value={totalAmount.toFixed(2)} readOnly disabled className="font-bold text-primary" />
-                    </div>
+                <div className="rounded-md border mt-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Salary Amount</TableHead>
+                        <TableHead>Increased Amount</TableHead>
+                        <TableHead>Gross Salary Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>{salaryAmount.toFixed(2)}</TableCell>
+                        <TableCell>{increasedAmount.toFixed(2)}</TableCell>
+                        <TableCell className="font-bold text-primary">{totalAmount.toFixed(2)}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
             </CardContent>
         </Card>
@@ -667,5 +676,8 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     
 
     
+
+
+
 
 
