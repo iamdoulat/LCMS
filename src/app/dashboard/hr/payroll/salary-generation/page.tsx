@@ -168,29 +168,30 @@ export default function SalaryGenerationPage() {
 
                 const daysInMonth = salaryPolicy.dayConsideration === 'Fixed Days' ? (salaryPolicy.fixedDaysInMonth || 30) : getDaysInMonth(startDate);
                 let absentDays = 0;
+                let workedDays = 0;
 
                 const daysInterval = eachDayOfInterval({ start: startDate, end: endDate });
                 
                 daysInterval.forEach(day => {
                     const attendance = attendanceRecs.find(a => a.employeeId === employee.id && format(new Date(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
-                    
-                    if (attendance) {
-                      if (attendance.flag === 'A') {
-                        absentDays++;
-                      }
-                      // If present, delayed, on leave (L), holiday (H), or weekly off (W), it's not an absence.
-                    } else {
-                      // No attendance record for this day, check if it's an excused day off
-                      const dayOfWeek = getDay(day);
-                      const isWeeklyHoliday = dayOfWeek === 5 && salaryPolicy.includeWeeklyHoliday;
-                      const isGovtHoliday = holidays.some(h => h.type === 'Public Holiday' && isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })) && salaryPolicy.includeGovtHoliday;
-                      const isFestivalHoliday = holidays.some(h => h.type === 'Company Holiday' && isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })) && salaryPolicy.includeFestivalHoliday;
-                      const isOnLeave = approvedLeaves.some(l => l.employeeId === employee.id && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+                    const dayOfWeek = getDay(day);
+                    const isWeeklyHoliday = dayOfWeek === 5 && salaryPolicy.includeWeeklyHoliday;
+                    const isGovtHoliday = holidays.some(h => h.type === 'Public Holiday' && isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })) && salaryPolicy.includeGovtHoliday;
+                    const isFestivalHoliday = holidays.some(h => h.type === 'Company Holiday' && isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })) && salaryPolicy.includeFestivalHoliday;
+                    const isOnLeave = approvedLeaves.some(l => l.employeeId === employee.id && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
 
-                      if (!isWeeklyHoliday && !isGovtHoliday && !isFestivalHoliday && !isOnLeave) {
-                        // Only count as absent if it's not an excused day off
-                        absentDays++;
+                    if (attendance) {
+                      if (attendance.flag === 'P' || attendance.flag === 'D') {
+                        workedDays++;
+                      } else if (attendance.flag === 'A') {
+                        if (!isWeeklyHoliday && !isGovtHoliday && !isFestivalHoliday && !isOnLeave) {
+                          absentDays++;
+                        }
                       }
+                    } else {
+                       if (!isWeeklyHoliday && !isGovtHoliday && !isFestivalHoliday && !isOnLeave) {
+                         absentDays++;
+                       }
                     }
                 });
                 
@@ -207,12 +208,12 @@ export default function SalaryGenerationPage() {
                 const payslipData: Payslip = {
                     id: payslipId, payrollId, employeeId: employee.id, employeeName: employee.fullName, employeeCode: employee.employeeCode,
                     designation: employee.designation, payPeriod,
-                    grossSalary: employee.salaryStructure.grossSalary || fullGrossSalary,
+                    grossSalary: employee.salaryStructure.totalSalary || fullGrossSalary,
+                    salaryBreakup: employee.salaryStructure.salaryBreakup,
                     totalDeductions: deductionForAbsence,
                     netSalary: (employee.salaryStructure.grossSalary || fullGrossSalary) - deductionForAbsence,
-                    salaryBreakup: employee.salaryStructure.salaryBreakup || [],
                     absentDeduction: deductionForAbsence,
-                    absentDays: absentDays, // Store the number of absent days
+                    absentDays: absentDays,
                     createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 };
                 batch.set(payslipDocRef, payslipData);
@@ -327,3 +328,4 @@ export default function SalaryGenerationPage() {
   
 
     
+

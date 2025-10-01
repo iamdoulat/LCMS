@@ -1646,6 +1646,7 @@ export interface Payslip {
     grossSalary: number;
     salaryBreakup?: SalaryBreakup[];
     // Deductions
+    advanceDeduction?: number;
     taxDeduction?: number;
     providentFund?: number;
     absentDeduction?: number;
@@ -1729,3 +1730,4 @@ export type LeaveApplicationDocument = LeaveApplication & { id: string };
   
 
     
+
