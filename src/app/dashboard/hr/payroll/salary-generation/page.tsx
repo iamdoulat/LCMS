@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -196,7 +197,7 @@ export default function SalaryGenerationPage() {
                 const deductionForAbsence = absentDays * perDaySalary;
                 const grossSalary = fullGrossSalary - deductionForAbsence;
 
-                const deductions = 0; // Only absent days are deducted from gross. No other deductions for now.
+                const deductions = deductionForAbsence; // Only absent days are deducted from gross.
                 
                 totalGrossSalary += grossSalary;
                 totalDeductions += deductions;
@@ -210,6 +211,7 @@ export default function SalaryGenerationPage() {
                     basicSalary: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Basic')?.amount ?? null,
                     houseRent: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'House Rent')?.amount ?? null,
                     medicalAllowance: employee.salaryStructure.salaryBreakup?.find(i => i.breakupName === 'Medical Allowance')?.amount ?? null,
+                    leaveDeduction: deductionForAbsence,
                     createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 };
                 batch.set(payslipDocRef, payslipData);
@@ -318,3 +320,5 @@ export default function SalaryGenerationPage() {
         </div>
     );
 }
+
+
