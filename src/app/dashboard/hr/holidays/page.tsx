@@ -110,17 +110,17 @@ export default function HolidaysPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Holiday Name</TableHead>
+                      <TableHead className="w-[25%] whitespace-nowrap">Holiday Name</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead className="w-[50%]">Message</TableHead>
+                      <TableHead className="w-[40%]">Message</TableHead>
                       {!isReadOnly && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {holidays.map(holiday => (
                       <TableRow key={holiday.id}>
-                        <TableCell>{holiday.name}</TableCell>
+                        <TableCell className="whitespace-nowrap">{holiday.name}</TableCell>
                         <TableCell className="min-w-[200px]">{formatHolidayDate(holiday)}</TableCell>
                         <TableCell>{holiday.type}</TableCell>
                         <TableCell className="whitespace-pre-wrap">{holiday.message || 'N/A'}</TableCell>
