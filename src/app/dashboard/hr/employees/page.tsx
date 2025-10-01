@@ -65,6 +65,8 @@ const EmployeeListSkeleton = () => (
     </>
 );
 
+const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
+
 export default function EmployeesListPage() {
   const router = useRouter();
   const { userRole } = useAuth();
@@ -196,10 +198,10 @@ export default function EmployeesListPage() {
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="statusFilter">Status</Label>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <Select value={filterStatus || ALL_STATUSES_VALUE} onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value)}>
                     <SelectTrigger id="statusFilter"><SelectValue placeholder="All Statuses" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Statuses</SelectItem>
+                      <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
                       {employeeStatusOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                     </SelectContent>
                   </Select>
