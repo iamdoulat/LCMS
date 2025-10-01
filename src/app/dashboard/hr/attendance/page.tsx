@@ -72,7 +72,7 @@ const AttendanceDayRow = ({
         return initialData.flag;
     }
     const dayOfWeek = getDay(date);
-    if (dayOfWeek === 5) return 'W';
+    if (dayOfWeek === 5) return 'W'; // Friday
     const isHoliday = holidays.some(h =>
         isWithinDateInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })
     );
@@ -83,18 +83,11 @@ const AttendanceDayRow = ({
         l.status === 'Approved'
     );
     if (isOnLeave) return 'L';
-    return 'A';
+    return 'A'; // Default to Absent
   }, [date, holidays, leaves, initialData, employee.id]);
 
   const form = useForm<AttendanceDayFormValues>({
     resolver: zodResolver(attendanceDaySchema),
-    defaultValues: {
-      flag: 'A',
-      inTime: '09:00',
-      inTimeRemarks: '',
-      outTime: '18:00',
-      outTimeRemarks: '',
-    },
   });
   
   React.useEffect(() => {
@@ -115,17 +108,16 @@ const AttendanceDayRow = ({
   const flag = watch('flag');
   
   React.useEffect(() => {
-    if (!initialData) { // Only apply auto-flag logic for NEW entries
-        if (inTime) {
-            try {
-                const [hours, minutes] = inTime.split(':').map(Number);
-                if ((hours > 9 || (hours === 9 && minutes > 10))) {
-                    if (flag !== 'D') setValue('flag', 'D');
-                } else {
-                    if (flag !== 'P') setValue('flag', 'P');
-                }
-            } catch {}
+    // Only auto-update flag for new entries (no initialData)
+    if (!initialData && inTime) {
+      try {
+        const [hours, minutes] = inTime.split(':').map(Number);
+        if (hours > 9 || (hours === 9 && minutes > 10)) {
+          if (flag !== 'D') setValue('flag', 'D');
+        } else {
+          if (flag !== 'P') setValue('flag', 'P');
         }
+      } catch {}
     }
   }, [inTime, flag, setValue, initialData]);
 
@@ -412,42 +404,51 @@ export default function DailyAttendancePage() {
 
     const [allAttendance, setAllAttendance] = React.useState<AttendanceDocument[]>([]);
     const [isLoadingAttendance, setIsLoadingAttendance] = React.useState(true);
+    const isInitialMount = React.useRef(true);
+
 
     const refetchAttendance = React.useCallback(async () => {
-        setIsLoadingAttendance(true);
-        if (!dateRange?.from) {
-            setAllAttendance([]);
-            setIsLoadingAttendance(false);
-            return;
-        }
-        
-        const fromDate = format(startOfDay(dateRange.from), "yyyy-MM-dd'T'00:00:00.000xxx");
-        const toDate = format(endOfDay(dateRange.to || dateRange.from), "yyyy-MM-dd'T'23:59:59.999xxx");
-        
-        const attendanceQuery = query(
-            collection(firestore, "attendance"),
-            where('date', '>=', fromDate),
-            where('date', '<=', toDate)
-        );
+      setIsLoadingAttendance(true);
+      if (!dateRange?.from) {
+        setAllAttendance([]);
+        setIsLoadingAttendance(false);
+        return;
+      }
+      
+      const fromDateStr = format(startOfDay(dateRange.from), "yyyy-MM-dd'T'00:00:00.000xxx");
+      const toDateStr = format(endOfDay(dateRange.to || dateRange.from), "yyyy-MM-dd'T'23:59:59.999xxx");
+      
+      const attendanceQuery = query(
+          collection(firestore, "attendance"),
+          where('date', '>=', fromDateStr),
+          where('date', '<=', toDateStr)
+      );
 
-        const unsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
-            const fetchedAttendance = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceDocument));
-            setAllAttendance(fetchedAttendance);
-            setIsLoadingAttendance(false);
-        }, (error) => {
-            console.error("Error fetching attendance:", error);
-            setIsLoadingAttendance(false);
-        });
+      const unsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
+          const fetchedAttendance = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceDocument));
+          setAllAttendance(fetchedAttendance);
+          setIsLoadingAttendance(false);
+      }, (error) => {
+          console.error("Error fetching attendance:", error);
+          Swal.fire("Error", "Could not fetch attendance data in real-time.", "error");
+          setIsLoadingAttendance(false);
+      });
 
-        return unsubscribe;
+      return unsubscribe;
     }, [dateRange]);
     
     React.useEffect(() => {
+        // Prevent fetching on initial mount before dateRange is stable
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         const unsubscribePromise = refetchAttendance();
         return () => {
             unsubscribePromise.then(unsub => unsub && unsub());
         };
-    }, [refetchAttendance]);
+    }, [refetchAttendance, dateRange]);
 
 
     const filteredEmployees = React.useMemo(() => {
@@ -578,6 +579,8 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
+
+    
 
     
 
