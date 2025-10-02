@@ -128,6 +128,23 @@ export default function AccountDetailsPage() {
       Swal.fire("Error", "User or employee data not available.", "error");
       return;
     }
+
+    const result = await Swal.fire({
+      title: `Enter ${type === 'in' ? 'In Time' : 'Out Time'} Remarks (Optional)`,
+      input: 'textarea',
+      inputPlaceholder: 'Type your remarks here...',
+      showCancelButton: true,
+      confirmButtonText: 'Submit',
+      preConfirm: (remarks) => {
+        return remarks || '';
+      }
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+    const remarks = result.value;
+
     setAttendanceLoading(true);
     const now = new Date();
     const formattedDate = format(now, 'yyyy-MM-dd');
@@ -137,7 +154,7 @@ export default function AccountDetailsPage() {
 
     try {
       const currentDoc = await getDoc(docRef);
-      let dataToSet = {};
+      let dataToSet: Record<string, any> = {};
 
       if (type === 'in') {
         const flag = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 10) ? 'D' : 'P';
@@ -147,6 +164,7 @@ export default function AccountDetailsPage() {
           date: format(now, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
           flag: flag,
           inTime: currentTime,
+          inTimeRemarks: remarks,
           updatedBy: user.uid,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -162,6 +180,7 @@ export default function AccountDetailsPage() {
         }
         dataToSet = {
           outTime: currentTime,
+          outTimeRemarks: remarks,
           updatedAt: serverTimestamp(),
         };
         await updateDoc(docRef, dataToSet);
@@ -554,3 +573,4 @@ export default function AccountDetailsPage() {
   );
 }
 
+    
