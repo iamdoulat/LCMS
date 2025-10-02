@@ -3,13 +3,13 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap } from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import Image from 'next/image';
-import { doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDocs, query, where, collection } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -26,6 +26,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
+import type { EmployeeDocument } from '@/types';
+import { format } from 'date-fns';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const accountDetailsSchema = z.object({
   displayName: z.string().min(1, "Display name cannot be empty.").max(50, "Display name is too long."),
@@ -33,13 +36,30 @@ const accountDetailsSchema = z.object({
 
 type AccountDetailsFormValues = z.infer<typeof accountDetailsSchema>;
 
+const formatDisplayDate = (dateString?: string | null) => {
+    if (!dateString) return 'N/A';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Invalid Date';
+        return format(date, 'PPP');
+    } catch (error) {
+        return 'Invalid Date';
+    }
+};
+
+const formatCurrency = (value?: number) => {
+  if (typeof value !== 'number' || isNaN(value)) return 'N/A';
+  return `BDT ${value.toLocaleString()}`;
+};
+
 
 export default function AccountDetailsPage() {
   const { user, loading: authLoading, setUser: setAuthUser, userRole } = useAuth();
+  const [employeeData, setEmployeeData] = useState<EmployeeDocument | null>(null);
+  const [isEmployeeDataLoading, setIsEmployeeDataLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // States for image cropping
   const [imgSrc, setImgSrc] = useState('');
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
@@ -56,8 +76,32 @@ export default function AccountDetailsPage() {
   useEffect(() => {
     if (user) {
       form.reset({ displayName: user.displayName || '' });
+      
+      const fetchEmployeeData = async () => {
+        if (!user.email) {
+            setIsEmployeeDataLoading(false);
+            return;
+        };
+        setIsEmployeeDataLoading(true);
+        try {
+            const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                const employeeDoc = querySnapshot.docs[0];
+                setEmployeeData({ id: employeeDoc.id, ...employeeDoc.data() } as EmployeeDocument);
+            }
+        } catch (err) {
+            console.error("Error fetching employee data:", err);
+            setError("Could not load detailed employee profile.");
+        } finally {
+            setIsEmployeeDataLoading(false);
+        }
+      };
+      
+      fetchEmployeeData();
     }
   }, [user, form]);
+  
 
   const getInitials = (nameOrEmail: string) => {
     if (!nameOrEmail) return 'U';
@@ -148,7 +192,6 @@ export default function AccountDetailsPage() {
     }
   };
 
-
   const onSubmitDisplayName = async (data: AccountDetailsFormValues) => {
     if (!auth.currentUser) {
       Swal.fire("Error", "No user logged in.", "error");
@@ -180,33 +223,16 @@ export default function AccountDetailsPage() {
     }
   };
 
-  const handlePasswordReset = async () => {
-    if (!user || !user.email) return;
-    const isPasswordProvider = user.providerData.some(p => p.providerId === 'password');
-    if (!isPasswordProvider) {
-      Swal.fire("Info", `You signed in with ${user.providerData[0]?.providerId || 'an external provider'}. Please reset your password there.`, "info");
-      return;
-    }
-    Swal.fire({
-      title: 'Send Password Reset Email?',
-      text: `A password reset link will be sent to ${user.email}.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Send Link',
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          // @ts-ignore - sendPasswordResetEmail is available on the auth object
-          await sendPasswordResetEmail(auth, user.email!);
-          Swal.fire('Email Sent!', 'Check your inbox for the password reset link.', 'success');
-        } catch (error: any) {
-          Swal.fire('Error', `Failed to send email: ${error.message}`, 'error');
-        }
-      }
-    });
-  };
+  const renderReadOnlyField = (label: string, value: string | number | null | undefined) => (
+    <FormItem>
+      <FormLabel>{label}</FormLabel>
+      <FormControl>
+        <Input value={value || 'N/A'} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+      </FormControl>
+    </FormItem>
+  );
 
-  if (authLoading) {
+  if (authLoading || isEmployeeDataLoading) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -223,15 +249,16 @@ export default function AccountDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <Card className="max-w-2xl mx-auto shadow-xl">
+    <div className="container mx-auto py-8 space-y-8">
+      {/* Account Settings Card */}
+      <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <UserCircle className="h-7 w-7 text-primary" />
-            Account Details
+            Account Settings
           </CardTitle>
           <CardDescription>
-            View and manage your personal account information and profile picture.
+            Manage your display name and profile picture.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -269,50 +296,47 @@ export default function AccountDetailsPage() {
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmitDisplayName)} className="space-y-6">
-              <div className="flex flex-col items-center space-y-4 mb-8">
-                <Avatar className="h-32 w-32 border-2 border-primary shadow-md">
-                  <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} data-ai-hint="user avatar" />
-                  <AvatarFallback className="text-4xl">
-                    {getInitials(user.displayName || user.email || "U")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="w-full max-w-sm">
-                    <FormLabel htmlFor="profile-picture-upload">Profile Picture</FormLabel>
-                    <div className="flex items-center gap-2 mt-1">
-                        <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" />
+              <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8 mb-8">
+                <div className="flex flex-col items-center gap-2">
+                    <Avatar className="h-32 w-32 border-2 border-primary shadow-md">
+                    <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} data-ai-hint="user avatar"/>
+                    <AvatarFallback className="text-4xl">
+                        {getInitials(user.displayName || user.email || "U")}
+                    </AvatarFallback>
+                    </Avatar>
+                     <div className="w-full max-w-sm">
+                        <FormLabel htmlFor="profile-picture-upload">Update Picture</FormLabel>
+                        <div className="flex items-center gap-2 mt-1">
+                            <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" />
+                        </div>
                     </div>
-                    <FormDescription className="mt-2">
-                        Select a new image to upload and crop.
-                    </FormDescription>
+                </div>
+
+                <div className="space-y-6 flex-1 w-full">
+                    <FormField
+                        control={form.control}
+                        name="displayName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Display Name</FormLabel>
+                            <FormControl>
+                            <Input placeholder="Your display name" {...field} />
+                            </FormControl>
+                            <FormDescription>This name will be displayed to others.</FormDescription>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                            <Input placeholder="your.email@example.com" value={user.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+                        </FormControl>
+                        <FormDescription>Your email address cannot be changed.</FormDescription>
+                    </FormItem>
                 </div>
               </div>
 
-              <FormField
-                control={form.control}
-                name="displayName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Display Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Your display name" {...field} />
-                    </FormControl>
-                    <FormDescription>This name will be displayed to others.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                name="email"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Email Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="your.email@example.com" value={user.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-                    </FormControl>
-                    <FormDescription>Your email address cannot be changed here.</FormDescription>
-                  </FormItem>
-                )}
-              />
               <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting}>
                 {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Name</>)}
               </Button>
@@ -320,6 +344,122 @@ export default function AccountDetailsPage() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Personal Information Card */}
+      <Card className="max-w-4xl mx-auto shadow-xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Info className="h-6 w-6 text-primary" />Personal Information</CardTitle>
+          <CardDescription>Your personal details from your employee profile.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {employeeData ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                    {renderReadOnlyField("First Name*", employeeData.fullName?.split(' ')[0])}
+                    {renderReadOnlyField("Last Name*", employeeData.fullName?.split(' ').slice(1).join(' '))}
+                    {renderReadOnlyField("Gender*", employeeData.gender)}
+                    {renderReadOnlyField("Date of Birth*", formatDisplayDate(employeeData.dateOfBirth))}
+                    {renderReadOnlyField("NID/SSN", employeeData.nationalId)}
+                    {renderReadOnlyField("Nationality", employeeData.nationality)}
+                    {renderReadOnlyField("Marital Status", employeeData.maritalStatus)}
+                    {renderReadOnlyField("Blood Group", employeeData.bloodGroup)}
+                    {renderReadOnlyField("Religion", employeeData.religion)}
+                </div>
+            ) : (
+                <p className="text-muted-foreground">No detailed employee profile found.</p>
+            )}
+        </CardContent>
+      </Card>
+      
+      {/* Professional Details Card */}
+      {employeeData && (
+          <>
+          <Card className="max-w-4xl mx-auto shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Professional Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                    {renderReadOnlyField("Employee Code*", employeeData.employeeCode)}
+                    {renderReadOnlyField("Designation*", employeeData.designation)}
+                    {renderReadOnlyField("Joined Date*", formatDisplayDate(employeeData.joinedDate))}
+                    {renderReadOnlyField("Mobile No*", employeeData.phone)}
+                    {renderReadOnlyField("Employee Status", employeeData.status)}
+                    {renderReadOnlyField("Job Base*", employeeData.jobBase)}
+                    {renderReadOnlyField("Job Base Effective Date*", formatDisplayDate(employeeData.jobBaseEffectiveDate))}
+                </div>
+            </CardContent>
+          </Card>
+          
+          {/* Education & Bank Info */}
+          <div className="max-w-4xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card className="shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><GraduationCap className="h-6 w-6 text-primary" />Education Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Education</TableHead>
+                            <TableHead>Institute</TableHead>
+                            <TableHead>Year</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {employeeData.educationDetails && employeeData.educationDetails.length > 0 ? employeeData.educationDetails.map((edu, idx) => (
+                            <TableRow key={idx}>
+                                <TableCell>{edu.education}</TableCell>
+                                <TableCell>{edu.instituteName}</TableCell>
+                                <TableCell>{edu.passedYear}</TableCell>
+                            </TableRow>
+                        )) : (
+                             <TableRow><TableCell colSpan={3} className="text-center">No education details found.</TableCell></TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+             <Card className="shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Banknote className="h-6 w-6 text-primary" />Bank Account Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Bank</TableHead>
+                            <TableHead>Account No.</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {employeeData.bankDetails && employeeData.bankDetails.length > 0 ? employeeData.bankDetails.map((bank, idx) => (
+                            <TableRow key={idx}>
+                                <TableCell>{bank.bankName}</TableCell>
+                                <TableCell>{bank.accountNo}</TableCell>
+                            </TableRow>
+                        )) : (
+                             <TableRow><TableCell colSpan={2} className="text-center">No bank details found.</TableCell></TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="max-w-4xl mx-auto shadow-xl">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" />Salary Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {renderReadOnlyField("Gross Salary", formatCurrency(employeeData.salaryStructure?.grossSalary))}
+            </CardContent>
+          </Card>
+
+          </>
+      )}
+
     </div>
   );
 }
+
