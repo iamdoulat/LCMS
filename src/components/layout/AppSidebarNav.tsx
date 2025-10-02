@@ -182,6 +182,7 @@ const hrNavItems: NavItem[] = [
   { href: "/dashboard/hr/attendance", label: "Attendance", icon: Calendar, iconColorClass: 'bg-icon-reports' },
   { href: "/dashboard/hr/leaves", label: "Leave Management", icon: Mailbox, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/holidays", label: "Holidays", icon: CalendarPlus, iconColorClass: 'bg-icon-upcoming'},
+  { href: "/dashboard/hr/attendance/reports", label: "Attendance Reports", icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/hr/settings', label: 'HRM Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 
