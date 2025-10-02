@@ -454,7 +454,7 @@ export default function DashboardPage() {
     }
   }, [authUser, userRole]);
 
-  const fetchMonthlyTxData = React.useCallback(async (year: number) => {
+  const fetchMonthlyTxData = useCallback(async (year: number) => {
     const txQuery = query(
       collection(firestore, "petty_cash_transactions")
     );
@@ -550,7 +550,7 @@ export default function DashboardPage() {
              <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
                 <div>
                     {greeting && authUser && (
-                        <h2 className="text-base font-semibold text-foreground mb-1">
+                        <h2 className="text-base font-semibold text-foreground mb-1 mt-[5px]">
                         {greeting}, <span className="text-primary">{userDisplayName}</span>!
                         </h2>
                     )}
@@ -614,7 +614,7 @@ export default function DashboardPage() {
       <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
         <div>
            {greeting && authUser && (
-            <h2 className="text-base font-semibold text-foreground mb-1">
+            <h2 className="text-base font-semibold text-foreground mb-1 mt-[5px]">
               {greeting}, <span className="text-primary">{userDisplayName}</span>!
             </h2>
           )}
@@ -1012,5 +1012,7 @@ export default function DashboardPage() {
 
 
 
+
+    
 
     
