@@ -57,6 +57,7 @@ export function AppHeader() {
     <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between gap-4 border-b bg-card px-2 md:px-4 shadow-sm">
         {/* Left Aligned Title */}
         <div className="flex items-center gap-2">
+             <SidebarTrigger className="md:hidden" />
              <Link
                 href="/dashboard"
                 className={cn("text-lg md:text-xl whitespace-nowrap font-bold", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}
