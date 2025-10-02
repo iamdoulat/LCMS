@@ -213,7 +213,7 @@ export default function PrintJobCardPage() {
         <div ref={printContainerRef} className="bg-white font-sans text-gray-800 p-8" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
             <header className="flex justify-between items-center mb-4">
                 <div>
-                    {companyProfile?.companyLogoUrl && <Image src={companyProfile.invoiceLogoUrl || ''} alt="Company Logo" width={166} height={43} className="object-contain" data-ai-hint="company logo"/>}
+                    {companyProfile?.companyLogoUrl && <Image src={companyProfile.invoiceLogoUrl || ''} alt="Company Logo" width={199} height={52} className="object-contain" data-ai-hint="company logo"/>}
                 </div>
                 <div className="text-right">
                     <h1 className="text-xl font-bold">{companyProfile?.companyName || 'SMART SOLUTION'}</h1>
@@ -264,4 +264,3 @@ export default function PrintJobCardPage() {
         </div>
     );
 }
-
