@@ -250,7 +250,6 @@ export default function AccountDetailsPage() {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
-      {/* Account Settings Card */}
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -262,39 +261,39 @@ export default function AccountDetailsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <ShieldAlert className="h-4 w-4" />
-              <AlertTitle>Update Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          
-          <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
-            <DialogContent className="max-w-md">
-                <DialogHeader><DialogTitle>Crop Your Image</DialogTitle></DialogHeader>
-                {imgSrc && (
-                    <ReactCrop
-                        crop={crop}
-                        onChange={(_, percentCrop) => setCrop(percentCrop)}
-                        onComplete={(c) => setCompletedCrop(c)}
-                        aspect={1}
-                        circularCrop
-                        minWidth={100}
-                    >
-                        <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
-                    </ReactCrop>
-                )}
-                <DialogFooter>
-                    <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
-                    <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
-                        {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Upload</>}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
           <Form {...form}>
+            {error && (
+              <Alert variant="destructive" className="mb-6">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Update Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
+              <DialogContent className="max-w-md">
+                  <DialogHeader><DialogTitle>Crop Your Image</DialogTitle></DialogHeader>
+                  {imgSrc && (
+                      <ReactCrop
+                          crop={crop}
+                          onChange={(_, percentCrop) => setCrop(percentCrop)}
+                          onComplete={(c) => setCompletedCrop(c)}
+                          aspect={1}
+                          circularCrop
+                          minWidth={100}
+                      >
+                          <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
+                      </ReactCrop>
+                  )}
+                  <DialogFooter>
+                      <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
+                      <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
+                          {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Upload</>}
+                      </Button>
+                  </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <form onSubmit={form.handleSubmit(onSubmitDisplayName)} className="space-y-6">
               <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8 mb-8">
                 <div className="flex flex-col items-center gap-2">
@@ -345,121 +344,118 @@ export default function AccountDetailsPage() {
         </CardContent>
       </Card>
 
-      {/* Personal Information Card */}
-      <Card className="max-w-4xl mx-auto shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Info className="h-6 w-6 text-primary" />Personal Information</CardTitle>
-          <CardDescription>Your personal details from your employee profile.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {employeeData ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
-                    {renderReadOnlyField("First Name*", employeeData.fullName?.split(' ')[0])}
-                    {renderReadOnlyField("Last Name*", employeeData.fullName?.split(' ').slice(1).join(' '))}
-                    {renderReadOnlyField("Gender*", employeeData.gender)}
-                    {renderReadOnlyField("Date of Birth*", formatDisplayDate(employeeData.dateOfBirth))}
-                    {renderReadOnlyField("NID/SSN", employeeData.nationalId)}
-                    {renderReadOnlyField("Nationality", employeeData.nationality)}
-                    {renderReadOnlyField("Marital Status", employeeData.maritalStatus)}
-                    {renderReadOnlyField("Blood Group", employeeData.bloodGroup)}
-                    {renderReadOnlyField("Religion", employeeData.religion)}
-                </div>
-            ) : (
-                <p className="text-muted-foreground">No detailed employee profile found.</p>
-            )}
-        </CardContent>
-      </Card>
+      <Form {...form}>
+        <Card className="max-w-4xl mx-auto shadow-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Info className="h-6 w-6 text-primary" />Personal Information</CardTitle>
+            <CardDescription>Your personal details from your employee profile.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              {employeeData ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                      {renderReadOnlyField("First Name*", employeeData.fullName?.split(' ')[0])}
+                      {renderReadOnlyField("Last Name*", employeeData.fullName?.split(' ').slice(1).join(' '))}
+                      {renderReadOnlyField("Gender*", employeeData.gender)}
+                      {renderReadOnlyField("Date of Birth*", formatDisplayDate(employeeData.dateOfBirth))}
+                      {renderReadOnlyField("NID/SSN", employeeData.nationalId)}
+                      {renderReadOnlyField("Nationality", employeeData.nationality)}
+                      {renderReadOnlyField("Marital Status", employeeData.maritalStatus)}
+                      {renderReadOnlyField("Blood Group", employeeData.bloodGroup)}
+                      {renderReadOnlyField("Religion", employeeData.religion)}
+                  </div>
+              ) : (
+                  <p className="text-muted-foreground">No detailed employee profile found.</p>
+              )}
+          </CardContent>
+        </Card>
       
-      {/* Professional Details Card */}
-      {employeeData && (
-          <>
-          <Card className="max-w-4xl mx-auto shadow-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Professional Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
-                    {renderReadOnlyField("Employee Code*", employeeData.employeeCode)}
-                    {renderReadOnlyField("Designation*", employeeData.designation)}
-                    {renderReadOnlyField("Joined Date*", formatDisplayDate(employeeData.joinedDate))}
-                    {renderReadOnlyField("Mobile No*", employeeData.phone)}
-                    {renderReadOnlyField("Employee Status", employeeData.status)}
-                    {renderReadOnlyField("Job Base*", employeeData.jobBase)}
-                    {renderReadOnlyField("Job Base Effective Date*", formatDisplayDate(employeeData.jobBaseEffectiveDate))}
-                </div>
-            </CardContent>
-          </Card>
-          
-          {/* Education & Bank Info */}
-          <div className="max-w-4xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Card className="shadow-xl">
+        {employeeData && (
+            <>
+            <Card className="max-w-4xl mx-auto shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><GraduationCap className="h-6 w-6 text-primary" />Education Information</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Professional Details</CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Education</TableHead>
-                            <TableHead>Institute</TableHead>
-                            <TableHead>Year</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {employeeData.educationDetails && employeeData.educationDetails.length > 0 ? employeeData.educationDetails.map((edu, idx) => (
-                            <TableRow key={idx}>
-                                <TableCell>{edu.education}</TableCell>
-                                <TableCell>{edu.instituteName}</TableCell>
-                                <TableCell>{edu.passedYear}</TableCell>
-                            </TableRow>
-                        )) : (
-                             <TableRow><TableCell colSpan={3} className="text-center">No education details found.</TableCell></TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                      {renderReadOnlyField("Employee Code*", employeeData.employeeCode)}
+                      {renderReadOnlyField("Designation*", employeeData.designation)}
+                      {renderReadOnlyField("Joined Date*", formatDisplayDate(employeeData.joinedDate))}
+                      {renderReadOnlyField("Mobile No*", employeeData.phone)}
+                      {renderReadOnlyField("Employee Status", employeeData.status)}
+                      {renderReadOnlyField("Job Base*", employeeData.jobBase)}
+                      {renderReadOnlyField("Job Base Effective Date*", formatDisplayDate(employeeData.jobBaseEffectiveDate))}
+                  </div>
+              </CardContent>
+            </Card>
+            
+            <div className="max-w-4xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><GraduationCap className="h-6 w-6 text-primary" />Education Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>Education</TableHead>
+                              <TableHead>Institute</TableHead>
+                              <TableHead>Year</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {employeeData.educationDetails && employeeData.educationDetails.length > 0 ? employeeData.educationDetails.map((edu, idx) => (
+                              <TableRow key={idx}>
+                                  <TableCell>{edu.education}</TableCell>
+                                  <TableCell>{edu.instituteName}</TableCell>
+                                  <TableCell>{edu.passedYear}</TableCell>
+                              </TableRow>
+                          )) : (
+                              <TableRow><TableCell colSpan={3} className="text-center">No education details found.</TableCell></TableRow>
+                          )}
+                      </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Banknote className="h-6 w-6 text-primary" />Bank Account Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>Bank</TableHead>
+                              <TableHead>Account No.</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {employeeData.bankDetails && employeeData.bankDetails.length > 0 ? employeeData.bankDetails.map((bank, idx) => (
+                              <TableRow key={idx}>
+                                  <TableCell>{bank.bankName}</TableCell>
+                                  <TableCell>{bank.accountNo}</TableCell>
+                              </TableRow>
+                          )) : (
+                              <TableRow><TableCell colSpan={2} className="text-center">No bank details found.</TableCell></TableRow>
+                          )}
+                      </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="max-w-4xl mx-auto shadow-xl">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" />Salary Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                  {renderReadOnlyField("Gross Salary", formatCurrency(employeeData.salaryStructure?.grossSalary))}
               </CardContent>
             </Card>
 
-             <Card className="shadow-xl">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Banknote className="h-6 w-6 text-primary" />Bank Account Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                 <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Bank</TableHead>
-                            <TableHead>Account No.</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {employeeData.bankDetails && employeeData.bankDetails.length > 0 ? employeeData.bankDetails.map((bank, idx) => (
-                            <TableRow key={idx}>
-                                <TableCell>{bank.bankName}</TableCell>
-                                <TableCell>{bank.accountNo}</TableCell>
-                            </TableRow>
-                        )) : (
-                             <TableRow><TableCell colSpan={2} className="text-center">No bank details found.</TableCell></TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="max-w-4xl mx-auto shadow-xl">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" />Salary Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-                {renderReadOnlyField("Gross Salary", formatCurrency(employeeData.salaryStructure?.grossSalary))}
-            </CardContent>
-          </Card>
-
-          </>
-      )}
-
+            </>
+        )}
+      </Form>
     </div>
   );
 }
-
