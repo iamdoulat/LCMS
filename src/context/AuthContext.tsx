@@ -212,9 +212,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
-
+  
       await firebaseUpdateProfile(user, { displayName });
-
+  
       const userDocRef = doc(firestore, "users", user.uid);
       
       let assignedRoles: UserRole[] = [];
@@ -231,7 +231,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("Viewer");
         if (assignedRoles.length === 0) assignedRoles.push("User");
       }
-
+  
       const newProfileData = {
           uid: user.uid,
           displayName: displayName,
