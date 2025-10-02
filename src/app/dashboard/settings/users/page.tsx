@@ -207,7 +207,7 @@ export default function UserListPage() {
                 </CardDescription>
               </div>
               <Button asChild disabled={!isAdminOrSuperAdmin || isReadOnly}>
-                <Link href="/register">
+                <Link href="/dashboard/settings/users/add">
                     <PlusCircle className="mr-2 h-4 w-4" /> Add New User
                 </Link>
               </Button>

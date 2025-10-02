@@ -42,7 +42,7 @@ interface AuthContextType {
   userRole: UserRole[] | null; // Changed to array of roles
   firestoreUser: UserDocumentForAdmin | null;
   login: (email: string, pass: string) => Promise<void>;
-  register: (email: string, pass: string, displayName: string) => Promise<void>;
+  register: (email: string, pass: string, displayName: string, roles?: UserRole[]) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
@@ -208,7 +208,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [router]);
   
-  const register = useCallback(async (email: string, pass: string, displayName: string) => {
+  const register = useCallback(async (email: string, pass: string, displayName: string, roles?: UserRole[]) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
@@ -217,36 +217,33 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
       const userDocRef = doc(firestore, "users", user.uid);
       
-      const lowercasedUserEmail = user.email?.toLowerCase() || '';
-      const roles: UserRole[] = [];
-      if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Super Admin");
-      if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Admin");
-      if (COMMERCIAL_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Commercial");
-      if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Service");
-      if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("DemoManager");
-      if (ACCOUNTS_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Accounts");
-      if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Viewer");
-      if (roles.length === 0) roles.push("User");
+      let assignedRoles: UserRole[] = [];
+      if (roles && roles.length > 0) {
+        assignedRoles = roles;
+      } else {
+        const lowercasedUserEmail = user.email?.toLowerCase() || '';
+        if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("Super Admin");
+        if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("Admin");
+        if (COMMERCIAL_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("Commercial");
+        if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("Service");
+        if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("DemoManager");
+        if (ACCOUNTS_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("Accounts");
+        if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("Viewer");
+        if (assignedRoles.length === 0) assignedRoles.push("User");
+      }
 
       const newProfileData = {
           uid: user.uid,
           displayName: displayName,
           email: user.email,
           photoURL: user.photoURL || null,
-          role: roles,
+          role: [...new Set(assignedRoles)], // Ensure roles are unique
           disabled: false,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
       };
       await setDoc(userDocRef, newProfileData);
       
-      Swal.fire({
-        title: "Registration Successful",
-        text: `Welcome, ${displayName}! You are now logged in.`,
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
-      });
     } catch (error: any) {
       console.error("AuthContext: Error registering user: ", error);
       let errorMessage = "Failed to register. Please try again.";
