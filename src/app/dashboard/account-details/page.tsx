@@ -250,102 +250,100 @@ export default function AccountDetailsPage() {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
-      <Card className="max-w-4xl mx-auto shadow-xl">
-        <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <UserCircle className="h-7 w-7 text-primary" />
-            Account Settings
-          </CardTitle>
-          <CardDescription>
-            Manage your display name and profile picture.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            {error && (
-              <Alert variant="destructive" className="mb-6">
-                <ShieldAlert className="h-4 w-4" />
-                <AlertTitle>Update Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            
-            <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
-              <DialogContent className="max-w-md">
-                  <DialogHeader><DialogTitle>Crop Your Image</DialogTitle></DialogHeader>
-                  {imgSrc && (
-                      <ReactCrop
-                          crop={crop}
-                          onChange={(_, percentCrop) => setCrop(percentCrop)}
-                          onComplete={(c) => setCompletedCrop(c)}
-                          aspect={1}
-                          circularCrop
-                          minWidth={100}
-                      >
-                          <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
-                      </ReactCrop>
-                  )}
-                  <DialogFooter>
-                      <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
-                      <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
-                          {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Upload</>}
-                      </Button>
-                  </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <form onSubmit={form.handleSubmit(onSubmitDisplayName)} className="space-y-6">
-              <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8 mb-8">
-                <div className="flex flex-col items-center gap-2">
-                    <Avatar className="h-32 w-32 border-2 border-primary shadow-md">
-                    <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} data-ai-hint="user avatar"/>
-                    <AvatarFallback className="text-4xl">
-                        {getInitials(user.displayName || user.email || "U")}
-                    </AvatarFallback>
-                    </Avatar>
-                     <div className="w-full max-w-sm">
-                        <FormLabel htmlFor="profile-picture-upload">Update Picture</FormLabel>
-                        <div className="flex items-center gap-2 mt-1">
-                            <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-6 flex-1 w-full">
-                    <FormField
-                        control={form.control}
-                        name="displayName"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Display Name</FormLabel>
-                            <FormControl>
-                            <Input placeholder="Your display name" {...field} />
-                            </FormControl>
-                            <FormDescription>This name will be displayed to others.</FormDescription>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormItem>
-                        <FormLabel>Email Address</FormLabel>
-                        <FormControl>
-                            <Input placeholder="your.email@example.com" value={user.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-                        </FormControl>
-                        <FormDescription>Your email address cannot be changed.</FormDescription>
-                    </FormItem>
-                </div>
-              </div>
-
-              <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting}>
-                {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Name</>)}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-
       <Form {...form}>
-        <Card className="max-w-4xl mx-auto shadow-xl">
+        <Card className="max-w-6xl mx-auto shadow-xl">
+          <CardHeader>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <UserCircle className="h-7 w-7 text-primary" />
+              Account Settings
+            </CardTitle>
+            <CardDescription>
+              Manage your display name and profile picture.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+              {error && (
+                <Alert variant="destructive" className="mb-6">
+                  <ShieldAlert className="h-4 w-4" />
+                  <AlertTitle>Update Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
+              <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader><DialogTitle>Crop Your Image</DialogTitle></DialogHeader>
+                    {imgSrc && (
+                        <ReactCrop
+                            crop={crop}
+                            onChange={(_, percentCrop) => setCrop(percentCrop)}
+                            onComplete={(c) => setCompletedCrop(c)}
+                            aspect={1}
+                            circularCrop
+                            minWidth={100}
+                        >
+                            <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
+                        </ReactCrop>
+                    )}
+                    <DialogFooter>
+                        <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
+                        <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
+                            {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Upload</>}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <form onSubmit={form.handleSubmit(onSubmitDisplayName)} className="space-y-6">
+                <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8 mb-8">
+                  <div className="flex flex-col items-center gap-2">
+                      <Avatar className="h-32 w-32 border-2 border-primary shadow-md">
+                      <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} data-ai-hint="user avatar"/>
+                      <AvatarFallback className="text-4xl">
+                          {getInitials(user.displayName || user.email || "U")}
+                      </AvatarFallback>
+                      </Avatar>
+                       <div className="w-full max-w-sm">
+                          <FormLabel htmlFor="profile-picture-upload">Update Picture</FormLabel>
+                          <div className="flex items-center gap-2 mt-1">
+                              <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" />
+                          </div>
+                      </div>
+                  </div>
+
+                  <div className="space-y-6 flex-1 w-full">
+                      <FormField
+                          control={form.control}
+                          name="displayName"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Display Name</FormLabel>
+                              <FormControl>
+                              <Input placeholder="Your display name" {...field} />
+                              </FormControl>
+                              <FormDescription>This name will be displayed to others.</FormDescription>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                              <Input placeholder="your.email@example.com" value={user.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+                          </FormControl>
+                          <FormDescription>Your email address cannot be changed.</FormDescription>
+                      </FormItem>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+                  {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Name</>)}
+                </Button>
+              </form>
+          </CardContent>
+        </Card>
+
+        <Card className="max-w-6xl mx-auto shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Info className="h-6 w-6 text-primary" />Personal Information</CardTitle>
             <CardDescription>Your personal details from your employee profile.</CardDescription>
@@ -371,7 +369,7 @@ export default function AccountDetailsPage() {
       
         {employeeData && (
             <>
-            <Card className="max-w-4xl mx-auto shadow-xl">
+            <Card className="max-w-6xl mx-auto shadow-xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Professional Details</CardTitle>
               </CardHeader>
@@ -388,7 +386,7 @@ export default function AccountDetailsPage() {
               </CardContent>
             </Card>
             
-            <div className="max-w-4xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
               <Card className="shadow-xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><GraduationCap className="h-6 w-6 text-primary" />Education Information</CardTitle>
@@ -444,7 +442,7 @@ export default function AccountDetailsPage() {
               </Card>
             </div>
 
-            <Card className="max-w-4xl mx-auto shadow-xl">
+            <Card className="max-w-6xl mx-auto shadow-xl">
               <CardHeader>
                   <CardTitle className="flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" />Salary Information</CardTitle>
               </CardHeader>
