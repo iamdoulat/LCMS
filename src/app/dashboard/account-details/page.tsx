@@ -3,13 +3,13 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check } from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import Image from 'next/image';
-import { doc, updateDoc, serverTimestamp, getDocs, query, where, collection } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDocs, query, where, collection, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -26,7 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
-import type { EmployeeDocument } from '@/types';
+import type { EmployeeDocument, AttendanceDocument } from '@/types';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -68,10 +68,31 @@ export default function AccountDetailsPage() {
   const imgRef = useRef<HTMLImageElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [dailyAttendance, setDailyAttendance] = useState<AttendanceDocument | null>(null);
+
+
   const form = useForm<AccountDetailsFormValues>({
     resolver: zodResolver(accountDetailsSchema),
     defaultValues: { displayName: '' },
   });
+
+  useEffect(() => {
+    if (user && employeeData) {
+      const formattedDate = format(new Date(), 'yyyy-MM-dd');
+      const attendanceDocId = `${employeeData.id}_${formattedDate}`;
+      const docRef = doc(firestore, 'attendance', attendanceDocId);
+
+      getDoc(docRef).then(docSnap => {
+        if (docSnap.exists()) {
+          setDailyAttendance(docSnap.data() as AttendanceDocument);
+        } else {
+          setDailyAttendance(null);
+        }
+      });
+    }
+  }, [user, employeeData]);
+
 
   useEffect(() => {
     if (user) {
@@ -102,6 +123,59 @@ export default function AccountDetailsPage() {
     }
   }, [user, form]);
   
+  const handleAttendance = async (type: 'in' | 'out') => {
+    if (!user || !employeeData) {
+      Swal.fire("Error", "User or employee data not available.", "error");
+      return;
+    }
+    setAttendanceLoading(true);
+    const now = new Date();
+    const formattedDate = format(now, 'yyyy-MM-dd');
+    const currentTime = format(now, 'HH:mm');
+    const docId = `${employeeData.id}_${formattedDate}`;
+    const docRef = doc(firestore, 'attendance', docId);
+
+    try {
+      const currentDoc = await getDoc(docRef);
+      let dataToSet = {};
+
+      if (type === 'in') {
+        const flag = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 10) ? 'D' : 'P';
+        dataToSet = {
+          employeeId: employeeData.id,
+          employeeName: employeeData.fullName,
+          date: format(now, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          flag: flag,
+          inTime: currentTime,
+          updatedBy: user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await setDoc(docRef, dataToSet, { merge: true });
+        setDailyAttendance(dataToSet as AttendanceDocument);
+        Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
+      } else if (type === 'out') {
+        if (!currentDoc.exists() || !currentDoc.data().inTime) {
+          Swal.fire("Cannot Clock Out", "You must clock in before you can clock out.", "warning");
+          setAttendanceLoading(false);
+          return;
+        }
+        dataToSet = {
+          outTime: currentTime,
+          updatedAt: serverTimestamp(),
+        };
+        await updateDoc(docRef, dataToSet);
+        setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
+        Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
+      }
+    } catch (error: any) {
+      console.error("Error updating attendance:", error);
+      Swal.fire("Error", `Failed to record attendance: ${error.message}`, "error");
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
 
   const getInitials = (nameOrEmail: string) => {
     if (!nameOrEmail) return 'U';
@@ -336,9 +410,31 @@ export default function AccountDetailsPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full md:w-auto bg-primary hover:bg-primary/90" disabled={isSubmitting}>
-                  {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Name</>)}
-                </Button>
+                 <div className="flex flex-wrap gap-4">
+                  <Button type="submit" className="flex-grow md:flex-grow-0 bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+                    {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Name</>)}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-grow md:flex-grow-0"
+                    onClick={() => handleAttendance('in')}
+                    disabled={attendanceLoading || !!dailyAttendance?.inTime}
+                  >
+                    {attendanceLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Clock className="mr-2 h-4 w-4"/>)}
+                    In Time {dailyAttendance?.inTime && `(${dailyAttendance.inTime})`}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-grow md:flex-grow-0"
+                    onClick={() => handleAttendance('out')}
+                    disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime}
+                  >
+                    {attendanceLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Clock className="mr-2 h-4 w-4"/>)}
+                    Out Time {dailyAttendance?.outTime && `(${dailyAttendance.outTime})`}
+                  </Button>
+                </div>
               </form>
           </CardContent>
         </Card>
@@ -457,3 +553,4 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
