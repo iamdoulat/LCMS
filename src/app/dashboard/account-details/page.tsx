@@ -391,7 +391,7 @@ export default function AccountDetailsPage() {
                 <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8 mb-8">
                   <div className="flex flex-col items-center gap-2">
                       <Avatar className="h-32 w-32 border-2 border-primary shadow-md">
-                      <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} data-ai-hint="user avatar"/>
+                      <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} />
                       <AvatarFallback className="text-4xl">
                           {getInitials(user.displayName || user.email || "U")}
                       </AvatarFallback>
@@ -435,12 +435,16 @@ export default function AccountDetailsPage() {
                   </Button>
                   <Button
                     type="button"
-                    variant="outline"
-                    className="flex-grow md:flex-grow-0"
+                    variant={dailyAttendance?.inTime ? 'default' : 'outline'}
+                    className={cn(
+                        "flex-grow md:flex-grow-0",
+                        dailyAttendance?.inTime && dailyAttendance.flag === 'P' && "bg-green-600 hover:bg-green-700 text-white",
+                        dailyAttendance?.inTime && dailyAttendance.flag === 'D' && "bg-red-600 hover:bg-red-700 text-white"
+                    )}
                     onClick={() => handleAttendance('in')}
                     disabled={attendanceLoading || !!dailyAttendance?.inTime}
                   >
-                    {attendanceLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Clock className="mr-2 h-4 w-4"/>)}
+                    {attendanceLoading && !dailyAttendance?.inTime ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="mr-2 h-4 w-4" /> : <Clock className="mr-2 h-4 w-4"/>)}
                     In Time {dailyAttendance?.inTime && `(${dailyAttendance.inTime})`}
                   </Button>
                   <Button
@@ -450,7 +454,7 @@ export default function AccountDetailsPage() {
                     onClick={() => handleAttendance('out')}
                     disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime}
                   >
-                    {attendanceLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Clock className="mr-2 h-4 w-4"/>)}
+                    {attendanceLoading && !dailyAttendance?.outTime ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Clock className="mr-2 h-4 w-4"/>)}
                     Out Time {dailyAttendance?.outTime && `(${dailyAttendance.outTime})`}
                   </Button>
                 </div>
@@ -573,4 +577,5 @@ export default function AccountDetailsPage() {
   );
 }
 
+    
     
