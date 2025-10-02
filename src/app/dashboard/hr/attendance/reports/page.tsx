@@ -6,11 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, orderBy, where, onSnapshot } from 'firebase/firestore';
-import type { EmployeeDocument } from '@/types';
+import { collection, query, orderBy, where, onSnapshot, getDocs } from 'firebase/firestore';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { cn } from '@/lib/utils';
-import { format, isValid } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -19,8 +19,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Loader2, User, Search, CalendarDays as CalendarIcon, FileDown, FileText, Filter, XCircle, ChevronDown } from 'lucide-react';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
-import { useAuth } from '@/context/AuthContext';
-import { Label } from '@/components/ui/label';
 
 const reportFilterSchema = z.object({
   employeeId: z.string().min(1, "Please select an employee."),
@@ -40,6 +38,8 @@ export default function AttendanceReportPage() {
     undefined,
     ['employees_for_attendance_report']
   );
+  
+  const [isLoadingReportData, setIsLoadingReportData] = React.useState(false);
 
   const form = useForm<ReportFilterFormValues>({
     resolver: zodResolver(reportFilterSchema),
@@ -59,13 +59,49 @@ export default function AttendanceReportPage() {
     return employees.map(emp => ({ value: emp.id, label: `${emp.fullName} (${emp.employeeCode})` }));
   }, [employees]);
 
-  const handleGeneratePdf = (data: ReportFilterFormValues) => {
-    Swal.fire({
-      title: "Feature Not Implemented",
-      text: "PDF report generation will be available in a future update.",
-      icon: "info",
-    });
+  const handleGeneratePdf = async (data: ReportFilterFormValues) => {
+    setIsLoadingReportData(true);
+    try {
+        const attendanceQuery = query(
+            collection(firestore, "attendance"),
+            where("employeeId", "==", data.employeeId),
+            where("date", ">=", format(data.dateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx")),
+            where("date", "<=", format(data.dateRange.to, "yyyy-MM-dd'T'23:59:59.999xxx"))
+        );
+        const leavesQuery = query(
+            collection(firestore, "leave_applications"),
+            where("employeeId", "==", data.employeeId),
+            where("status", "==", "Approved")
+        );
+        const holidaysQuery = query(collection(firestore, "holidays"));
+
+        const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot] = await Promise.all([
+            getDocs(attendanceQuery),
+            getDocs(leavesQuery),
+            getDocs(holidaysQuery)
+        ]);
+
+        const reportData = {
+            employee: employees?.find(e => e.id === data.employeeId),
+            dateRange: {
+                from: format(data.dateRange.from, "yyyy-MM-dd"),
+                to: format(data.dateRange.to, "yyyy-MM-dd"),
+            },
+            attendance: attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument),
+            leaves: leavesSnapshot.docs.map(d => d.data() as LeaveApplicationDocument),
+            holidays: holidaysSnapshot.docs.map(d => d.data() as HolidayDocument),
+        };
+        
+        localStorage.setItem('jobCardReportData', JSON.stringify(reportData));
+        window.open(`/dashboard/hr/attendance/reports/print`, '_blank');
+
+    } catch (error: any) {
+        Swal.fire("Error", `Could not generate report data: ${error.message}`, "error");
+    } finally {
+        setIsLoadingReportData(false);
+    }
   };
+
 
   const handleExportToExcel = (data: ReportFilterFormValues) => {
     Swal.fire({
@@ -141,8 +177,9 @@ export default function AttendanceReportPage() {
               </Card>
 
               <div className="flex justify-end gap-4 mt-6">
-                <Button type="button" onClick={handleSubmit(handleGeneratePdf)} disabled={isLoadingEmployees}>
-                  <FileText className="mr-2 h-4 w-4" /> PDF Report
+                <Button type="button" onClick={handleSubmit(handleGeneratePdf)} disabled={isLoadingEmployees || isLoadingReportData}>
+                  {isLoadingReportData ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileText className="mr-2 h-4 w-4" />}
+                  PDF Report
                 </Button>
                 <Button type="button" onClick={handleSubmit(handleExportToExcel)} disabled={isLoadingEmployees} className="bg-green-600 hover:bg-green-700">
                   <FileDown className="mr-2 h-4 w-4" /> Export to Excel
