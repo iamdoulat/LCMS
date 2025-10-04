@@ -82,13 +82,6 @@ const defaultFormValues: LCEditFormValues = {
   totalNetWeight: 0,
   totalGrossWeight: 0,
   totalCbm: 0,
-  vesselOrFlightName: '',
-  vesselImoNumber: '',
-  flightNumber: '',
-  trackingCourier: "DHL",
-  trackingNumber: '',
-  etd: undefined,
-  eta: undefined,
   originalBlQty: 0,
   copyBlQty: 0,
   originalCooQty: 0,
@@ -120,7 +113,6 @@ const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--
 
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_EDIT_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_EDIT_BENEFICIARY_PLACEHOLDER__";
-const NONE_COURIER_VALUE = "__NONE_LC_EDIT_COURIER__";
 
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -236,13 +228,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             totalNetWeight: initialData.totalNetWeight ?? defaultFormValues.totalNetWeight,
             totalGrossWeight: initialData.totalGrossWeight ?? defaultFormValues.totalGrossWeight,
             totalCbm: initialData.totalCbm ?? defaultFormValues.totalCbm,
-            vesselOrFlightName: initialData.vesselOrFlightName ?? defaultFormValues.vesselOrFlightName,
-            vesselImoNumber: initialData.vesselImoNumber ?? defaultFormValues.vesselImoNumber,
-            flightNumber: initialData.flightNumber ?? defaultFormValues.flightNumber,
-            trackingCourier: initialData.trackingCourier ?? defaultFormValues.trackingCourier,
-            trackingNumber: initialData.trackingNumber ?? defaultFormValues.trackingNumber,
-            etd: initialData.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : defaultFormValues.etd,
-            eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : defaultFormValues.eta,
             originalBlQty: initialData.originalBlQty ?? defaultFormValues.originalBlQty,
             copyBlQty: initialData.copyBlQty ?? defaultFormValues.copyBlQty,
             originalCooQty: initialData.originalCooQty ?? defaultFormValues.originalCooQty,
@@ -406,7 +391,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       currency: finalData.currency,
       termsOfPay: finalData.termsOfPay,
       status: finalData.status,
-      trackingCourier: finalData.trackingCourier,
       amount: finalData.amount,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
       proformaInvoiceNumber: finalData.proformaInvoiceNumber,
@@ -420,12 +404,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       portOfLoading: finalData.portOfLoading,
       portOfDischarge: finalData.portOfDischarge,
       consigneeBankNameAddress: finalData.consigneeBankNameAddress,
-      vesselOrFlightName: finalData.vesselOrFlightName,
-      vesselImoNumber: finalData.vesselImoNumber,
-      flightNumber: finalData.flightNumber,
-      trackingNumber: (finalData.trackingCourier === "" || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
-      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       certificateOfOrigin: finalData.certificateOfOrigin,
       shippingMarks: finalData.shippingMarks,
       purchaseOrderUrl: finalData.purchaseOrderUrl,
@@ -525,61 +503,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       setIsSubmitting(false);
     }
   }
-
-  const handleTrackDocument = () => {
-    const courier = getValues("trackingCourier");
-    const number = getValues("trackingNumber");
-
-    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
-      Swal.fire({
-        title: "Information Missing",
-        text: "Please select a courier and enter a tracking number.",
-        icon: "info",
-      });
-      return;
-    }
-
-    let url = "";
-    if (courier === "DHL") {
-      url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
-    } else if (courier === "FedEx") {
-      url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
-    }
-
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } else {
-      Swal.fire({
-        title: "Courier Not Supported",
-        text: "Tracking for the selected courier is not implemented.",
-        icon: "warning",
-      });
-    }
-  };
-
-  const handleTrackVessel = () => {
-    const imoNumber = getValues("vesselImoNumber");
-    if (!imoNumber || String(imoNumber).trim() === "") {
-       Swal.fire({
-        title: "IMO Number Missing",
-        text: "Please enter a Vessel IMO number to track.",
-        icon: "info",
-      });
-      return;
-    }
-    const url = `https://www.vesselfinder.com/vessels/details/${encodeURIComponent(String(imoNumber).trim())}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleTrackFlight = () => {
-    const flightNum = getValues("flightNumber");
-    if (!flightNum || String(flightNum).trim() === "") {
-      Swal.fire("Info", "Please enter a flight number to track.", "info");
-      return;
-    }
-    const url = `https://www.flightradar24.com/${encodeURIComponent(String(flightNum).trim())}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
 
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && String(url).trim() !== "") {
@@ -1101,125 +1024,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         {/* Section: Shipping Information */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Ship className="mr-2 h-5 w-5 text-primary" />
-          Shipping Information
+          Shipment Notes
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-          <FormField
-            control={control}
-            name="vesselOrFlightName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Vessel/Flight Name</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter vessel or flight name"
-                    {...field}
-                    value={field.value ?? ''}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="vesselImoNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Vessel IMO Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
-          <FormField
-            control={control}
-            name="flightNumber"
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Flight Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter Flight Number (e.g., EK582)" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button
-            type="button"
-            variant="default"
-            onClick={handleTrackFlight}
-            disabled={!watch("flightNumber") || isSubmitting}
-            className="md:col-span-1"
-            title="Track Flight on FlightRadar24"
-          >
-            <Search className="mr-2 h-4 w-4" />
-            Track Flight
-          </Button>
-        </div>
-        
-        <div className="mt-6">
-          <h4 className="text-base font-medium text-foreground flex items-center mb-2">
-            <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
-             <FormField
-                control={control}
-                name="trackingCourier"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-1 space-y-3">
-                    <FormLabel>Courier By</FormLabel>
-                    <FormControl>
-                       <RadioGroup
-                          onValueChange={field.onChange}
-                          value={field.value ?? "DHL"}
-                          className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                        >
-                          {trackingCourierOptions.map((courier) => (
-                            <FormItem key={courier} className="flex items-center space-x-2 space-y-0">
-                              <FormControl><RadioGroupItem value={courier} /></FormControl>
-                              <FormLabel className="font-normal text-sm">{courier}</FormLabel>
-                            </FormItem>
-                          ))}
-                        </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            <FormField
-              control={control}
-              name="trackingNumber"
-              render={({ field }) => (
-                <FormItem className="md:col-span-1">
-                  <FormLabel>Tracking Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter tracking number" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleTrackDocument}
-              disabled={!watch("trackingNumber") || !watch("trackingCourier") || isSubmitting}
-              className="md:col-span-1 mt-4 md:mt-0"
-              title="Track Original Document"
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Track
-            </Button>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           <FormField
             control={form.control}
             name="isFirstShipment"
@@ -1306,30 +1114,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <FormField
-            control={control}
-            name="etd"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>ETD (Estimated Time of Departure)</FormLabel>
-                <DatePickerField field={field} placeholder="Select date" />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="eta"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>ETA (Estimated Time of Arrival)</FormLabel>
-                <DatePickerField field={field} placeholder="Select date" />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
         <Separator />
 
         {/* Section: Consignee Bank Details */}
