@@ -77,11 +77,6 @@ const defaultFormValues: NewLCFormValues = {
   totalNetWeight: 0,
   totalGrossWeight: 0,
   totalCbm: 0,
-  vesselOrFlightName: '',
-  vesselImoNumber: '',
-  flightNumber: '',
-  trackingCourier: "DHL",
-  trackingNumber: '',
   etd: undefined,
   eta: undefined,
   originalBlQty: 0,
@@ -1167,7 +1162,7 @@ export function NewLCEntryForm() {
                     <FormControl>
                        <RadioGroup
                           onValueChange={field.onChange}
-                          value={field.value ?? "DHL"}
+                          value={field.value ?? ""}
                           className="flex flex-wrap items-center gap-x-6 gap-y-2"
                         >
                           {trackingCourierOptions.map((courier) => (
