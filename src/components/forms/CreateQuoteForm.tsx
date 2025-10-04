@@ -407,6 +407,7 @@ export function CreateQuoteForm() {
     setGeneratedQuoteId(null);
   };
 
+  const grandTotalLabel = `TOTAL (USD):`;
 
   if (isLoadingDropdowns) {
     return (
@@ -419,7 +420,6 @@ export function CreateQuoteForm() {
   
   const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
   const actionButtonsDisabled = !generatedQuoteId || isSubmitting;
-
 
   return (
     <Form {...form}>
@@ -571,7 +571,7 @@ export function CreateQuoteForm() {
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
                 <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {Number(watchedFreightCharges || 0).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />
