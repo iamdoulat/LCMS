@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -92,7 +91,7 @@ export function DatePickerField({
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="single"
-            captionLayout="dropdown-buttons"
+            captionLayout="dropdown"
             selected={field.value ? new Date(field.value) : undefined}
             onSelect={handleCalendarSelect}
             disabled={disabled}
