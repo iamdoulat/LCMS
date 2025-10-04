@@ -328,7 +328,7 @@ export function AddEmployeeForm() {
                     <FormMessage />
                 </FormItem>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <FormField control={control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name*</FormLabel><FormControl><Input placeholder="Mohammed Swaif" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                     <FormField control={control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name*</FormLabel><FormControl><Input placeholder="Gemini" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                      <FormField control={control} name="middleName" render={({ field }) => (<FormItem><FormLabel>Middle Name</FormLabel><FormControl><Input placeholder="Enter here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                      <FormField control={control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name*</FormLabel><FormControl><Input placeholder="Ullah" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </div>
@@ -691,6 +691,8 @@ export function AddEmployeeForm() {
     
 
     
+
+
 
 
 
