@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet, PlusCircle } from 'lucide-react';
+import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet, PlusCircle, MoreHorizontal, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -36,8 +36,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Ship, PackageCheck, FileText as FileTextIcon, Plane, MoreHorizontal, ShieldAlert } from 'lucide-react';
-import { Form, FormField } from '@/components/ui/form';
+import { Ship, PackageCheck, FileText as FileTextIcon, Plane, Minus, Plus } from 'lucide-react';
+import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form';
 
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
@@ -529,9 +529,7 @@ export default function TotalLCPage() {
                         <SelectTrigger>
                           <SelectValue placeholder="All Years" />
                         </SelectTrigger>
-                        <SelectContent>
-                          {yearFilterOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-                        </SelectContent>
+                        <SelectContent>{yearFilterOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1">
@@ -885,4 +883,6 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
+
 
