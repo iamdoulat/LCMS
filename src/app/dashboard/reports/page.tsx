@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -331,7 +329,16 @@ export default function ReportsPage() {
                     </div>
                     <div className="space-y-1">
                       <label htmlFor="shipmentDateFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</label>
-                      <DatePickerField field={{ value: filterShipmentDate, onChange: setFilterShipmentDate, name: 'filterShipmentDate' }} placeholder="Select Date" />
+                      <DatePickerField 
+                        field={{ 
+                          value: filterShipmentDate, 
+                          onChange: setFilterShipmentDate, 
+                          name: 'filterShipmentDate',
+                          onBlur: () => {},
+                          ref: () => {}
+                        }} 
+                        placeholder="Select Date" 
+                      />
                     </div>
                     <div className="space-y-1">
                       <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
@@ -450,8 +457,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-
-
-
-
-
