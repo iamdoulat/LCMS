@@ -60,7 +60,7 @@ function Calendar({
           return <ChevronRight className="h-4 w-4" />
         },
       }}
-      captionLayout="dropdown-buttons"
+      captionLayout="dropdown"
       fromYear={1990}
       toYear={2040}
       {...props}
