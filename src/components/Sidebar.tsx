@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -39,7 +38,7 @@ import {
   ContactRound,
   CopyCheck,
   CreditCard,
-  CurrencyDollar,
+  DollarSign,
   Factory,
   File,
   FilePlus,
@@ -220,7 +219,7 @@ export const dashboardConfig = {
         {
           title: "Petty Cash Transactions",
           href: "/dashboard/petty-cash/transactions",
-          icon: CurrencyDollar,
+          icon: DollarSign,
           description: "Record and track all cash transactions.",
         },
       ],
@@ -283,7 +282,7 @@ export const dashboardConfig = {
         {
           title: "Payroll",
           href: "#",
-          icon: CurrencyDollar,
+          icon: DollarSign,
           description: "Manage payroll transactions.",
           disabled: true,
         },
