@@ -1,8 +1,6 @@
-
-
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -82,7 +80,7 @@ const sortOptions = [
 ];
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())]; // 2020 to currentYear + 10
+const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
 
 
 const ALL_YEARS_VALUE = "__ALL_YEARS__";
@@ -152,7 +150,7 @@ export default function TotalLCPage() {
   const { user, userRole, loading: authLoading } = useAuth();
   
   const isReadOnly = useMemo(() => {
-    if (!userRole) return true; // Default to read-only if roles are not yet defined
+    if (!userRole) return true;
     const hasWritePermissions = userRole.some(role => ["Super Admin", "Admin", "Commercial"].includes(role));
     return !hasWritePermissions;
   }, [userRole]);
@@ -169,6 +167,7 @@ export default function TotalLCPage() {
   const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('Shipment Pending');
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
 
+  const shipmentDateRef = useRef<HTMLInputElement>(null);
 
   const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<DropdownOption[]>([]);
@@ -181,7 +180,6 @@ export default function TotalLCPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    // Role-based access check before fetching any data
     const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(role));
     if (!authLoading && !canView && userRole !== null) {
       setFetchError("You do not have permission to view this data.");
@@ -275,7 +273,7 @@ export default function TotalLCPage() {
       filtered = filtered.filter(lc => {
         if (Array.isArray(lc.status)) {
             return lc.status.includes(filterStatus);
-        } else if (typeof lc.status === 'string') { // Handle old data
+        } else if (typeof lc.status === 'string') {
             return lc.status === filterStatus;
         }
         return false;
@@ -296,7 +294,7 @@ export default function TotalLCPage() {
           try {
             valA = parseISO(valA);
             valB = parseISO(valB);
-             if (!isValid(valA) && isValid(valB)) return sortOrder === 'asc' ? 1 : -1;
+             if (!isValid(valA) && isValid(valB)) return sortOrder === 'asc' ? 1 :-1;
              if (isValid(valA) && !isValid(valB)) return sortOrder === 'asc' ? -1 : 1;
              if (!isValid(valA) && !isValid(valB)) return 0;
           } catch { /* ignore parsing error, will compare as strings or fall through */ }
@@ -359,7 +357,7 @@ export default function TotalLCPage() {
   const handleOpenLink = (url?: string) => {
     if (url && url.trim() !== "") {
         try {
-            new URL(url); // Validate URL
+            new URL(url);
             window.open(url, '_blank', 'noopener,noreferrer');
         } catch (e) {
             Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
@@ -537,7 +535,13 @@ export default function TotalLCPage() {
                     <div className="space-y-1">
                       <label htmlFor="shipmentDateFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</label>
                       <DatePickerField
-                        field={{ value: filterShipmentDate, onChange: setFilterShipmentDate, name: 'filterShipmentDate' }}
+                        field={{ 
+                          value: filterShipmentDate, 
+                          onChange: setFilterShipmentDate, 
+                          name: 'filterShipmentDate',
+                          onBlur: () => {},
+                          ref: shipmentDateRef
+                        }}
                         placeholder="Select Date"
                       />
                     </div>
@@ -828,7 +832,7 @@ export default function TotalLCPage() {
                   </TableBody>
                   <TableCaption className="py-4">
                     A list of your L/C data from database.
-                    Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, allLcEntries.length)} of {allLcEntries.length} entries.
+                    Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedLcEntries.length)} of {displayedLcEntries.length} entries.
                   </TableCaption>
                 </Table>
               </div>
@@ -847,7 +851,7 @@ export default function TotalLCPage() {
                     typeof page === 'number' ? (
                       <Button
                         key={page}
-                        variant={currentPage === page ? 'default' : 'outline'}
+                        variant={currentPage=== page ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => handlePageChange(page)}
                         className="w-9 h-9 p-0"
@@ -878,7 +882,3 @@ export default function TotalLCPage() {
     </div>
   );
 }
-
-
-
-
