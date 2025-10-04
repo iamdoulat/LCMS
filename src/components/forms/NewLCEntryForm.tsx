@@ -131,7 +131,6 @@ export function NewLCEntryForm() {
   const { control, setValue, watch, getValues, reset } = form;
 
   const watchedApplicantId = watch("applicantId");
-  const watchedShipmentMode = watch("shipmentMode");
   const watchedCurrency = watch("currency");
   const watchedPartialShipmentAllowed = watch("partialShipmentAllowed");
   const watchedTermsOfPay = watch("termsOfPay");
@@ -197,10 +196,11 @@ export function NewLCEntryForm() {
   }, [watchedApplicantId, applicantOptions, setValue]);
 
 
+  const shipmentModeValue = getValues("shipmentMode");
   let viaLabel = "Vessel/Flight Name";
-  if (watchedShipmentMode === "Sea") {
+  if (shipmentModeValue === "Sea") {
     viaLabel = "Vessel Name";
-  } else if (watchedShipmentMode === "Air") {
+  } else if (shipmentModeValue === "Air") {
     viaLabel = "Flight Name";
   }
 
@@ -1077,19 +1077,19 @@ export function NewLCEntryForm() {
                 <FormLabel>{viaLabel}</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder={watchedShipmentMode ? `Enter ${watchedShipmentMode === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
+                    placeholder={getValues("shipmentMode") ? `Enter ${getValues("shipmentMode") === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
                     {...field}
-                    disabled={!watchedShipmentMode}
+                    disabled={!getValues("shipmentMode")}
                     value={field.value ?? ''}
                   />
                 </FormControl>
-                {!watchedShipmentMode && <FormDescription>Select shipment mode first.</FormDescription>}
+                {!getValues("shipmentMode") && <FormDescription>Select shipment mode first.</FormDescription>}
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-        {watchedShipmentMode === 'Sea' && (
+        {getValues("shipmentMode") === 'Sea' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
             <FormField
               control={control}
@@ -1117,7 +1117,7 @@ export function NewLCEntryForm() {
             </Button>
           </div>
         )}
-        {watchedShipmentMode === 'Air' && (
+        {getValues("shipmentMode") === 'Air' && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
             <FormField
               control={control}
