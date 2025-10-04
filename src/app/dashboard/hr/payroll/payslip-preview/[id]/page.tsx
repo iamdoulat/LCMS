@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -37,7 +36,11 @@ const formatDisplayDate = (dateString?: string) => {
 };
 
 export default function PayslipPreviewPage() {
-  const { companyName, address, companyLogoUrl } = useAuth();
+  const authContext = useAuth();
+  const companyName = authContext?.companyName || 'Company Name';
+  const address = (authContext as any)?.address || 'Company Address';
+  const companyLogoUrl = authContext?.companyLogoUrl || '';
+  
   const printContainerRef = React.useRef<HTMLDivElement>(null);
   const params = useParams();
   const id = params.id as string;
