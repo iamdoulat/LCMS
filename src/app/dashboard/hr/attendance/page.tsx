@@ -67,7 +67,7 @@ const AttendanceDayRow = ({
 }) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [workingHours, setWorkingHours] = React.useState<string | null>(null);
+  const [workingHours, setWorkingHours] = React.useState<string | undefined>(undefined);
 
   const getDefaultFlag = React.useCallback((): AttendanceFlag => {
     const dayOfWeek = getDay(date);
@@ -123,7 +123,7 @@ const AttendanceDayRow = ({
 
   React.useEffect(() => {
     if (flag !== 'P' && flag !== 'D') {
-      setWorkingHours(null);
+      setWorkingHours(undefined);
       return;
     }
     if (!inTime || !outTime) {
@@ -211,7 +211,7 @@ const AttendanceDayRow = ({
 
   return (
     <TableRow>
-      <TableCell>{format(date, 'EEE, dd/MM/yy')}</TableCell>
+      <TableCell>{format(date, 'EEE, MM/dd/yyyy')}</TableCell>
       <TableCell>
         <Controller
           control={control}
@@ -654,14 +654,14 @@ export default function DailyAttendancePage() {
                                     <Label>From*</Label>
                                     <DatePickerField
                                         field={{ name: 'from', value: dateRange?.from, onChange: (date) => setDateRange(prev => ({...prev, from: date})) }}
-                                        placeholder="From Date"
+                                        placeholder="MM/DD/YYYY"
                                     />
                                   </div>
                                   <div className="space-y-1">
                                     <Label>To*</Label>
                                      <DatePickerField
                                         field={{ name: 'to', value: dateRange?.to, onChange: (date) => setDateRange(prev => ({...prev, to: date})) }}
-                                        placeholder="To Date"
+                                        placeholder="MM/DD/YYYY"
                                         fromDate={dateRange?.from}
                                     />
                                   </div>
@@ -730,18 +730,5 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
-
-    
-
-    
-
-
-
-
-
-
-    
-
-    
 
     
