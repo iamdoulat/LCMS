@@ -1,12 +1,11 @@
-
 "use client";
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, PlusCircle, Trash2, Loader2, Info, AlertTriangle, Edit, MoreHorizontal, Building } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,14 +20,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import type { HrmSettingDocument, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
+import type { DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { format, parseISO, isValid } from 'date-fns';
 import { AddDesignationForm } from '@/components/forms/AddDesignationForm';
 import { EditDesignationForm } from '@/components/forms/EditDesignationForm';
 import { AddBranchForm } from '@/components/forms/AddBranchForm';
@@ -254,7 +251,7 @@ export default function HrmSettingsPage() {
             
             {editingBranch && (
                 <Dialog open={isEditBranchDialogOpen} onOpenChange={setIsEditBranchDialogOpen}>
-                     <DialogContent className="sm:max-w-md">
+                                          <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Edit Branch</DialogTitle>
                             <DialogDescription>Update the details for this branch.</DialogDescription>
