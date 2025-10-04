@@ -114,7 +114,7 @@ export function CreateQuoteForm() {
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedFreightCharges = watch("freightCharges");
-
+  
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
@@ -470,7 +470,7 @@ export function CreateQuoteForm() {
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel><Input value={generatedQuoteId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
-            <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="MM/DD/YYYY" /><FormMessage /></FormItem>)}/>
              <FormField
                 control={form.control}
                 name="taxType"
@@ -520,7 +520,9 @@ export function CreateQuoteForm() {
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
+                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
+            </h3>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
