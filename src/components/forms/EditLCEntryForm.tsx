@@ -82,7 +82,6 @@ const defaultFormValues: LCEditFormValues = {
   totalNetWeight: 0,
   totalGrossWeight: 0,
   totalCbm: 0,
-  shipmentTerms: piShipmentModeOptions[0],
   vesselOrFlightName: '',
   vesselImoNumber: '',
   flightNumber: '',
@@ -237,7 +236,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             totalNetWeight: initialData.totalNetWeight ?? defaultFormValues.totalNetWeight,
             totalGrossWeight: initialData.totalGrossWeight ?? defaultFormValues.totalGrossWeight,
             totalCbm: initialData.totalCbm ?? defaultFormValues.totalCbm,
-            shipmentTerms: initialData.shipmentTerms ?? defaultFormValues.shipmentTerms,
             vesselOrFlightName: initialData.vesselOrFlightName ?? defaultFormValues.vesselOrFlightName,
             vesselImoNumber: initialData.vesselImoNumber ?? defaultFormValues.vesselImoNumber,
             flightNumber: initialData.flightNumber ?? defaultFormValues.flightNumber,
@@ -408,7 +406,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       currency: finalData.currency,
       termsOfPay: finalData.termsOfPay,
       status: finalData.status,
-      shipmentTerms: finalData.shipmentTerms,
       trackingCourier: finalData.trackingCourier,
       amount: finalData.amount,
       documentaryCreditNumber: finalData.documentaryCreditNumber,
@@ -845,7 +842,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               )}
             />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField
                 control={control}
                 name="partialShipments"
@@ -884,30 +881,6 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormMessage />
                 </FormItem>
                 )}
-            />
-            <FormField
-              control={control}
-              name="shipmentTerms"
-              render={({ field }) => (
-                  <FormItem className="space-y-3">
-                      <FormLabel>Shipment Terms</FormLabel>
-                      <FormControl>
-                          <RadioGroup
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              className="flex flex-wrap items-center gap-x-4 gap-y-2"
-                          >
-                              {piShipmentModeOptions.map((option) => (
-                                  <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                                      <FormControl><RadioGroupItem value={option} /></FormControl>
-                                      <FormLabel className="font-normal text-sm">{option}</FormLabel>
-                                  </FormItem>
-                              ))}
-                          </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                  </FormItem>
-              )}
             />
         </div>
         <FormField
