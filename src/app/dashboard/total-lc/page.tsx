@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -9,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet } from 'lucide-react';
+import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -541,7 +542,7 @@ export default function TotalLCPage() {
                             <FormItem className="flex flex-col">
                                 <FormLabel className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</FormLabel>
                                 <DatePickerField 
-                                    field={{...field, value: filterShipmentDate, onChange: setFilterShipmentDate }}
+                                    field={{...field, value: filterShipmentDate, onChange: setFilterShipmentDate, ref: () => {} }}
                                     placeholder="MM/DD/YYYY"
                                 />
                             </FormItem>
@@ -567,9 +568,7 @@ export default function TotalLCPage() {
                         <label htmlFor="sortBy" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground"/>Sort By</label>
                         <Select value={sortBy} onValueChange={setSortBy}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                {sortOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                            </SelectContent>
+                            <SelectContent>{sortOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
                     <div className="pt-6">
@@ -886,3 +885,4 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
