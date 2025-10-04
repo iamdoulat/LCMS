@@ -77,7 +77,6 @@ const defaultFormValues: NewLCFormValues = {
   totalNetWeight: 0,
   totalGrossWeight: 0,
   totalCbm: 0,
-  shipmentTerms: piShipmentModeOptions[0],
   vesselOrFlightName: '',
   vesselImoNumber: '',
   flightNumber: '',
