@@ -167,8 +167,6 @@ export default function TotalLCPage() {
   const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('Shipment Pending');
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
 
-  const shipmentDateRef = useRef<HTMLInputElement>(null);
-
   const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<DropdownOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
@@ -539,8 +537,7 @@ export default function TotalLCPage() {
                           value: filterShipmentDate, 
                           onChange: setFilterShipmentDate, 
                           name: 'filterShipmentDate',
-                          onBlur: () => {},
-                          ref: shipmentDateRef
+                          onBlur: () => {}
                         }}
                         placeholder="Select Date"
                       />
