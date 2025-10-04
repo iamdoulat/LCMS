@@ -197,15 +197,6 @@ export const lcEntrySchema = z.object({
   totalNetWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Net weight cannot be negative").optional().default(0)),
   totalGrossWeight: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Gross weight cannot be negative").optional().default(0)),
   totalCbm: z.preprocess(toNumberOrUndefined, z.number().nonnegative("CBM cannot be negative").optional().default(0)),
-  shipmentMode: z.enum(shipmentModeOptions).optional(),
-  shipmentTerms: z.enum(["CFR CHATTOGRAM", "CPT DHAKA", "FOB", "EXW"]).optional(),
-  vesselOrFlightName: z.string().optional(),
-  vesselImoNumber: z.string().optional(),
-  flightNumber: z.string().optional(),
-  trackingCourier: z.enum(["", ...trackingCourierOptions]).optional(),
-  trackingNumber: z.string().optional(),
-  etd: z.date().optional().nullable(),
-  eta: z.date().optional().nullable(),
   originalBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
   copyBlQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
   originalCooQty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional().default(0)),
@@ -924,7 +915,7 @@ export interface QuoteDocument {
 export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void", "Cancelled", "Refunded"] as const;
 export type InvoiceStatus = typeof invoiceStatusOptions[number];
 
-export const InvoiceLineItemSchema = z.object({ // Same as QuoteLineItemSchema for now
+export const InvoiceLineItemSchema = z.object({
   itemId: z.string().min(1, "Item selection is required."),
   itemCode: z.string().optional(),
   description: z.string().optional(),
@@ -1508,6 +1499,7 @@ export interface Employee {
   educationDetails?: Education[];
   presentAddress?: z.infer<typeof AddressSchema>;
   permanentAddress?: z.infer<typeof AddressSchema>;
+  bankDetails?: BankDetails[];
   salaryStructure?: {
     isConsolidate: boolean;
     paymentType?: "Bank" | "Cash";
