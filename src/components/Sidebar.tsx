@@ -67,7 +67,6 @@ import {
   Settings,
   ShoppingBag,
   ShoppingCart,
-  SquareKanbanDashed,
   Store,
   Ticket,
   Truck,
