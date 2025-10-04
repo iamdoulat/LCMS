@@ -1674,6 +1674,7 @@ export type AttendanceFormValues = z.infer<typeof AttendanceFormSchema>;
 export interface Attendance {
   id?: string; // Composite key like {employeeId}_{YYYY-MM-DD}
   employeeId: string;
+  employeeName: string; // Denormalized
   date: string; // YYYY-MM-DD
   flag: AttendanceFlag;
   enableInTime?: boolean;
@@ -1682,7 +1683,7 @@ export interface Attendance {
   outTime?: string;
   inTimeRemarks?: string;
   outTimeRemarks?: string;
-  workingHours?: string; // Changed from number to string to store "HH:mm"
+  workingHours?: string | undefined; // Changed from number to string to store "HH:mm"
   updatedBy: string;
   updatedAt: any;
   createdAt: any;
@@ -1722,4 +1723,5 @@ export type LeaveApplicationDocument = LeaveApplication & { id: string };
   
 
     
+
 
