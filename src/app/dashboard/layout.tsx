@@ -1,8 +1,8 @@
-
 "use client";
 
 import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
+import { AppFooter } from '@/components/layout/AppFooter';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import React from 'react';
 import dynamic from 'next/dynamic';
@@ -27,10 +27,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             <AppSidebarNav />
           </Sidebar>
           <SidebarInset>
-            <AppHeader />
-            <main className="w-full flex-1 px-4 sm:px-6 lg:px-8">
-              {children}
-            </main>
+            <div className="flex flex-col min-h-screen">
+              <AppHeader />
+              <main className="w-full flex-1 px-4 sm:px-6 lg:px-8">
+                {children}
+              </main>
+              <AppFooter />
+            </div>
           </SidebarInset>
         </div>
         <BottomNavBar />
