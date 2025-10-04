@@ -21,6 +21,7 @@ import { Loader2, Save, Settings, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/context/AuthContext';
+import { Label } from '@/components/ui/label';
 
 
 const SALARY_POLICY_COLLECTION = 'hrm_settings';
