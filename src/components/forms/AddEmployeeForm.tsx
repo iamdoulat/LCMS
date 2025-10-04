@@ -121,14 +121,17 @@ export function AddEmployeeForm() {
   
   React.useEffect(() => {
     // Set default dates on the client side to prevent hydration mismatch
-    form.reset({
-      ...form.getValues(),
-      jobBaseEffectiveDate: new Date(),
-      salaryStructure: {
-          ...form.getValues('salaryStructure'),
-          structureDate: new Date()
-      }
-    });
+    const currentValues = form.getValues();
+    if (!currentValues.jobBaseEffectiveDate && !currentValues.salaryStructure?.structureDate) {
+        form.reset({
+            ...currentValues,
+            jobBaseEffectiveDate: new Date(),
+            salaryStructure: {
+                ...currentValues.salaryStructure,
+                structureDate: new Date()
+            }
+        });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -327,9 +330,9 @@ export function AddEmployeeForm() {
                     <FormMessage />
                 </FormItem>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <FormField control={control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name*</FormLabel><FormControl><Input placeholder="Your Name" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                     <FormField control={control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name*</FormLabel><FormControl><Input placeholder="Doulat" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                      <FormField control={control} name="middleName" render={({ field }) => (<FormItem><FormLabel>Middle Name</FormLabel><FormControl><Input placeholder="Enter here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                     <FormField control={control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name*</FormLabel><FormControl><Input placeholder="Last Name" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                     <FormField control={control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name*</FormLabel><FormControl><Input placeholder="Last name" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </div>
             </div>
         </div>

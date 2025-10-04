@@ -119,17 +119,23 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   React.useEffect(() => {
     // This effect runs only on the client-side after initial render.
     // It safely sets dates, preventing hydration mismatches.
-    form.reset({
-      ...form.getValues(),
-      dateOfBirth: employee.dateOfBirth ? new Date(employee.dateOfBirth) : undefined,
-      joinedDate: employee.joinedDate ? new Date(employee.joinedDate) : undefined,
-      jobStatusEffectiveDate: employee.jobStatusEffectiveDate ? new Date(employee.jobStatusEffectiveDate) : undefined,
-      jobBaseEffectiveDate: employee.jobBaseEffectiveDate ? new Date(employee.jobBaseEffectiveDate) : new Date(),
-      salaryStructure: {
-          ...form.getValues('salaryStructure'),
-          structureDate: employee.salaryStructure?.structureDate ? new Date(employee.salaryStructure.structureDate) : new Date()
-      }
-    });
+    const currentValues = form.getValues();
+    const effectiveDate = employee.jobBaseEffectiveDate ? new Date(employee.jobBaseEffectiveDate) : undefined;
+    const structureDate = employee.salaryStructure?.structureDate ? new Date(employee.salaryStructure.structureDate) : undefined;
+
+    if (currentValues.jobBaseEffectiveDate === undefined && currentValues.salaryStructure?.structureDate === undefined) {
+      form.reset({
+        ...currentValues,
+        dateOfBirth: employee.dateOfBirth ? new Date(employee.dateOfBirth) : undefined,
+        joinedDate: employee.joinedDate ? new Date(employee.joinedDate) : undefined,
+        jobStatusEffectiveDate: employee.jobStatusEffectiveDate ? new Date(employee.jobStatusEffectiveDate) : undefined,
+        jobBaseEffectiveDate: effectiveDate,
+        salaryStructure: {
+            ...currentValues.salaryStructure,
+            structureDate: structureDate,
+        }
+      });
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employee]);
 
@@ -313,9 +319,9 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                     <FormMessage />
                 </FormItem>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <FormField control={control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name*</FormLabel><FormControl><Input placeholder="Mohammed Swaif" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                     <FormField control={control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name*</FormLabel><FormControl><Input placeholder="Doulat" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                      <FormField control={control} name="middleName" render={({ field }) => (<FormItem><FormLabel>Middle Name</FormLabel><FormControl><Input placeholder="Enter here" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                     <FormField control={control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name*</FormLabel><FormControl><Input placeholder="Ullah" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                     <FormField control={control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name*</FormLabel><FormControl><Input placeholder="Last name" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                 </div>
             </div>
         </div>
@@ -676,6 +682,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     
 
     
+
 
 
 
