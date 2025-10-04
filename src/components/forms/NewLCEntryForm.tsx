@@ -77,8 +77,6 @@ const defaultFormValues: NewLCFormValues = {
   totalNetWeight: 0,
   totalGrossWeight: 0,
   totalCbm: 0,
-  etd: undefined,
-  eta: undefined,
   originalBlQty: 0,
   copyBlQty: 0,
   originalCooQty: 0,
