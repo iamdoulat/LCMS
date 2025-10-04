@@ -1,5 +1,3 @@
-
-
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -23,7 +21,6 @@ export type Currency = typeof currencyOptions[number];
 export const trackingCourierOptions = ["DHL", "FedEx"] as const;
 export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
-
 export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Payment Pending", "Payment Done", "Shipment Done"] as const;
 export type LCStatus = typeof lcStatusOptions[number];
 
@@ -34,6 +31,13 @@ export const certificateOfOriginCountries = [
   "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "THAILAND", "HONG KONG", "TURKEY", "GERMANY",
 ] as const;
 export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[number];
+
+// --- Proforma Invoice Types - MOVED HERE BEFORE USE ---
+export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
+export type FreightChargeOption = typeof freightChargeOptions[number];
+export const piShipmentModeOptions = ["CFR CHATTOGRAM", "CPT DHAKA", "FOB", "EXW"] as const;
+export type PIShipmentMode = typeof piShipmentModeOptions[number];
+// --- END Moved Types ---
 
 export const toNumberOrUndefined = (val: unknown): number | undefined => {
   if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
@@ -492,12 +496,7 @@ export type ExtractShippingDataOutput = z.infer<typeof ExtractShippingDataOutput
 // --- END Extract Shipping Data Types ---
 
 
-// --- Proforma Invoice Types ---
-export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
-export type FreightChargeOption = typeof freightChargeOptions[number];
-export const piShipmentModeOptions = ["CFR CHATTOGRAM", "CPT DHAKA", "FOB", "EXW"] as const;
-export type PIShipmentMode = typeof piShipmentModeOptions[number];
-
+// --- Proforma Invoice Types (continuation) ---
 export interface ProformaInvoiceLineItem {
   slNo?: string;
   modelNo: string;
@@ -1725,13 +1724,3 @@ export interface LeaveApplication {
 export type LeaveApplicationDocument = LeaveApplication & { id: string };
 
 // --- END Leave Types ---
-
-    
-
-
-  
-
-    
-
-
-
