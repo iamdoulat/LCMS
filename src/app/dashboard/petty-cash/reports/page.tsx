@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -163,11 +162,29 @@ export default function PettyCashReportsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
                 <div className="space-y-1">
                   <Label>Date From</Label>
-                  <DatePickerField field={{ value: filterDateFrom, onChange: setFilterDateFrom, name: 'filterDateFrom' }} placeholder="Start Date" />
+                  <DatePickerField 
+                    field={{ 
+                      value: filterDateFrom, 
+                      onChange: setFilterDateFrom, 
+                      name: 'filterDateFrom',
+                      onBlur: () => {},
+                      ref: () => {}
+                    }} 
+                    placeholder="Start Date" 
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>Date To</Label>
-                  <DatePickerField field={{ value: filterDateTo, onChange: setFilterDateTo, name: 'filterDateTo' }} placeholder="End Date" />
+                  <DatePickerField 
+                    field={{ 
+                      value: filterDateTo, 
+                      onChange: setFilterDateTo, 
+                      name: 'filterDateTo',
+                      onBlur: () => {},
+                      ref: () => {}
+                    }} 
+                    placeholder="End Date" 
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="flex items-center"><Wallet className="mr-1 h-4 w-4 text-muted-foreground"/>Account</Label>
