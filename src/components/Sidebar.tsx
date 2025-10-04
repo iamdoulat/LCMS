@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -67,8 +68,6 @@ import {
   Settings,
   ShoppingBag,
   ShoppingCart,
-  SmartHome,
-  SquareKanbanDashed,
   Store,
   Ticket,
   User2,
@@ -314,7 +313,7 @@ export const dashboardConfig = {
         {
           title: "Demo Machine Challans",
           href: "/dashboard/demo-machine-challans",
-          icon: SmartHome,
+          icon: Home,
           description: "Manage demo machine challans.",
         },
       ],
@@ -456,3 +455,5 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(({ className, ...
 Sidebar.displayName = "Sidebar"
 
 export default Sidebar;
+
+    
