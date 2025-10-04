@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -68,6 +67,8 @@ import {
   Settings,
   ShoppingBag,
   ShoppingCart,
+  SmartHome,
+  SquareKanbanDashed,
   Store,
   Ticket,
   User2,
@@ -313,7 +314,7 @@ export const dashboardConfig = {
         {
           title: "Demo Machine Challans",
           href: "/dashboard/demo-machine-challans",
-          icon: Home,
+          icon: SmartHome,
           description: "Manage demo machine challans.",
         },
       ],
@@ -350,7 +351,7 @@ export const dashboardConfig = {
 interface SidebarProps extends React.HTMLAttributes<HTMLElement> {}
 
 const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(({ className, ...props }, ref) => {
-  const { user, userRole, isLoading } = useAuth();
+  const { user, userRole } = useAuth();
   const router = useRouter();
   const isAdmin = userRole?.includes('Admin') || userRole?.includes('Super Admin');
 
@@ -403,12 +404,10 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(({ className, ...
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>
                 <span className="mr-2">Role:</span>
-                {isLoading ? (
+                {!userRole ? (
                   <Skeleton className="h-4 w-20" />
-                ) : userRole ? (
-                  userRole.join(', ')
                 ) : (
-                  'Guest'
+                  userRole.join(', ') || 'Guest'
                 )}
                 <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
               </DropdownMenuItem>
@@ -455,5 +454,3 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(({ className, ...
 Sidebar.displayName = "Sidebar"
 
 export default Sidebar;
-
-    
