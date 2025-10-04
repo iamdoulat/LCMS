@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -310,7 +309,7 @@ const EmployeeAttendanceRow = ({
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                       <div className="p-4 bg-muted/50 overflow-x-auto">
+                    <div className="p-4 bg-muted/50 overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -633,7 +632,7 @@ export default function DailyAttendancePage() {
                         <AlertTriangle className="h-4 w-4 !text-blue-600" />
                         <AlertTitle className="font-semibold !text-blue-700 dark:!text-blue-300">Bulk Upload CSV Format</AlertTitle>
                         <AlertDescription>
-                            The CSV file must have the following headers: <strong>employeeCode, date, flag, inTime, outTime, remarks</strong>. Date format should be MM/DD/YYYY or YYYY-MM-DD. Time format must be HH:mm (24-hour).
+                            The CSV file must have the following headers:<strong>employeeCode, date, flag, inTime, outTime, remarks</strong>. Date format should be MM/DD/YYYY or YYYY-MM-DD. Time format must be HH:mm (24-hour).
                         </AlertDescription>
                     </Alert>
                    <Card className="mb-6 shadow-md p-4">
@@ -653,14 +652,26 @@ export default function DailyAttendancePage() {
                                   <div className="space-y-1">
                                     <Label>From*</Label>
                                     <DatePickerField
-                                        field={{ name: 'from', value: dateRange?.from, onChange: (date) => setDateRange(prev => ({...prev, from: date})) }}
+                                        field={{
+                                            name: 'from',
+                                            value: dateRange?.from,
+                                            onChange: (date) => setDateRange(prev => ({...prev, from: date})),
+                                            onBlur: () => {},
+                                            ref: () => {}
+                                        }}
                                         placeholder="MM/DD/YYYY"
                                     />
                                   </div>
                                   <div className="space-y-1">
                                     <Label>To*</Label>
-                                     <DatePickerField
-                                        field={{ name: 'to', value: dateRange?.to, onChange: (date) => setDateRange(prev => ({...prev, to: date})) }}
+                                    <DatePickerField
+                                        field={{
+                                            name: 'to',
+                                            value: dateRange?.to,
+                                            onChange: (date) => setDateRange(prev => ({...prev, to: date})),
+                                            onBlur: () => {},
+                                            ref: () => {}
+                                        }}
                                         placeholder="MM/DD/YYYY"
                                         fromDate={dateRange?.from}
                                     />
@@ -730,5 +741,3 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
-
-    
