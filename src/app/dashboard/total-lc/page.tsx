@@ -1,13 +1,15 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useForm } from 'react-hook-form'; // Import useForm
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet } from 'lucide-react';
+import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -34,6 +36,8 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Ship, PackageCheck, FileText as FileTextIcon, Plane, MoreHorizontal, ShieldAlert } from 'lucide-react';
+import { Form, FormField } from '@/components/ui/form';
+
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -176,6 +180,8 @@ export default function TotalLCPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [currentPage, setCurrentPage] = useState(1);
+
+  const filterForm = useForm();
 
   useEffect(() => {
     const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(role));
@@ -366,14 +372,10 @@ export default function TotalLCPage() {
   };
 
   const clearFilters = () => {
-    setFilterLcNumber('');
-    setFilterApplicantId('');
-    setFilterBeneficiaryId('');
-    setFilterShipmentDate(null);
-    setFilterStatus('');
+    setFilterLcNumber(''); setFilterApplicantId(''); setFilterBeneficiaryId('');
+    setFilterShipmentDate(null); setFilterStatus('');
     setFilterYear(new Date().getFullYear().toString());
-    setSortBy('lcIssueDate');
-    setSortOrder('desc');
+    setSortBy('lcIssueDate'); setSortOrder('desc');
     setCurrentPage(1);
   };
 
@@ -482,6 +484,7 @@ export default function TotalLCPage() {
                   <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter &amp; Sort Options</CardTitle>
                 </CardHeader>
                 <CardContent className="p-2 space-y-4">
+                 <Form {...filterForm}>
                   <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
                     <div className="space-y-1">
                       <label htmlFor="lcNumberFilter" className="text-sm font-medium">T/T OR L/C Number</label>
@@ -520,40 +523,43 @@ export default function TotalLCPage() {
                       <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
                       <Select
                         value={filterYear === '' ? ALL_YEARS_VALUE : filterYear}
-                        onValueChange={(value) => setFilterYear(value === ALL_YEARS_VALUE ? '' : value)}
+                        onValueChange={(v) => setFilterYear(v === ALL_YEARS_VALUE ? '' : v)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="All Years" />
                         </SelectTrigger>
                         <SelectContent>
-                          {yearFilterOptions.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                          {yearFilterOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-1">
-                      <label htmlFor="shipmentDateFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</label>
-                      <DatePickerField
-                        field={{ 
-                          value: filterShipmentDate, 
-                          onChange: setFilterShipmentDate, 
-                          name: 'filterShipmentDate',
-                          onBlur: () => {}
-                        }}
-                        placeholder="Select Date"
-                      />
+                       <FormField
+                          control={filterForm.control}
+                          name="filterShipmentDate"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</FormLabel>
+                                <DatePickerField 
+                                    field={{...field, value: filterShipmentDate, onChange: setFilterShipmentDate }}
+                                    placeholder="MM/DD/YYYY"
+                                />
+                            </FormItem>
+                          )}
+                        />
                     </div>
                     <div className="space-y-1">
                       <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
                       <Select
                         value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus}
-                        onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as LCStatus | '')}
+                        onValueChange={(v) => setFilterStatus(v === ALL_STATUSES_VALUE ? '' : v as LCStatus | '')}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="All Statuses" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
-                          {lcStatusOptions.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                          {lcStatusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -562,7 +568,7 @@ export default function TotalLCPage() {
                         <Select value={sortBy} onValueChange={setSortBy}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
-                                {sortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                {sortOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -570,9 +576,10 @@ export default function TotalLCPage() {
                       <Button onClick={clearFilters} variant="outline" className="w-full"><XCircle className="mr-2 h-4 w-4" /> Clear Filters &amp; Sort</Button>
                     </div>
                   </div>
+                 </Form>
                 </CardContent>
               </Card>
-
+              
               <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -665,9 +672,9 @@ export default function TotalLCPage() {
                                 </DropdownMenu>
                             </TableCell>
                           </TableRow>
-                          <TableRow key={`${lc.id}-actions`}>
-                            <TableCell colSpan={9} className="pt-0 pb-4 px-4 border-b border-border bg-muted/20">
-                              <div className="flex flex-wrap justify-center items-center gap-2">
+                          <TableRow key={`${lc.id}-actions`} className="bg-muted/20">
+                            <TableCell colSpan={9} className="py-2 px-4">
+                              <div className="flex flex-wrap items-center gap-2">
                                   {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
                                     <Popover>
                                         <PopoverTrigger asChild>
@@ -735,8 +742,8 @@ export default function TotalLCPage() {
                                 disabled={!lc.trackingCourier || !lc.trackingNumber}
                                 title="Track Original Document"
                                 >
-                                {lc.trackingCourier === "DHL" ? <img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo" /> :
-                                lc.trackingCourier === "FedEx" ? <img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo" /> :
+                                {lc.trackingCourier === "DHL" ? <img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo"/> :
+                                lc.trackingCourier === "FedEx" ? <img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo"/> :
                                 <PackageCheck className="mr-1.5 h-3.5 w-3.5" />}
                                 {lc.trackingCourier ? lc.trackingCourier : "Docs"}
                                 </Button>
