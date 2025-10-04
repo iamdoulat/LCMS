@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -61,7 +60,7 @@ export function DatePickerInput({
             disabled={disabled}
             fromDate={fromDate}
             toDate={toDate}
-            captionLayout="dropdown-buttons"
+            captionLayout="dropdown"
             fromYear={1990}
             toYear={2040}
           />
