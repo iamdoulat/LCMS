@@ -30,7 +30,7 @@ import {
   Bell,
   Building2,
   Calendar,
-  Category,
+  Layers,
   CheckCircle2,
   ChevronsRight,
   ClipboardList,
@@ -214,7 +214,7 @@ export const dashboardConfig = {
         {
           title: "Petty Cash Categories",
           href: "/dashboard/petty-cash/categories",
-          icon: Category,
+          icon: Layers,
           description: "Categorize your cash transactions.",
         },
         {
