@@ -61,6 +61,9 @@ export function DatePickerInput({
             disabled={disabled}
             fromDate={fromDate}
             toDate={toDate}
+            captionLayout="dropdown-buttons"
+            fromYear={1990}
+            toYear={2040}
           />
         </PopoverContent>
       </Popover>
