@@ -130,7 +130,7 @@
     .bg-icon-no-warranty { @apply bg-red-200 text-gray-800 dark:bg-red-800 dark:text-gray-100; }
     .bg-icon-notifications { @apply bg-blue-200 text-gray-800 dark:bg-blue-800 dark:text-gray-100; }
     .bg-icon-company { @apply bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-100; }
-    .bg-icon-users { @apply bg-teal-200 text-gray-800 dark:bg-teal-800 dark:text-gray-100; }
+    .bg-icon-users { @apply bg-green-200 text-gray-800 dark:bg-green-800 dark:text-gray-100; }
     .bg-icon-logs { @apply bg-indigo-200 text-gray-800 dark:bg-indigo-800 dark:text-gray-100; }
     .bg-icon-financial { @apply bg-green-200 text-gray-800 dark:bg-green-800 dark:text-gray-100; }
 }
