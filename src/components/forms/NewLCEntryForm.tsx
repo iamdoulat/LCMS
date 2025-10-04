@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import * as React from 'react';
@@ -79,7 +77,6 @@ const defaultFormValues: NewLCFormValues = {
   totalNetWeight: 0,
   totalGrossWeight: 0,
   totalCbm: 0,
-  shipmentMode: shipmentModeOptions[0],
   shipmentTerms: piShipmentModeOptions[0],
   vesselOrFlightName: '',
   vesselImoNumber: '',
