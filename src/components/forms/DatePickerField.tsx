@@ -25,7 +25,7 @@ interface DatePickerFieldProps {
 
 export function DatePickerField({
   field,
-  placeholder,
+  placeholder = "MM/DD/YYYY", // Set default placeholder
   disabled,
   fromDate,
   toDate,
@@ -71,7 +71,7 @@ export function DatePickerField({
     <div className="relative w-full">
       <Input
         type="text"
-        placeholder={placeholder || "MM/DD/YYYY"}
+        placeholder={placeholder}
         value={inputValue}
         onChange={handleInputChange}
         disabled={disabled}
