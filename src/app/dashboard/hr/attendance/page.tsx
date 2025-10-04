@@ -86,7 +86,6 @@ const AttendanceDayRow = ({
 
   const form = useForm<AttendanceDayFormValues>({
     resolver: zodResolver(attendanceDaySchema),
-    // Default values are now more carefully handled in useEffect
   });
   
   React.useEffect(() => {
@@ -108,7 +107,7 @@ const AttendanceDayRow = ({
   const flag = watch('flag');
   
   React.useEffect(() => {
-    if (!initialData && inTime && flag === 'A') { // Only change if it's a new record and currently Absent
+    if (!initialData && inTime && flag === 'A') {
       try {
         const [hours, minutes] = inTime.split(':').map(Number);
         if (hours > 9 || (hours === 9 && minutes > 10)) {
@@ -309,7 +308,7 @@ const EmployeeAttendanceRow = ({
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                    <div className="p-4 bg-muted/50 overflow-x-auto">
+                       <div className="p-4 bg-muted/50 overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -514,6 +513,10 @@ export default function DailyAttendancePage() {
                     await batch.commit();
                     Swal.fire("Upload Complete", `${processedCount} records processed successfully.`, "success");
                     await refetchAttendance();
+                    // Reset file input
+                    if (fileInputRef.current) {
+                        fileInputRef.current.value = '';
+                    }
                 } catch (error: any) {
                     Swal.fire("Upload Failed", `An error occurred during database write: ${error.message}`, "error");
                 }
@@ -632,7 +635,7 @@ export default function DailyAttendancePage() {
                         <AlertTriangle className="h-4 w-4 !text-blue-600" />
                         <AlertTitle className="font-semibold !text-blue-700 dark:!text-blue-300">Bulk Upload CSV Format</AlertTitle>
                         <AlertDescription>
-                            The CSV file must have the following headers:<strong>employeeCode, date, flag, inTime, outTime, remarks</strong>. Date format should be MM/DD/YYYY or YYYY-MM-DD. Time format must be HH:mm (24-hour).
+                            The CSV file must have the following headers: <strong>employeeCode, date, flag, inTime, outTime, remarks</strong>. Date format should be MM/DD/YYYY or YYYY-MM-DD. Time format must be HH:mm (24-hour).
                         </AlertDescription>
                     </Alert>
                    <Card className="mb-6 shadow-md p-4">
@@ -655,7 +658,13 @@ export default function DailyAttendancePage() {
                                         field={{
                                             name: 'from',
                                             value: dateRange?.from,
-                                            onChange: (date) => setDateRange(prev => ({...prev, from: date})),
+                                            onChange: (date) => setDateRange(prev => {
+                                                const newFrom = date || prev?.from || startOfDay(new Date());
+                                                return {
+                                                    from: newFrom,
+                                                    to: prev?.to
+                                                };
+                                            }),
                                             onBlur: () => {},
                                             ref: () => {}
                                         }}
@@ -668,7 +677,12 @@ export default function DailyAttendancePage() {
                                         field={{
                                             name: 'to',
                                             value: dateRange?.to,
-                                            onChange: (date) => setDateRange(prev => ({...prev, to: date})),
+                                            onChange: (date) => setDateRange(prev => {
+                                                return {
+                                                    from: prev?.from || startOfDay(new Date()),
+                                                    to: date
+                                                };
+                                            }),
                                             onBlur: () => {},
                                             ref: () => {}
                                         }}
