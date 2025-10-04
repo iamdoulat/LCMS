@@ -12,15 +12,16 @@ export function AppFooter() {
       <Separator />
       <div className="container mx-auto py-4 text-center text-sm text-muted-foreground">
         <p>
-          &copy; {currentYear} LC Management System. All Rights Reserved. | Contact:{" "}
+          &copy; {currentYear} - Designed and Developed by{" "}
           <Link
             href="https://cards.mddoulat.com/iamdoulat"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline"
           >
-            mddoulat.com
-          </Link>
+            Doulat
+          </Link>{" "}
+          v1.1
         </p>
       </div>
     </footer>
