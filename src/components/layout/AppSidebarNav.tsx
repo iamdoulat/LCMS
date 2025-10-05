@@ -147,8 +147,6 @@ const lcManagementNavItems: NavItem[] = [
     { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment Done', icon: PackageCheck, iconColorClass: 'bg-icon-shipment-done' },
     { href: '/dashboard/shipments/lc-payment-pending', label: 'Payment Pending', icon: DollarSign, iconColorClass: 'bg-icon-payment-pending' },
     { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign, iconColorClass: 'bg-icon-payment-done' },
-    { href: '/dashboard/google-sheets', label: 'Google Sheets', icon: Sheet, iconColorClass: 'bg-icon-sheets' },
-    { href: '/dashboard/google-drive', label: 'Google Drive', icon: FolderOpen, iconColorClass: 'bg-icon-drive' },
 ];
 
 const partiesNavItems: NavItem[] = [
