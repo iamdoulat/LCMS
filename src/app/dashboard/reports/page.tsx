@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -6,14 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet } from 'lucide-react';
+import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet, PlusCircle, MoreHorizontal, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile } from '@/types';
 import { lcStatusOptions, currencyOptions } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fns';
+import { format, parseISO, isValid, startOfDay, isAfter, isEqual, getYear } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
@@ -283,9 +284,10 @@ export default function ReportsPage() {
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentItems = displayedLcEntries.slice(indexOfFirstItem, indexOfLastItem);
   const handlePageChange = (page: number) => setCurrentPage(page);
+  const { control } = useForm(); // For DatePickerField
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader className="noprint">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
