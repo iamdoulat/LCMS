@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form'; // Import useForm
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -181,7 +181,6 @@ export default function TotalLCPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [currentPage, setCurrentPage] = useState(1);
-
   const filterForm = useForm();
 
   useEffect(() => {
@@ -882,6 +881,7 @@ export default function TotalLCPage() {
     </div>
   );
 }
+
 
 
 
