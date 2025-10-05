@@ -545,7 +545,7 @@ export default function DashboardPage() {
 
   if (userRole && !userRole.some(r => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(r))) {
     return (
-        <div className="flex flex-col gap-8 mx-[5px]">
+        <div className="flex flex-col gap-8 mx-[10px]">
              {notice && <NoticeBoardDialog notice={notice} />}
              <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
                 <div>
@@ -609,7 +609,7 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="flex flex-col gap-8 mx-[5px]">
+    <div className="flex flex-col gap-8 mx-[10px]">
       {notice && <NoticeBoardDialog notice={notice} />}
       <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
         <div>
@@ -1016,3 +1016,4 @@ export default function DashboardPage() {
     
 
     
+
