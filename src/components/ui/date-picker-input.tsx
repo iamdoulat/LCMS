@@ -20,6 +20,8 @@ interface DatePickerInputProps {
   fromDate?: Date;
   toDate?: Date;
   disabled?: boolean;
+  fromYear?: number;
+  toYear?: number;
 }
 
 export function DatePickerInput({
@@ -29,6 +31,8 @@ export function DatePickerInput({
   fromDate,
   toDate,
   disabled = false,
+  fromYear = 1990,
+  toYear = 2040,
 }: DatePickerInputProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -45,7 +49,11 @@ export function DatePickerInput({
             disabled={disabled}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {field?.value ? format(new Date(field.value), "PPP") : <span>{placeholder || "Pick a date"}</span>}
+            {field?.value ? (
+              format(new Date(field.value), "PPP")
+            ) : (
+              <span>{placeholder || "Pick a date"}</span>
+            )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -56,13 +64,13 @@ export function DatePickerInput({
               field?.onChange(date);
               setOpen(false);
             }}
-            initialFocus
             disabled={disabled}
             fromDate={fromDate}
             toDate={toDate}
-            captionLayout="dropdown"
-            fromYear={1990}
-            toYear={2040}
+            captionLayout="dropdown-buttons"
+            fromYear={fromYear}
+            toYear={toYear}
+            defaultMonth={field?.value ? new Date(field.value) : undefined}
           />
         </PopoverContent>
       </Popover>
