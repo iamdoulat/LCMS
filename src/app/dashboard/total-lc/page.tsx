@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form'; // Import useForm
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -447,7 +447,7 @@ export default function TotalLCPage() {
 
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -479,7 +479,7 @@ export default function TotalLCPage() {
                 <AlertDescription>{fetchError}</AlertDescription>
             </Alert>
           ) : (
-            <>
+            <div>
               <Card className="mb-6 shadow-md p-4">
                 <CardHeader className="p-2 pb-4">
                   <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter &amp; Sort Options</CardTitle>
@@ -576,7 +576,6 @@ export default function TotalLCPage() {
                  </Form>
                 </CardContent>
               </Card>
-              
               <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -876,13 +875,14 @@ export default function TotalLCPage() {
                   </Button>
                 </div>
               )}
-            </>
+            </div>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
+
 
 
 
