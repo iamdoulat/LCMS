@@ -25,7 +25,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           <SidebarInset>
             <div className="flex flex-col min-h-screen">
               <AppHeader />
-              <main className="w-full flex-1 px-4 sm:px-6 lg:px-8">
+              <main className="w-full flex-1">
                 <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
                   {children}
                 </Suspense>
