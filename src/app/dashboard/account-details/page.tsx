@@ -335,14 +335,14 @@ export default function AccountDetailsPage() {
 
   if (!user) {
      return (
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <Card className="shadow-lg"><CardHeader><CardTitle>Account Details</CardTitle></CardHeader><CardContent><p>Please log in.</p></CardContent></Card>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8 px-5">
+    <div className="container mx-auto py-8 space-y-8 px-4 sm:px-6 lg:px-8">
       <Form {...form}>
         <Card className="max-w-6xl mx-auto shadow-xl">
           <CardHeader>
@@ -404,7 +404,7 @@ export default function AccountDetailsPage() {
                       </div>
                   </div>
 
-                  <div className="space-y-6 flex-1 w-full">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 w-full">
                       <FormField
                           control={form.control}
                           name="displayName"
@@ -578,6 +578,8 @@ export default function AccountDetailsPage() {
 }
 
     
+    
+
     
 
     
