@@ -86,14 +86,14 @@ export default function InstallationReportsViewPage() {
             ...data,
             createdAt: isValid(createdAt) ? format(createdAt, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : 'N/A',
             updatedAt: data.updatedAt instanceof Timestamp ? format(data.updatedAt.toDate(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : (data.updatedAt && isValid(parseISO(data.updatedAt)) ? format(parseISO(data.updatedAt), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : 'N/A'),
-            invoiceDate: data.invoiceDate && isValid(parseISO(data.invoiceDate)) ? data.invoiceDate : undefined,
-            commercialInvoiceDate: data.commercialInvoiceDate && isValid(parseISO(data.commercialInvoiceDate)) ? data.commercialInvoiceDate : undefined,
-            etdDate: data.etdDate && isValid(parseISO(data.etdDate)) ? data.etdDate : undefined,
-            etaDate: data.etaDate && isValid(parseISO(data.etaDate)) ? data.etaDate : undefined,
+            invoiceDate: data.invoiceDate && data.invoiceDate.toDate ? data.invoiceDate.toDate().toISOString() : data.invoiceDate,
+            commercialInvoiceDate: data.commercialInvoiceDate && data.commercialInvoiceDate.toDate ? data.commercialInvoiceDate.toDate().toISOString() : data.commercialInvoiceDate,
+            etdDate: data.etdDate && data.etdDate.toDate ? data.etdDate.toDate().toISOString() : data.etdDate,
+            etaDate: data.etaDate && data.etaDate.toDate ? data.etaDate.toDate().toISOString() : data.etaDate,
             packingListUrl: data.packingListUrl || undefined, // Ensure packingListUrl is explicitly handled
             installationDetails: data.installationDetails?.map((item: any) => ({
                 ...item,
-                installDate: item.installDate && isValid(parseISO(item.installDate)) ? item.installDate : undefined,
+                installDate: item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate,
             })) || [],
           } as InstallationReportDocument;
         });
@@ -228,7 +228,7 @@ export default function InstallationReportsViewPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
