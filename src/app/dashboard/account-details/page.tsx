@@ -128,71 +128,110 @@ export default function AccountDetailsPage() {
       Swal.fire("Error", "User or employee data not available.", "error");
       return;
     }
-
-    const result = await Swal.fire({
-      title: `Enter ${type === 'in' ? 'In Time' : 'Out Time'} Remarks (Optional)`,
-      input: 'textarea',
-      inputPlaceholder: 'Type your remarks here...',
-      showCancelButton: true,
-      confirmButtonText: 'Submit',
-      preConfirm: (remarks) => {
-        return remarks || '';
-      }
-    });
-
-    if (!result.isConfirmed) {
+  
+    setAttendanceLoading(true);
+  
+    // 1. Get Geolocation
+    if (!navigator.geolocation) {
+      Swal.fire("Geolocation Not Supported", "Your browser does not support geolocation.", "error");
+      setAttendanceLoading(false);
       return;
     }
-    const remarks = result.value;
-
-    setAttendanceLoading(true);
-    const now = new Date();
-    const formattedDate = format(now, 'yyyy-MM-dd');
-    const currentTime = format(now, 'HH:mm');
-    const docId = `${employeeData.id}_${formattedDate}`;
-    const docRef = doc(firestore, 'attendance', docId);
-
-    try {
-      const currentDoc = await getDoc(docRef);
-      let dataToSet: Record<string, any> = {};
-
-      if (type === 'in') {
-        const flag = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 10) ? 'D' : 'P';
-        dataToSet = {
-          employeeId: employeeData.id,
-          employeeName: employeeData.fullName,
-          date: format(now, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          flag: flag,
-          inTime: currentTime,
-          inTimeRemarks: remarks,
-          updatedBy: user.uid,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-        await setDoc(docRef, dataToSet, { merge: true });
-        setDailyAttendance(dataToSet as AttendanceDocument);
-        Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
-      } else if (type === 'out') {
-        if (!currentDoc.exists() || !currentDoc.data().inTime) {
-          Swal.fire("Cannot Clock Out", "You must clock in before you can clock out.", "warning");
+  
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const locationData = { latitude, longitude };
+  
+        // 2. Get Remarks
+        const result = await Swal.fire({
+          title: `Enter ${type === 'in' ? 'In Time' : 'Out Time'} Remarks (Optional)`,
+          input: 'textarea',
+          inputPlaceholder: 'Type your remarks here...',
+          showCancelButton: true,
+          confirmButtonText: 'Submit',
+          preConfirm: (remarks) => {
+            return remarks || '';
+          }
+        });
+  
+        if (!result.isConfirmed) {
           setAttendanceLoading(false);
           return;
         }
-        dataToSet = {
-          outTime: currentTime,
-          outTimeRemarks: remarks,
-          updatedAt: serverTimestamp(),
-        };
-        await updateDoc(docRef, dataToSet);
-        setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
-        Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
+        const remarks = result.value;
+  
+        // 3. Save to Firestore
+        const now = new Date();
+        const formattedDate = format(now, 'yyyy-MM-dd');
+        const currentTime = format(now, 'HH:mm');
+        const docId = `${employeeData.id}_${formattedDate}`;
+        const docRef = doc(firestore, 'attendance', docId);
+  
+        try {
+          let dataToSet: Record<string, any> = {};
+  
+          if (type === 'in') {
+            const flag = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 10) ? 'D' : 'P';
+            dataToSet = {
+              employeeId: employeeData.id,
+              employeeName: employeeData.fullName,
+              date: format(now, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+              flag: flag,
+              inTime: currentTime,
+              inTimeRemarks: remarks,
+              inTimeLocation: locationData,
+              updatedBy: user.uid,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            };
+            await setDoc(docRef, dataToSet, { merge: true });
+            setDailyAttendance(dataToSet as AttendanceDocument);
+            Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
+          } else if (type === 'out') {
+            const currentDoc = await getDoc(docRef);
+            if (!currentDoc.exists() || !currentDoc.data().inTime) {
+              Swal.fire("Cannot Clock Out", "You must clock in before you can clock out.", "warning");
+              setAttendanceLoading(false);
+              return;
+            }
+            dataToSet = {
+              outTime: currentTime,
+              outTimeRemarks: remarks,
+              outTimeLocation: locationData,
+              updatedAt: serverTimestamp(),
+            };
+            await updateDoc(docRef, dataToSet);
+            setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
+            Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
+          }
+        } catch (error: any) {
+          console.error("Error updating attendance:", error);
+          Swal.fire("Error", `Failed to record attendance: ${error.message}`, "error");
+        } finally {
+          setAttendanceLoading(false);
+        }
+      },
+      (error) => {
+        let errorMessage = "Could not get your location. ";
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage += "You denied the request for Geolocation.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage += "Location information is unavailable.";
+            break;
+          case error.TIMEOUT:
+            errorMessage += "The request to get user location timed out.";
+            break;
+          default:
+            errorMessage += "An unknown error occurred.";
+            break;
+        }
+        Swal.fire("Location Error", errorMessage, "error");
+        setAttendanceLoading(false);
       }
-    } catch (error: any) {
-      console.error("Error updating attendance:", error);
-      Swal.fire("Error", `Failed to record attendance: ${error.message}`, "error");
-    } finally {
-      setAttendanceLoading(false);
-    }
+    );
   };
 
 
@@ -581,5 +620,7 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
+    
 
     
