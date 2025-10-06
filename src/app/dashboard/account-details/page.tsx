@@ -335,14 +335,14 @@ export default function AccountDetailsPage() {
 
   if (!user) {
      return (
-      <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <Card className="shadow-lg"><CardHeader><CardTitle>Account Details</CardTitle></CardHeader><CardContent><p>Please log in.</p></CardContent></Card>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8 px-4 sm:px-6 lg:px-8">
+    <div className="container mx-auto space-y-8 px-5 py-8">
       <Form {...form}>
         <Card className="max-w-6xl mx-auto shadow-xl">
           <CardHeader>
@@ -467,7 +467,7 @@ export default function AccountDetailsPage() {
           </CardHeader>
           <CardContent>
               {employeeData ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4 text-sm">
                       {renderReadOnlyField("First Name*", employeeData.fullName?.split(' ')[0])}
                       {renderReadOnlyField("Last Name*", employeeData.fullName?.split(' ').slice(1).join(' '))}
                       {renderReadOnlyField("Gender*", employeeData.gender)}
@@ -574,3 +574,5 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
+    
