@@ -389,20 +389,18 @@ export default function AccountDetailsPage() {
 
               <form onSubmit={form.handleSubmit(onSubmitDisplayName)} className="space-y-6">
                 <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8 mb-8">
-                  <div className="flex flex-col items-center gap-2">
+                   <div className="flex items-center gap-4">
                       <Avatar className="h-32 w-32 border-2 border-primary shadow-md">
-                      <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} />
-                      <AvatarFallback className="text-4xl">
+                        <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} />
+                        <AvatarFallback className="text-4xl">
                           {getInitials(user.displayName || user.email || "U")}
-                      </AvatarFallback>
+                        </AvatarFallback>
                       </Avatar>
-                       <div className="w-full max-w-sm">
+                      <div className="space-y-1">
                           <FormLabel htmlFor="profile-picture-upload">Update Picture</FormLabel>
-                          <div className="flex items-center gap-2 mt-1">
-                              <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" />
-                          </div>
+                          <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="max-w-xs" />
                       </div>
-                  </div>
+                    </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 w-full">
                       <FormField
@@ -576,10 +574,3 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
-
-    
-    
-
-    
-
-    
