@@ -120,7 +120,7 @@ export default function UserActivitiesPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -207,9 +207,7 @@ export default function UserActivitiesPage() {
                     {page}
                   </Button>
                 ) : (
-                  <span key={`ellipsis-log-${index}`} className="px-2 py-1 text-sm">
-                    {page}
-                  </span>
+                  <span key={`ellipsis-log-${index}`} className="px-2 py-1 text-sm">{page}</span>
                 )
               )}
               <Button
