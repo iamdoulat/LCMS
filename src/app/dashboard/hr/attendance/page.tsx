@@ -11,7 +11,7 @@ import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { cn } from '@/lib/utils';
-import { format, isValid, eachDayOfInterval, startOfDay, endOfDay, parseISO, differenceInMinutes, parse as parseDateFns, getDay, isWithinInterval as isWithinDateInterval } from 'date-fns';
+import { format, isValid, eachDayOfInterval, startOfDay, endOfDay, parseISO, differenceInMinutes, parse as parseDateFns, getDay, isWithinInterval as isWithinDateInterval, subDays } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -72,12 +72,12 @@ const AttendanceDayRow = ({
     const dayOfWeek = getDay(date);
     if (dayOfWeek === 5) return 'W'; // Friday
     const isHoliday = holidays.some(h =>
-        isWithinDateInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })
+        isWithinInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })
     );
     if (isHoliday) return 'H';
     const isOnLeave = leaves.some(l =>
         l.employeeId === employee.id &&
-        isWithinDateInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) &&
+        isWithinInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) &&
         l.status === 'Approved'
     );
     if (isOnLeave) return 'L';
@@ -398,7 +398,7 @@ export default function DailyAttendancePage() {
     const [selectedDept, setSelectedDept] = React.useState('');
     
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
-        from: startOfDay(new Date()),
+        from: startOfDay(subDays(new Date(), 1)),
         to: startOfDay(new Date()),
     });
 
@@ -635,7 +635,7 @@ export default function DailyAttendancePage() {
                         <AlertTriangle className="h-4 w-4 !text-blue-600" />
                         <AlertTitle className="font-semibold !text-blue-700 dark:!text-blue-300">Bulk Upload CSV Format</AlertTitle>
                         <AlertDescription>
-                            The CSV file must have the following headers: <strong>employeeCode, date, flag, inTime, outTime, remarks</strong>. Date format should be MM/DD/YYYY or YYYY-MM-DD. Time format must be HH:mm (24-hour).
+                            The CSV file must have the following headers: <strong>employeeCode,date,flag,inTime,outTime,remarks</strong>. Date format should be MM/DD/YYYY or YYYY-MM-DD. Time format must be HH:mm (24-hour).
                         </AlertDescription>
                     </Alert>
                    <Card className="mb-6 shadow-md p-4">
