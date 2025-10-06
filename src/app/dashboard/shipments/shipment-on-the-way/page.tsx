@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, PackageCheck, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, CalendarDays, Filter, XCircle, Users, Building, Hash } from 'lucide-react';
+import { Loader2, PackageCheck, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Filter, XCircle, Users, Building, CalendarDays, Hash } from 'lucide-react';
 import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDocument } from '@/types'; 
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
@@ -32,29 +32,22 @@ const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
 
 
-const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
+const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
-    case 'Draft':
-      return 'outline';
-    case 'Transmitted':
-      return 'secondary';
-    case 'Shipment Pending':
-      return 'default';
-    case 'Payment Pending':
-      return 'destructive';
-    case 'Payment Done':
-      return 'default';
-    case 'Shipment Done':
-      return 'default';
-    default:
-      return 'outline';
+    case 'Draft': return 'outline';
+    case 'Transmitted': return 'secondary';
+    case 'Shipment Pending': return 'default';
+    case 'Payment Pending': return 'destructive';
+    case 'Payment Done': return 'default';
+    case 'Shipment Done': return 'default';
+    default: return 'outline';
   }
 };
 
-const formatDisplayDate = (dateString?: string) => {
+const formatDisplayDate = (dateString?: string | Date) => {
   if (!dateString) return 'N/A';
   try {
-    const date = parseISO(dateString);
+    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
     return isValid(date) ? format(date, 'PPP') : 'N/A';
   } catch (e) {
     return 'N/A';
@@ -235,10 +228,10 @@ export default function ShipmentDonePage() {
 
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <PackageCheck className="h-7 w-7 text-primary" />
             Shipment Done
           </CardTitle>
