@@ -294,7 +294,7 @@ export default function InventoryRefundsReturnsPage() {
 
   const totalPages = Math.ceil(displayedSales.length / SALE_ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * SALE_ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - SALE_ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentItems = displayedSales.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
@@ -328,7 +328,7 @@ export default function InventoryRefundsReturnsPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
