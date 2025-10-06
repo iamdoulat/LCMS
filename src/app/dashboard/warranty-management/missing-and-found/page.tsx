@@ -80,7 +80,7 @@ export default function MissingAndFoundPage() {
       } catch (error: any) {
         console.error("Error fetching installation reports for missing/found page: ", error);
         let errorMessage = `Failed to fetch reports. Please check Firestore rules and connectivity.`;
-         if (error.message && error.message.toLowerCase().includes("index")) {
+         if (error.message?.toLowerCase().includes("index")) {
             errorMessage = `Could not fetch reports: A Firestore index might be required. Please check the browser console for a link to create it.`;
         } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
            errorMessage = `Could not fetch reports: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'.`;
@@ -97,7 +97,7 @@ export default function MissingAndFoundPage() {
   }, []);
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -118,7 +118,7 @@ export default function MissingAndFoundPage() {
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
               <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
               <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Data</p>
-              <p className="text-sm text-destructive-foreground text-center">{fetchError}</p>
+              <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap">{fetchError}</p>
             </div>
           ) : reportsWithIssues.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
