@@ -3,7 +3,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin } from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -232,6 +232,15 @@ export default function AccountDetailsPage() {
         setAttendanceLoading(false);
       }
     );
+  };
+  
+  const handleViewLocation = (location: { latitude: number; longitude: number } | undefined | null) => {
+    if (location) {
+      const url = `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      Swal.fire('No Location', 'Location data is not available for this entry.', 'info');
+    }
   };
 
 
@@ -483,6 +492,18 @@ export default function AccountDetailsPage() {
                                 <span className="text-xs mt-1">In Time</span>
                                 {dailyAttendance?.inTime && <span className="text-[10px] font-mono">({dailyAttendance.inTime})</span>}
                             </Button>
+                            {dailyAttendance?.inTimeLocation && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full"
+                                  onClick={() => handleViewLocation(dailyAttendance.inTimeLocation)}
+                                  title="View In-Time Location"
+                                >
+                                  <MapPin className="h-4 w-4 text-blue-500" />
+                                </Button>
+                             )}
                         </div>
                         <div className="flex flex-col items-center gap-2">
                              <Button
@@ -499,6 +520,18 @@ export default function AccountDetailsPage() {
                                 <span className="text-xs mt-1">Out Time</span>
                                 {dailyAttendance?.outTime && <span className="text-[10px] font-mono">({dailyAttendance.outTime})</span>}
                             </Button>
+                             {dailyAttendance?.outTimeLocation && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full"
+                                  onClick={() => handleViewLocation(dailyAttendance.outTimeLocation)}
+                                  title="View Out-Time Location"
+                                >
+                                  <MapPin className="h-4 w-4 text-orange-500" />
+                                </Button>
+                             )}
                         </div>
                     </div>
                 </div>
@@ -626,6 +659,8 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
+    
 
     
 
