@@ -143,13 +143,15 @@ export default function DeliveryChallanListPage() {
     }
   };
   
-  const getPageNumbers = () => {
+   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5;
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
 
     if (totalPages <= maxPagesToShow + 2) {
-      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
     } else {
       pageNumbers.push(1);
       let startPage = Math.max(2, currentPage - halfPagesToShow);
@@ -165,7 +167,7 @@ export default function DeliveryChallanListPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -240,7 +242,7 @@ export default function DeliveryChallanListPage() {
               </TableBody>
               <TableCaption className="py-4">
                 A list of your delivery challans from Database. 
-                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedChallans.length)} of {displayedChallans.length} entries.
+                Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedChallans.length)} of {displayedChallans.length} entries.
               </TableCaption>
             </Table>
           </div>
