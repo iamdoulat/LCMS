@@ -164,7 +164,7 @@ export default function AccountDetailsPage() {
         // 3. Save to Firestore
         const now = new Date();
         const formattedDate = format(now, 'yyyy-MM-dd');
-        const currentTime = format(now, 'HH:mm');
+        const currentTime = format(now, 'hh:mm a');
         const docId = `${employeeData.id}_${formattedDate}`;
         const docRef = doc(firestore, 'attendance', docId);
   
@@ -662,3 +662,5 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
+    
