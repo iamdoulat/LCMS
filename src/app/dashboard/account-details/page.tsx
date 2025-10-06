@@ -388,72 +388,75 @@ export default function AccountDetailsPage() {
               </Dialog>
 
               <form onSubmit={form.handleSubmit(onSubmitDisplayName)} className="space-y-6">
-                <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8 mb-8">
-                   <div className="flex items-center gap-4">
-                      <Avatar className="h-32 w-32 border-2 border-primary shadow-md">
-                        <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} />
-                        <AvatarFallback className="text-4xl">
-                          {getInitials(user.displayName || user.email || "U")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1">
-                          <FormLabel htmlFor="profile-picture-upload">Update Picture</FormLabel>
-                          <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="max-w-xs" />
-                      </div>
+                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-x-8 gap-y-6 items-center">
+                    <div className="lg:col-span-1 flex items-center gap-4">
+                       <Avatar className="h-24 w-24 border-2 border-primary shadow-md">
+                          <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} />
+                          <AvatarFallback className="text-3xl">
+                            {getInitials(user.displayName || user.email || "U")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1">
+                            <FormLabel htmlFor="profile-picture-upload" className="text-sm">Update Picture</FormLabel>
+                            <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="max-w-xs h-9 text-xs" />
+                        </div>
+                    </div>
+                    
+                    <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                        <FormField
+                            control={form.control}
+                            name="displayName"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Display Name</FormLabel>
+                                <FormControl>
+                                <Input placeholder="Your display name" {...field} />
+                                </FormControl>
+                                <FormDescription>This name will be displayed to others.</FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormItem>
+                            <FormLabel>Email Address</FormLabel>
+                            <FormControl>
+                                <Input placeholder="your.email@example.com" value={user.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+                            </FormControl>
+                            <FormDescription>Your email address cannot be changed.</FormDescription>
+                        </FormItem>
                     </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 w-full">
-                      <FormField
-                          control={form.control}
-                          name="displayName"
-                          render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Display Name</FormLabel>
-                              <FormControl>
-                              <Input placeholder="Your display name" {...field} />
-                              </FormControl>
-                              <FormDescription>This name will be displayed to others.</FormDescription>
-                              <FormMessage />
-                          </FormItem>
+                    <div className="lg:col-span-1 flex flex-col gap-2 self-center">
+                        <Button
+                          type="button"
+                          variant={dailyAttendance?.inTime ? 'default' : 'outline'}
+                          className={cn(
+                              "w-full",
+                              dailyAttendance?.inTime && dailyAttendance.flag === 'P' && "bg-green-600 hover:bg-green-700 text-white",
+                              dailyAttendance?.inTime && dailyAttendance.flag === 'D' && "bg-red-600 hover:bg-red-700 text-white"
                           )}
-                      />
-                      <FormItem>
-                          <FormLabel>Email Address</FormLabel>
-                          <FormControl>
-                              <Input placeholder="your.email@example.com" value={user.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-                          </FormControl>
-                          <FormDescription>Your email address cannot be changed.</FormDescription>
-                      </FormItem>
-                  </div>
+                          onClick={() => handleAttendance('in')}
+                          disabled={attendanceLoading || !!dailyAttendance?.inTime}
+                        >
+                          {attendanceLoading && !dailyAttendance?.inTime ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="mr-2 h-4 w-4" /> : <Clock className="mr-2 h-4 w-4"/>)}
+                          In Time {dailyAttendance?.inTime && `(${dailyAttendance.inTime})`}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => handleAttendance('out')}
+                          disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime}
+                        >
+                          {attendanceLoading && !dailyAttendance?.outTime ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Clock className="mr-2 h-4 w-4"/>)}
+                          Out Time {dailyAttendance?.outTime && `(${dailyAttendance.outTime})`}
+                        </Button>
+                    </div>
                 </div>
 
-                 <div className="flex flex-wrap gap-4">
-                  <Button type="submit" className="flex-grow md:flex-grow-0 bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+                <div className="flex justify-start pt-2">
+                  <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
                     {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Name</>)}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={dailyAttendance?.inTime ? 'default' : 'outline'}
-                    className={cn(
-                        "flex-grow md:flex-grow-0",
-                        dailyAttendance?.inTime && dailyAttendance.flag === 'P' && "bg-green-600 hover:bg-green-700 text-white",
-                        dailyAttendance?.inTime && dailyAttendance.flag === 'D' && "bg-red-600 hover:bg-red-700 text-white"
-                    )}
-                    onClick={() => handleAttendance('in')}
-                    disabled={attendanceLoading || !!dailyAttendance?.inTime}
-                  >
-                    {attendanceLoading && !dailyAttendance?.inTime ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="mr-2 h-4 w-4" /> : <Clock className="mr-2 h-4 w-4"/>)}
-                    In Time {dailyAttendance?.inTime && `(${dailyAttendance.inTime})`}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-grow md:flex-grow-0"
-                    onClick={() => handleAttendance('out')}
-                    disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime}
-                  >
-                    {attendanceLoading && !dailyAttendance?.outTime ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Clock className="mr-2 h-4 w-4"/>)}
-                    Out Time {dailyAttendance?.outTime && `(${dailyAttendance.outTime})`}
                   </Button>
                 </div>
               </form>
