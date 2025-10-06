@@ -342,7 +342,7 @@ export default function AccountDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto py-8 space-y-8 px-5">
       <Form {...form}>
         <Card className="max-w-6xl mx-auto shadow-xl">
           <CardHeader>
@@ -578,4 +578,6 @@ export default function AccountDetailsPage() {
 }
 
     
+    
+
     
