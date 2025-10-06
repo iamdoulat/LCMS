@@ -72,12 +72,12 @@ const AttendanceDayRow = ({
     const dayOfWeek = getDay(date);
     if (dayOfWeek === 5) return 'W'; // Friday
     const isHoliday = holidays.some(h =>
-        isWithinInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })
+        isWithinDateInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })
     );
     if (isHoliday) return 'H';
     const isOnLeave = leaves.some(l =>
         l.employeeId === employee.id &&
-        isWithinInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) &&
+        isWithinDateInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) &&
         l.status === 'Approved'
     );
     if (isOnLeave) return 'L';
@@ -596,7 +596,7 @@ export default function DailyAttendancePage() {
     const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance || isLoadingHolidays || isLoadingLeaves;
 
     return (
-        <div className="container mx-auto py-8 px-5">
+        <div className="py-8 px-5">
             <Card className="shadow-xl">
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
