@@ -251,7 +251,7 @@ export default function LCPaymentDonePage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -378,7 +378,7 @@ export default function LCPaymentDonePage() {
                                       variant={shipment.flag ? "default" : "outline"}
                                       size="icon"
                                       className={cn(
-                                          "h-7 w-7 rounded-full p-0 text-xs",
+                                          "h-7 w-7 rounded-full p-0 text-xs font-bold",
                                           shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
                                       )}
                                       title={`${shipment.label} Shipment Status`}
