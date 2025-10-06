@@ -251,7 +251,7 @@ export default function LCPaymentPendingPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -366,9 +366,9 @@ export default function LCPaymentPendingPage() {
                     </div>
                     <div className="flex gap-1.5">
                       {[
-                          { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
-                          { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
-                          { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
+                        { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
+                        { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
+                        { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
                       ].map((shipment, idx) => (
                         <TooltipProvider key={idx} delayDuration={100}>
                           <Tooltip>
