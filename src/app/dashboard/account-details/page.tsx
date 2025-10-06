@@ -390,9 +390,9 @@ export default function AccountDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8 px-5">
+    <div className="py-8 space-y-8 px-5">
       <Form {...form}>
-        <Card className="max-w-6xl mx-auto shadow-xl">
+        <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <UserCircle className="h-7 w-7 text-primary" />
@@ -545,7 +545,7 @@ export default function AccountDetailsPage() {
           </CardContent>
         </Card>
 
-        <Card className="max-w-6xl mx-auto shadow-xl">
+        <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Info className="h-6 w-6 text-primary" />Personal Information</CardTitle>
             <CardDescription>Your personal details from your employee profile.</CardDescription>
@@ -571,7 +571,7 @@ export default function AccountDetailsPage() {
       
         {employeeData && (
             <>
-            <Card className="max-w-6xl mx-auto shadow-xl">
+            <Card className="shadow-xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Professional Details</CardTitle>
               </CardHeader>
@@ -588,7 +588,7 @@ export default function AccountDetailsPage() {
               </CardContent>
             </Card>
             
-            <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
               <Card className="shadow-xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><GraduationCap className="h-6 w-6 text-primary" />Education Information</CardTitle>
@@ -644,7 +644,7 @@ export default function AccountDetailsPage() {
               </Card>
             </div>
 
-            <Card className="max-w-6xl mx-auto shadow-xl">
+            <Card className="shadow-xl">
               <CardHeader>
                   <CardTitle className="flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" />Salary Information</CardTitle>
               </CardHeader>
@@ -659,5 +659,7 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
+    
 
     
