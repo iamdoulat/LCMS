@@ -1695,6 +1695,8 @@ export interface Attendance {
   updatedBy: string;
   updatedAt: any;
   createdAt: any;
+  inTimeLocation?: { latitude: number; longitude: number };
+  outTimeLocation?: { latitude: number; longitude: number };
 }
 export type AttendanceDocument = Attendance & { id: string };
 // --- END Attendance Types ---
