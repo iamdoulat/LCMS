@@ -275,7 +275,7 @@ export default function InvoicesListPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -401,7 +401,7 @@ export default function InvoicesListPage() {
                       <TableCell className="p-2 sm:px-4 truncate max-w-xs" title={getFirstItemName(invoice.lineItems)}>{getFirstItemName(invoice.lineItems)} ({getTotalQuantity(invoice.lineItems)} qty)</TableCell>
                       <TableCell className="p-2 sm:px-4">{formatCurrencyValue(invoice.totalAmount)}</TableCell>
                       <TableCell className="p-2 sm:px-4"><Badge variant={getInvoiceStatusBadgeVariant(invoice.status)}>{invoice.status || "N/A"}</Badge></TableCell>
-                      <TableCell className="text-right p-2 sm:p-4">
+                      <TableCell className="text-right p-2 sm:px-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-8 w-8 p-0" disabled={!invoice.id}>
