@@ -39,7 +39,7 @@ const formatDisplayDate = (dateString?: string) => {
   }
 };
 
-const formatCurrencyValue = (amount?: number, currencySymbol: string = 'USD') => { // Assuming USD for now
+const formatCurrencyValue = (amount?: number, currencySymbol: string = 'USD') => { // Assuming USD as default
   if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
   return `${currencySymbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -263,7 +263,7 @@ export default function QuotesListPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -329,7 +329,17 @@ export default function QuotesListPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="lg:col-span-4 md:col-span-2 xl:col-start-4 self-end">
+                 <div>
+                    <Label htmlFor="sortOrderQuote" className="text-sm font-medium">Order</Label>
+                    <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="asc">Ascending</SelectItem>
+                            <SelectItem value="desc">Descending</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="xl:col-start-4">
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters & Sort
                   </Button>
@@ -355,19 +365,9 @@ export default function QuotesListPage() {
               </TableHeader>
               <TableBody>
                  {isLoading ? (
-                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4">
-                       <div className="flex justify-center items-center">
-                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading Quotes...
-                       </div>
-                    </TableCell>
-                  </TableRow>
+                   <TableRow><TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary inline" /> Loading Quotes...</TableCell></TableRow>
                 ) : fetchError ? (
-                     <TableRow>
-                        <TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">
-                            {fetchError}
-                        </TableCell>
-                    </TableRow>
+                     <TableRow><TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((quote) => (
                     <TableRow key={quote.id}>
@@ -413,11 +413,7 @@ export default function QuotesListPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4">
-                       No quotes found matching your criteria.
-                    </TableCell>
-                  </TableRow>
+                  <TableRow><TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4">No quotes found matching your criteria.</TableCell></TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
