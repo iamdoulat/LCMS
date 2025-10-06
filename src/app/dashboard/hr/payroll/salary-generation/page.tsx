@@ -31,6 +31,14 @@ import { AddDivisionForm } from '@/components/forms/AddDivisionForm';
 import { EditDivisionForm } from '@/components/forms/EditDivisionForm';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 const DataTableSkeleton = () => (
