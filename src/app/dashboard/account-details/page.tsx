@@ -342,7 +342,7 @@ export default function AccountDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto space-y-8 px-5 py-8">
+    <div className="container mx-auto py-8 space-y-8 px-5">
       <Form {...form}>
         <Card className="max-w-6xl mx-auto shadow-xl">
           <CardHeader>
@@ -398,7 +398,7 @@ export default function AccountDetailsPage() {
                         </Avatar>
                         <div className="space-y-1 w-full">
                             <FormLabel htmlFor="profile-picture-upload" className="text-sm">Update Picture</FormLabel>
-                            <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="h-9 text-xs" />
+                            <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="w-full h-9 text-xs" />
                         </div>
                     </div>
                     
@@ -428,28 +428,32 @@ export default function AccountDetailsPage() {
 
                     <div className="lg:col-span-1 flex flex-col gap-2 self-center">
                         <Button
-                          type="button"
-                          variant={dailyAttendance?.inTime ? 'default' : 'outline'}
-                          className={cn(
-                              "w-full",
-                              dailyAttendance?.inTime && dailyAttendance.flag === 'P' && "bg-green-600 hover:bg-green-700 text-white",
-                              dailyAttendance?.inTime && dailyAttendance.flag === 'D' && "bg-red-600 hover:bg-red-700 text-white"
-                          )}
-                          onClick={() => handleAttendance('in')}
-                          disabled={attendanceLoading || !!dailyAttendance?.inTime}
-                        >
-                          {attendanceLoading && !dailyAttendance?.inTime ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="mr-2 h-4 w-4" /> : <Clock className="mr-2 h-4 w-4"/>)}
-                          In Time {dailyAttendance?.inTime && `(${dailyAttendance.inTime})`}
+                            type="button"
+                            variant={dailyAttendance?.inTime ? 'default' : 'outline'}
+                            className={cn(
+                                "w-full transition-all duration-300 ease-in-out",
+                                !dailyAttendance?.inTime && "bg-gradient-to-r from-blue-500 to-teal-500 text-white hover:opacity-90",
+                                dailyAttendance?.inTime && dailyAttendance.flag === 'P' && "bg-green-600 hover:bg-green-700 text-white",
+                                dailyAttendance?.inTime && dailyAttendance.flag === 'D' && "bg-red-600 hover:bg-red-700 text-white"
+                            )}
+                            onClick={() => handleAttendance('in')}
+                            disabled={attendanceLoading || !!dailyAttendance?.inTime}
+                            >
+                            {attendanceLoading && !dailyAttendance?.inTime ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="mr-2 h-4 w-4" /> : <Clock className="mr-2 h-4 w-4"/>)}
+                            In Time {dailyAttendance?.inTime && `(${dailyAttendance.inTime})`}
                         </Button>
                         <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => handleAttendance('out')}
-                          disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime}
-                        >
-                          {attendanceLoading && !dailyAttendance?.outTime ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Clock className="mr-2 h-4 w-4"/>)}
-                          Out Time {dailyAttendance?.outTime && `(${dailyAttendance.outTime})`}
+                            type="button"
+                            variant="outline"
+                            className={cn(
+                                "w-full transition-all duration-300 ease-in-out",
+                                !dailyAttendance?.outTime && !!dailyAttendance?.inTime && "bg-gradient-to-r from-orange-500 to-rose-500 text-white hover:opacity-90 hover:text-white"
+                            )}
+                            onClick={() => handleAttendance('out')}
+                            disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime}
+                            >
+                            {attendanceLoading && !dailyAttendance?.outTime ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Clock className="mr-2 h-4 w-4"/>)}
+                            Out Time {dailyAttendance?.outTime && `(${dailyAttendance.outTime})`}
                         </Button>
                     </div>
                 </div>
