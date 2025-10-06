@@ -210,7 +210,7 @@ export default function ApplicantsListPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -351,7 +351,7 @@ export default function ApplicantsListPage() {
               </TableBody>
               <TableCaption className="py-4">
                 A list of your Applicants from Database.
-                Showing {displayedApplicants.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedApplicants.length)} of {displayedApplicants.length} entries.
+                Showing {displayedApplicants.length > 0 ? indexOfFirstItem + 1 : 0}-${Math.min(indexOfLastItem, displayedApplicants.length)} of {displayedApplicants.length} entries.
               </TableCaption>
             </Table>
           </div>
