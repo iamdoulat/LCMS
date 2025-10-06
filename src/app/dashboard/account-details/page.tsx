@@ -396,9 +396,9 @@ export default function AccountDetailsPage() {
                             {getInitials(user.displayName || user.email || "U")}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="space-y-1">
+                        <div className="space-y-1 w-full">
                             <FormLabel htmlFor="profile-picture-upload" className="text-sm">Update Picture</FormLabel>
-                            <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="max-w-xs h-9 text-xs" />
+                            <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="h-9 text-xs" />
                         </div>
                     </div>
                     
