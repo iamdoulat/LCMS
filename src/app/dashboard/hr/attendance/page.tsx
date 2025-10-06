@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -22,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, User, Search, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, PlusCircle, Trash2, Calendar, Filter, XCircle, Save, Upload, AlertTriangle, Download } from 'lucide-react';
+import { Loader2, User, Search, CalendarDays as CalendarIcon, Clock, MessageSquare, Minus, Plus, PlusCircle, Trash2, Calendar, Filter, XCircle, Save, Upload, AlertTriangle, Download, MapPin } from 'lucide-react';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
@@ -206,6 +207,15 @@ const AttendanceDayRow = ({
         }
     });
   };
+  
+  const handleViewLocation = (location: { latitude: number; longitude: number } | undefined | null) => {
+    if (location) {
+      const url = `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      Swal.fire('No Location', 'Location data is not available for this entry.', 'info');
+    }
+  };
 
   return (
     <TableRow>
@@ -225,13 +235,27 @@ const AttendanceDayRow = ({
         />
       </TableCell>
       <TableCell>
-        <Controller control={control} name="inTime" render={({ field }) => <Input type="time" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
+        <div className="flex items-center gap-1">
+          <Controller control={control} name="inTime" render={({ field }) => <Input type="time" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
+          {initialData?.inTimeLocation && (
+            <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewLocation(initialData.inTimeLocation)} title="View In-Time Location">
+              <MapPin className="h-4 w-4 text-blue-500" />
+            </Button>
+          )}
+        </div>
       </TableCell>
       <TableCell>
         <Controller control={control} name="inTimeRemarks" render={({ field }) => <Input placeholder="Enter remarks" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
       </TableCell>
       <TableCell>
-        <Controller control={control} name="outTime" render={({ field }) => <Input type="time" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
+        <div className="flex items-center gap-1">
+          <Controller control={control} name="outTime" render={({ field }) => <Input type="time" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
+          {initialData?.outTimeLocation && (
+             <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewLocation(initialData.outTimeLocation)} title="View Out-Time Location">
+              <MapPin className="h-4 w-4 text-orange-500" />
+            </Button>
+          )}
+        </div>
       </TableCell>
       <TableCell>
         <Controller control={control} name="outTimeRemarks" render={({ field }) => <Input placeholder="Enter remarks" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
@@ -755,3 +779,4 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
+
