@@ -482,7 +482,7 @@ export default function AccountDetailsPage() {
                                     type="button"
                                     variant={dailyAttendance?.inTime ? 'default' : 'outline'}
                                     className={cn(
-                                        "h-20 w-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-in-out",
+                                        "h-20 w-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-in-out font-bold",
                                         !dailyAttendance?.inTime && "bg-gradient-to-br from-blue-500 to-teal-500 text-white hover:opacity-90",
                                         dailyAttendance?.inTime && dailyAttendance.flag === 'P' && "bg-green-600 hover:bg-green-700 text-white",
                                         dailyAttendance?.inTime && dailyAttendance.flag === 'D' && "bg-red-600 hover:bg-red-700 text-white"
@@ -512,7 +512,7 @@ export default function AccountDetailsPage() {
                                     type="button"
                                     variant="outline"
                                     className={cn(
-                                        "h-20 w-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-in-out",
+                                        "h-20 w-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-in-out font-bold",
                                         !dailyAttendance?.outTime && !!dailyAttendance?.inTime && "bg-gradient-to-br from-orange-500 to-rose-500 text-white hover:opacity-90 hover:text-white"
                                     )}
                                     onClick={() => handleAttendance('out')}
