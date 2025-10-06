@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Undo2, Loader2, Filter, XCircle, Users, CalendarDays, ChevronLeft, ChevronRight, FileText, AlertTriangle, Wallet, List, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -25,7 +26,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
@@ -294,7 +294,7 @@ export default function InventoryRefundsReturnsPage() {
 
   const totalPages = Math.ceil(displayedSales.length / SALE_ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * SALE_ITEMS_PER_PAGE;
-  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - SALE_ITEMS_PER_PAGE;
   const currentItems = displayedSales.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
