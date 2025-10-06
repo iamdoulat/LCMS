@@ -68,14 +68,14 @@ export default function HrmSettingsPage() {
     const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(query(collection(firestore, 'units'), orderBy("name", "asc")), undefined, ['units']);
     const { data: divisions, isLoading: isLoadingDivisions } = useFirestoreQuery<DivisionDocument[]>(query(collection(firestore, 'divisions'), orderBy("name", "asc")), undefined, ['divisions']);
 
-    const [isAddDesignationDialogOpen, setIsAddDesignationDialogOpen] = React.useState(false);
+    const [isAddDivisionDialogOpen, setIsAddDivisionDialogOpen] = React.useState(false);
     const [isAddBranchDialogOpen, setIsAddBranchDialogOpen] = React.useState(false);
     const [isAddDepartmentDialogOpen, setIsAddDepartmentDialogOpen] = React.useState(false);
     const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = React.useState(false);
-    const [isAddDivisionDialogOpen, setIsAddDivisionDialogOpen] = React.useState(false);
+    const [isAddDesignationDialogOpen, setIsAddDesignationDialogOpen] = React.useState(false);
 
-    const [editingDesignation, setEditingDesignation] = React.useState<DesignationDocument | null>(null);
-    const [isEditDesignationDialogOpen, setIsEditDesignationDialogOpen] = React.useState(false);
+    const [editingDivision, setEditingDivision] = React.useState<DivisionDocument | null>(null);
+    const [isEditDivisionDialogOpen, setIsEditDivisionDialogOpen] = React.useState(false);
     
     const [editingBranch, setEditingBranch] = React.useState<BranchDocument | null>(null);
     const [isEditBranchDialogOpen, setIsEditBranchDialogOpen] = React.useState(false);
@@ -86,8 +86,8 @@ export default function HrmSettingsPage() {
     const [editingUnit, setEditingUnit] = React.useState<UnitDocument | null>(null);
     const [isEditUnitDialogOpen, setIsEditUnitDialogOpen] = React.useState(false);
 
-    const [editingDivision, setEditingDivision] = React.useState<DivisionDocument | null>(null);
-    const [isEditDivisionDialogOpen, setIsEditDivisionDialogOpen] = React.useState(false);
+    const [editingDesignation, setEditingDesignation] = React.useState<DesignationDocument | null>(null);
+    const [isEditDesignationDialogOpen, setIsEditDesignationDialogOpen] = React.useState(false);
 
 
     const handleEdit = (item: any, setEditingItem: React.Dispatch<any>, setIsEditDialogOpen: React.Dispatch<any>) => {
@@ -123,9 +123,10 @@ export default function HrmSettingsPage() {
       isLoading: boolean,
       onAddClick: () => void,
       onEditClick: (item: any) => void,
-      collectionName: string
+      collectionName: string,
+      className?: string
     ) => (
-      <Card>
+      <Card className={className}>
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
                   <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>{title}</CardTitle>
@@ -179,7 +180,7 @@ export default function HrmSettingsPage() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <Dialog open={isAddDivisionDialogOpen} onOpenChange={setIsAddDivisionDialogOpen}>
-                        {renderTableSection("Divisions", "Manage company divisions.", divisions, isLoadingDivisions, () => setIsAddDivisionDialogOpen(true), (item) => handleEdit(item, setEditingDivision, setIsEditDivisionDialogOpen), "divisions")}
+                        {renderTableSection("Divisions", "Manage company divisions.", divisions, isLoadingDivisions, () => setIsAddDivisionDialogOpen(true), (item) => handleEdit(item, setEditingDivision, setIsEditDivisionDialogOpen), "divisions", "md:col-span-2")}
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New Division</DialogTitle>
