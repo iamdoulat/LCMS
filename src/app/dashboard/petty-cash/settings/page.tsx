@@ -100,7 +100,7 @@ export default function PettyCashSettingsPage() {
         if (isReadOnly) return;
         Swal.fire({
             title: `Delete '${docName}'?`,
-            text: `This will permanently delete the item. This action cannot be undone.`,
+            text: "This will permanently delete the item.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: 'hsl(var(--destructive))',
@@ -118,7 +118,7 @@ export default function PettyCashSettingsPage() {
     };
 
     return (
-        <div className="container mx-auto py-8">
+        <div className="container mx-auto py-8 px-5">
             <Card className="shadow-xl">
                 <CardHeader>
                     <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
