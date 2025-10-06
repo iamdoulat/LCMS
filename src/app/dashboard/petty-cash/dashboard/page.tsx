@@ -412,7 +412,7 @@ export default function PettyCashDashboardPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 space-y-8">
+        <div className="container mx-auto py-8 space-y-8 px-5">
             <Card className="shadow-xl">
                 <CardHeader>
                     <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -683,8 +683,7 @@ export default function PettyCashDashboardPage() {
                 </CardContent>
                 </Card>
             </div>
-
-            <Card className="shadow-xl">
+             <Card className="shadow-xl">
                 <CardHeader>
                     <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-3xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                         <ListChecks className="h-7 w-7 text-primary" />
@@ -699,4 +698,3 @@ export default function PettyCashDashboardPage() {
         </div>
     );
 }
-
