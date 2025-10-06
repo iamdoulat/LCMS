@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -148,7 +147,7 @@ export default function EmployeesListPage() {
 
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -304,3 +303,4 @@ export default function EmployeesListPage() {
     
 
     
+
