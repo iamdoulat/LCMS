@@ -157,8 +157,8 @@ export default function PayslipListPage() {
   const currentPayslips = filteredPayslips?.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
-    <div className="container mx-auto py-8 px-5">
-      <Card className="shadow-xl">
+    <div className="py-8 px-4 sm:px-6 lg:px-8">
+      <Card className="shadow-xl overflow-hidden">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <ListChecks className="h-7 w-7 text-primary" />
@@ -168,7 +168,7 @@ export default function PayslipListPage() {
             View, manage, and print generated payslips for all employees.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
            <Card className="mb-6 shadow-md p-4">
             <CardHeader className="p-2 pb-4">
               <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
