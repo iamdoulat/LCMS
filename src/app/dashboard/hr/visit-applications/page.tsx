@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Loader2, AlertTriangle, Info, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Loader2, AlertTriangle, Info, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -23,6 +23,14 @@ import { format, parseISO, isValid } from 'date-fns';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const formatDisplayDate = (dateString: string): string => {
     try {
@@ -158,8 +166,30 @@ export default function VisitApplicationListPage() {
                                             <TableCell><Badge variant={getStatusBadgeVariant(app.status)}>{app.status}</Badge></TableCell>
                                             <TableCell className="max-w-xs truncate text-xs text-muted-foreground" title={app.approverComment}>{app.approverComment || 'N/A'}</TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" onClick={() => handleEdit(app.id)} disabled={isReadOnly}><Edit className="h-4 w-4"/></Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDelete(app.id, app.employeeName)} disabled={isReadOnly}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}>
+                                                            <span className="sr-only">Open menu</span>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => handleEdit(app.id)}>
+                                                            <Edit className="mr-2 h-4 w-4" />
+                                                            <span>Edit/Approve</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={() => handleDelete(app.id, app.employeeName)}
+                                                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                                            disabled={isReadOnly}
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            <span>Delete</span>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </TableCell>
                                         </TableRow>
                                     ))}
