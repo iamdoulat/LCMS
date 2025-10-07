@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -1664,7 +1665,7 @@ export interface Payslip {
 
 
 // --- Attendance Types ---
-export const attendanceFlagOptions = ['P', 'A', 'L', 'W', 'H', 'D'] as const;
+export const attendanceFlagOptions = ['P', 'A', 'L', 'W', 'H', 'D', 'V'] as const;
 export type AttendanceFlag = (typeof attendanceFlagOptions)[number];
 
 export const AttendanceFormSchema = z.object({

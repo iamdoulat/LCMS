@@ -8,7 +8,7 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, getDocs, writeBatch } from 'firebase/firestore';
-import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument } from '@/types';
+import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { cn } from '@/lib/utils';
@@ -72,6 +72,7 @@ const AttendanceDayRow = ({
   onRecordUpdate,
   holidays,
   leaves,
+  visits,
 }: {
   employee: EmployeeDocument;
   date: Date;
@@ -79,6 +80,7 @@ const AttendanceDayRow = ({
   onRecordUpdate: () => void;
   holidays: HolidayDocument[];
   leaves: LeaveApplicationDocument[];
+  visits: VisitApplicationDocument[];
 }) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -87,18 +89,28 @@ const AttendanceDayRow = ({
   const getDefaultFlag = React.useCallback((): AttendanceFlag => {
     const dayOfWeek = getDay(date);
     if (dayOfWeek === 5) return 'W'; // Friday
+    
     const isHoliday = holidays.some(h =>
         isWithinDateInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })
     );
     if (isHoliday) return 'H';
+
     const isOnLeave = leaves.some(l =>
         l.employeeId === employee.id &&
         isWithinDateInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) &&
         l.status === 'Approved'
     );
     if (isOnLeave) return 'L';
+    
+    const isOnVisit = visits.some(v =>
+        v.employeeId === employee.id &&
+        isWithinDateInterval(date, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }) &&
+        v.status === 'Approved'
+    );
+    if (isOnVisit) return 'V';
+
     return 'A'; // Default to Absent if no other condition is met
-  }, [date, holidays, leaves, employee.id]);
+  }, [date, holidays, leaves, visits, employee.id]);
 
   const form = useForm<AttendanceDayFormValues>({
     resolver: zodResolver(attendanceDaySchema),
@@ -307,6 +319,7 @@ const EmployeeAttendanceRow = ({
     attendanceRecords,
     holidays,
     leaves,
+    visits,
     onRecordUpdate
 }: { 
     employee: EmployeeDocument, 
@@ -314,6 +327,7 @@ const EmployeeAttendanceRow = ({
     attendanceRecords: AttendanceDocument[],
     holidays: HolidayDocument[],
     leaves: LeaveApplicationDocument[],
+    visits: VisitApplicationDocument[],
     onRecordUpdate: () => void;
 }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
@@ -393,6 +407,7 @@ const EmployeeAttendanceRow = ({
                                                 onRecordUpdate={onRecordUpdate}
                                                 holidays={holidays}
                                                 leaves={leaves}
+                                                visits={visits}
                                             />
                                         );
                                     })}
@@ -439,6 +454,11 @@ export default function DailyAttendancePage() {
         query(collection(firestore, "leave_applications"), where("status", "==", "Approved")), 
         undefined, 
         ['approved_leaves']
+    );
+    const { data: visits, isLoading: isLoadingVisits } = useFirestoreQuery<VisitApplicationDocument[]>(
+        query(collection(firestore, "visit_applications"), where("status", "==", "Approved")), 
+        undefined, 
+        ['approved_visits']
     );
 
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -642,7 +662,7 @@ export default function DailyAttendancePage() {
         return map;
     }, [allAttendance]);
 
-    const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance || isLoadingHolidays || isLoadingLeaves;
+    const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance || isLoadingHolidays || isLoadingLeaves || isLoadingVisits;
 
     return (
         <div className="py-8 px-5">
@@ -793,6 +813,7 @@ export default function DailyAttendancePage() {
                                         attendanceRecords={attendanceByEmployee.get(emp.id) || []}
                                         holidays={holidays || []}
                                         leaves={leaves || []}
+                                        visits={visits || []}
                                         onRecordUpdate={refetchAttendance}
                                     />
                                ))
@@ -804,4 +825,3 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
-
