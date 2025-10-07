@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -17,7 +16,7 @@ const StarBorder = React.forwardRef<HTMLElement, StarBorderProps>(
   ({
     as: Component = 'div',
     className = '',
-    color = 'cyan',
+    color = 'magenta',
     speed = '6s',
     thickness = 2,
     children,
@@ -28,7 +27,7 @@ const StarBorder = React.forwardRef<HTMLElement, StarBorderProps>(
         ref={ref}
         className={cn('star-border-container', className)}
         style={{
-          padding: `${thickness}px`,
+          padding: `${thickness}px 3px`,
           ...rest.style
         }}
         {...rest}
