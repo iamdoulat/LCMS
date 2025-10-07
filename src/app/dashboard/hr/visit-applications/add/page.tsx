@@ -3,7 +3,7 @@
 
 import { AddVisitApplicationForm } from '@/components/forms/AddVisitApplicationForm';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Plane, ArrowLeft } from 'lucide-react';
+import { Plane, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
