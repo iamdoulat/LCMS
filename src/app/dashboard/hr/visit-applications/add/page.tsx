@@ -14,7 +14,7 @@ export default function AddVisitApplicationPage() {
 
   return (
     <div className="container mx-auto py-8 px-5">
-      <Card className="max-w-4xl mx-auto shadow-xl">
+      <Card className="shadow-xl">
         <CardHeader>
           <div className="flex justify-between items-start">
              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
