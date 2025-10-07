@@ -760,11 +760,6 @@ export default function HrmDashboardPage() {
                         </CardContent>
                     </Card>
                 </div>
-
-                <div className="mt-12">
-                    <LeaveCalendar birthdays={birthdaysToday} />
-                </div>
-
             </CardContent>
         </Card>
     </div>

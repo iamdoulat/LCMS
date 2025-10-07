@@ -30,6 +30,7 @@ import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplic
 import { format, isWithinInterval, parseISO, startOfDay, getDay } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
+import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
 
 
 const accountDetailsSchema = z.object({
@@ -82,6 +83,9 @@ export default function AccountDetailsPage() {
   const [visits, setVisits] = useState<VisitApplicationDocument[]>([]);
   const [dayStatus, setDayStatus] = useState<DayStatus>('Working Day');
   const [isDayStatusLoading, setIsDayStatusLoading] = useState(true);
+  
+  const [allEmployees, setAllEmployees] = useState<EmployeeDocument[]>([]);
+  const [birthdaysToday, setBirthdaysToday] = React.useState<EmployeeDocument[]>([]);
 
   useEffect(() => {
     const fetchAuxData = async () => {
@@ -115,6 +119,11 @@ export default function AccountDetailsPage() {
         const visitsSnapshot = await getDocs(visitsQuery);
         const fetchedVisits = visitsSnapshot.docs.map(doc => doc.data() as VisitApplicationDocument);
         setVisits(fetchedVisits);
+
+        // Fetch all employees for birthday calculation
+        const employeesSnapshot = await getDocs(collection(firestore, 'employees'));
+        const fetchedEmployees = employeesSnapshot.docs.map(doc => doc.data() as EmployeeDocument);
+        setAllEmployees(fetchedEmployees);
         
       } catch (err) {
         console.error("Error fetching holidays, leaves, or visits:", err);
@@ -125,7 +134,7 @@ export default function AccountDetailsPage() {
     if (user && employeeData) {
       fetchAuxData();
     }
-  }, [user, employeeData?.id]);
+  }, [user, employeeData]);
 
 
   useEffect(() => {
@@ -157,6 +166,20 @@ export default function AccountDetailsPage() {
     setDayStatus('Working Day');
   }, [holidays, leaves, visits]);
 
+
+  React.useEffect(() => {
+    if (allEmployees.length > 0) {
+        const todayMonthDay = format(new Date(), 'MM-dd');
+        const todayBirthdays = allEmployees.filter(emp => {
+            if (!emp.dateOfBirth) return false;
+            try {
+                const dob = parseISO(emp.dateOfBirth);
+                return format(dob, 'MM-dd') === todayMonthDay;
+            } catch { return false; }
+        });
+        setBirthdaysToday(todayBirthdays);
+    }
+  }, [allEmployees]);
 
 
   const form = useForm<AccountDetailsFormValues>({
@@ -601,7 +624,7 @@ export default function AccountDetailsPage() {
                     </div>
 
                     <div className="lg:col-span-1">
-                        <StarBorder as="div" className="w-full" color="magenta">
+                        <StarBorder as="div" className="w-full" color="magenta" thickness={2}>
                             <div className="p-4">
                                 <h4 className={cn("text-sm font-semibold mb-2 flex items-center gap-2", dayStatus !== 'Working Day' && "text-muted-foreground")}>
                                     {dayStatus === 'Working Day' ? <UserCheck className="h-4 w-4 text-primary"/> : <XCircle className="h-4 w-4 text-destructive"/>}
@@ -680,6 +703,10 @@ export default function AccountDetailsPage() {
               </form>
           </CardContent>
         </Card>
+        
+        <div className="mt-8">
+            <LeaveCalendar birthdays={birthdaysToday} />
+        </div>
 
         <Card className="shadow-xl">
           <CardHeader>
