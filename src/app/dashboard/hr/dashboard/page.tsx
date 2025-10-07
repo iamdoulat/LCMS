@@ -8,7 +8,7 @@ import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX
 import { cn } from '@/lib/utils';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument, BranchDocument, DepartmentDocument, NoticeBoardSettings, AdvanceSalaryDocument } from '@/types';
+import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument, BranchDocument, DepartmentDocument, NoticeBoardSettings, AdvanceSalaryDocument, VisitApplicationDocument } from '@/types';
 import { format, startOfTomorrow, isWithinInterval, startOfDay, endOfDay, parseISO, isToday, isFuture, subDays, eachDayOfInterval, getDay, endOfMonth, startOfMonth, differenceInDays } from 'date-fns';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Input } from '@/components/ui/input';
@@ -50,6 +50,7 @@ interface HrmDashboardStats {
     pendingLeaveApplications: number;
     upcomingBirthdays: number;
     pendingAdvanceSalaryRequests: number;
+    pendingVisitApplications: number;
 }
 
 const getInitials = (name?: string) => {
@@ -73,6 +74,7 @@ export default function HrmDashboardPage() {
         pendingLeaveApplications: 0,
         upcomingBirthdays: 0,
         pendingAdvanceSalaryRequests: 0,
+        pendingVisitApplications: 0,
     });
     
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_hrm_dashboard']);
@@ -80,6 +82,7 @@ export default function HrmDashboardPage() {
     const { data: holidays, isLoading: isLoadingHolidays } = useFirestoreQuery<HolidayDocument[]>(collection(firestore, 'holidays'), undefined, ['holidays_hrm_dashboard']);
     const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings"), where("isEnabled", "==", true)), undefined, ['notices_hrm_dashboard']);
     const { data: advanceSalaryRequests, isLoading: isLoadingAdvanceSalary } = useFirestoreQuery<AdvanceSalaryDocument[]>(query(collection(firestore, 'advance_salary'), where('status', '==', 'Pending')), undefined, ['pending_advance_salary']);
+    const { data: pendingVisits, isLoading: isLoadingVisits } = useFirestoreQuery<VisitApplicationDocument[]>(query(collection(firestore, 'visit_applications'), where('status', '==', 'Pending')), undefined, ['pending_visits']);
 
     const [attendance, setAttendance] = React.useState<AttendanceDocument[]>([]);
     const [isLoadingAttendance, setIsLoadingAttendance] = React.useState(true);
@@ -105,7 +108,7 @@ export default function HrmDashboardPage() {
     const [leaveFilterBranch, setLeaveFilterBranch] = React.useState(ALL_BRANCHES_FILTER_VALUE);
     const [leaveFilterDept, setLeaveFilterDept] = React.useState(ALL_DEPTS_FILTER_VALUE);
 
-    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts || isLoadingNotices || isLoadingAdvanceSalary;
+    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts || isLoadingNotices || isLoadingAdvanceSalary || isLoadingVisits;
     
     React.useEffect(() => {
         const todayStart = format(startOfDay(new Date()), "yyyy-MM-dd'T'00:00:00.000xxx");
@@ -187,7 +190,7 @@ export default function HrmDashboardPage() {
     }, [employees, attendance, searchTerm, statusFilter]);
 
     React.useEffect(() => {
-        if (employees && leaves && attendance && advanceSalaryRequests) {
+        if (employees && leaves && attendance && advanceSalaryRequests && pendingVisits) {
             const today = new Date();
             const tomorrow = startOfTomorrow();
             
@@ -236,9 +239,10 @@ export default function HrmDashboardPage() {
                 pendingLeaveApplications: pendingLeaveApplicationsCount,
                 upcomingBirthdays: upcomingBirthdaysCount,
                 pendingAdvanceSalaryRequests: advanceSalaryRequests.length,
+                pendingVisitApplications: pendingVisits.length,
             });
         }
-    }, [employees, leaves, attendance, advanceSalaryRequests]);
+    }, [employees, leaves, attendance, advanceSalaryRequests, pendingVisits]);
     
     React.useEffect(() => {
       const processChartData = async () => {
@@ -470,7 +474,7 @@ export default function HrmDashboardPage() {
                     />
                     <StatCard
                         title="Pending Visit Application"
-                        value="0"
+                        value={stats.pendingVisitApplications}
                         icon={<BookOpen />}
                         description="Visit requests to approve"
                         className="bg-rose-500"
@@ -753,8 +757,3 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
-
-
-
-
-
