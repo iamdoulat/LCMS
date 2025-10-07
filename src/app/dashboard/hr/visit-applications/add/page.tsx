@@ -3,7 +3,7 @@
 
 import { AddVisitApplicationForm } from '@/components/forms/AddVisitApplicationForm';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Plane, X } from 'lucide-react';
+import { Plane, ArrowLeft, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,14 @@ export default function AddVisitApplicationPage() {
 
   return (
     <div className="container mx-auto py-8 px-5">
+       <div className="mb-6">
+        <Link href="/dashboard/hr/visit-applications" passHref>
+          <Button variant="outline">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Visit Applications
+          </Button>
+        </Link>
+      </div>
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex justify-between items-start">
