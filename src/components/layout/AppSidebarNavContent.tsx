@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -83,6 +84,7 @@ import {
   PanelRight,
   PanelLeftClose,
   CalendarPlus,
+  Plane,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -180,6 +182,7 @@ const hrNavItems: NavItem[] = [
   { href: "/dashboard/hr/payroll/advance-salary", label: "Advance Salary", icon: DollarSign, iconColorClass: 'bg-icon-payment' },
   { href: "/dashboard/hr/attendance", label: "Attendance", icon: Calendar, iconColorClass: 'bg-icon-reports' },
   { href: "/dashboard/hr/leaves", label: "Leave Management", icon: Mailbox, iconColorClass: 'bg-icon-list' },
+  { href: "/dashboard/hr/visit-applications", label: "Visit Application", icon: Plane, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/holidays", label: "Holidays", icon: CalendarPlus, iconColorClass: 'bg-icon-upcoming'},
   { href: "/dashboard/hr/attendance/reports", label: "Attendance Reports", icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: "/dashboard/hr/notice", label: "Manage Notice Board", icon: Bell, iconColorClass: 'bg-icon-notifications' },

@@ -1765,3 +1765,43 @@ export interface AdvanceSalary {
 }
 export type AdvanceSalaryDocument = AdvanceSalary & { id: string };
 // --- END Advance Salary Types ---
+
+// --- Visit Application Types ---
+export const visitStatusOptions = ["Pending", "Approved", "Rejected"] as const;
+export type VisitStatus = (typeof visitStatusOptions)[number];
+
+export const VisitApplicationSchema = z.object({
+  employeeId: z.string().min(1, "Employee is required."),
+  fromDate: z.date({ required_error: "Start date is required." }),
+  toDate: z.date({ required_error: "End date is required." }),
+  remarks: z.string().min(1, "Remarks are required."),
+  status: z.enum(visitStatusOptions).optional(),
+  approverComment: z.string().optional(),
+}).refine(data => {
+    if(data.fromDate && data.toDate) {
+        return data.toDate >= data.fromDate;
+    }
+    return true;
+}, {
+    message: "End date cannot be before the start date.",
+    path: ["toDate"],
+});
+export type VisitApplicationFormValues = z.infer<typeof VisitApplicationSchema>;
+
+export interface VisitApplication {
+  id?: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string;
+  applyDate: string; // ISO String
+  fromDate: string; // ISO String
+  toDate: string; // ISO String
+  day: number;
+  remarks: string;
+  status: VisitStatus;
+  approverComment?: string;
+  createdAt: any;
+  updatedAt: any;
+}
+export type VisitApplicationDocument = VisitApplication & { id: string };
+// --- END Visit Application Types ---
