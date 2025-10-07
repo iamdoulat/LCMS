@@ -13,17 +13,21 @@ import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Save, User, Calendar, MessageSquare } from 'lucide-react';
+import { Loader2, Save, User, Calendar, MessageSquare, Info } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
 import { Textarea } from '../ui/textarea';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
 import { Separator } from '../ui/separator';
+import { Input } from '../ui/input';
+import { Badge } from '../ui/badge';
 
 interface EditVisitApplicationFormProps {
   initialData: VisitApplicationDocument;
 }
+
+const PLACEHOLDER_EMPLOYEE_VALUE = "__EDIT_VISIT_APP_EMPLOYEE__";
 
 export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFormProps) {
   const { user, userRole } = useAuth();
@@ -46,6 +50,20 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
     },
   });
 
+  const { watch } = form;
+  const fromDate = watch('fromDate');
+  const toDate = watch('toDate');
+  const [dayCount, setDayCount] = React.useState<number>(initialData.day || 0);
+
+  React.useEffect(() => {
+    if (fromDate && toDate && toDate >= fromDate) {
+      const diff = differenceInCalendarDays(toDate, fromDate) + 1;
+      setDayCount(diff);
+    } else {
+      setDayCount(0);
+    }
+  }, [fromDate, toDate]);
+
   const employeeOptions = React.useMemo(() => {
     if (!employees) return [];
     return employees.map(emp => ({ value: emp.id, label: `${emp.fullName} (${emp.employeeCode})` }));
@@ -53,8 +71,8 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
 
   async function onSubmit(data: VisitApplicationFormValues) {
     if (!user) {
-      Swal.fire("Authentication Error", "You must be logged in to update.", "error");
-      return;
+        Swal.fire("Authentication Error", "You must be logged in to update.", "error");
+        return;
     }
 
     if(data.status !== 'Pending' && !canApprove) {
@@ -64,7 +82,6 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
 
     setIsSubmitting(true);
     const selectedEmployee = employeeOptions.find(emp => emp.value === data.employeeId);
-    const dayCount = differenceInCalendarDays(data.toDate, data.fromDate) + 1;
 
     const dataToUpdate = {
       ...data,
@@ -90,7 +107,7 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
         showConfirmButton: false,
       });
     } catch (error: any) {
-      Swal.fire("Update Failed", `Failed to update application: ${error.message}`, "error");
+      Swal.fire("Update Failed", `There was an error updating the application: ${error.message}`, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -99,54 +116,80 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="employeeId"
-          render={({ field }) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-end">
+            <FormField
+            control={form.control}
+            name="employeeId"
+            render={({ field }) => (
+                <FormItem className="lg:col-span-1 xl:col-span-1">
+                <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
+                <Combobox
+                    options={employeeOptions}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Search Employee..."
+                    selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
+                    disabled={isLoadingEmployees}
+                />
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Visit Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger className="h-10">
+                                <SelectValue placeholder="Select Status" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {visitStatusOptions.map(opt => (
+                                <SelectItem key={opt} value={opt} disabled={!canApprove && opt !== 'Pending'}>{opt}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="fromDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />From Date*</FormLabel>
+                    <DatePickerField field={field} showTimeSelect/>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="toDate"
+                render={({ field }) => (
+                <FormItem className="flex flex-col">
+                    <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />End Date*</FormLabel>
+                    <DatePickerField field={field} fromDate={form.getValues("fromDate")} showTimeSelect/>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
             <FormItem>
-              <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
-              <Combobox
-                options={employeeOptions}
-                value={field.value}
-                onValueChange={field.onChange}
-                placeholder="Search Employee..."
-                selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
-                disabled={isLoadingEmployees}
-              />
-              <FormMessage />
+                <FormLabel>Day Count</FormLabel>
+                <Input value={`${dayCount} Day(s)`} readOnly disabled className="bg-muted/50 h-10 cursor-not-allowed"/>
             </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="fromDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />From Date*</FormLabel>
-                <DatePickerField field={field} />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="toDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />To Date*</FormLabel>
-                <DatePickerField field={field} fromDate={form.getValues("fromDate")} />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
         <FormField
           control={form.control}
           name="remarks"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Remarks*</FormLabel>
+              <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Visit Purpose*</FormLabel>
               <FormControl>
                 <Textarea placeholder="Describe the purpose of the visit..." {...field} />
               </FormControl>
@@ -158,41 +201,19 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
             <>
                 <Separator />
                 <h3 className="text-lg font-semibold">Approval Section</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Status*</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {visitStatusOptions.map(opt => (
-                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                    <FormField
-                    control={form.control}
-                    name="approverComment"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Approver Comment</FormLabel>
-                        <FormControl>
-                            <Textarea placeholder="Add a comment for approval or rejection..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                </div>
+                <FormField
+                control={form.control}
+                name="approverComment"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Approver Comment</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="Add a comment for approval or rejection..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
             </>
         )}
         <div className="flex justify-end pt-4">
