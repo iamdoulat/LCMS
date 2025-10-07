@@ -194,10 +194,22 @@ export default function HrmDashboardPage() {
             const presentCount = attendance.filter(a => a.flag === 'P').length;
             const delayedCount = attendance.filter(a => a.flag === 'D').length;
             const todayPresentCount = presentCount + delayedCount;
-            const todayAbsentCount = employees.length - todayPresentCount;
 
-            const onLeaveTodayCount = leaves.filter(l => l.status === 'Approved' && isWithinInterval(today, { start: parseISO(l.fromDate), end: parseISO(l.toDate) })).length;
-            const onLeaveTomorrowCount = leaves.filter(l => l.status === 'Approved' && isToday(parseISO(l.fromDate))).length;
+            const onLeaveTodayCount = leaves.filter(l => {
+                try {
+                    return l.status === 'Approved' && isWithinInterval(today, { start: parseISO(l.fromDate), end: parseISO(l.toDate) })
+                } catch (e) {
+                    return false;
+                }
+            }).length;
+
+            const todayAbsentCount = employees.length - todayPresentCount - onLeaveTodayCount;
+
+            const onLeaveTomorrowCount = leaves.filter(l => {
+                try {
+                    return l.status === 'Approved' && isToday(parseISO(l.fromDate))
+                } catch(e) { return false; }
+            }).length;
             const pendingLeaveApplicationsCount = leaves.filter(l => l.status === 'Pending').length;
 
             const upcomingBirthdaysCount = employees.filter(e => {
