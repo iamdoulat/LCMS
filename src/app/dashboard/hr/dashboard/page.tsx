@@ -1,9 +1,10 @@
+
 "use client";
 
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX, UserPlus, Coffee, Plane, Wallet, BookOpen, Loader2, AlertTriangle, Search, MoreHorizontal } from 'lucide-react';
+import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX, UserPlus, Coffee, Plane, Wallet, BookOpen, Loader2, AlertTriangle, Search, MoreHorizontal, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Swal from 'sweetalert2';
 
 interface HrmDashboardStats {
     totalEmployees: number;
@@ -99,6 +101,8 @@ export default function HrmDashboardPage() {
                 ...emp,
                 inTime: att?.inTime || '-',
                 outTime: att?.outTime || '-',
+                inTimeLocation: att?.inTimeLocation,
+                outTimeLocation: att?.outTimeLocation,
                 status: status,
             };
         });
@@ -160,6 +164,15 @@ export default function HrmDashboardPage() {
             });
         }
     }, [employees, leaves, attendance]);
+
+    const handleViewLocation = (location: { latitude: number; longitude: number } | undefined | null, timeType: string) => {
+        if (location) {
+          const url = `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
+          window.open(url, '_blank', 'noopener,noreferrer');
+        } else {
+          Swal.fire('No Location', `Location data is not available for this ${timeType} entry.`, 'info');
+        }
+    };
 
     if (isLoading) {
         return (
@@ -327,8 +340,26 @@ export default function HrmDashboardPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell>{emp.designation}</TableCell>
-                                        <TableCell>{emp.inTime}</TableCell>
-                                        <TableCell>{emp.outTime}</TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-1">
+                                                {emp.inTime}
+                                                {emp.inTimeLocation && (
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleViewLocation(emp.inTimeLocation, 'In-Time')}>
+                                                        <MapPin className="h-3.5 w-3.5 text-blue-500"/>
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-1">
+                                                {emp.outTime}
+                                                {emp.outTimeLocation && (
+                                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleViewLocation(emp.outTimeLocation, 'Out-Time')}>
+                                                        <MapPin className="h-3.5 w-3.5 text-orange-500"/>
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                         <TableCell>
                                             <Badge variant={emp.status === 'Present' || emp.status === 'Delayed' ? 'default' : 'destructive'} className={cn(emp.status === 'Present' && 'bg-green-500', emp.status === 'Delayed' && 'bg-yellow-500 text-black')}>
                                                 {emp.status}
@@ -358,3 +389,4 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
+
