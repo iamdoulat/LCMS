@@ -1742,6 +1742,7 @@ export const AdvanceSalarySchema = z.object({
   paymentMethod: z.enum(advanceSalaryPaymentMethodOptions, { required_error: "Payment method is required." }),
   reason: z.string().min(10, "Reason must be at least 10 characters long."),
   status: z.enum(advanceSalaryStatusOptions).optional(),
+  approverComment: z.string().optional(), // Added for the edit form
 });
 export type AdvanceSalaryFormValues = z.infer<typeof AdvanceSalarySchema>;
 
@@ -1758,6 +1759,7 @@ export interface AdvanceSalary {
   paymentMethod: AdvanceSalaryPaymentMethod;
   reason: string;
   status: AdvanceSalaryStatus;
+  approverComment?: string;
   createdAt?: any;
   updatedAt?: any;
 }

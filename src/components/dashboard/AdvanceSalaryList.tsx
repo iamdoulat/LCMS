@@ -25,6 +25,7 @@ const formatCurrency = (amount: number) => `BDT ${amount.toLocaleString()}`;
 export function AdvanceSalaryList() {
     const router = useRouter();
     const { user, userRole } = useAuth();
+    const isReadOnly = userRole?.includes('Viewer');
 
     // Conditionally build the query based on the user's role
     const advancesQuery = React.useMemo(() => {
@@ -42,11 +43,11 @@ export function AdvanceSalaryList() {
     }, [user, userRole]);
 
     // useFirestoreQuery will only run if advancesQuery is not null
-    const { data: advances, isLoading, error } = useFirestoreQuery<AdvanceSalaryDocument[]>(
-        advancesQuery!, // The '!' asserts that we've handled the null case, which we have.
+    const { data: advances, isLoading, error, refetch } = useFirestoreQuery<AdvanceSalaryDocument[]>(
+        advancesQuery!, 
         undefined,
-        ['advance_salary', user?.uid, userRole?.join('-')], // Query key depends on user and role
-        !!advancesQuery // The query is enabled only when advancesQuery is truthy
+        ['advance_salary', user?.uid, userRole?.join('-')], 
+        !!advancesQuery
     );
 
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -66,7 +67,15 @@ export function AdvanceSalaryList() {
         currentPage * ITEMS_PER_PAGE
     );
     
+    const handleEdit = (id: string) => {
+        router.push(`/dashboard/hr/payroll/advance-salary/edit/${id}`);
+    };
+    
     const handleDelete = async (id: string, name: string) => {
+        if(isReadOnly) {
+             Swal.fire('Permission Denied', 'You do not have permission to delete records.', 'error');
+             return;
+        }
         Swal.fire({
             title: 'Are you sure?',
             text: `This will permanently delete the advance salary record for ${name}.`,
@@ -78,6 +87,7 @@ export function AdvanceSalaryList() {
             if (result.isConfirmed) {
                 try {
                     await deleteDoc(doc(firestore, "advance_salary", id));
+                    refetch();
                     Swal.fire('Deleted!', 'The record has been deleted.', 'success');
                 } catch (e: any) {
                     Swal.fire('Error!', `Could not delete the record: ${e.message}`, 'error');
@@ -103,12 +113,12 @@ export function AdvanceSalaryList() {
                         <TableRow>
                             <TableHead>Employee</TableHead>
                             <TableHead>Apply Date</TableHead>
-                            <TableHead>Payment Starts From</TableHead>
-                            <TableHead>Payment Duration</TableHead>
+                            <TableHead>Starts From</TableHead>
+                            <TableHead>Duration</TableHead>
                             <TableHead>Advance Amount</TableHead>
                             <TableHead>Due Amount</TableHead>
-                            <TableHead>Amount Type</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead>Approver Comments</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -121,18 +131,19 @@ export function AdvanceSalaryList() {
                                 <TableCell>{advance.paymentDuration} months</TableCell>
                                 <TableCell>{formatCurrency(advance.advanceAmount)}</TableCell>
                                 <TableCell>{formatCurrency(advance.dueAmount)}</TableCell>
-                                <TableCell>{advance.paymentMethod}</TableCell>
-                                <TableCell><Badge>{advance.status}</Badge></TableCell>
+                                <TableCell><Badge variant={advance.status === 'Approved' ? 'default' : advance.status === 'Rejected' ? 'destructive' : 'secondary'}>{advance.status}</Badge></TableCell>
+                                <TableCell className="text-xs text-muted-foreground max-w-xs truncate" title={advance.approverComment}>{advance.approverComment || 'N/A'}</TableCell>
                                 <TableCell className="text-right">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => router.push(`/dashboard/hr/payroll/advance-salary/edit/${advance.id}`)}>
-                                                <Edit className="mr-2 h-4 w-4" /> Edit
+                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuItem onClick={() => handleEdit(advance.id)}>
+                                                <Edit className="mr-2 h-4 w-4" /> Edit/Approve
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleDelete(advance.id, advance.employeeName)} className="text-destructive focus:text-destructive">
+                                            <DropdownMenuItem onClick={() => handleDelete(advance.id, advance.employeeName)} className="text-destructive focus:text-destructive" disabled={isReadOnly}>
                                                 <Trash2 className="mr-2 h-4 w-4" /> Delete
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
