@@ -43,7 +43,7 @@ export function AdvanceSalaryList() {
     }, [user, userRole]);
 
     const { data: advances, isLoading, error, refetch } = useFirestoreQuery<AdvanceSalaryDocument[]>(
-        advancesQuery, 
+        advancesQuery!,
         undefined,
         ['advance_salary', user?.uid, userRole?.join('-')], // A more specific query key
         !!advancesQuery // This query is only enabled if advancesQuery is not null
