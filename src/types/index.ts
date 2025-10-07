@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -413,7 +414,7 @@ export interface AppNotification {
   link?: string;
 }
 
-export const userRoles = ["Super Admin", "Admin", "User", "Service", "DemoManager", "Accounts", "Viewer", "Commercial"] as const;
+export const userRoles = ["Super Admin", "Admin", "User", "Service", "DemoManager", "Accounts", "Viewer", "Commercial", "HR"] as const;
 export type UserRole = typeof userRoles[number];
 
 export const NoticeBoardSettingsSchema = z.object({

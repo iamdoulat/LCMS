@@ -34,6 +34,7 @@ const DEMO_MANAGER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_DE
 const ACCOUNTS_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_ACCOUNTS_EMAILS);
 const VIEWER_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_VIEWER_EMAILS);
 const COMMERCIAL_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_COMMERCIAL_EMAILS);
+const HR_EMAILS_FROM_ENV = getEmailsFromEnv(process.env.NEXT_PUBLIC_HR_EMAILS);
 
 
 interface AuthContextType {
@@ -229,6 +230,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("DemoManager");
         if (ACCOUNTS_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("Accounts");
         if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("Viewer");
+        if (HR_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("HR");
         if (assignedRoles.length === 0) assignedRoles.push("User");
       }
   
@@ -273,6 +275,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
           if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("DemoManager");
           if (ACCOUNTS_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Accounts");
           if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Viewer");
+          if (HR_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("HR");
           if (roles.length === 0) roles.push("User");
           
           const newProfileData = {

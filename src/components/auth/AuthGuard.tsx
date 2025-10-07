@@ -39,14 +39,14 @@ const roleAllowedPaths: Record<string, UserRole[]> = {
   "/dashboard/shipments": ["Super Admin", "Admin", "Viewer", "Commercial"],
   "/dashboard/demo": ["Super Admin", "Admin", "DemoManager", "Viewer", "Commercial"],
   "/dashboard/warranty-management": ["Super Admin", "Admin", "Service", "Viewer", "Commercial"],
-  "/dashboard/suppliers": ["Super Admin", "Admin", "Viewer", "Commercial"],
-  "/dashboard/customers": ["Super Admin", "Admin", "Viewer", "Commercial"],
+  "/dashboard/suppliers": ["Super Admin", "Admin", "Viewer", "Commercial", "Accounts", "Service", "DemoManager"],
+  "/dashboard/customers": ["Super Admin", "Admin", "Viewer", "Commercial", "Accounts", "Service", "DemoManager"],
   "/dashboard/petty-cash": ["Super Admin", "Admin", "Accounts", "Viewer"],
   "/dashboard/petty_cash": ["Super Admin", "Admin", "Accounts", "Viewer"],
   "/dashboard/google-sheets": ["Super Admin", "Admin", "Viewer", "Commercial"],
   "/dashboard/google-drive": ["Super Admin", "Admin", "Viewer", "Commercial"],
   "/dashboard/settings": ["Super Admin", "Admin", "Viewer"],
-  "/dashboard/hr": ["Super Admin", "Admin", "Viewer"],
+  "/dashboard/hr": ["Super Admin", "Admin", "HR", "Viewer"],
 };
 
 // Define default redirect paths for restricted roles
@@ -55,6 +55,7 @@ const roleRedirects: Record<string, string> = {
   "Service": process.env.NEXT_PUBLIC_REDIRECT_PATH_SERVICE || '/dashboard/warranty-management/search',
   "DemoManager": process.env.NEXT_PUBLIC_REDIRECT_PATH_DEMO_MANAGER || '/dashboard/demo/demo-machine-search',
   "Accounts": process.env.NEXT_PUBLIC_REDIRECT_PATH_ACCOUNTS || '/dashboard/petty-cash/dashboard',
+  "HR": '/dashboard/hr/dashboard',
   "Viewer": '/dashboard',
   "Commercial": '/dashboard/total-lc',
 };
