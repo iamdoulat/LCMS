@@ -465,11 +465,11 @@ export default function HrmDashboardPage() {
                         className="bg-rose-500"
                     />
                      <StatCard
-                        title="On Break Now"
-                        value="0"
-                        icon={<Coffee />}
-                        description="Employees currently on break"
-                        className="bg-gray-500"
+                        title="Total Delayed Today"
+                        value={stats.todayDelayed}
+                        icon={<Clock />}
+                        description="Delayed Today"
+                        className="bg-yellow-400"
                     />
                     <StatCard
                         title="On Visit Today"
@@ -493,11 +493,11 @@ export default function HrmDashboardPage() {
                         className="bg-rose-500"
                     />
                     <StatCard
-                        title="Total Delayed Today"
-                        value={stats.todayDelayed}
-                        icon={<Clock />}
-                        description="Delayed Today"
-                        className="bg-yellow-400"
+                        title="On Break Now"
+                        value="0"
+                        icon={<Coffee />}
+                        description="Employees currently on break"
+                        className="bg-gray-500"
                     />
                </div>
 
@@ -760,8 +760,13 @@ export default function HrmDashboardPage() {
                         </CardContent>
                     </Card>
                 </div>
+
+                <div className="mt-8">
+                    <LeaveCalendar birthdays={birthdaysToday} />
+                </div>
             </CardContent>
         </Card>
     </div>
   );
 }
+
