@@ -358,6 +358,20 @@ export default function HrmDashboardPage() {
       return missedRecords;
     }, [employees, missedDateRange, rangeAttendance]);
 
+    const birthdaysToday = React.useMemo(() => {
+        if (!employees) return [];
+        const todayMonthDay = format(new Date(), 'MM-dd');
+        return employees.filter(emp => {
+            if (!emp.dateOfBirth) return false;
+            try {
+                const dob = parseISO(emp.dateOfBirth);
+                return format(dob, 'MM-dd') === todayMonthDay;
+            } catch {
+                return false;
+            }
+        });
+    }, [employees]);
+
 
     if (isLoading) {
         return (
@@ -730,7 +744,7 @@ export default function HrmDashboardPage() {
                 </div>
 
                 <div className="mt-12">
-                    <LeaveCalendar />
+                    <LeaveCalendar birthdays={birthdaysToday} />
                 </div>
 
             </CardContent>
@@ -738,4 +752,3 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
-

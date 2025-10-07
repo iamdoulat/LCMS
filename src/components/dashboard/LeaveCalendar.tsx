@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -11,7 +12,7 @@ import { firestore } from '@/lib/firebase/config';
 import type { LeaveApplicationDocument, EmployeeDocument, BranchDocument, DepartmentDocument, HolidayDocument, LeaveType } from '@/types';
 import { leaveTypeOptions } from '@/types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO, addMonths, subMonths, isToday } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Cake } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 
@@ -25,6 +26,7 @@ interface DayWithLeaves {
   isHoliday: boolean;
   isWeekend: boolean;
   leaves: (LeaveApplicationDocument & { employee?: EmployeeDocument })[];
+  birthdays: EmployeeDocument[];
 }
 
 const getInitials = (name?: string) => {
@@ -32,7 +34,11 @@ const getInitials = (name?: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 };
 
-export function LeaveCalendar() {
+interface LeaveCalendarProps {
+    birthdays?: EmployeeDocument[];
+}
+
+export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
   const [filterBranch, setFilterBranch] = React.useState(ALL_BRANCHES);
   const [filterDept, setFilterDept] = React.useState(ALL_DEPTS);
@@ -72,6 +78,14 @@ export function LeaveCalendar() {
             employee: employees?.find(e => e.id === leave.employeeId)
         }));
 
+        const dayBirthdays = birthdays.filter(emp => {
+            if (!emp.dateOfBirth) return false;
+            try {
+                const dob = parseISO(emp.dateOfBirth);
+                return format(dob, 'MM-dd') === format(day, 'MM-dd');
+            } catch { return false; }
+        });
+
         const isHoliday = holidays?.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
         const isWeekend = day.getDay() === 5; // Friday
         
@@ -81,9 +95,10 @@ export function LeaveCalendar() {
             isHoliday: !!isHoliday,
             isWeekend: isWeekend,
             leaves: dayLeaves || [],
+            birthdays: dayBirthdays || [],
         };
     });
-  }, [currentMonth, employees, leaves, holidays, filterBranch, filterDept, filterLeaveType, isLoading]);
+  }, [currentMonth, employees, leaves, holidays, filterBranch, filterDept, filterLeaveType, isLoading, birthdays]);
 
   const goToPreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -132,6 +147,21 @@ export function LeaveCalendar() {
             <div key={dayInfo.date.toString()} className="relative bg-card p-1.5 min-h-[100px] h-auto flex flex-col">
               <time dateTime={format(dayInfo.date, 'yyyy-MM-dd')} className="text-xs font-semibold">{format(dayInfo.date, 'd')}</time>
               <div className="flex-grow mt-1 space-y-1">
+                {dayInfo.birthdays.map(emp => (
+                     <TooltipProvider key={emp.id}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1.5 cursor-pointer bg-pink-100 dark:bg-pink-900/50 p-1 rounded">
+                                    <Cake className="h-4 w-4 text-pink-500 flex-shrink-0"/>
+                                    <span className="hidden sm:inline text-xs truncate font-medium text-pink-700 dark:text-pink-300">{emp.fullName}</span>
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="font-semibold">{emp.fullName}'s Birthday!</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                ))}
                 {dayInfo.leaves.map(leave => (
                    <TooltipProvider key={leave.id}>
                     <Tooltip>
@@ -162,6 +192,7 @@ export function LeaveCalendar() {
             <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-yellow-500 mr-2"></span>Pending</div>
             <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-blue-500 mr-2"></span>Today</div>
             <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-gray-400 mr-2"></span>Holiday</div>
+            <div className="flex items-center"><Cake className="h-4 w-4 text-pink-500 mr-1"/>Birthday</div>
         </div>
       </CardContent>
     </Card>
