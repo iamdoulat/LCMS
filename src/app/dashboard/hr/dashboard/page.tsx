@@ -302,8 +302,8 @@ export default function HrmDashboardPage() {
             })
             .filter(emp => {
                 const nameMatch = !leaveSearchTerm || emp.fullName?.toLowerCase().includes(leaveSearchTerm.toLowerCase());
-                const branchMatch = leaveFilterBranch === ALL_BRANCHES || emp.branch === leaveFilterBranch;
-                const deptMatch = leaveFilterDept === ALL_DEPTS || emp.department === leaveFilterDept;
+                const branchMatch = leaveFilterBranch === ALL_BRANCHES_FILTER_VALUE || emp.branch === leaveFilterBranch;
+                const deptMatch = leaveFilterDept === ALL_DEPTS_FILTER_VALUE || emp.department === leaveFilterDept;
                 return nameMatch && branchMatch && deptMatch;
             });
 
@@ -599,7 +599,7 @@ export default function HrmDashboardPage() {
                                 <Select value={leaveFilterDept} onValueChange={(value) => setLeaveFilterDept(value)}>
                                     <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="All Depts" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value={ALL_DEPTS_FILTER_VALUE}>All Depts</SelectItem>
+                                        <SelectItem value={ALL_DEPTS_FILTER_VALUE}>All Departments</SelectItem>
                                         {departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
@@ -720,3 +720,4 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
+
