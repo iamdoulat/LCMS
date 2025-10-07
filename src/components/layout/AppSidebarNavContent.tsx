@@ -182,7 +182,7 @@ const hrNavItems: NavItem[] = [
   { href: "/dashboard/hr/leaves", label: "Leave Management", icon: Mailbox, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/holidays", label: "Holidays", icon: CalendarPlus, iconColorClass: 'bg-icon-upcoming'},
   { href: "/dashboard/hr/attendance/reports", label: "Attendance Reports", icon: BarChart3, iconColorClass: 'bg-icon-reports' },
-  { href: "/dashboard/settings/manage-notices", label: "Manage Notice Board", icon: Bell, iconColorClass: 'bg-icon-notifications' },
+  { href: "/dashboard/hr/notice", label: "Manage Notice Board", icon: Bell, iconColorClass: 'bg-icon-notifications' },
   { href: '/dashboard/hr/settings', label: 'HRM Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 
@@ -247,7 +247,7 @@ export function AppSidebarNavContent() {
 
   return (
     <>
-<SidebarHeader className="border-b sticky top-0 bg-sidebar z-40">
+<SidebarHeader className="border-b sticky top-0 bg-sidebar z-50">
   <div className="flex items-center justify-between p-2 gap-2">
     <Link href="/dashboard" className="flex items-center gap-2 min-w-0 flex-1">
       <Image
