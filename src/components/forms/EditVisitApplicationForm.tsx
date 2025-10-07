@@ -10,16 +10,16 @@ import { collection, query, orderBy, doc, updateDoc, serverTimestamp, getDocs } 
 import type { VisitApplicationFormValues, EmployeeDocument, VisitApplicationDocument, VisitStatus } from '@/types';
 import { VisitApplicationSchema, visitStatusOptions } from '@/types';
 import { format, parseISO, differenceInCalendarDays } from 'date-fns';
-
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from './DatePickerField';
 import { Loader2, Save, User, Calendar, MessageSquare } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
 import { Textarea } from '../ui/textarea';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../ui/select';
+import { Separator } from '../ui/separator';
 
 interface EditVisitApplicationFormProps {
   initialData: VisitApplicationDocument;

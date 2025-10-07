@@ -142,6 +142,7 @@ export default function VisitApplicationListPage() {
                                         <TableHead>Days</TableHead>
                                         <TableHead>Remarks</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead>Approver Comments</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -155,6 +156,7 @@ export default function VisitApplicationListPage() {
                                             <TableCell>{app.day}</TableCell>
                                             <TableCell className="max-w-xs truncate" title={app.remarks}>{app.remarks}</TableCell>
                                             <TableCell><Badge variant={getStatusBadgeVariant(app.status)}>{app.status}</Badge></TableCell>
+                                            <TableCell className="max-w-xs truncate text-xs text-muted-foreground" title={app.approverComment}>{app.approverComment || 'N/A'}</TableCell>
                                             <TableCell className="text-right">
                                                 <Button variant="ghost" size="icon" onClick={() => handleEdit(app.id)} disabled={isReadOnly}><Edit className="h-4 w-4"/></Button>
                                                 <Button variant="ghost" size="icon" onClick={() => handleDelete(app.id, app.employeeName)} disabled={isReadOnly}><Trash2 className="h-4 w-4 text-destructive"/></Button>
