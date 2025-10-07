@@ -245,7 +245,7 @@ export function AppSidebarNav() {
 
   return (
     <>
-<SidebarHeader className="border-b">
+<SidebarHeader className="border-b sticky top-0 bg-sidebar z-40">
   <div className="flex items-center justify-between p-2 gap-2">
     <Link href="/dashboard" className="flex items-center gap-2 min-w-0 flex-1">
       <Image
@@ -381,3 +381,5 @@ export function AppSidebarNav() {
     </>
   );
 }
+
+    
