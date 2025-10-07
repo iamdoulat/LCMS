@@ -1725,5 +1725,41 @@ export interface LeaveApplication {
   updatedAt: any;
 }
 export type LeaveApplicationDocument = LeaveApplication & { id: string };
-
 // --- END Leave Types ---
+
+// --- Advance Salary Types ---
+export const advanceSalaryStatusOptions = ["Pending", "Approved", "Rejected", "Paid", "Partially Paid"] as const;
+export type AdvanceSalaryStatus = typeof advanceSalaryStatusOptions[number];
+export const advanceSalaryPaymentMethodOptions = ["Salary Deduction", "Cash"] as const;
+export type AdvanceSalaryPaymentMethod = typeof advanceSalaryPaymentMethodOptions[number];
+
+export const AdvanceSalarySchema = z.object({
+  employeeId: z.string().min(1, "Employee is required."),
+  applyDate: z.date({ required_error: "Apply date is required." }),
+  paymentStartsFrom: z.date({ required_error: "Payment start date is required." }),
+  paymentDuration: z.number().int().positive("Payment duration in months is required."),
+  advanceAmount: z.number().positive("Advance amount must be a positive number."),
+  paymentMethod: z.enum(advanceSalaryPaymentMethodOptions, { required_error: "Payment method is required." }),
+  reason: z.string().min(10, "Reason must be at least 10 characters long."),
+  status: z.enum(advanceSalaryStatusOptions).optional(),
+});
+export type AdvanceSalaryFormValues = z.infer<typeof AdvanceSalarySchema>;
+
+export interface AdvanceSalary {
+  id?: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string;
+  applyDate: string; // ISO String
+  paymentStartsFrom: string; // ISO String
+  paymentDuration: number;
+  advanceAmount: number;
+  dueAmount: number;
+  paymentMethod: AdvanceSalaryPaymentMethod;
+  reason: string;
+  status: AdvanceSalaryStatus;
+  createdAt?: any;
+  updatedAt?: any;
+}
+export type AdvanceSalaryDocument = AdvanceSalary & { id: string };
+// --- END Advance Salary Types ---
