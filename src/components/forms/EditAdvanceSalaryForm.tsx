@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, getDocs, collection, query, orderBy } from 'firebase/firestore';
 import type { AdvanceSalaryFormValues, EmployeeDocument, AdvanceSalaryDocument, AdvanceSalaryStatus } from '@/types';
-import { AdvanceSalarySchema, advanceSalaryStatusOptions } from '@/types';
+import { AdvanceSalarySchema, advanceSalaryStatusOptions, advanceSalaryPaymentMethodOptions } from '@/types';
 import { format, parseISO } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -111,85 +111,83 @@ export function EditAdvanceSalaryForm({ initialData }: EditAdvanceSalaryFormProp
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="employeeId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
-              <Combobox
-                options={employeeOptions}
-                value={field.value}
-                onValueChange={field.onChange}
-                placeholder="Search Employee..."
-                selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
-                disabled={isLoadingEmployees}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="applyDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Apply Date*</FormLabel>
-                <DatePickerField field={field} />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-           <FormField
-            control={form.control}
-            name="paymentStartsFrom"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Payment Starts From*</FormLabel>
-                <DatePickerField field={field} />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 items-end">
             <FormField
             control={form.control}
-            name="advanceAmount"
+            name="employeeId"
             render={({ field }) => (
-                <FormItem>
-                <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Advance Amount*</FormLabel>
-                <FormControl><Input type="number" placeholder="Enter amount in BDT" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                <FormItem className="lg:col-span-1 xl:col-span-1">
+                <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
+                <Combobox
+                    options={employeeOptions}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Search Employee..."
+                    selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
+                    disabled={isLoadingEmployees}
+                />
                 <FormMessage />
                 </FormItem>
             )}
             />
             <FormField
             control={form.control}
-            name="paymentDuration"
+            name="applyDate"
             render={({ field }) => (
-                <FormItem>
-                <FormLabel>Payment Duration (Months)*</FormLabel>
-                <FormControl><Input type="number" placeholder="e.g., 6" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 1)} /></FormControl>
+                <FormItem className="flex flex-col">
+                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Apply Date*</FormLabel>
+                <DatePickerField field={field} />
                 <FormMessage />
                 </FormItem>
             )}
+            />
+            <FormField
+            control={form.control}
+            name="paymentStartsFrom"
+            render={({ field }) => (
+                <FormItem className="flex flex-col">
+                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Payment Starts From*</FormLabel>
+                <DatePickerField field={field} />
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+                control={form.control}
+                name="advanceAmount"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Advance Amount*</FormLabel>
+                    <FormControl><Input type="number" placeholder="Enter amount in BDT" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+             <FormField
+                control={form.control}
+                name="paymentDuration"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Payment Duration (Months)*</FormLabel>
+                    <FormControl><Input type="number" placeholder="e.g., 6" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 1)} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
             />
         </div>
         
         <FormField
-          control={form.control}
-          name="reason"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Reason*</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Reason for advance salary request..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+            control={form.control}
+            name="reason"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Reason*</FormLabel>
+                <FormControl>
+                    <Textarea placeholder="Reason for advance salary request..." {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
         />
 
         <Separator />
