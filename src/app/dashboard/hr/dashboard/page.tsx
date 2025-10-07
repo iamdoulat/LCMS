@@ -207,9 +207,10 @@ export default function HrmDashboardPage() {
 
             const onLeaveTomorrowCount = leaves.filter(l => {
                 try {
-                    return l.status === 'Approved' && isToday(parseISO(l.fromDate))
+                    return l.status === 'Approved' && isWithinInterval(tomorrow, { start: parseISO(l.fromDate), end: parseISO(l.toDate) });
                 } catch(e) { return false; }
             }).length;
+
             const pendingLeaveApplicationsCount = leaves.filter(l => l.status === 'Pending').length;
 
             const upcomingBirthdaysCount = employees.filter(e => {
@@ -360,7 +361,7 @@ export default function HrmDashboardPage() {
 
     if (isLoading) {
         return (
-             <div className="container mx-auto py-8">
+             <div className="container mx-auto py-8 px-5">
                 <div className="flex justify-center items-center h-96">
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 </div>
@@ -737,3 +738,4 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
+
