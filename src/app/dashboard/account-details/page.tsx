@@ -486,6 +486,7 @@ export default function AccountDetailsPage() {
   );
 
   const getAttendanceTitle = () => {
+    if (employeeData?.status === 'Terminated') return 'Account Terminated';
     switch (dayStatus) {
       case 'Weekend': return 'Today is a Weekend';
       case 'Holiday': return 'Today is a Holiday';
@@ -494,6 +495,9 @@ export default function AccountDetailsPage() {
       default: return 'Daily Attendance';
     }
   };
+  
+  const isAttendanceDisabled = dayStatus !== 'Working Day' || employeeData?.status === 'Terminated';
+
 
   if (authLoading || isEmployeeDataLoading || isDayStatusLoading) {
     return (
@@ -597,7 +601,7 @@ export default function AccountDetailsPage() {
                     </div>
 
                     <div className="lg:col-span-1">
-                        <StarBorder as="div" className="w-full">
+                        <StarBorder as="div" className="w-full" color="magenta">
                             <div className="p-4">
                                 <h4 className={cn("text-sm font-semibold mb-2 flex items-center gap-2", dayStatus !== 'Working Day' && "text-muted-foreground")}>
                                     {dayStatus === 'Working Day' ? <UserCheck className="h-4 w-4 text-primary"/> : <XCircle className="h-4 w-4 text-destructive"/>}
@@ -615,7 +619,7 @@ export default function AccountDetailsPage() {
                                                 dailyAttendance?.inTime && dailyAttendance.flag === 'D' && "bg-red-600 hover:bg-red-700 text-white"
                                             )}
                                             onClick={() => handleAttendance('in')}
-                                            disabled={attendanceLoading || !!dailyAttendance?.inTime || dayStatus !== 'Working Day'}
+                                            disabled={attendanceLoading || !!dailyAttendance?.inTime || isAttendanceDisabled}
                                             >
                                             {attendanceLoading && !dailyAttendance?.inTime ? <Loader2 className="h-5 w-5 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="h-5 w-5" /> : <Clock className="h-5 w-5"/>)}
                                             <span className="text-xs mt-1">In Time</span>
@@ -643,7 +647,7 @@ export default function AccountDetailsPage() {
                                                 !dailyAttendance?.outTime && !!dailyAttendance?.inTime && "bg-gradient-to-br from-orange-500 to-rose-500 text-white hover:opacity-90 hover:text-white"
                                             )}
                                             onClick={() => handleAttendance('out')}
-                                            disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime || dayStatus !== 'Working Day'}
+                                            disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime || isAttendanceDisabled}
                                             >
                                             {attendanceLoading && !dailyAttendance?.outTime ? <Loader2 className="h-5 w-5 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="h-5 w-5 text-green-500" /> : <Clock className="h-5 w-5"/>)}
                                             <span className="text-xs mt-1">Out Time</span>
