@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { EmployeeDocument } from '@/types';
+import type { EmployeeDocument, LeaveApplicationDocument } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { DatePickerInput } from '@/components/ui/date-picker-input';
 import { Mailbox, ArrowLeft, Loader2, Save } from 'lucide-react';
@@ -119,71 +119,73 @@ export function AddLeaveForm({ onFormSubmit }: { onFormSubmit: () => void }) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="employeeId"
-          render={({ field }) => (
-          <FormItem>
-            <FormLabel>Employee*</FormLabel>
-             <Combobox
-              options={employeeOptions}
-              value={field.value}
-              onValueChange={field.onChange}
-              placeholder="Search Employee..."
-              selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
-              disabled={isLoadingEmployees}
-            />
-            <FormMessage />
-          </FormItem>
-        )} />
-        <FormField
-          control={form.control}
-          name="leaveType"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Leave Type*</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Leave Type" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="Annual">Annual Leave</SelectItem>
-                  <SelectItem value="Sick">Sick Leave</SelectItem>
-                  <SelectItem value="Paternity">Paternity Leave</SelectItem>
-                  <SelectItem value="Maternity">Maternity Leave</SelectItem>
-                  <SelectItem value="Unpaid">Unpaid Leave</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+            <FormField
+            control={form.control}
+            name="employeeId"
+            render={({ field }) => (
+            <FormItem className="lg:col-span-1">
+                <FormLabel>Employee*</FormLabel>
+                <Combobox
+                options={employeeOptions}
+                value={field.value}
+                onValueChange={field.onChange}
+                placeholder="Search Employee..."
+                selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
+                disabled={isLoadingEmployees}
+                />
+                <FormMessage />
             </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
+            )} />
+
+            <FormField
+            control={form.control}
+            name="leaveType"
+            render={({ field }) => (
+                <FormItem className="lg:col-span-1">
+                <FormLabel>Leave Type*</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select Leave Type" />
+                    </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                    <SelectItem value="Annual">Annual Leave</SelectItem>
+                    <SelectItem value="Sick">Sick Leave</SelectItem>
+                    <SelectItem value="Paternity">Paternity Leave</SelectItem>
+                    <SelectItem value="Maternity">Maternity Leave</SelectItem>
+                    <SelectItem value="Unpaid">Unpaid Leave</SelectItem>
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
             control={form.control}
             name="fromDate"
             render={({ field }) => (
-              <FormItem>
+                <FormItem className="lg:col-span-1">
                 <FormLabel>From*</FormLabel>
                 <DatePickerInput field={field} />
                 <FormMessage />
-              </FormItem>
+                </FormItem>
             )}
-          />
-          <FormField
+            />
+            <FormField
             control={form.control}
             name="toDate"
             render={({ field }) => (
-              <FormItem>
+                <FormItem className="lg:col-span-1">
                 <FormLabel>To*</FormLabel>
                 <DatePickerInput field={field} fromDate={form.getValues("fromDate")} />
                 <FormMessage />
-              </FormItem>
+                </FormItem>
             )}
-          />
+            />
         </div>
+        
         <FormField
           control={form.control}
           name="reason"
@@ -210,4 +212,3 @@ export function AddLeaveForm({ onFormSubmit }: { onFormSubmit: () => void }) {
     </Form>
   );
 }
-

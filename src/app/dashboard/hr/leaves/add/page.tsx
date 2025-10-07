@@ -22,7 +22,7 @@ export default function AddLeavePage() {
           </Button>
         </Link>
       </div>
-      <Card className="max-w-2xl mx-auto shadow-xl">
+      <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Mailbox className="h-7 w-7 text-primary"/>New Leave Application
@@ -38,4 +38,3 @@ export default function AddLeavePage() {
     </div>
   );
 }
-
