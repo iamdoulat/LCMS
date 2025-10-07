@@ -14,12 +14,14 @@ const defaultTransformer = <T>(snapshot: QuerySnapshot<DocumentData>): T[] => {
  * @param firestoreQuery The Firestore query to execute.
  * @param transformer An optional function to transform the snapshot data.
  * @param queryKey A unique key for the query, required for caching and refetching.
+ * @param enabled A boolean to enable or disable the query.
  * @returns The state of the query including data, error, and loading status.
  */
 export const useFirestoreQuery = <T>(
     firestoreQuery: Query<DocumentData>,
     transformer?: (snapshot: QuerySnapshot<DocumentData>) => T,
     queryKey?: any[],
+    enabled: boolean = true, // Add the enabled option with a default value
 ) => {
     // A query key is required for TanStack Query to work correctly.
     // We use a combination of the query's path and any additional keys.
@@ -35,5 +37,6 @@ export const useFirestoreQuery = <T>(
     return useQuery<T, Error>({
         queryKey: key,
         queryFn,
+        enabled, // Pass the enabled option to useQuery
     });
 };
