@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -8,8 +7,8 @@ import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument } from '@/types';
-import { format, startOfTomorrow, isWithinInterval, startOfDay, endOfDay, parseISO, isToday, isFuture, subDays, eachDayOfInterval, getDay, endOfMonth, startOfMonth } from 'date-fns';
+import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument, BranchDocument, DepartmentDocument } from '@/types';
+import { format, startOfTomorrow, isWithinInterval, startOfDay, endOfDay, parseISO, isToday, isFuture, subDays, eachDayOfInterval, getDay, endOfMonth, startOfMonth, differenceInDays } from 'date-fns';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -30,6 +29,8 @@ import Swal from 'sweetalert2';
 import dynamic from 'next/dynamic';
 import { DateRange } from 'react-day-picker';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 const AttendanceSummaryChart = dynamic(() => import('@/components/dashboard/AttendanceSummaryChart'), {
     ssr: false,
@@ -81,7 +82,13 @@ export default function HrmDashboardPage() {
     });
     const [chartData, setChartData] = React.useState<any[]>([]);
 
-    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays;
+    const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(collection(firestore, 'branches'), undefined, ['branches_hrm_dashboard']);
+    const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(collection(firestore, 'departments'), undefined, ['departments_hrm_dashboard']);
+    const [leaveSearchTerm, setLeaveSearchTerm] = React.useState('');
+    const [leaveFilterBranch, setLeaveFilterBranch] = React.useState('');
+    const [leaveFilterDept, setLeaveFilterDept] = React.useState('');
+
+    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts;
     
     React.useEffect(() => {
         const todayStart = format(startOfDay(new Date()), "yyyy-MM-dd'T'00:00:00.000xxx");
@@ -240,6 +247,43 @@ export default function HrmDashboardPage() {
           Swal.fire('No Location', `Location data is not available for this ${timeType} entry.`, 'info');
         }
     };
+    
+    const leaveData = React.useMemo(() => {
+        if (!employees || !leaves) return [];
+
+        return employees
+            .map(emp => {
+                const totalLeaveDays = 24; // Assuming a fixed total
+                const takenLeaves = leaves.filter(
+                    l => l.employeeId === emp.id && l.status === 'Approved'
+                );
+                const leaveTaken = takenLeaves.reduce((acc, l) => {
+                    return acc + differenceInDays(parseISO(l.toDate), parseISO(l.fromDate)) + 1;
+                }, 0);
+                const remainLeave = totalLeaveDays - leaveTaken;
+
+                return {
+                    ...emp,
+                    leaveGroup: 'General',
+                    remainLeave,
+                    leaveTaken
+                };
+            })
+            .filter(emp => {
+                const nameMatch = !leaveSearchTerm || emp.fullName?.toLowerCase().includes(leaveSearchTerm.toLowerCase());
+                const branchMatch = !leaveFilterBranch || emp.branch === leaveFilterBranch;
+                const deptMatch = !leaveFilterDept || emp.department === leaveFilterDept;
+                return nameMatch && branchMatch && deptMatch;
+            });
+
+    }, [employees, leaves, leaveSearchTerm, leaveFilterBranch, leaveFilterDept]);
+
+    const missedAttendanceToday = React.useMemo(() => {
+        if (!employees || attendance.length === employees.length) return [];
+        const presentTodayIds = new Set(attendance.map(a => a.employeeId));
+        return employees.filter(emp => !presentTodayIds.has(emp.id));
+    }, [employees, attendance]);
+
 
     if (isLoading) {
         return (
@@ -472,6 +516,95 @@ export default function HrmDashboardPage() {
                     </div>
                 </div>
 
+                 <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                   <Card>
+                        <CardHeader>
+                            <CardTitle>Current Leave Balance</CardTitle>
+                            <div className="flex items-center gap-2 pt-2">
+                                <Input placeholder="Search name..." value={leaveSearchTerm} onChange={e => setLeaveSearchTerm(e.target.value)} className="h-9"/>
+                                <Select value={leaveFilterBranch} onValueChange={setLeaveFilterBranch}><SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="All Branches" /></SelectTrigger><SelectContent><SelectItem value="">All Branches</SelectItem>{branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}</SelectContent></Select>
+                                <Select value={leaveFilterDept} onValueChange={setLeaveFilterDept}><SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="All Depts" /></SelectTrigger><SelectContent><SelectItem value="">All Depts</SelectItem>{departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}</SelectContent></Select>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                           <ScrollArea className="h-96">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Designation</TableHead>
+                                            <TableHead>Leave Group</TableHead>
+                                            <TableHead>Remain Leave</TableHead>
+                                            <TableHead>Leave Taken</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                    {leaveData.map(emp => (
+                                        <TableRow key={emp.id}>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar>
+                                                        <AvatarImage src={emp.photoURL} alt={emp.fullName} data-ai-hint="employee photo"/>
+                                                        <AvatarFallback>{getInitials(emp.fullName)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div>
+                                                        <p className="font-medium">{emp.fullName}</p>
+                                                        <p className="text-xs text-muted-foreground">{emp.branch || 'N/A'}</p>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{emp.designation}</TableCell>
+                                            <TableCell>{emp.leaveGroup}</TableCell>
+                                            <TableCell>{emp.remainLeave}</TableCell>
+                                            <TableCell>{emp.leaveTaken}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                    </TableBody>
+                                </Table>
+                           </ScrollArea>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Attendance Missed Today</CardTitle>
+                            <CardDescription>{format(new Date(), 'PPP')}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                             <ScrollArea className="h-96">
+                                {missedAttendanceToday.length > 0 ? (
+                                    <Table>
+                                        <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Designation</TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {missedAttendanceToday.map(emp => (
+                                                <TableRow key={emp.id}>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-3">
+                                                            <Avatar>
+                                                                <AvatarImage src={emp.photoURL} alt={emp.fullName} />
+                                                                <AvatarFallback>{getInitials(emp.fullName)}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div>
+                                                                <p className="font-medium">{emp.fullName}</p>
+                                                                <p className="text-xs text-muted-foreground">{emp.branch}</p>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>{emp.designation}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-center text-muted-foreground">
+                                        <p>All employees have marked their attendance today.</p>
+                                    </div>
+                                )}
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
+                </div>
+
+
                 <div className="mt-12">
                    <Card>
                         <CardHeader>
@@ -498,4 +631,3 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
-
