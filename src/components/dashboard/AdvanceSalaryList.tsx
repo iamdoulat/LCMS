@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -7,13 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Search, Filter, XCircle, ChevronLeft, ChevronRight, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import type { AdvanceSalaryDocument } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, deleteDoc, doc, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useAuth } from '@/context/AuthContext';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -22,10 +24,29 @@ const formatCurrency = (amount: number) => `BDT ${amount.toLocaleString()}`;
 
 export function AdvanceSalaryList() {
     const router = useRouter();
+    const { user, userRole } = useAuth();
+
+    // Conditionally build the query based on the user's role
+    const advancesQuery = React.useMemo(() => {
+        if (!user) return null; // No query if user is not logged in
+        
+        const canViewAll = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+        const baseQuery = collection(firestore, "advance_salary");
+
+        if (canViewAll) {
+            return query(baseQuery, orderBy("applyDate", "desc"));
+        } else {
+            // Regular user can only see their own requests
+            return query(baseQuery, where("employeeId", "==", user.uid), orderBy("applyDate", "desc"));
+        }
+    }, [user, userRole]);
+
+    // useFirestoreQuery will only run if advancesQuery is not null
     const { data: advances, isLoading, error } = useFirestoreQuery<AdvanceSalaryDocument[]>(
-        query(collection(firestore, "advance_salary"), orderBy("applyDate", "desc")),
+        advancesQuery!, // The '!' asserts that we've handled the null case, which we have.
         undefined,
-        ['advance_salary']
+        ['advance_salary', user?.uid, userRole?.join('-')], // Query key depends on user and role
+        !!advancesQuery // The query is enabled only when advancesQuery is truthy
     );
 
     const [searchTerm, setSearchTerm] = React.useState('');
