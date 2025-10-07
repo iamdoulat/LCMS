@@ -131,7 +131,6 @@ export default function AccountDetailsPage() {
   
     setAttendanceLoading(true);
   
-    // 1. Get Geolocation
     if (!navigator.geolocation) {
       Swal.fire("Geolocation Not Supported", "Your browser does not support geolocation.", "error");
       setAttendanceLoading(false);
@@ -143,15 +142,28 @@ export default function AccountDetailsPage() {
         const { latitude, longitude } = position.coords;
         const locationData = { latitude, longitude };
   
-        // 2. Get Remarks
+        const mapHtml = `
+          <iframe
+            width="100%"
+            height="250"
+            style="border:0; border-radius: 8px; margin-bottom: 1rem;"
+            loading="lazy"
+            allowfullscreen
+            src="https://maps.google.com/maps?q=${latitude},${longitude}&hl=es;z=14&amp;output=embed">
+          </iframe>
+        `;
+
         const result = await Swal.fire({
-          title: `Enter ${type === 'in' ? 'In Time' : 'Out Time'} Remarks (Optional)`,
-          input: 'textarea',
-          inputPlaceholder: 'Type your remarks here...',
+          title: `<span style="font-size: 1.1rem;">Enter ${type === 'in' ? 'In Time' : 'Out Time'} Remarks (Optional)</span>`,
+          html: `${mapHtml}<textarea id="swal-textarea" class="swal2-textarea" placeholder="Type your remarks here..."></textarea>`,
           showCancelButton: true,
           confirmButtonText: 'Submit',
-          preConfirm: (remarks) => {
-            return remarks || '';
+          customClass: {
+            htmlContainer: 'p-0',
+          },
+          preConfirm: () => {
+            const textarea = document.getElementById('swal-textarea') as HTMLTextAreaElement;
+            return textarea.value || '';
           }
         });
   
@@ -161,7 +173,6 @@ export default function AccountDetailsPage() {
         }
         const remarks = result.value;
   
-        // 3. Save to Firestore
         const now = new Date();
         const formattedDate = format(now, 'yyyy-MM-dd');
         const currentTime = format(now, 'hh:mm a');
@@ -169,7 +180,7 @@ export default function AccountDetailsPage() {
         const docRef = doc(firestore, 'attendance', docId);
   
         try {
-          let dataToSet: Record<string, any> = {};
+          let dataToSet: Partial<AttendanceDocument> = {};
   
           if (type === 'in') {
             const flag = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 10) ? 'D' : 'P';
@@ -666,3 +677,4 @@ export default function AccountDetailsPage() {
     
 
     
+
