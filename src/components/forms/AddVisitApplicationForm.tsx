@@ -143,7 +143,10 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
                 </FormItem>
             )}
             />
-            <FormItem>
+            <div></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+          <FormItem className="md:col-span-1">
               <FormLabel>Visit Status</FormLabel>
               <div className="flex items-center h-10 px-3 border rounded-md bg-muted/50">
                 <Badge variant="secondary" className="flex items-center gap-1.5">
@@ -151,9 +154,7 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
                   Pending
                 </Badge>
               </div>
-            </FormItem>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          </FormItem>
           <FormField
             control={form.control}
             name="fromDate"
