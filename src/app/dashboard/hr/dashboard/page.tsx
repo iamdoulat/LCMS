@@ -76,7 +76,7 @@ export default function HrmDashboardPage() {
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_hrm_dashboard']);
     const { data: leaves, isLoading: isLoadingLeaves } = useFirestoreQuery<LeaveApplicationDocument[]>(collection(firestore, 'leave_applications'), undefined, ['leaves_hrm_dashboard']);
     const { data: holidays, isLoading: isLoadingHolidays } = useFirestoreQuery<HolidayDocument[]>(collection(firestore, 'holidays'), undefined, ['holidays_hrm_dashboard']);
-    const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings")), undefined, ['notices_hrm_dashboard']);
+    const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings"), where("isEnabled", "==", true)), undefined, ['notices_hrm_dashboard']);
     const [attendance, setAttendance] = React.useState<AttendanceDocument[]>([]);
     const [isLoadingAttendance, setIsLoadingAttendance] = React.useState(true);
     
@@ -302,8 +302,8 @@ export default function HrmDashboardPage() {
             })
             .filter(emp => {
                 const nameMatch = !leaveSearchTerm || emp.fullName?.toLowerCase().includes(leaveSearchTerm.toLowerCase());
-                const branchMatch = leaveFilterBranch === ALL_BRANCHES_FILTER_VALUE || emp.branch === leaveFilterBranch;
-                const deptMatch = leaveFilterDept === ALL_DEPTS_FILTER_VALUE || emp.department === leaveFilterDept;
+                const branchMatch = leaveFilterBranch === ALL_BRANCHES || emp.branch === leaveFilterBranch;
+                const deptMatch = leaveFilterDept === ALL_DEPTS || emp.department === leaveFilterDept;
                 return nameMatch && branchMatch && deptMatch;
             });
 
@@ -562,7 +562,7 @@ export default function HrmDashboardPage() {
                                 {isLoadingNotices ? (
                                     <div className="flex items-center justify-center h-48"><Loader2 className="h-6 w-6 animate-spin"/></div>
                                 ) : !notices || notices.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground text-center">No notices available.</p>
+                                    <p className="text-sm text-muted-foreground text-center">No active notices available.</p>
                                 ) : (
                                     <ScrollArea className="h-96 pr-4">
                                         <div className="space-y-4">
@@ -647,7 +647,7 @@ export default function HrmDashboardPage() {
                         <CardHeader>
                              <div className="flex justify-between items-center gap-2">
                                 <div>
-                                    <CardTitle>Attendance Missed Today</CardTitle>
+                                    <CardTitle>Attendance Missed</CardTitle>
                                     <CardDescription>Employees who missed attendance.</CardDescription>
                                 </div>
                                 <DatePickerWithRange date={missedDateRange} onDateChange={setMissedDateRange} />
