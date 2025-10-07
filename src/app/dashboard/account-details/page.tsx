@@ -109,7 +109,7 @@ export default function AccountDetailsPage() {
         // Fetch approved visits for user
         const visitsQuery = query(
           collection(firestore, 'visit_applications'),
-          where('employeeId', '==_('),
+          where('employeeId', '==', employeeData.id),
           where('status', '==', 'Approved')
         );
         const visitsSnapshot = await getDocs(visitsQuery);
@@ -791,9 +791,3 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
-
-    
-
-    
-
-    
