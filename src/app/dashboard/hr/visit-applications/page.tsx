@@ -97,7 +97,7 @@ export default function VisitApplicationListPage() {
     };
 
     return (
-        <div className="py-8 px-5">
+        <div className="py-8">
             <Card className="shadow-xl">
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
