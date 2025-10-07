@@ -177,7 +177,7 @@ export default function HrmDashboardPage() {
             const lowercasedFilter = searchTerm.toLowerCase();
             employeeList = employeeList.filter(emp =>
                 emp.fullName?.toLowerCase().includes(lowercasedFilter) ||
-                emp.designation?.toLowerCase().includes(lowercasedFilter)
+                emp.employeeCode?.includes(lowercasedFilter)
             );
         }
 
