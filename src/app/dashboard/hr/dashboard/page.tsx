@@ -86,6 +86,12 @@ export default function HrmDashboardPage() {
       to: new Date(),
     });
     const [chartData, setChartData] = React.useState<any[]>([]);
+    const [missedDateRange, setMissedDateRange] = React.useState<DateRange | undefined>({
+        from: new Date(),
+        to: new Date(),
+    });
+    const [rangeAttendance, setRangeAttendance] = React.useState<AttendanceDocument[]>([]);
+
 
     const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(collection(firestore, 'branches'), undefined, ['branches_hrm_dashboard']);
     const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(collection(firestore, 'departments'), undefined, ['departments_hrm_dashboard']);
@@ -111,6 +117,24 @@ export default function HrmDashboardPage() {
 
         return () => unsubscribe();
     }, []);
+    
+    React.useEffect(() => {
+      const fetchRangeAttendance = async () => {
+        if (!missedDateRange?.from) return;
+        const from = startOfDay(missedDateRange.from);
+        const to = endOfDay(missedDateRange.to || from);
+
+        const rangeAttendanceQuery = query(
+          collection(firestore, "attendance"),
+          where("date", ">=", from.toISOString()),
+          where("date", "<=", to.toISOString())
+        );
+
+        const snapshot = await getDocs(rangeAttendanceQuery);
+        setRangeAttendance(snapshot.docs.map(d => d.data() as AttendanceDocument));
+      };
+      fetchRangeAttendance();
+    }, [missedDateRange]);
 
     const combinedEmployeeData = React.useMemo(() => {
         if (!employees) return [];
@@ -283,11 +307,36 @@ export default function HrmDashboardPage() {
 
     }, [employees, leaves, leaveSearchTerm, leaveFilterBranch, leaveFilterDept]);
 
-    const missedAttendanceToday = React.useMemo(() => {
-        if (!employees || attendance.length === employees.length) return [];
-        const presentTodayIds = new Set(attendance.map(a => a.employeeId));
-        return employees.filter(emp => !presentTodayIds.has(emp.id));
-    }, [employees, attendance]);
+    const missedAttendanceInRange = React.useMemo(() => {
+      if (!employees || !missedDateRange?.from) return [];
+      
+      const from = startOfDay(missedDateRange.from);
+      const to = endOfDay(missedDateRange.to || from);
+      const daysInRange = eachDayOfInterval({ start: from, end: to });
+      
+      const missedRecords: {date: Date; employee: EmployeeDocument}[] = [];
+      const attendanceMap = new Map<string, Set<string>>(); // YYYY-MM-DD -> Set<employeeId>
+      
+      rangeAttendance.forEach(att => {
+        const dateKey = att.date.substring(0, 10);
+        if (!attendanceMap.has(dateKey)) {
+          attendanceMap.set(dateKey, new Set());
+        }
+        attendanceMap.get(dateKey)!.add(att.employeeId);
+      });
+      
+      daysInRange.forEach(day => {
+        const dateKey = format(day, 'yyyy-MM-dd');
+        const presentIds = attendanceMap.get(dateKey) || new Set();
+        employees.forEach(emp => {
+          if (!presentIds.has(emp.id)) {
+            missedRecords.push({ date: day, employee: emp });
+          }
+        });
+      });
+      
+      return missedRecords;
+    }, [employees, missedDateRange, rangeAttendance]);
 
 
     if (isLoading) {
@@ -583,37 +632,43 @@ export default function HrmDashboardPage() {
                     </Card>
                     <Card>
                         <CardHeader>
-                            <CardTitle>Attendance Missed Today</CardTitle>
-                            <CardDescription>{format(new Date(), 'PPP')}</CardDescription>
+                             <div className="flex justify-between items-center gap-2">
+                                <div>
+                                    <CardTitle>Attendance Missed</CardTitle>
+                                    <CardDescription>Employees who missed attendance.</CardDescription>
+                                </div>
+                                <DatePickerWithRange date={missedDateRange} onDateChange={setMissedDateRange} />
+                            </div>
                         </CardHeader>
                         <CardContent className="p-0">
                              <ScrollArea className="h-96">
-                                {missedAttendanceToday.length > 0 ? (
+                                {missedAttendanceInRange.length > 0 ? (
                                     <Table>
-                                        <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Designation</TableHead></TableRow></TableHeader>
+                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Name</TableHead><TableHead>Designation</TableHead></TableRow></TableHeader>
                                         <TableBody>
-                                            {missedAttendanceToday.map(emp => (
-                                                <TableRow key={emp.id}>
+                                            {missedAttendanceInRange.map(item => (
+                                                <TableRow key={`${item.date.toISOString()}-${item.employee.id}`}>
+                                                    <TableCell>{format(item.date, 'MMM d, yyyy')}</TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center gap-3">
                                                             <Avatar>
-                                                                <AvatarImage src={emp.photoURL} alt={emp.fullName} />
-                                                                <AvatarFallback>{getInitials(emp.fullName)}</AvatarFallback>
+                                                                <AvatarImage src={item.employee.photoURL} alt={item.employee.fullName} />
+                                                                <AvatarFallback>{getInitials(item.employee.fullName)}</AvatarFallback>
                                                             </Avatar>
                                                             <div>
-                                                                <p className="font-medium">{emp.fullName}</p>
-                                                                <p className="text-xs text-muted-foreground">{emp.branch}</p>
+                                                                <p className="font-medium">{item.employee.fullName}</p>
+                                                                <p className="text-xs text-muted-foreground">{item.employee.branch}</p>
                                                             </div>
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell>{emp.designation}</TableCell>
+                                                    <TableCell>{item.employee.designation}</TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>
                                     </Table>
                                 ) : (
-                                    <div className="flex items-center justify-center h-full text-center text-muted-foreground">
-                                        <p>All employees have marked their attendance today.</p>
+                                    <div className="flex items-center justify-center h-full text-center text-muted-foreground p-4">
+                                        <p>No missed attendance records found for the selected range.</p>
                                     </div>
                                 )}
                             </ScrollArea>
