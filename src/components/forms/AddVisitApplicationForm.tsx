@@ -9,14 +9,16 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where } from 'firebase/firestore';
 import type { VisitApplicationFormValues, EmployeeDocument, VisitApplicationDocument } from '@/types';
 import { VisitApplicationSchema } from '@/types';
-import { format, differenceInCalendarDays } from 'date-fns';
+import { format, differenceInCalendarDays, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, Save, User, Calendar, MessageSquare } from 'lucide-react';
+import { Loader2, Save, User, Calendar, MessageSquare, Info } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
 import { Textarea } from '../ui/textarea';
+import { Input } from '../ui/input';
+import { Badge } from '../ui/badge';
 
 interface AddVisitApplicationFormProps {
   onFormSubmit: () => void;
@@ -29,6 +31,8 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [employeeOptions, setEmployeeOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = React.useState(true);
+  const [dayCount, setDayCount] = React.useState<number>(1);
+
 
   const form = useForm<VisitApplicationFormValues>({
     resolver: zodResolver(VisitApplicationSchema),
@@ -39,6 +43,19 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
       remarks: '',
     },
   });
+
+  const { watch } = form;
+  const fromDate = watch('fromDate');
+  const toDate = watch('toDate');
+
+  React.useEffect(() => {
+    if (fromDate && toDate && toDate >= fromDate) {
+      const diff = differenceInCalendarDays(toDate, fromDate) + 1;
+      setDayCount(diff);
+    } else {
+      setDayCount(0);
+    }
+  }, [fromDate, toDate]);
 
   React.useEffect(() => {
     const fetchEmployees = async () => {
@@ -71,8 +88,7 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
     }
     setIsSubmitting(true);
     const selectedEmployee = employeeOptions.find(emp => emp.value === data.employeeId);
-    const dayCount = differenceInCalendarDays(data.toDate, data.fromDate) + 1;
-
+    
     const dataToSave: Omit<VisitApplicationDocument, 'id'> = {
       employeeId: data.employeeId,
       employeeName: selectedEmployee?.label.split(' (')[0] || 'N/A',
@@ -108,32 +124,43 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="employeeId"
-          render={({ field }) => (
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+            control={form.control}
+            name="employeeId"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
+                <Combobox
+                    options={employeeOptions}
+                    value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
+                    placeholder="Search Employee by Code or Name"
+                    selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee by Code or Name"}
+                    disabled={isLoadingEmployees}
+                />
+                <FormMessage />
+                </FormItem>
+            )}
+            />
             <FormItem>
-              <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
-              <Combobox
-                options={employeeOptions}
-                value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
-                onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
-                placeholder="Search Employee..."
-                selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
-                disabled={isLoadingEmployees}
-              />
-              <FormMessage />
+              <FormLabel>Visit Status</FormLabel>
+              <div className="flex items-center h-10 px-3 border rounded-md bg-muted/50">
+                <Badge variant="secondary" className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse"></span>
+                  Pending
+                </Badge>
+              </div>
             </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField
             control={form.control}
             name="fromDate"
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />From Date*</FormLabel>
-                <DatePickerField field={field} />
+                <DatePickerField field={field} placeholder="dd-mm-yyyy hh:mm a" showTimeSelect/>
                 <FormMessage />
               </FormItem>
             )}
@@ -143,34 +170,46 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
             name="toDate"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />To Date*</FormLabel>
-                <DatePickerField field={field} fromDate={form.getValues("fromDate")} />
+                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />End Date*</FormLabel>
+                <DatePickerField field={field} fromDate={form.getValues("fromDate")} placeholder="dd-mm-yyyy hh:mm a" showTimeSelect/>
                 <FormMessage />
               </FormItem>
             )}
           />
+          <FormItem>
+              <FormLabel>Day Count</FormLabel>
+              <Input value={`${dayCount} Day(s)`} readOnly disabled className="bg-muted/50 h-10 cursor-not-allowed"/>
+          </FormItem>
         </div>
         <FormField
           control={form.control}
           name="remarks"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Remarks*</FormLabel>
+              <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Visit Purpose*</FormLabel>
               <FormControl>
-                <Textarea placeholder="Describe the purpose of the visit..." {...field} />
+                <Textarea placeholder="Type here" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div className="flex justify-end pt-4">
-          <Button type="submit" disabled={isSubmitting || isLoadingEmployees}>
-            {isSubmitting ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Submitting...</>
-            ) : (
-              <><Save className="mr-2 h-4 w-4"/>Submit Application</>
-            )}
-          </Button>
+        <div className="flex justify-between items-center pt-4 border-t">
+          <div className="text-sm text-muted-foreground">
+            Apply Date: {format(new Date(), 'PPP')}
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={onFormSubmit}>
+                Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting || isLoadingEmployees}>
+                {isSubmitting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Submitting...</>
+                ) : (
+                <><Save className="mr-2 h-4 w-4"/>Save</>
+                )}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>

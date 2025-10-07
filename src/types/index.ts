@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -1769,7 +1768,7 @@ export type AdvanceSalaryDocument = AdvanceSalary & { id: string };
 
 // --- Visit Application Types ---
 export const visitStatusOptions = ["Pending", "Approved", "Rejected"] as const;
-export type VisitStatus = (typeof visitStatusOptions)[number];
+export type VisitStatus = typeof visitStatusOptions[number];
 
 export const VisitApplicationSchema = z.object({
   employeeId: z.string().min(1, "Employee is required."),
