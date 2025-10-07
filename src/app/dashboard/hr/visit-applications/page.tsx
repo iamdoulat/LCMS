@@ -135,6 +135,7 @@ export default function VisitApplicationListPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead>#</TableHead>
                                         <TableHead>Employee Name</TableHead>
                                         <TableHead>From</TableHead>
                                         <TableHead>To</TableHead>
@@ -145,8 +146,9 @@ export default function VisitApplicationListPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {applications.map(app => (
+                                    {applications.map((app, index) => (
                                         <TableRow key={app.id}>
+                                            <TableCell>{index + 1}</TableCell>
                                             <TableCell className="font-medium">{app.employeeName}</TableCell>
                                             <TableCell>{formatDisplayDate(app.fromDate)}</TableCell>
                                             <TableCell>{formatDisplayDate(app.toDate)}</TableCell>
