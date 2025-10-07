@@ -50,6 +50,7 @@ interface HrmDashboardStats {
     pendingLeaveApplications: number;
     upcomingBirthdays: number;
     pendingAdvanceSalaryRequests: number;
+    pendingAttendanceApproval: number;
 }
 
 const getInitials = (name?: string) => {
@@ -73,6 +74,7 @@ export default function HrmDashboardPage() {
         pendingLeaveApplications: 0,
         upcomingBirthdays: 0,
         pendingAdvanceSalaryRequests: 0,
+        pendingAttendanceApproval: 0,
     });
     
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_hrm_dashboard']);
@@ -222,6 +224,9 @@ export default function HrmDashboardPage() {
                     return todayMonthDay === dobMonthDay;
                 } catch { return false; }
             }).length;
+            
+            const presentEmployeeIds = new Set(attendance.map(a => a.employeeId));
+            const pendingAttendanceCount = employees.filter(emp => !presentEmployeeIds.has(emp.id)).length;
 
             setStats({
                 totalEmployees: employees.length,
@@ -233,6 +238,7 @@ export default function HrmDashboardPage() {
                 pendingLeaveApplications: pendingLeaveApplicationsCount,
                 upcomingBirthdays: upcomingBirthdaysCount,
                 pendingAdvanceSalaryRequests: advanceSalaryRequests.length,
+                pendingAttendanceApproval: pendingAttendanceCount
             });
         }
     }, [employees, leaves, attendance, advanceSalaryRequests]);
@@ -419,10 +425,10 @@ export default function HrmDashboardPage() {
                         className="bg-orange-500"
                     />
                      <StatCard
-                        title="Upcoming Birthdays"
+                        title="Today's Birthdays"
                         value={stats.upcomingBirthdays}
                         icon={<Cake />}
-                        description="Today's birthdays"
+                        description="Employees celebrating today"
                         className="bg-pink-500"
                     />
                     <StatCard
@@ -434,9 +440,9 @@ export default function HrmDashboardPage() {
                     />
                     <StatCard
                         title="Pending Attendance Approval"
-                        value="7"
+                        value={stats.pendingAttendanceApproval}
                         icon={<Calendar />}
-                        description="Manual entries to review"
+                        description="Entries missing for today"
                         className="bg-indigo-500"
                     />
                     <StatCard
@@ -752,3 +758,4 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
+
