@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -53,6 +54,10 @@ const getInitials = (name?: string) => {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 };
+
+const ALL_BRANCHES_FILTER_VALUE = "__ALL_BRANCHES__";
+const ALL_DEPTS_FILTER_VALUE = "__ALL_DEPARTMENTS__";
+
 
 export default function HrmDashboardPage() {
     const router = useRouter();
@@ -522,8 +527,20 @@ export default function HrmDashboardPage() {
                             <CardTitle>Current Leave Balance</CardTitle>
                             <div className="flex items-center gap-2 pt-2">
                                 <Input placeholder="Search name..." value={leaveSearchTerm} onChange={e => setLeaveSearchTerm(e.target.value)} className="h-9"/>
-                                <Select value={leaveFilterBranch} onValueChange={setLeaveFilterBranch}><SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="All Branches" /></SelectTrigger><SelectContent><SelectItem value="">All Branches</SelectItem>{branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}</SelectContent></Select>
-                                <Select value={leaveFilterDept} onValueChange={setLeaveFilterDept}><SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="All Depts" /></SelectTrigger><SelectContent><SelectItem value="">All Depts</SelectItem>{departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}</SelectContent></Select>
+                                <Select value={leaveFilterBranch} onValueChange={(value) => setLeaveFilterBranch(value === ALL_BRANCHES_FILTER_VALUE ? '' : value)}>
+                                    <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="All Branches" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={ALL_BRANCHES_FILTER_VALUE}>All Branches</SelectItem>
+                                        {branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={leaveFilterDept} onValueChange={(value) => setLeaveFilterDept(value === ALL_DEPTS_FILTER_VALUE ? '' : value)}>
+                                    <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="All Depts" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={ALL_DEPTS_FILTER_VALUE}>All Depts</SelectItem>
+                                        {departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </CardHeader>
                         <CardContent className="p-0">
