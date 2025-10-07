@@ -50,6 +50,21 @@ const attendanceDaySchema = z.object({
 });
 type AttendanceDayFormValues = z.infer<typeof attendanceDaySchema>;
 
+// Helper to convert "10:41 AM" to "10:41"
+const parse12HourTo24Hour = (time12h?: string): string => {
+    if (!time12h) return '';
+    try {
+        const date = parseDateFns(time12h, 'hh:mm a', new Date());
+        if (isValid(date)) {
+            return format(date, 'HH:mm');
+        }
+    } catch (e) {
+        console.warn(`Could not parse time: ${time12h}`, e);
+    }
+    return ''; // Return empty if parsing fails
+};
+
+
 const AttendanceDayRow = ({
   employee,
   date,
@@ -94,8 +109,8 @@ const AttendanceDayRow = ({
     const isPresent = initialData?.flag === 'P' || initialData?.flag === 'D';
     form.reset({
       flag: initialData?.flag || defaultFlag,
-      inTime: isPresent ? initialData?.inTime : '',
-      outTime: isPresent ? initialData?.outTime : '',
+      inTime: isPresent ? parse12HourTo24Hour(initialData?.inTime) : '',
+      outTime: isPresent ? parse12HourTo24Hour(initialData?.outTime) : '',
       inTimeRemarks: initialData?.inTimeRemarks || '',
       outTimeRemarks: initialData?.outTimeRemarks || '',
     });
@@ -166,9 +181,19 @@ const AttendanceDayRow = ({
     };
     
     if (data.flag === 'P' || data.flag === 'D') {
-        dataToSave.inTime = data.inTime;
+        const formatTimeForFirestore = (timeString?: string) => {
+            if (!timeString) return undefined;
+            try {
+                const dateObj = parseDateFns(timeString, 'HH:mm', new Date());
+                return format(dateObj, 'hh:mm a');
+            } catch {
+                return undefined;
+            }
+        };
+
+        dataToSave.inTime = formatTimeForFirestore(data.inTime);
         dataToSave.inTimeRemarks = data.inTimeRemarks;
-        dataToSave.outTime = data.outTime;
+        dataToSave.outTime = formatTimeForFirestore(data.outTime);
         dataToSave.outTimeRemarks = data.outTimeRemarks;
     }
 
@@ -340,7 +365,7 @@ const EmployeeAttendanceRow = ({
                                         <TableHead>Flag</TableHead>
                                         <TableHead>In Time</TableHead>
                                         <TableHead>In Time Remarks</TableHead>
-                                        <TableHead>Out Time &amp; Date</TableHead>
+                                        <TableHead>Out Time</TableHead>
                                         <TableHead>Out Time Remarks</TableHead>
                                         <TableHead>Working Hour</TableHead>
                                         <TableHead className="text-right">Action</TableHead>
