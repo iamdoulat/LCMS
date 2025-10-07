@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { StatCard } from '@/components/dashboard/StatCard';
 import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX, UserPlus, Coffee, Plane, Wallet, BookOpen, Loader2, AlertTriangle, Search, MoreHorizontal, MapPin, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { firestore } from '@/lib/firebase/config';
+import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument, BranchDocument, DepartmentDocument, NoticeBoardSettings, AdvanceSalaryDocument } from '@/types';
 import { format, startOfTomorrow, isWithinInterval, startOfDay, endOfDay, parseISO, isToday, isFuture, subDays, eachDayOfInterval, getDay, endOfMonth, startOfMonth, differenceInDays } from 'date-fns';
@@ -372,9 +372,7 @@ export default function HrmDashboardPage() {
             try {
                 const dob = parseISO(emp.dateOfBirth);
                 return format(dob, 'MM-dd') === todayMonthDay;
-            } catch {
-                return false;
-            }
+            } catch { return false; }
         });
     }, [employees]);
 
@@ -425,10 +423,10 @@ export default function HrmDashboardPage() {
                         className="bg-orange-500"
                     />
                      <StatCard
-                        title="Today's Birthdays"
+                        title="Upcoming Birthdays"
                         value={stats.upcomingBirthdays}
                         icon={<Cake />}
-                        description="Employees celebrating today"
+                        description="Today's birthdays"
                         className="bg-pink-500"
                     />
                     <StatCard
@@ -439,8 +437,8 @@ export default function HrmDashboardPage() {
                         className="bg-blue-500"
                     />
                     <StatCard
-                        title="Pending Attendance Approval"
-                        value={stats.pendingAttendanceApproval}
+                        title="Today Absent"
+                        value={stats.todayAbsent}
                         icon={<Calendar />}
                         description="Entries missing for today"
                         className="bg-indigo-500"
@@ -758,4 +756,5 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
+
 
