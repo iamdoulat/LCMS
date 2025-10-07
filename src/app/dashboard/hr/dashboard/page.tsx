@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -7,7 +8,7 @@ import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument, BranchDocument, DepartmentDocument } from '@/types';
+import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument, BranchDocument, DepartmentDocument, NoticeBoardSettings } from '@/types';
 import { format, startOfTomorrow, isWithinInterval, startOfDay, endOfDay, parseISO, isToday, isFuture, subDays, eachDayOfInterval, getDay, endOfMonth, startOfMonth, differenceInDays } from 'date-fns';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Input } from '@/components/ui/input';
@@ -75,6 +76,7 @@ export default function HrmDashboardPage() {
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_hrm_dashboard']);
     const { data: leaves, isLoading: isLoadingLeaves } = useFirestoreQuery<LeaveApplicationDocument[]>(collection(firestore, 'leave_applications'), undefined, ['leaves_hrm_dashboard']);
     const { data: holidays, isLoading: isLoadingHolidays } = useFirestoreQuery<HolidayDocument[]>(collection(firestore, 'holidays'), undefined, ['holidays_hrm_dashboard']);
+    const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings")), undefined, ['notices_hrm_dashboard']);
     const [attendance, setAttendance] = React.useState<AttendanceDocument[]>([]);
     const [isLoadingAttendance, setIsLoadingAttendance] = React.useState(true);
     
@@ -99,7 +101,7 @@ export default function HrmDashboardPage() {
     const [leaveFilterBranch, setLeaveFilterBranch] = React.useState(ALL_BRANCHES_FILTER_VALUE);
     const [leaveFilterDept, setLeaveFilterDept] = React.useState(ALL_DEPTS_FILTER_VALUE);
 
-    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts;
+    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts || isLoadingNotices;
     
     React.useEffect(() => {
         const todayStart = format(startOfDay(new Date()), "yyyy-MM-dd'T'00:00:00.000xxx");
@@ -554,17 +556,28 @@ export default function HrmDashboardPage() {
                     <div className="lg:col-span-1">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary"/>Notice</CardTitle>
+                                <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary"/>Notice Board</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <h4 className="font-semibold">দৈনিক হাজিরা নিয়ম।</h4>
-                                <p className="text-sm text-muted-foreground">
-                                প্রতিদিন সকাল ৯:০০ থেকে ৯:১০ পর্যন্ত InTime এবং সন্ধা ৬:০০ বা ৬:০০ টার পরে Out Time দিবেন। যদি কোন কারনে ঠিক সময়ে হাজিরা দিতে না পারলে সংশোধন করে নিবেন।
-                                </p>
-                                <div className="flex items-center text-xs text-muted-foreground">
-                                    <Calendar className="mr-2 h-4 w-4"/>
-                                    <span>February 11, 2025</span>
-                                </div>
+                            <CardContent>
+                                {isLoadingNotices ? (
+                                    <div className="flex items-center justify-center h-48"><Loader2 className="h-6 w-6 animate-spin"/></div>
+                                ) : !notices || notices.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground text-center">No notices available.</p>
+                                ) : (
+                                    <ScrollArea className="h-96 pr-4">
+                                        <div className="space-y-4">
+                                            {notices.map(notice => (
+                                                <div key={notice.id} className="p-3 border rounded-lg bg-background shadow-sm">
+                                                    <h4 className="font-semibold text-sm mb-1">{notice.title}</h4>
+                                                    <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: notice.content ? notice.content.substring(0, 100) + '...' : '' }} />
+                                                    <div className="text-xs text-muted-foreground mt-2">
+                                                        {notice.updatedAt ? format(new Date((notice.updatedAt as any).seconds * 1000), 'PPP') : 'N/A'}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                )}
                             </CardContent>
                         </Card>
                     </div>
@@ -634,7 +647,7 @@ export default function HrmDashboardPage() {
                         <CardHeader>
                              <div className="flex justify-between items-center gap-2">
                                 <div>
-                                    <CardTitle>Attendance Missed</CardTitle>
+                                    <CardTitle>Attendance Missed Today</CardTitle>
                                     <CardDescription>Employees who missed attendance.</CardDescription>
                                 </div>
                                 <DatePickerWithRange date={missedDateRange} onDateChange={setMissedDateRange} />
