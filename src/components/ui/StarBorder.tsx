@@ -18,7 +18,7 @@ const StarBorder = React.forwardRef<HTMLElement, StarBorderProps>(
     className = '',
     color = 'magenta',
     speed = '6s',
-    thickness = 2,
+    thickness = 6,
     children,
     ...rest
   }, ref) => {
@@ -27,7 +27,7 @@ const StarBorder = React.forwardRef<HTMLElement, StarBorderProps>(
         ref={ref}
         className={cn('star-border-container', className)}
         style={{
-          padding: `${thickness}px 3px`,
+          padding: `${thickness}px 2px`,
           ...rest.style
         }}
         {...rest}
