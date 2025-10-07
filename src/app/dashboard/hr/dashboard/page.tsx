@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX, UserPlus, Coffee, Plane, Wallet, BookOpen, Loader2, AlertTriangle, Search, MoreHorizontal, MapPin, Bell } from 'lucide-react';
+import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX, UserPlus, Coffee, Plane, Wallet, BookOpen, Loader2, AlertTriangle, Search, MoreHorizontal, MapPin, Bell, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
@@ -492,12 +492,12 @@ export default function HrmDashboardPage() {
                         description="Visit requests to approve"
                         className="bg-rose-500"
                     />
-                     <StatCard
-                        title="Pending Loan Application"
-                        value="0"
-                        icon={<Wallet />}
-                        description="Loan requests"
-                        className="bg-lime-500"
+                    <StatCard
+                        title="Total Delayed Today"
+                        value={stats.todayDelayed}
+                        icon={<Clock />}
+                        description="Delayed Today"
+                        className="bg-yellow-400"
                     />
                </div>
 
