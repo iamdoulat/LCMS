@@ -195,8 +195,7 @@ export default function HrmDashboardPage() {
             
             const presentCount = attendance.filter(a => a.flag === 'P').length;
             const delayedCount = attendance.filter(a => a.flag === 'D').length;
-            const todayPresentCount = presentCount + delayedCount;
-
+            
             const onLeaveTodayCount = leaves.filter(l => {
                 try {
                     return l.status === 'Approved' && isWithinInterval(today, { start: parseISO(l.fromDate), end: parseISO(l.toDate) })
@@ -204,8 +203,6 @@ export default function HrmDashboardPage() {
                     return false;
                 }
             }).length;
-
-            const todayAbsentCount = employees.length - todayPresentCount - onLeaveTodayCount;
 
             const onLeaveTomorrowCount = leaves.filter(l => {
                 try {
@@ -215,10 +212,10 @@ export default function HrmDashboardPage() {
 
             const pendingLeaveApplicationsCount = leaves.filter(l => l.status === 'Pending').length;
 
-            const upcomingBirthdaysCount = employees.filter(e => {
-                if (!e.dateOfBirth) return false;
+            const upcomingBirthdaysCount = birthdays.filter(emp => {
+                if (!emp.dateOfBirth) return false;
                 try {
-                    const dob = parseISO(e.dateOfBirth);
+                    const dob = parseISO(emp.dateOfBirth);
                     const todayMonthDay = format(today, 'MM-dd');
                     const dobMonthDay = format(dob, 'MM-dd');
                     return todayMonthDay === dobMonthDay;
@@ -226,7 +223,11 @@ export default function HrmDashboardPage() {
             }).length;
             
             const presentEmployeeIds = new Set(attendance.map(a => a.employeeId));
-            const pendingAttendanceCount = employees.filter(emp => !presentEmployeeIds.has(emp.id)).length;
+            const onLeaveTodayIds = new Set(leaves.filter(l => l.status === 'Approved' && isWithinInterval(today, { start: parseISO(l.fromDate), end: parseISO(l.toDate) })).map(l => l.employeeId));
+            
+            const todayAbsentCount = employees.filter(emp => !presentEmployeeIds.has(emp.id) && !onLeaveTodayIds.has(emp.id)).length;
+            const pendingAttendanceCount = employees.length - presentEmployeeIds.size;
+
 
             setStats({
                 totalEmployees: employees.length,
@@ -241,7 +242,7 @@ export default function HrmDashboardPage() {
                 pendingAttendanceApproval: pendingAttendanceCount
             });
         }
-    }, [employees, leaves, attendance, advanceSalaryRequests]);
+    }, [employees, leaves, attendance, advanceSalaryRequests, birthdays]);
     
     React.useEffect(() => {
       const processChartData = async () => {
@@ -440,7 +441,7 @@ export default function HrmDashboardPage() {
                         title="Today Absent"
                         value={stats.todayAbsent}
                         icon={<Calendar />}
-                        description="Entries missing for today"
+                        description={`${stats.totalEmployees} Total Employees`}
                         className="bg-indigo-500"
                     />
                     <StatCard
@@ -756,5 +757,6 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
+
 
 
