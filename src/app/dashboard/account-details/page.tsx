@@ -3,8 +3,8 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw } from 'lucide-react';
-import React, { useEffect, useState, useRef } from 'react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle } from 'lucide-react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
@@ -26,8 +26,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
-import type { EmployeeDocument, AttendanceDocument } from '@/types';
-import { format } from 'date-fns';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument } from '@/types';
+import { format, isWithinInterval, parseISO, startOfDay, getDay } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const accountDetailsSchema = z.object({
@@ -35,6 +35,9 @@ const accountDetailsSchema = z.object({
 });
 
 type AccountDetailsFormValues = z.infer<typeof accountDetailsSchema>;
+
+type DayStatus = 'Working Day' | 'Weekend' | 'Holiday' | 'On Leave' | 'On Visit';
+
 
 const formatDisplayDate = (dateString?: string | null) => {
     if (!dateString) return 'N/A';
@@ -70,6 +73,88 @@ export default function AccountDetailsPage() {
 
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [dailyAttendance, setDailyAttendance] = useState<AttendanceDocument | null>(null);
+  
+  // State for holidays, leaves, and visits
+  const [holidays, setHolidays] = useState<HolidayDocument[]>([]);
+  const [leaves, setLeaves] = useState<LeaveApplicationDocument[]>([]);
+  const [visits, setVisits] = useState<VisitApplicationDocument[]>([]);
+  const [dayStatus, setDayStatus] = useState<DayStatus>('Working Day');
+  const [isDayStatusLoading, setIsDayStatusLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAuxData = async () => {
+      if (!user || !employeeData?.id) return;
+      setIsDayStatusLoading(true);
+      try {
+        const today = startOfDay(new Date());
+        
+        // Fetch holidays
+        const holidaysQuery = query(collection(firestore, 'holidays'));
+        const holidaysSnapshot = await getDocs(holidaysQuery);
+        const fetchedHolidays = holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument);
+        setHolidays(fetchedHolidays);
+  
+        // Fetch approved leaves for user
+        const leavesQuery = query(
+          collection(firestore, 'leave_applications'),
+          where('employeeId', '==', employeeData.id),
+          where('status', '==', 'Approved')
+        );
+        const leavesSnapshot = await getDocs(leavesQuery);
+        const fetchedLeaves = leavesSnapshot.docs.map(doc => doc.data() as LeaveApplicationDocument);
+        setLeaves(fetchedLeaves);
+
+        // Fetch approved visits for user
+        const visitsQuery = query(
+          collection(firestore, 'visit_applications'),
+          where('employeeId', '==_('),
+          where('status', '==', 'Approved')
+        );
+        const visitsSnapshot = await getDocs(visitsQuery);
+        const fetchedVisits = visitsSnapshot.docs.map(doc => doc.data() as VisitApplicationDocument);
+        setVisits(fetchedVisits);
+        
+      } catch (err) {
+        console.error("Error fetching holidays, leaves, or visits:", err);
+      } finally {
+        setIsDayStatusLoading(false);
+      }
+    };
+    if (user && employeeData) {
+      fetchAuxData();
+    }
+  }, [user, employeeData?.id]);
+
+
+  useEffect(() => {
+    const today = startOfDay(new Date());
+
+    if (getDay(today) === 5) {
+      setDayStatus('Weekend');
+      return;
+    }
+
+    const holiday = holidays.find(h => isWithinInterval(today, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+    if (holiday) {
+      setDayStatus('Holiday');
+      return;
+    }
+    
+    const leave = leaves.find(l => isWithinInterval(today, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+    if (leave) {
+      setDayStatus('On Leave');
+      return;
+    }
+
+    const visit = visits.find(v => isWithinInterval(today, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
+    if (visit) {
+        setDayStatus('On Visit');
+        return;
+    }
+
+    setDayStatus('Working Day');
+  }, [holidays, leaves, visits]);
+
 
 
   const form = useForm<AccountDetailsFormValues>({
@@ -398,7 +483,17 @@ export default function AccountDetailsPage() {
     </FormItem>
   );
 
-  if (authLoading || isEmployeeDataLoading) {
+  const getAttendanceTitle = () => {
+    switch (dayStatus) {
+      case 'Weekend': return 'Today is a Weekend';
+      case 'Holiday': return 'Today is a Holiday';
+      case 'On Leave': return 'You are on Leave';
+      case 'On Visit': return 'You are on Visit';
+      default: return 'Daily Attendance';
+    }
+  };
+
+  if (authLoading || isEmployeeDataLoading || isDayStatusLoading) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -500,7 +595,10 @@ export default function AccountDetailsPage() {
                     </div>
 
                     <div className="lg:col-span-1 flex flex-col gap-2 items-center border border-black p-4 rounded-lg">
-                        <h4 className="text-sm font-semibold mb-2 flex items-center gap-2"><UserCheck className="h-4 w-4 text-primary"/>Daily Attendance</h4>
+                        <h4 className={cn("text-sm font-semibold mb-2 flex items-center gap-2", dayStatus !== 'Working Day' && "text-muted-foreground")}>
+                            {dayStatus === 'Working Day' ? <UserCheck className="h-4 w-4 text-primary"/> : <XCircle className="h-4 w-4 text-destructive"/>}
+                            {getAttendanceTitle()}
+                        </h4>
                         <div className="flex items-center gap-4 justify-around w-full">
                             <div className="flex flex-col items-center gap-2">
                                 <Button
@@ -513,7 +611,7 @@ export default function AccountDetailsPage() {
                                         dailyAttendance?.inTime && dailyAttendance.flag === 'D' && "bg-red-600 hover:bg-red-700 text-white"
                                     )}
                                     onClick={() => handleAttendance('in')}
-                                    disabled={attendanceLoading || !!dailyAttendance?.inTime}
+                                    disabled={attendanceLoading || !!dailyAttendance?.inTime || dayStatus !== 'Working Day'}
                                     >
                                     {attendanceLoading && !dailyAttendance?.inTime ? <Loader2 className="h-5 w-5 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="h-5 w-5" /> : <Clock className="h-5 w-5"/>)}
                                     <span className="text-xs mt-1">In Time</span>
@@ -541,7 +639,7 @@ export default function AccountDetailsPage() {
                                         !dailyAttendance?.outTime && !!dailyAttendance?.inTime && "bg-gradient-to-br from-orange-500 to-rose-500 text-white hover:opacity-90 hover:text-white"
                                     )}
                                     onClick={() => handleAttendance('out')}
-                                    disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime}
+                                    disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime || dayStatus !== 'Working Day'}
                                     >
                                     {attendanceLoading && !dailyAttendance?.outTime ? <Loader2 className="h-5 w-5 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="h-5 w-5 text-green-500" /> : <Clock className="h-5 w-5"/>)}
                                     <span className="text-xs mt-1">Out Time</span>
@@ -692,4 +790,4 @@ export default function AccountDetailsPage() {
 
     
 
-
+    
