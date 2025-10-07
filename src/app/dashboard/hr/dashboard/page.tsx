@@ -8,8 +8,8 @@ import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument } from '@/types';
-import { format, startOfTomorrow, isWithinInterval, startOfDay, endOfDay, parseISO, isToday } from 'date-fns';
+import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument } from '@/types';
+import { format, startOfTomorrow, isWithinInterval, startOfDay, endOfDay, parseISO, isToday, isFuture, subDays, eachDayOfInterval, getDay, endOfMonth, startOfMonth } from 'date-fns';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,15 @@ import {
 import { useRouter } from 'next/navigation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Swal from 'sweetalert2';
+import dynamic from 'next/dynamic';
+import { DateRange } from 'react-day-picker';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+
+const AttendanceSummaryChart = dynamic(() => import('@/components/dashboard/AttendanceSummaryChart'), {
+    ssr: false,
+    loading: () => <div className="flex h-[350px] w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>,
+});
+
 
 interface HrmDashboardStats {
     totalEmployees: number;
@@ -59,13 +68,20 @@ export default function HrmDashboardPage() {
     
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_hrm_dashboard']);
     const { data: leaves, isLoading: isLoadingLeaves } = useFirestoreQuery<LeaveApplicationDocument[]>(collection(firestore, 'leave_applications'), undefined, ['leaves_hrm_dashboard']);
+    const { data: holidays, isLoading: isLoadingHolidays } = useFirestoreQuery<HolidayDocument[]>(collection(firestore, 'holidays'), undefined, ['holidays_hrm_dashboard']);
     const [attendance, setAttendance] = React.useState<AttendanceDocument[]>([]);
     const [isLoadingAttendance, setIsLoadingAttendance] = React.useState(true);
     
     const [searchTerm, setSearchTerm] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState<'All' | 'P' | 'A' | 'D'>('All');
 
-    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance;
+    const [chartDateRange, setChartDateRange] = React.useState<DateRange | undefined>({
+      from: subDays(new Date(), 29),
+      to: new Date(),
+    });
+    const [chartData, setChartData] = React.useState<any[]>([]);
+
+    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays;
     
     React.useEffect(() => {
         const todayStart = format(startOfDay(new Date()), "yyyy-MM-dd'T'00:00:00.000xxx");
@@ -164,6 +180,57 @@ export default function HrmDashboardPage() {
             });
         }
     }, [employees, leaves, attendance]);
+    
+    React.useEffect(() => {
+      const processChartData = async () => {
+        if (!chartDateRange?.from || !employees || !holidays || !leaves) return;
+
+        const from = startOfDay(chartDateRange.from);
+        const to = endOfDay(chartDateRange.to || from);
+
+        const attendanceQuery = query(
+            collection(firestore, "attendance"),
+            where("date", ">=", from.toISOString()),
+            where("date", "<=", to.toISOString())
+        );
+
+        const attendanceSnapshot = await getDocs(attendanceQuery);
+        const rangeAttendance = attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument);
+        
+        const days = eachDayOfInterval({ start: from, end: to });
+        const data = days.map(day => {
+            const dayOfWeek = getDay(day);
+            const dayStr = format(day, 'yyyy-MM-dd');
+            
+            const isHoliday = holidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+            const isWeekend = dayOfWeek === 5; // Friday
+
+            const dailyAttendance = rangeAttendance.filter(a => a.date.startsWith(dayStr));
+
+            const present = dailyAttendance.filter(a => a.flag === 'P').length;
+            const delayed = dailyAttendance.filter(a => a.flag === 'D').length;
+            const onLeave = leaves.filter(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) })).length;
+            const weekendCount = isWeekend ? employees.length - onLeave : 0;
+            const holidayCount = isHoliday && !isWeekend ? employees.length - onLeave : 0;
+
+            const accountedFor = present + delayed + onLeave + weekendCount + holidayCount;
+            const absent = Math.max(0, employees.length - accountedFor);
+
+            return {
+                name: format(day, 'd/MM'),
+                present,
+                absent,
+                delay: delayed,
+                leave: onLeave,
+                weekend: weekendCount,
+                holiday: holidayCount
+            };
+        });
+        setChartData(data);
+      };
+      processChartData();
+    }, [chartDateRange, employees, holidays, leaves]);
+
 
     const handleViewLocation = (location: { latitude: number; longitude: number } | undefined | null, timeType: string) => {
         if (location) {
@@ -405,8 +472,30 @@ export default function HrmDashboardPage() {
                     </div>
                 </div>
 
+                <div className="mt-12">
+                   <Card>
+                        <CardHeader>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <div>
+                                    <CardTitle className="text-2xl font-bold">Attendance Summary</CardTitle>
+                                    <CardDescription>Last 30 days attendance overview</CardDescription>
+                                </div>
+                                <DatePickerWithRange
+                                    date={chartDateRange}
+                                    onDateChange={setChartDateRange}
+                                    className="max-w-sm"
+                                />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="h-[400px]">
+                            <AttendanceSummaryChart data={chartData} />
+                        </CardContent>
+                    </Card>
+                </div>
+
             </CardContent>
         </Card>
     </div>
   );
 }
+
