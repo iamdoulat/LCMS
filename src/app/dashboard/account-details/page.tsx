@@ -3,7 +3,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw } from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -128,22 +128,19 @@ export default function AccountDetailsPage() {
       Swal.fire("Error", "User or employee data not available.", "error");
       return;
     }
-  
+
     setAttendanceLoading(true);
-  
+
     if (!navigator.geolocation) {
       Swal.fire("Geolocation Not Supported", "Your browser does not support geolocation.", "error");
       setAttendanceLoading(false);
       return;
     }
-  
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        const locationData = { latitude, longitude };
-  
+
+    const showLocationSwal = (latitude: number, longitude: number) => {
         const mapHtml = `
           <iframe
+            id="swal-map-iframe"
             width="100%"
             height="250"
             style="border:0; border-radius: 8px; margin-bottom: 1rem;"
@@ -152,76 +149,93 @@ export default function AccountDetailsPage() {
             src="https://maps.google.com/maps?q=${latitude},${longitude}&hl=es;z=14&amp;output=embed">
           </iframe>
         `;
-
-        const result = await Swal.fire({
-          title: `<span style="font-size: 1.1rem;">Enter ${type === 'in' ? 'In Time' : 'Out Time'} Remarks (Optional)</span>`,
-          html: `${mapHtml}<textarea id="swal-textarea" class="swal2-textarea" placeholder="Type your remarks here..."></textarea>`,
-          showCancelButton: true,
-          confirmButtonText: 'Submit',
-          customClass: {
-            htmlContainer: 'p-0',
-          },
-          preConfirm: () => {
-            const textarea = document.getElementById('swal-textarea') as HTMLTextAreaElement;
-            return textarea.value || '';
-          }
-        });
-  
-        if (!result.isConfirmed) {
-          setAttendanceLoading(false);
-          return;
-        }
-        const remarks = result.value;
-  
-        const now = new Date();
-        const formattedDate = format(now, 'yyyy-MM-dd');
-        const currentTime = format(now, 'hh:mm a');
-        const docId = `${employeeData.id}_${formattedDate}`;
-        const docRef = doc(firestore, 'attendance', docId);
-  
-        try {
-          let dataToSet: Partial<AttendanceDocument> = {};
-  
-          if (type === 'in') {
-            const flag = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 10) ? 'D' : 'P';
-            dataToSet = {
-              employeeId: employeeData.id,
-              employeeName: employeeData.fullName,
-              date: format(now, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-              flag: flag,
-              inTime: currentTime,
-              inTimeRemarks: remarks,
-              inTimeLocation: locationData,
-              updatedBy: user.uid,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            };
-            await setDoc(docRef, dataToSet, { merge: true });
-            setDailyAttendance(dataToSet as AttendanceDocument);
-            Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
-          } else if (type === 'out') {
-            const currentDoc = await getDoc(docRef);
-            if (!currentDoc.exists() || !currentDoc.data().inTime) {
-              Swal.fire("Cannot Clock Out", "You must clock in before you can clock out.", "warning");
-              setAttendanceLoading(false);
-              return;
+        
+        Swal.fire({
+            title: `<div style="font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center;">Enter ${type === 'in' ? 'In Time' : 'Out Time'} Remarks (Optional)<button id="refresh-location-btn" class="swal2-confirm swal2-styled" style="font-size: 0.8rem; padding: 0.4rem 0.6rem; margin: 0; min-width: auto; background: hsl(var(--secondary)) !important; color: hsl(var(--secondary-foreground)) !important;">Refresh Location</button></div>`,
+            html: `${mapHtml}<textarea id="swal-textarea" class="swal2-textarea" placeholder="Type your remarks here..."></textarea>`,
+            showCancelButton: true,
+            confirmButtonText: 'Submit',
+            customClass: { htmlContainer: 'p-0', title: 'w-full' },
+            didOpen: () => {
+                document.getElementById('refresh-location-btn')?.addEventListener('click', () => {
+                    Swal.showLoading();
+                    navigator.geolocation.getCurrentPosition(
+                        (newPosition) => {
+                            Swal.close();
+                            showLocationSwal(newPosition.coords.latitude, newPosition.coords.longitude);
+                        },
+                        (error) => {
+                           Swal.fire("Location Error", "Could not refresh location.", "error");
+                        }
+                    );
+                });
+            },
+            preConfirm: () => {
+              const textarea = document.getElementById('swal-textarea') as HTMLTextAreaElement;
+              return { remarks: textarea.value || '', latitude, longitude };
             }
-            dataToSet = {
-              outTime: currentTime,
-              outTimeRemarks: remarks,
-              outTimeLocation: locationData,
-              updatedAt: serverTimestamp(),
-            };
-            await updateDoc(docRef, dataToSet);
-            setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
-            Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
-          }
-        } catch (error: any) {
-          console.error("Error updating attendance:", error);
-          Swal.fire("Error", `Failed to record attendance: ${error.message}`, "error");
-        } finally {
-          setAttendanceLoading(false);
-        }
+        }).then(async (result) => {
+            if (!result.isConfirmed) {
+                setAttendanceLoading(false);
+                return;
+            }
+
+            const { remarks, latitude: finalLatitude, longitude: finalLongitude } = result.value;
+            const locationData = { latitude: finalLatitude, longitude: finalLongitude };
+
+            const now = new Date();
+            const formattedDate = format(now, 'yyyy-MM-dd');
+            const currentTime = format(now, 'hh:mm a');
+            const docId = `${employeeData.id}_${formattedDate}`;
+            const docRef = doc(firestore, 'attendance', docId);
+
+            try {
+                if (type === 'in') {
+                    const flag = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 10) ? 'D' : 'P';
+                    const dataToSet = {
+                        employeeId: employeeData.id,
+                        employeeName: employeeData.fullName,
+                        date: format(now, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                        flag: flag,
+                        inTime: currentTime,
+                        inTimeRemarks: remarks,
+                        inTimeLocation: locationData,
+                        updatedBy: user.uid,
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp(),
+                    };
+                    await setDoc(docRef, dataToSet, { merge: true });
+                    setDailyAttendance(dataToSet as AttendanceDocument);
+                    Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
+                } else {
+                    const currentDoc = await getDoc(docRef);
+                    if (!currentDoc.exists() || !currentDoc.data().inTime) {
+                        Swal.fire("Cannot Clock Out", "You must clock in before you can clock out.", "warning");
+                        setAttendanceLoading(false);
+                        return;
+                    }
+                    const dataToSet = {
+                        outTime: currentTime,
+                        outTimeRemarks: remarks,
+                        outTimeLocation: locationData,
+                        updatedAt: serverTimestamp(),
+                    };
+                    await updateDoc(docRef, dataToSet);
+                    setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
+                    Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
+                }
+            } catch (error: any) {
+                console.error("Error updating attendance:", error);
+                Swal.fire("Error", `Failed to record attendance: ${error.message}`, "error");
+            } finally {
+                setAttendanceLoading(false);
+            }
+        });
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        showLocationSwal(position.coords.latitude, position.coords.longitude);
       },
       (error) => {
         let errorMessage = "Could not get your location. ";
@@ -677,4 +691,5 @@ export default function AccountDetailsPage() {
     
 
     
+
 
