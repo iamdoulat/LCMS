@@ -22,6 +22,7 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
 import { Textarea } from '../ui/textarea';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { Separator } from '@/components/ui/separator';
 
 const editAdvanceSalarySchema = AdvanceSalarySchema.extend({
   status: z.enum(advanceSalaryStatusOptions, { required_error: "Status is required." }),
