@@ -3,7 +3,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet, FileDigit } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet, FileDigit, Bell } from 'lucide-react';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -26,7 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
-import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip } from '@/types';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings } from '@/types';
 import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
@@ -35,6 +35,8 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
 import { Badge } from '@/components/ui/badge';
+import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 const accountDetailsSchema = z.object({
@@ -109,6 +111,7 @@ export default function AccountDetailsPage() {
   });
   const [filteredAttendance, setFilteredAttendance] = React.useState<AttendanceDocument[]>([]);
   const [isAttendanceLoading, setIsAttendanceLoading] = React.useState(true);
+  const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings"), where("isEnabled", "==", true)), undefined, ['notices_hrm_dashboard']);
 
 
   React.useEffect(() => {
@@ -878,84 +881,116 @@ export default function AccountDetailsPage() {
             )}
           </CardContent>
         </Card>
-
-        <Card className="shadow-xl">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-              <div>
-                <CardTitle className="flex items-center gap-2 font-bold text-xl lg:text-2xl text-primary bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
-                  <CalendarDays className="h-6 w-6 text-primary" /> Quick Attendance View
-                </CardTitle>
-                <CardDescription>
-                  Your attendance records for the selected period.
-                </CardDescription>
-              </div>
-              <DatePickerWithRange date={attendanceDateRange} onDateChange={setAttendanceDateRange} />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+                <Card className="shadow-xl h-full">
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <div>
+                        <CardTitle className="flex items-center gap-2 font-bold text-xl lg:text-2xl text-primary bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
+                        <CalendarDays className="h-6 w-6 text-primary" /> Quick Attendance View
+                        </CardTitle>
+                        <CardDescription>
+                        Your attendance records for the selected period.
+                        </CardDescription>
+                    </div>
+                    <DatePickerWithRange date={attendanceDateRange} onDateChange={setAttendanceDateRange} />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {isAttendanceLoading ? (
+                    <div className="flex justify-center items-center h-48">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                    ) : filteredAttendance.length === 0 ? (
+                    <p className="text-muted-foreground text-center">No attendance data found for the selected range.</p>
+                    ) : (
+                    <div className="rounded-md border">
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>In Time</TableHead>
+                            <TableHead>In Time Remarks</TableHead>
+                            <TableHead>Out Time</TableHead>
+                            <TableHead>Out Time Remarks</TableHead>
+                            <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredAttendance.map((att) => (
+                            <TableRow key={att.id}>
+                                <TableCell>{formatDisplayDate(att.date)}</TableCell>
+                                <TableCell>
+                                <div className="flex items-center gap-1">
+                                    {att.inTime || 'N/A'}
+                                    {att.inTimeLocation && (
+                                    <Button
+                                        type="button" variant="ghost" size="icon" className="h-6 w-6"
+                                        onClick={() => handleViewLocation(att.inTimeLocation)} title="View In-Time Location">
+                                        <MapPin className="h-3.5 w-3.5 text-blue-500" />
+                                    </Button>
+                                    )}
+                                </div>
+                                </TableCell>
+                                <TableCell>{att.inTimeRemarks || 'N/A'}</TableCell>
+                                <TableCell>
+                                <div className="flex items-center gap-1">
+                                    {att.outTime || 'N/A'}
+                                    {att.outTimeLocation && (
+                                    <Button
+                                        type="button" variant="ghost" size="icon" className="h-6 w-6"
+                                        onClick={() => handleViewLocation(att.outTimeLocation)} title="View Out-Time Location">
+                                        <MapPin className="h-3.5 w-3.5 text-orange-500" />
+                                    </Button>
+                                    )}
+                                </div>
+                                </TableCell>
+                                <TableCell>{att.outTimeRemarks || 'N/A'}</TableCell>
+                                <TableCell>
+                                <Badge variant={att.flag === 'P' ? 'default' : att.flag === 'D' ? 'destructive' : 'secondary'}>
+                                    {att.flag}
+                                </Badge>
+                                </TableCell>
+                            </TableRow>
+                            ))}
+                        </TableBody>
+                        </Table>
+                    </div>
+                    )}
+                </CardContent>
+                </Card>
             </div>
-          </CardHeader>
-          <CardContent>
-            {isAttendanceLoading ? (
-              <div className="flex justify-center items-center h-48">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : filteredAttendance.length === 0 ? (
-              <p className="text-muted-foreground text-center">No attendance data found for the selected range.</p>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>In Time</TableHead>
-                      <TableHead>In Time Remarks</TableHead>
-                      <TableHead>Out Time</TableHead>
-                      <TableHead>Out Time Remarks</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAttendance.map((att) => (
-                      <TableRow key={att.id}>
-                        <TableCell>{formatDisplayDate(att.date)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            {att.inTime || 'N/A'}
-                            {att.inTimeLocation && (
-                              <Button
-                                type="button" variant="ghost" size="icon" className="h-6 w-6"
-                                onClick={() => handleViewLocation(att.inTimeLocation)} title="View In-Time Location">
-                                <MapPin className="h-3.5 w-3.5 text-blue-500" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{att.inTimeRemarks || 'N/A'}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            {att.outTime || 'N/A'}
-                            {att.outTimeLocation && (
-                              <Button
-                                type="button" variant="ghost" size="icon" className="h-6 w-6"
-                                onClick={() => handleViewLocation(att.outTimeLocation)} title="View Out-Time Location">
-                                <MapPin className="h-3.5 w-3.5 text-orange-500" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{att.outTimeRemarks || 'N/A'}</TableCell>
-                        <TableCell>
-                          <Badge variant={att.flag === 'P' ? 'default' : att.flag === 'D' ? 'destructive' : 'secondary'}>
-                            {att.flag}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <div className="lg:col-span-1">
+                 <Card className="h-full">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary"/>Notice Board</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingNotices ? (
+                            <div className="flex items-center justify-center h-48"><Loader2 className="h-6 w-6 animate-spin"/></div>
+                        ) : !notices || notices.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center">No active notices available.</p>
+                        ) : (
+                            <ScrollArea className="h-96 pr-4">
+                                <div className="space-y-4">
+                                    {notices.map(notice => (
+                                        <div key={notice.id} className="p-3 border rounded-lg bg-background shadow-sm">
+                                            <h4 className="font-semibold text-sm mb-1">{notice.title}</h4>
+                                            <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: notice.content ? notice.content.substring(0, 100) + '...' : '' }} />
+                                            <div className="text-xs text-muted-foreground mt-2">
+                                                {notice.updatedAt ? format(new Date((notice.updatedAt as any).seconds * 1000), 'PPP') : 'N/A'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
         
         <div className="mt-8">
             <LeaveCalendar birthdays={birthdaysToday} />
@@ -1075,4 +1110,3 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
-
