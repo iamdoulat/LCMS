@@ -1,3 +1,4 @@
+
 "use client";
 
 import { EditEmployeeForm } from '@/components/forms/EditEmployeeForm';
@@ -49,7 +50,7 @@ export default function EditEmployeePage() {
   }, [id]);
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <div className="mb-6">
         <Link href="/dashboard/hr/employees" passHref>
           <Button variant="outline">
