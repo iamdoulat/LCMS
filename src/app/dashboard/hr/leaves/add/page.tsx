@@ -1,3 +1,4 @@
+
 "use client";
 
 import { AddLeaveForm } from '@/components/forms/AddLeaveForm';
@@ -21,7 +22,7 @@ export default function AddLeavePage() {
           </Button>
         </Link>
       </div>
-      <Card className="mx-auto shadow-xl">
+      <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Mailbox className="h-7 w-7 text-primary"/>New Leave Application

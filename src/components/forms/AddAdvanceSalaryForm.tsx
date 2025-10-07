@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -110,49 +111,47 @@ export function AddAdvanceSalaryForm({ onFormSubmit }: AddAdvanceSalaryFormProps
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="employeeId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
-              <Combobox
-                options={employeeOptions}
-                value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
-                onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
-                placeholder="Search Employee..."
-                selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
-                disabled={isLoadingEmployees}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="applyDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Apply Date*</FormLabel>
-                <DatePickerField field={field} />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-           <FormField
-            control={form.control}
-            name="paymentStartsFrom"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Payment Starts From*</FormLabel>
-                <DatePickerField field={field} />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
+            <FormField
+              control={form.control}
+              name="employeeId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
+                  <Combobox
+                    options={employeeOptions}
+                    value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
+                    placeholder="Search Employee..."
+                    selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
+                    disabled={isLoadingEmployees}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="applyDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Apply Date*</FormLabel>
+                  <DatePickerField field={field} />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="paymentStartsFrom"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Payment Starts From*</FormLabel>
+                  <DatePickerField field={field} />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
             control={form.control}
             name="advanceAmount"
@@ -176,7 +175,7 @@ export function AddAdvanceSalaryForm({ onFormSubmit }: AddAdvanceSalaryFormProps
             )}
             />
         </div>
-
+        
         <FormField
             control={form.control}
             name="paymentMethod"
