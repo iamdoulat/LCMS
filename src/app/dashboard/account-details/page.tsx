@@ -3,13 +3,13 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet, FileDigit } from 'lucide-react';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import Image from 'next/image';
-import { doc, updateDoc, serverTimestamp, getDocs, query, where, collection, getDoc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDocs, query, where, collection, getDoc, setDoc, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -26,7 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
-import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument } from '@/types';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip } from '@/types';
 import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
@@ -96,6 +96,9 @@ export default function AccountDetailsPage() {
     visit: 0,
     advanceSalary: 0,
   });
+
+  const [payslips, setPayslips] = React.useState<Payslip[]>([]);
+  const [isLoadingPayslips, setIsLoadingPayslips] = React.useState(true);
 
 
   useEffect(() => {
@@ -176,9 +179,22 @@ export default function AccountDetailsPage() {
         const employeesSnapshot = await getDocs(collection(firestore, 'employees'));
         const fetchedEmployees = employeesSnapshot.docs.map(doc => doc.data() as EmployeeDocument);
         setAllEmployees(fetchedEmployees);
+
+        // Fetch payslips for the user
+        setIsLoadingPayslips(true);
+        const payslipsQuery = query(
+          collection(firestore, "payslips"),
+          where("employeeId", "==", employeeData.id),
+          orderBy("createdAt", "desc")
+        );
+        const payslipsSnapshot = await getDocs(payslipsQuery);
+        setPayslips(payslipsSnapshot.docs.map(d => d.data() as Payslip));
+        setIsLoadingPayslips(false);
+
         
       } catch (err) {
         console.error("Error fetching auxiliary data:", err);
+        setIsLoadingPayslips(false);
       } finally {
         setIsDayStatusLoading(false);
       }
@@ -776,6 +792,52 @@ export default function AccountDetailsPage() {
               </div>
           </CardContent>
         </Card>
+
+        <Card className="shadow-xl">
+          <CardHeader>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <FileDigit className="h-6 w-6 text-primary" />
+              Monthly Payslip Summary
+            </CardTitle>
+            <CardDescription>
+              A summary of your generated payslips.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingPayslips ? (
+              <div className="flex justify-center items-center h-24">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : payslips.length === 0 ? (
+              <p className="text-muted-foreground text-center">No payslip data found for this account.</p>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Month</TableHead>
+                      <TableHead>Gross Salary</TableHead>
+                      <TableHead>Advance Paid</TableHead>
+                      <TableHead>Total Deductions</TableHead>
+                      <TableHead className="font-bold">Net Salary</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payslips.map((payslip) => (
+                      <TableRow key={payslip.id}>
+                        <TableCell>{payslip.payPeriod}</TableCell>
+                        <TableCell>{formatCurrency(payslip.grossSalary)}</TableCell>
+                        <TableCell>{formatCurrency(payslip.advanceDeduction)}</TableCell>
+                        <TableCell>{formatCurrency(payslip.totalDeductions)}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(payslip.netSalary)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
         
         <div className="mt-8">
             <LeaveCalendar birthdays={birthdaysToday} />
@@ -895,3 +957,4 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
