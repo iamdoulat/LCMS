@@ -51,6 +51,8 @@ interface HrmDashboardStats {
     upcomingBirthdays: number;
     pendingAdvanceSalaryRequests: number;
     pendingVisitApplications: number;
+    onVisitToday: number;
+    onVisitTomorrow: number;
 }
 
 const getInitials = (name?: string) => {
@@ -75,6 +77,8 @@ export default function HrmDashboardPage() {
         upcomingBirthdays: 0,
         pendingAdvanceSalaryRequests: 0,
         pendingVisitApplications: 0,
+        onVisitToday: 0,
+        onVisitTomorrow: 0,
     });
     
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_hrm_dashboard']);
@@ -82,7 +86,8 @@ export default function HrmDashboardPage() {
     const { data: holidays, isLoading: isLoadingHolidays } = useFirestoreQuery<HolidayDocument[]>(collection(firestore, 'holidays'), undefined, ['holidays_hrm_dashboard']);
     const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings"), where("isEnabled", "==", true)), undefined, ['notices_hrm_dashboard']);
     const { data: advanceSalaryRequests, isLoading: isLoadingAdvanceSalary } = useFirestoreQuery<AdvanceSalaryDocument[]>(query(collection(firestore, 'advance_salary'), where('status', '==', 'Pending')), undefined, ['pending_advance_salary']);
-    const { data: pendingVisits, isLoading: isLoadingVisits } = useFirestoreQuery<VisitApplicationDocument[]>(query(collection(firestore, 'visit_applications'), where('status', '==', 'Pending')), undefined, ['pending_visits']);
+    const { data: allVisits, isLoading: isLoadingAllVisits } = useFirestoreQuery<VisitApplicationDocument[]>(collection(firestore, 'visit_applications'), undefined, ['all_visits_hrm_dashboard']);
+
 
     const [attendance, setAttendance] = React.useState<AttendanceDocument[]>([]);
     const [isLoadingAttendance, setIsLoadingAttendance] = React.useState(true);
@@ -108,7 +113,7 @@ export default function HrmDashboardPage() {
     const [leaveFilterBranch, setLeaveFilterBranch] = React.useState(ALL_BRANCHES_FILTER_VALUE);
     const [leaveFilterDept, setLeaveFilterDept] = React.useState(ALL_DEPTS_FILTER_VALUE);
 
-    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts || isLoadingNotices || isLoadingAdvanceSalary || isLoadingVisits;
+    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts || isLoadingNotices || isLoadingAdvanceSalary || isLoadingAllVisits;
     
     React.useEffect(() => {
         const todayStart = format(startOfDay(new Date()), "yyyy-MM-dd'T'00:00:00.000xxx");
@@ -190,7 +195,7 @@ export default function HrmDashboardPage() {
     }, [employees, attendance, searchTerm, statusFilter]);
 
     React.useEffect(() => {
-        if (employees && leaves && attendance && advanceSalaryRequests && pendingVisits) {
+        if (employees && leaves && attendance && advanceSalaryRequests && allVisits) {
             const today = new Date();
             const tomorrow = startOfTomorrow();
             
@@ -228,6 +233,12 @@ export default function HrmDashboardPage() {
             const onLeaveTodayIds = new Set(leaves.filter(l => l.status === 'Approved' && isWithinInterval(today, { start: parseISO(l.fromDate), end: parseISO(l.toDate) })).map(l => l.employeeId));
             
             const todayAbsentCount = employees.filter(emp => !presentEmployeeIds.has(emp.id) && !onLeaveTodayIds.has(emp.id)).length;
+            
+            const approvedVisits = allVisits.filter(v => v.status === 'Approved');
+            const onVisitTodayCount = approvedVisits.filter(v => isWithinInterval(today, { start: parseISO(v.fromDate), end: parseISO(v.toDate) })).length;
+            const onVisitTomorrowCount = approvedVisits.filter(v => isWithinInterval(tomorrow, { start: parseISO(v.fromDate), end: parseISO(v.toDate) })).length;
+            const pendingVisitApplicationsCount = allVisits.filter(v => v.status === 'Pending').length;
+
 
             setStats({
                 totalEmployees: employees.length,
@@ -239,10 +250,12 @@ export default function HrmDashboardPage() {
                 pendingLeaveApplications: pendingLeaveApplicationsCount,
                 upcomingBirthdays: upcomingBirthdaysCount,
                 pendingAdvanceSalaryRequests: advanceSalaryRequests.length,
-                pendingVisitApplications: pendingVisits.length,
+                pendingVisitApplications: pendingVisitApplicationsCount,
+                onVisitToday: onVisitTodayCount,
+                onVisitTomorrow: onVisitTomorrowCount,
             });
         }
-    }, [employees, leaves, attendance, advanceSalaryRequests, pendingVisits]);
+    }, [employees, leaves, attendance, advanceSalaryRequests, allVisits]);
     
     React.useEffect(() => {
       const processChartData = async () => {
@@ -460,14 +473,14 @@ export default function HrmDashboardPage() {
                     />
                     <StatCard
                         title="On Visit Today"
-                        value="0"
+                        value={stats.onVisitToday}
                         icon={<Briefcase />}
                         description="Employees on official visit"
                         className="bg-cyan-500"
                     />
                      <StatCard
                         title="On Visit Tomorrow"
-                        value="0"
+                        value={stats.onVisitTomorrow}
                         icon={<Plane />}
                         description="Scheduled for tomorrow"
                         className="bg-sky-500"
