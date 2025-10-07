@@ -3,7 +3,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet, FileDigit, Bell } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle } from 'lucide-react';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings } from '@/types';
-import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth } from 'date-fns';
+import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
@@ -37,6 +37,7 @@ import type { DateRange } from 'react-day-picker';
 import { Badge } from '@/components/ui/badge';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Link from 'next/link';
 
 
 const accountDetailsSchema = z.object({
@@ -83,10 +84,10 @@ export default function AccountDetailsPage() {
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [dailyAttendance, setDailyAttendance] = useState<AttendanceDocument | null>(null);
   
-  // State for holidays, leaves, and visits
   const [holidays, setHolidays] = useState<HolidayDocument[]>([]);
   const [leaves, setLeaves] = useState<LeaveApplicationDocument[]>([]);
   const [visits, setVisits] = useState<VisitApplicationDocument[]>([]);
+  const [userAdvanceSalary, setUserAdvanceSalary] = useState<AdvanceSalaryDocument[]>([]);
   const [dayStatus, setDayStatus] = useState<DayStatus>('Working Day');
   const [isDayStatusLoading, setIsDayStatusLoading] = useState(true);
   
@@ -163,7 +164,7 @@ export default function AccountDetailsPage() {
         const leavesQuery = query(
           collection(firestore, 'leave_applications'),
           where('employeeId', '==', employeeData.id),
-          where('status', '==', 'Approved')
+          // where('status', '==', 'Approved') // Fetch all statuses to display in list
         );
         const leavesSnapshot = await getDocs(leavesQuery);
         const fetchedLeaves = leavesSnapshot.docs.map(doc => doc.data() as LeaveApplicationDocument);
@@ -173,12 +174,20 @@ export default function AccountDetailsPage() {
         const visitsQuery = query(
           collection(firestore, 'visit_applications'),
           where('employeeId', '==', employeeData.id),
-          where('status', '==', 'Approved')
+          // where('status', '==', 'Approved') // Fetch all statuses
         );
         const visitsSnapshot = await getDocs(visitsQuery);
         const fetchedVisits = visitsSnapshot.docs.map(doc => doc.data() as VisitApplicationDocument);
         setVisits(fetchedVisits);
         
+        // Fetch advance salary requests for user
+        const advanceSalaryQuery = query(
+            collection(firestore, 'advance_salary'),
+            where('employeeId', '==', employeeData.id)
+        );
+        const advanceSalarySnapshot = await getDocs(advanceSalaryQuery);
+        setUserAdvanceSalary(advanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument));
+
         // --- Fetch data for monthly stats ---
         const monthlyAttendanceQuery = query(
           collection(firestore, 'attendance'),
@@ -196,7 +205,6 @@ export default function AccountDetailsPage() {
           where('applyDate', '<=', endOfCurrentMonth.toISOString()),
           where('status', '==', 'Approved')
         );
-        const monthlyAdvanceSalarySnapshot = await getDocs(monthlyAdvanceSalaryQuery);
         const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
 
 
@@ -264,13 +272,15 @@ export default function AccountDetailsPage() {
       return;
     }
     
-    const leave = leaves.find(l => isWithinInterval(today, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+    const activeLeaves = leaves.filter(l => l.status === 'Approved');
+    const leave = activeLeaves.find(l => isWithinInterval(today, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
     if (leave) {
       setDayStatus('On Leave');
       return;
     }
 
-    const visit = visits.find(v => isWithinInterval(today, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
+    const activeVisits = visits.filter(v => v.status === 'Approved');
+    const visit = activeVisits.find(v => isWithinInterval(today, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
     if (visit) {
         setDayStatus('On Visit');
         return;
@@ -991,7 +1001,74 @@ export default function AccountDetailsPage() {
                 </Card>
             </div>
         </div>
+
+        <Card className="shadow-xl">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Advance Salary</CardTitle>
+                    <CardDescription>Your advance salary requests.</CardDescription>
+                </div>
+                <Button asChild><Link href="/dashboard/hr/payroll/advance-salary/add"><PlusCircle className="mr-2 h-4 w-4"/>Apply</Link></Button>
+            </CardHeader>
+            <CardContent>
+                <Table><TableHeader><TableRow><TableHead>Apply Date</TableHead><TableHead>Amount</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {userAdvanceSalary.length > 0 ? userAdvanceSalary.slice(0, 3).map(req => (
+                        <TableRow key={req.id}><TableCell>{formatDisplayDate(req.applyDate)}</TableCell><TableCell>{formatCurrency(req.advanceAmount)}</TableCell><TableCell>{req.reason}</TableCell><TableCell><Badge variant={req.status === 'Approved' ? 'default' : 'secondary'}>{req.status}</Badge></TableCell></TableRow>
+                    )) : <TableRow><TableCell colSpan={4} className="text-center">No advance salary requests found.</TableCell></TableRow>}
+                </TableBody></Table>
+            </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2"><Plane className="h-5 w-5 text-primary"/>Leave Management</CardTitle>
+                    <CardDescription>Your leave applications.</CardDescription>
+                </div>
+                <Button asChild><Link href="/dashboard/hr/leaves/add"><PlusCircle className="mr-2 h-4 w-4"/>Apply</Link></Button>
+            </CardHeader>
+            <CardContent>
+                <Table><TableHeader><TableRow><TableHead>Type</TableHead><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Days</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {leaves.length > 0 ? leaves.slice(0, 3).map(leave => (
+                        <TableRow key={leave.id}>
+                            <TableCell>{leave.leaveType}</TableCell>
+                            <TableCell>{formatDisplayDate(leave.fromDate)}</TableCell>
+                            <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
+                            <TableCell>{differenceInCalendarDays(parseISO(leave.toDate), parseISO(leave.fromDate)) + 1}</TableCell>
+                            <TableCell>{leave.reason}</TableCell>
+                            <TableCell><Badge variant={leave.status === 'Approved' ? 'default' : 'secondary'}>{leave.status}</Badge></TableCell>
+                        </TableRow>
+                    )) : <TableRow><TableCell colSpan={6} className="text-center">No leave applications found.</TableCell></TableRow>}
+                </TableBody></Table>
+            </CardContent>
+        </Card>
         
+        <Card className="shadow-xl">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2"><Briefcase className="h-5 w-5 text-primary"/>Visit Applications</CardTitle>
+                    <CardDescription>Your official visit applications.</CardDescription>
+                </div>
+                <Button asChild><Link href="/dashboard/hr/visit-applications/add"><PlusCircle className="mr-2 h-4 w-4"/>Apply</Link></Button>
+            </CardHeader>
+            <CardContent>
+                <Table><TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Days</TableHead><TableHead>Remarks</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {visits.length > 0 ? visits.slice(0, 3).map(visit => (
+                        <TableRow key={visit.id}>
+                            <TableCell>{formatDisplayDate(visit.fromDate)}</TableCell>
+                            <TableCell>{formatDisplayDate(visit.toDate)}</TableCell>
+                            <TableCell>{visit.day}</TableCell>
+                            <TableCell>{visit.remarks}</TableCell>
+                            <TableCell><Badge variant={visit.status === 'Approved' ? 'default' : 'secondary'}>{visit.status}</Badge></TableCell>
+                        </TableRow>
+                    )) : <TableRow><TableCell colSpan={5} className="text-center">No visit applications found.</TableCell></TableRow>}
+                </TableBody></Table>
+            </CardContent>
+        </Card>
+
         <div className="mt-8">
             <LeaveCalendar birthdays={birthdaysToday} />
         </div>
