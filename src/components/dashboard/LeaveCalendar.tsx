@@ -42,7 +42,7 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
   const [filterBranch, setFilterBranch] = React.useState(ALL_BRANCHES);
   const [filterDept, setFilterDept] = React.useState(ALL_DEPTS);
-  const [filterLeaveType, setFilterLeaveType] = React.useState<LeaveType | ''>(ALL_LEAVE_TYPES as any);
+  const [filterLeaveType, setFilterLeaveType] = React.useState<LeaveType | '' | typeof ALL_LEAVE_TYPES>(ALL_LEAVE_TYPES);
   
   const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_for_leave_calendar']);
   const { data: leaves, isLoading: isLoadingLeaves } = useFirestoreQuery<LeaveApplicationDocument[]>(collection(firestore, 'leave_applications'), undefined, ['leaves_for_leave_calendar']);
