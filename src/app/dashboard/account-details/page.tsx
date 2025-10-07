@@ -3,7 +3,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet } from 'lucide-react';
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -26,11 +26,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
-import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument } from '@/types';
-import { format, isWithinInterval, parseISO, startOfDay, getDay } from 'date-fns';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument } from '@/types';
+import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
+import { StatCard } from '@/components/dashboard/StatCard';
 
 
 const accountDetailsSchema = z.object({
@@ -86,6 +87,16 @@ export default function AccountDetailsPage() {
   
   const [allEmployees, setAllEmployees] = useState<EmployeeDocument[]>([]);
   const [birthdaysToday, setBirthdaysToday] = React.useState<EmployeeDocument[]>([]);
+  
+  const [monthlyStats, setMonthlyStats] = useState({
+    present: 0,
+    absent: 0,
+    delayed: 0,
+    leave: 0,
+    visit: 0,
+    advanceSalary: 0,
+  });
+
 
   useEffect(() => {
     const fetchAuxData = async () => {
@@ -93,6 +104,8 @@ export default function AccountDetailsPage() {
       setIsDayStatusLoading(true);
       try {
         const today = startOfDay(new Date());
+        const startOfCurrentMonth = startOfMonth(today);
+        const endOfCurrentMonth = endOfMonth(today);
         
         // Fetch holidays
         const holidaysQuery = query(collection(firestore, 'holidays'));
@@ -119,6 +132,45 @@ export default function AccountDetailsPage() {
         const visitsSnapshot = await getDocs(visitsQuery);
         const fetchedVisits = visitsSnapshot.docs.map(doc => doc.data() as VisitApplicationDocument);
         setVisits(fetchedVisits);
+        
+        // --- Fetch data for monthly stats ---
+        const monthlyAttendanceQuery = query(
+          collection(firestore, 'attendance'),
+          where('employeeId', '==', employeeData.id),
+          where('date', '>=', startOfCurrentMonth.toISOString()),
+          where('date', '<=', endOfCurrentMonth.toISOString())
+        );
+        const monthlyAttendanceSnapshot = await getDocs(monthlyAttendanceQuery);
+        const monthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
+
+        const monthlyAdvanceSalaryQuery = query(
+          collection(firestore, 'advance_salary'),
+          where('employeeId', '==', employeeData.id),
+          where('applyDate', '>=', startOfCurrentMonth.toISOString()),
+          where('applyDate', '<=', endOfCurrentMonth.toISOString()),
+          where('status', '==', 'Approved')
+        );
+        const monthlyAdvanceSalarySnapshot = await getDocs(monthlyAdvanceSalaryQuery);
+        const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
+
+
+        // --- Calculate stats ---
+        const presentCount = monthlyAttendance.filter(a => a.flag === 'P').length;
+        const delayedCount = monthlyAttendance.filter(a => a.flag === 'D').length;
+        const absentCount = monthlyAttendance.filter(a => a.flag === 'A').length;
+        const leaveCount = monthlyAttendance.filter(a => a.flag === 'L').length;
+        const visitCount = monthlyAttendance.filter(a => a.flag === 'V').length;
+        const advanceTotal = monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0);
+        
+        setMonthlyStats({
+            present: presentCount,
+            absent: absentCount,
+            delayed: delayedCount,
+            leave: leaveCount,
+            visit: visitCount,
+            advanceSalary: advanceTotal,
+        });
+
 
         // Fetch all employees for birthday calculation
         const employeesSnapshot = await getDocs(collection(firestore, 'employees'));
@@ -126,7 +178,7 @@ export default function AccountDetailsPage() {
         setAllEmployees(fetchedEmployees);
         
       } catch (err) {
-        console.error("Error fetching holidays, leaves, or visits:", err);
+        console.error("Error fetching auxiliary data:", err);
       } finally {
         setIsDayStatusLoading(false);
       }
@@ -139,6 +191,8 @@ export default function AccountDetailsPage() {
 
   useEffect(() => {
     const today = startOfDay(new Date());
+    
+    if(employeeData?.status === 'Terminated') return;
 
     if (getDay(today) === 5) {
       setDayStatus('Weekend');
@@ -164,7 +218,7 @@ export default function AccountDetailsPage() {
     }
 
     setDayStatus('Working Day');
-  }, [holidays, leaves, visits]);
+  }, [holidays, leaves, visits, employeeData?.status]);
 
 
   React.useEffect(() => {
@@ -627,7 +681,7 @@ export default function AccountDetailsPage() {
                         <StarBorder as="div" className="w-full" color="magenta" thickness={2}>
                             <div className="p-4">
                                 <h4 className={cn("text-sm font-semibold mb-2 flex items-center gap-2", dayStatus !== 'Working Day' && "text-muted-foreground")}>
-                                    {dayStatus === 'Working Day' ? <UserCheck className="h-4 w-4 text-primary"/> : <XCircle className="h-4 w-4 text-destructive"/>}
+                                    {dayStatus === 'Working Day' && employeeData?.status !== 'Terminated' ? <UserCheck className="h-4 w-4 text-primary"/> : <XCircle className="h-4 w-4 text-destructive"/>}
                                     {getAttendanceTitle()}
                                 </h4>
                                 <div className="flex items-center gap-4 justify-around w-full">
@@ -701,6 +755,25 @@ export default function AccountDetailsPage() {
                   </Button>
                 </div>
               </form>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
+          <CardHeader>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                  <BarChart3 className="h-6 w-6 text-primary" />
+                  This Month's Summary
+              </CardTitle>
+          </CardHeader>
+          <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <StatCard title="Total Present" value={monthlyStats.present} icon={<UserCheck />} description="Days present this month" className="bg-green-500"/>
+                  <StatCard title="Total Absent" value={monthlyStats.absent} icon={<UserX />} description="Days absent this month" className="bg-red-500"/>
+                  <StatCard title="Total Delayed" value={monthlyStats.delayed} icon={<Clock />} description="Late arrivals this month" className="bg-yellow-500" />
+                  <StatCard title="Total On Leave" value={monthlyStats.leave} icon={<Plane />} description="Leave days this month" className="bg-blue-500" />
+                  <StatCard title="Total On Visit" value={monthlyStats.visit} icon={<Briefcase />} description="Official visit days" className="bg-indigo-500"/>
+                  <StatCard title="Advance Salary" value={formatCurrency(monthlyStats.advanceSalary)} icon={<Wallet />} description="Taken this month" className="bg-purple-500"/>
+              </div>
           </CardContent>
         </Card>
         
