@@ -29,6 +29,8 @@ import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument } from '@/types';
 import { format, isWithinInterval, parseISO, startOfDay, getDay } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import StarBorder from '@/components/ui/StarBorder';
+
 
 const accountDetailsSchema = z.object({
   displayName: z.string().min(1, "Display name cannot be empty.").max(50, "Display name is too long."),
@@ -594,71 +596,75 @@ export default function AccountDetailsPage() {
                         </FormItem>
                     </div>
 
-                    <div className="lg:col-span-1 flex flex-col gap-2 items-center border border-black p-4 rounded-lg">
-                        <h4 className={cn("text-sm font-semibold mb-2 flex items-center gap-2", dayStatus !== 'Working Day' && "text-muted-foreground")}>
-                            {dayStatus === 'Working Day' ? <UserCheck className="h-4 w-4 text-primary"/> : <XCircle className="h-4 w-4 text-destructive"/>}
-                            {getAttendanceTitle()}
-                        </h4>
-                        <div className="flex items-center gap-4 justify-around w-full">
-                            <div className="flex flex-col items-center gap-2">
-                                <Button
-                                    type="button"
-                                    variant={dailyAttendance?.inTime ? 'default' : 'outline'}
-                                    className={cn(
-                                        "h-20 w-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-in-out font-bold",
-                                        !dailyAttendance?.inTime && "bg-gradient-to-br from-blue-500 to-teal-500 text-white hover:opacity-90",
-                                        dailyAttendance?.inTime && dailyAttendance.flag === 'P' && "bg-green-600 hover:bg-green-700 text-white",
-                                        dailyAttendance?.inTime && dailyAttendance.flag === 'D' && "bg-red-600 hover:bg-red-700 text-white"
-                                    )}
-                                    onClick={() => handleAttendance('in')}
-                                    disabled={attendanceLoading || !!dailyAttendance?.inTime || dayStatus !== 'Working Day'}
-                                    >
-                                    {attendanceLoading && !dailyAttendance?.inTime ? <Loader2 className="h-5 w-5 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="h-5 w-5" /> : <Clock className="h-5 w-5"/>)}
-                                    <span className="text-xs mt-1">In Time</span>
-                                    {dailyAttendance?.inTime && <span className="text-[10px] font-mono">({dailyAttendance.inTime})</span>}
-                                </Button>
-                                {dailyAttendance?.inTimeLocation && (
-                                    <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full"
-                                    onClick={() => handleViewLocation(dailyAttendance.inTimeLocation)}
-                                    title="View In-Time Location"
-                                    >
-                                    <MapPin className="h-4 w-4 text-blue-500" />
-                                    </Button>
-                                )}
+                    <div className="lg:col-span-1">
+                        <StarBorder as="div" className="w-full">
+                            <div className="p-4">
+                                <h4 className={cn("text-sm font-semibold mb-2 flex items-center gap-2", dayStatus !== 'Working Day' && "text-muted-foreground")}>
+                                    {dayStatus === 'Working Day' ? <UserCheck className="h-4 w-4 text-primary"/> : <XCircle className="h-4 w-4 text-destructive"/>}
+                                    {getAttendanceTitle()}
+                                </h4>
+                                <div className="flex items-center gap-4 justify-around w-full">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Button
+                                            type="button"
+                                            variant={dailyAttendance?.inTime ? 'default' : 'outline'}
+                                            className={cn(
+                                                "h-20 w-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-in-out font-bold",
+                                                !dailyAttendance?.inTime && "bg-gradient-to-br from-blue-500 to-teal-500 text-white hover:opacity-90",
+                                                dailyAttendance?.inTime && dailyAttendance.flag === 'P' && "bg-green-600 hover:bg-green-700 text-white",
+                                                dailyAttendance?.inTime && dailyAttendance.flag === 'D' && "bg-red-600 hover:bg-red-700 text-white"
+                                            )}
+                                            onClick={() => handleAttendance('in')}
+                                            disabled={attendanceLoading || !!dailyAttendance?.inTime || dayStatus !== 'Working Day'}
+                                            >
+                                            {attendanceLoading && !dailyAttendance?.inTime ? <Loader2 className="h-5 w-5 animate-spin" /> : (dailyAttendance?.inTime ? <Check className="h-5 w-5" /> : <Clock className="h-5 w-5"/>)}
+                                            <span className="text-xs mt-1">In Time</span>
+                                            {dailyAttendance?.inTime && <span className="text-[10px] font-mono">({dailyAttendance.inTime})</span>}
+                                        </Button>
+                                        {dailyAttendance?.inTimeLocation && (
+                                            <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full"
+                                            onClick={() => handleViewLocation(dailyAttendance.inTimeLocation)}
+                                            title="View In-Time Location"
+                                            >
+                                            <MapPin className="h-4 w-4 text-blue-500" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className={cn(
+                                                "h-20 w-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-in-out font-bold",
+                                                !dailyAttendance?.outTime && !!dailyAttendance?.inTime && "bg-gradient-to-br from-orange-500 to-rose-500 text-white hover:opacity-90 hover:text-white"
+                                            )}
+                                            onClick={() => handleAttendance('out')}
+                                            disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime || dayStatus !== 'Working Day'}
+                                            >
+                                            {attendanceLoading && !dailyAttendance?.outTime ? <Loader2 className="h-5 w-5 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="h-5 w-5 text-green-500" /> : <Clock className="h-5 w-5"/>)}
+                                            <span className="text-xs mt-1">Out Time</span>
+                                            {dailyAttendance?.outTime && <span className="text-[10px] font-mono">({dailyAttendance.outTime})</span>}
+                                        </Button>
+                                        {dailyAttendance?.outTimeLocation && (
+                                            <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-full"
+                                            onClick={() => handleViewLocation(dailyAttendance.outTimeLocation)}
+                                            title="View Out-Time Location"
+                                            >
+                                            <MapPin className="h-4 w-4 text-orange-500" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex flex-col items-center gap-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className={cn(
-                                        "h-20 w-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 ease-in-out font-bold",
-                                        !dailyAttendance?.outTime && !!dailyAttendance?.inTime && "bg-gradient-to-br from-orange-500 to-rose-500 text-white hover:opacity-90 hover:text-white"
-                                    )}
-                                    onClick={() => handleAttendance('out')}
-                                    disabled={attendanceLoading || !dailyAttendance?.inTime || !!dailyAttendance?.outTime || dayStatus !== 'Working Day'}
-                                    >
-                                    {attendanceLoading && !dailyAttendance?.outTime ? <Loader2 className="h-5 w-5 animate-spin" /> : (dailyAttendance?.outTime ? <Check className="h-5 w-5 text-green-500" /> : <Clock className="h-5 w-5"/>)}
-                                    <span className="text-xs mt-1">Out Time</span>
-                                    {dailyAttendance?.outTime && <span className="text-[10px] font-mono">({dailyAttendance.outTime})</span>}
-                                </Button>
-                                {dailyAttendance?.outTimeLocation && (
-                                    <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full"
-                                    onClick={() => handleViewLocation(dailyAttendance.outTimeLocation)}
-                                    title="View Out-Time Location"
-                                    >
-                                    <MapPin className="h-4 w-4 text-orange-500" />
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
+                        </StarBorder>
                     </div>
                 </div>
 
