@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -31,6 +30,7 @@ import dynamic from 'next/dynamic';
 import { DateRange } from 'react-day-picker';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
 
 
 const AttendanceSummaryChart = dynamic(() => import('@/components/dashboard/AttendanceSummaryChart'), {
@@ -90,8 +90,8 @@ export default function HrmDashboardPage() {
     const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(collection(firestore, 'branches'), undefined, ['branches_hrm_dashboard']);
     const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(collection(firestore, 'departments'), undefined, ['departments_hrm_dashboard']);
     const [leaveSearchTerm, setLeaveSearchTerm] = React.useState('');
-    const [leaveFilterBranch, setLeaveFilterBranch] = React.useState('');
-    const [leaveFilterDept, setLeaveFilterDept] = React.useState('');
+    const [leaveFilterBranch, setLeaveFilterBranch] = React.useState(ALL_BRANCHES_FILTER_VALUE);
+    const [leaveFilterDept, setLeaveFilterDept] = React.useState(ALL_DEPTS_FILTER_VALUE);
 
     const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts;
     
@@ -276,8 +276,8 @@ export default function HrmDashboardPage() {
             })
             .filter(emp => {
                 const nameMatch = !leaveSearchTerm || emp.fullName?.toLowerCase().includes(leaveSearchTerm.toLowerCase());
-                const branchMatch = !leaveFilterBranch || emp.branch === leaveFilterBranch;
-                const deptMatch = !leaveFilterDept || emp.department === leaveFilterDept;
+                const branchMatch = leaveFilterBranch === ALL_BRANCHES_FILTER_VALUE || emp.branch === leaveFilterBranch;
+                const deptMatch = leaveFilterDept === ALL_DEPTS_FILTER_VALUE || emp.department === leaveFilterDept;
                 return nameMatch && branchMatch && deptMatch;
             });
 
@@ -301,7 +301,7 @@ export default function HrmDashboardPage() {
     }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 space-y-8">
         <Card className="shadow-xl">
             <CardHeader>
                 <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -527,14 +527,14 @@ export default function HrmDashboardPage() {
                             <CardTitle>Current Leave Balance</CardTitle>
                             <div className="flex items-center gap-2 pt-2">
                                 <Input placeholder="Search name..." value={leaveSearchTerm} onChange={e => setLeaveSearchTerm(e.target.value)} className="h-9"/>
-                                <Select value={leaveFilterBranch} onValueChange={(value) => setLeaveFilterBranch(value === ALL_BRANCHES_FILTER_VALUE ? '' : value)}>
+                                <Select value={leaveFilterBranch} onValueChange={(value) => setLeaveFilterBranch(value)}>
                                     <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="All Branches" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value={ALL_BRANCHES_FILTER_VALUE}>All Branches</SelectItem>
                                         {branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <Select value={leaveFilterDept} onValueChange={(value) => setLeaveFilterDept(value === ALL_DEPTS_FILTER_VALUE ? '' : value)}>
+                                <Select value={leaveFilterDept} onValueChange={(value) => setLeaveFilterDept(value)}>
                                     <SelectTrigger className="h-9 w-[150px]"><SelectValue placeholder="All Depts" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value={ALL_DEPTS_FILTER_VALUE}>All Depts</SelectItem>
@@ -641,6 +641,10 @@ export default function HrmDashboardPage() {
                             <AttendanceSummaryChart data={chartData} />
                         </CardContent>
                     </Card>
+                </div>
+
+                <div className="mt-12">
+                    <LeaveCalendar />
                 </div>
 
             </CardContent>
