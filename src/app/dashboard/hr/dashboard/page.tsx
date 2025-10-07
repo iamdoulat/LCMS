@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX, UserPlus, Coffee, Plane, Wallet, BookOpen, Loader2, AlertTriangle, Search, MoreHorizontal, MapPin } from 'lucide-react';
+import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX, UserPlus, Coffee, Plane, Wallet, BookOpen, Loader2, AlertTriangle, Search, MoreHorizontal, MapPin, Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
@@ -284,104 +284,125 @@ export default function HrmDashboardPage() {
                     />
                </div>
 
-                <div className="mt-12">
-                    <CardHeader className="px-0">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div className="flex-1">
-                          <CardTitle className="text-2xl font-bold">Quick View</CardTitle>
-                          <CardDescription>Today's attendance at a glance.</CardDescription>
-                        </div>
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <div className="relative w-full sm:w-64">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
-                                <Input placeholder="Search employee..." className="pl-10 h-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                            </div>
-                            <Button variant={statusFilter === 'All' ? 'default' : 'outline'} onClick={() => setStatusFilter('All')} className="relative">
-                                All <Badge className="ml-2 bg-blue-500 text-white absolute -top-2 -right-2 px-1.5">{stats.totalEmployees}</Badge>
-                            </Button>
-                            <Button variant={statusFilter === 'A' ? 'destructive' : 'outline'} onClick={() => setStatusFilter('A')} className="relative">
-                                A <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5">{stats.todayAbsent}</Badge>
-                            </Button>
-                            <Button variant={statusFilter === 'P' ? 'default' : 'outline'} onClick={() => setStatusFilter('P')} className="relative">
-                                P <Badge className="ml-2 bg-green-500 absolute -top-2 -right-2 px-1.5">{stats.todayPresent}</Badge>
-                            </Button>
-                            <Button variant={statusFilter === 'D' ? 'secondary' : 'outline'} onClick={() => setStatusFilter('D')} className="relative">
-                                D <Badge variant="secondary" className="absolute -top-2 -right-2 px-1.5">{stats.todayDelayed}</Badge>
-                            </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <ScrollArea className="h-96">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Designation</TableHead>
-                                    <TableHead>In Time</TableHead>
-                                    <TableHead>Out Time</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {combinedEmployeeData.map(emp => (
-                                    <TableRow key={emp.id}>
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <Avatar>
-                                                    <AvatarImage src={emp.photoURL} alt={emp.fullName} data-ai-hint="employee photo"/>
-                                                    <AvatarFallback>{getInitials(emp.fullName)}</AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <p className="font-medium">{emp.fullName}</p>
-                                                    <p className="text-xs text-muted-foreground">{emp.branch || 'N/A'}</p>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>{emp.designation}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-1">
-                                                {emp.inTime}
-                                                {emp.inTimeLocation && (
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleViewLocation(emp.inTimeLocation, 'In-Time')}>
-                                                        <MapPin className="h-3.5 w-3.5 text-blue-500"/>
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-1">
-                                                {emp.outTime}
-                                                {emp.outTimeLocation && (
-                                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleViewLocation(emp.outTimeLocation, 'Out-Time')}>
-                                                        <MapPin className="h-3.5 w-3.5 text-orange-500"/>
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={emp.status === 'Present' || emp.status === 'Delayed' ? 'default' : 'destructive'} className={cn(emp.status === 'Present' && 'bg-green-500', emp.status === 'Delayed' && 'bg-yellow-500 text-black')}>
-                                                {emp.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/hr/employees/edit/${emp.id}`)}>View Profile</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/hr/attendance`)}>View Full Attendance</DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                        </ScrollArea>
-                    </CardContent>
+                <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2">
+                        <Card>
+                             <CardHeader>
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                    <div className="flex-1">
+                                    <CardTitle className="text-2xl font-bold">Quick View</CardTitle>
+                                    <CardDescription>Today's attendance at a glance.</CardDescription>
+                                    </div>
+                                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                                        <div className="relative w-full sm:w-64">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
+                                            <Input placeholder="Search employee..." className="pl-10 h-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                        </div>
+                                        <Button variant={statusFilter === 'All' ? 'default' : 'outline'} onClick={() => setStatusFilter('All')} className="relative">
+                                            All <Badge className="ml-2 bg-blue-500 text-white absolute -top-2 -right-2 px-1.5">{stats.totalEmployees}</Badge>
+                                        </Button>
+                                        <Button variant={statusFilter === 'A' ? 'destructive' : 'outline'} onClick={() => setStatusFilter('A')} className="relative">
+                                            A <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5">{stats.todayAbsent}</Badge>
+                                        </Button>
+                                        <Button variant={statusFilter === 'P' ? 'default' : 'outline'} onClick={() => setStatusFilter('P')} className="relative">
+                                            P <Badge className="ml-2 bg-green-500 absolute -top-2 -right-2 px-1.5">{stats.todayPresent}</Badge>
+                                        </Button>
+                                        <Button variant={statusFilter === 'D' ? 'secondary' : 'outline'} onClick={() => setStatusFilter('D')} className="relative">
+                                            D <Badge variant="secondary" className="absolute -top-2 -right-2 px-1.5">{stats.todayDelayed}</Badge>
+                                        </Button>
+                                    </div>
+                                </div>
+                                </CardHeader>
+                            <CardContent className="p-0">
+                                <ScrollArea className="h-96">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Designation</TableHead>
+                                            <TableHead>In Time</TableHead>
+                                            <TableHead>Out Time</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Action</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {combinedEmployeeData.map(emp => (
+                                            <TableRow key={emp.id}>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar>
+                                                            <AvatarImage src={emp.photoURL} alt={emp.fullName} data-ai-hint="employee photo"/>
+                                                            <AvatarFallback>{getInitials(emp.fullName)}</AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <p className="font-medium">{emp.fullName}</p>
+                                                            <p className="text-xs text-muted-foreground">{emp.branch || 'N/A'}</p>
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{emp.designation}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-1">
+                                                        {emp.inTime}
+                                                        {emp.inTimeLocation && (
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleViewLocation(emp.inTimeLocation, 'In-Time')}>
+                                                                <MapPin className="h-3.5 w-3.5 text-blue-500"/>
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-1">
+                                                        {emp.outTime}
+                                                        {emp.outTimeLocation && (
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleViewLocation(emp.outTimeLocation, 'Out-Time')}>
+                                                                <MapPin className="h-3.5 w-3.5 text-orange-500"/>
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={emp.status === 'Present' || emp.status === 'Delayed' ? 'default' : 'destructive'} className={cn(emp.status === 'Present' && 'bg-green-500', emp.status === 'Delayed' && 'bg-yellow-500 text-black')}>
+                                                        {emp.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => router.push(`/dashboard/hr/employees/edit/${emp.id}`)}>View Profile</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => router.push(`/dashboard/hr/attendance`)}>View Full Attendance</DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <div className="lg:col-span-1">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary"/>Notice</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <h4 className="font-semibold">দৈনিক হাজিরা নিয়ম।</h4>
+                                <p className="text-sm text-muted-foreground">
+                                প্রতিদিন সকাল ৯:০০ থেকে ৯:১০ পর্যন্ত InTime এবং সন্ধা ৬:০০ বা ৬:০০ টার পরে Out Time দিবেন। যদি কোন কারনে ঠিক সময়ে হাজিরা দিতে না পারলে সংশোধন করে নিবেন।
+                                </p>
+                                <div className="flex items-center text-xs text-muted-foreground">
+                                    <Calendar className="mr-2 h-4 w-4"/>
+                                    <span>February 11, 2025</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
 
             </CardContent>
@@ -389,4 +410,3 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
-
