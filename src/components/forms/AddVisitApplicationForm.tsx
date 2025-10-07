@@ -12,7 +12,7 @@ import { VisitApplicationSchema } from '@/types';
 import { format, differenceInCalendarDays, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { DatePickerField } from './DatePickerField';
+import { DatePickerInput } from '@/components/ui/date-picker-input';
 import { Loader2, Save, User, Calendar, MessageSquare, Info } from 'lucide-react';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
@@ -158,7 +158,7 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />From Date*</FormLabel>
-                <DatePickerField field={field} placeholder="dd-mm-yyyy hh:mm a" showTimeSelect/>
+                <DatePickerInput field={field} placeholder="dd-mm-yyyy hh:mm a" showTimeSelect/>
                 <FormMessage />
               </FormItem>
             )}
@@ -169,7 +169,7 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />End Date*</FormLabel>
-                <DatePickerField field={field} fromDate={form.getValues("fromDate")} placeholder="dd-mm-yyyy hh:mm a" showTimeSelect/>
+                <DatePickerInput field={field} fromDate={form.getValues("fromDate")} placeholder="dd-mm-yyyy hh:mm a" showTimeSelect/>
                 <FormMessage />
               </FormItem>
             )}

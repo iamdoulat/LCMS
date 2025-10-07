@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -22,6 +23,7 @@ interface DatePickerInputProps {
   disabled?: boolean;
   fromYear?: number;
   toYear?: number;
+  showTimeSelect?: boolean;
 }
 
 export function DatePickerInput({
@@ -33,6 +35,7 @@ export function DatePickerInput({
   disabled = false,
   fromYear = 1990,
   toYear = 2040,
+  showTimeSelect = false,
 }: DatePickerInputProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -50,7 +53,7 @@ export function DatePickerInput({
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {field?.value ? (
-              format(new Date(field.value), "PPP")
+              format(new Date(field.value), showTimeSelect ? "PPP p" : "PPP")
             ) : (
               <span>{placeholder || "Pick a date"}</span>
             )}
