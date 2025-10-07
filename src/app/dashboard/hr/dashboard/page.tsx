@@ -50,7 +50,6 @@ interface HrmDashboardStats {
     pendingLeaveApplications: number;
     upcomingBirthdays: number;
     pendingAdvanceSalaryRequests: number;
-    pendingAttendanceApproval: number;
 }
 
 const getInitials = (name?: string) => {
@@ -74,7 +73,6 @@ export default function HrmDashboardPage() {
         pendingLeaveApplications: 0,
         upcomingBirthdays: 0,
         pendingAdvanceSalaryRequests: 0,
-        pendingAttendanceApproval: 0,
     });
     
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_hrm_dashboard']);
@@ -212,7 +210,7 @@ export default function HrmDashboardPage() {
 
             const pendingLeaveApplicationsCount = leaves.filter(l => l.status === 'Pending').length;
 
-            const upcomingBirthdaysCount = birthdays.filter(emp => {
+            const birthdaysToday = employees.filter(emp => {
                 if (!emp.dateOfBirth) return false;
                 try {
                     const dob = parseISO(emp.dateOfBirth);
@@ -220,14 +218,13 @@ export default function HrmDashboardPage() {
                     const dobMonthDay = format(dob, 'MM-dd');
                     return todayMonthDay === dobMonthDay;
                 } catch { return false; }
-            }).length;
+            });
+            const upcomingBirthdaysCount = birthdaysToday.length;
             
             const presentEmployeeIds = new Set(attendance.map(a => a.employeeId));
             const onLeaveTodayIds = new Set(leaves.filter(l => l.status === 'Approved' && isWithinInterval(today, { start: parseISO(l.fromDate), end: parseISO(l.toDate) })).map(l => l.employeeId));
             
             const todayAbsentCount = employees.filter(emp => !presentEmployeeIds.has(emp.id) && !onLeaveTodayIds.has(emp.id)).length;
-            const pendingAttendanceCount = employees.length - presentEmployeeIds.size;
-
 
             setStats({
                 totalEmployees: employees.length,
@@ -239,10 +236,9 @@ export default function HrmDashboardPage() {
                 pendingLeaveApplications: pendingLeaveApplicationsCount,
                 upcomingBirthdays: upcomingBirthdaysCount,
                 pendingAdvanceSalaryRequests: advanceSalaryRequests.length,
-                pendingAttendanceApproval: pendingAttendanceCount
             });
         }
-    }, [employees, leaves, attendance, advanceSalaryRequests, birthdays]);
+    }, [employees, leaves, attendance, advanceSalaryRequests]);
     
     React.useEffect(() => {
       const processChartData = async () => {
@@ -757,6 +753,8 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
+
+
 
 
 
