@@ -124,12 +124,12 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-end">
             <FormField
             control={form.control}
             name="employeeId"
             render={({ field }) => (
-                <FormItem>
+                <FormItem className="lg:col-span-1 xl:col-span-1">
                 <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
                 <Combobox
                     options={employeeOptions}
@@ -143,10 +143,7 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
                 </FormItem>
             )}
             />
-            <div></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-          <FormItem className="md:col-span-1">
+            <FormItem className="md:col-span-1">
               <FormLabel>Visit Status</FormLabel>
               <div className="flex items-center h-10 px-3 border rounded-md bg-muted/50">
                 <Badge variant="secondary" className="flex items-center gap-1.5">
