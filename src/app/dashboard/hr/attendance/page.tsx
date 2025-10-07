@@ -35,6 +35,8 @@ import { DatePickerField } from '@/components/forms/DatePickerField';
 const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
 const ALL_UNITS_VALUE = "__ALL_UNITS_ATTENDANCE__";
 const ALL_DEPTS_VALUE = "__ALL_DEPTS_ATTENDANCE__";
+const ALL_FLAGS_VALUE = "__ALL_FLAGS_ATTENDANCE__";
+
 
 const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -465,6 +467,8 @@ export default function DailyAttendancePage() {
     const [selectedBranch, setSelectedBranch] = React.useState('');
     const [selectedUnit, setSelectedUnit] = React.useState('');
     const [selectedDept, setSelectedDept] = React.useState('');
+    const [filterFlag, setFilterFlag] = React.useState('');
+
     
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
         from: startOfDay(subDays(new Date(), 1)),
@@ -640,13 +644,27 @@ export default function DailyAttendancePage() {
 
     const filteredEmployees = React.useMemo(() => {
         if (!employees) return [];
-        return employees.filter(emp => 
-            (emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || emp.employeeCode.includes(searchTerm)) &&
-            (!selectedBranch || emp.branch === selectedBranch) &&
-            (!selectedUnit || emp.unit === selectedUnit) &&
-            (!selectedDept || emp.department === selectedDept)
-        );
-    }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept]);
+        return employees.filter(emp => {
+            const flagMatch = !filterFlag || !dateRange?.from || !dateRange.to || (
+                eachDayOfInterval({ start: dateRange.from, end: dateRange.to }).some(day => {
+                    const formattedDateKey = format(day, 'yyyy-MM-dd');
+                    const attRecord = attendanceByEmployee.get(emp.id)?.find(rec => rec.date.startsWith(formattedDateKey));
+                    if (attRecord) return attRecord.flag === filterFlag;
+                    // If no record, check if default flag matches
+                    const defaultFlag = getDefaultFlag(day, emp.id, holidays || [], leaves || [], visits || []);
+                    return defaultFlag === filterFlag;
+                })
+            );
+
+            return (
+                (emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || emp.employeeCode.includes(searchTerm)) &&
+                (!selectedBranch || emp.branch === selectedBranch) &&
+                (!selectedUnit || emp.unit === selectedUnit) &&
+                (!selectedDept || emp.department === selectedDept) &&
+                flagMatch
+            );
+        });
+    }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept, filterFlag, dateRange]);
     
     const attendanceByEmployee = React.useMemo(() => {
         const map = new Map<string, AttendanceDocument[]>();
@@ -662,6 +680,18 @@ export default function DailyAttendancePage() {
         return map;
     }, [allAttendance]);
 
+    const getDefaultFlag = (date: Date, employeeId: string, holidays: HolidayDocument[], leaves: LeaveApplicationDocument[], visits: VisitApplicationDocument[]): AttendanceFlag => {
+        const dayOfWeek = getDay(date);
+        if (dayOfWeek === 5) return 'W';
+        const isHoliday = holidays.some(h => isWithinDateInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+        if (isHoliday) return 'H';
+        const isOnLeave = leaves.some(l => l.employeeId === employeeId && isWithinDateInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) && l.status === 'Approved');
+        if (isOnLeave) return 'L';
+        const isOnVisit = visits.some(v => v.employeeId === employeeId && isWithinDateInterval(date, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }) && v.status === 'Approved');
+        if (isOnVisit) return 'V';
+        return 'A';
+    };
+    
     const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance || isLoadingHolidays || isLoadingLeaves || isLoadingVisits;
 
     return (
@@ -712,13 +742,23 @@ export default function DailyAttendancePage() {
                             <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
                         </CardHeader>
                         <CardContent className="p-2 space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-end">
                                 <div className="space-y-1">
                                     <Label htmlFor='search-term-employee-attendance'>Employee Name or Code</Label>
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
                                         <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                     </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="flagFilter">Flag</Label>
+                                    <Select value={filterFlag} onValueChange={(v) => setFilterFlag(v === ALL_FLAGS_VALUE ? '' : v)}>
+                                        <SelectTrigger id="flagFilter" className="h-10"><SelectValue placeholder="All Flags" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL_FLAGS_VALUE}>All Flags</SelectItem>
+                                            {attendanceFlagOptions.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="space-y-1">
@@ -825,3 +865,5 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
+
+    
