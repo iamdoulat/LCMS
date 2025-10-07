@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   useSidebar,
   SidebarHeader,
@@ -182,6 +181,7 @@ const hrNavItems: NavItem[] = [
   { href: "/dashboard/hr/leaves", label: "Leave Management", icon: Mailbox, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/holidays", label: "Holidays", icon: CalendarPlus, iconColorClass: 'bg-icon-upcoming'},
   { href: "/dashboard/hr/attendance/reports", label: "Attendance Reports", icon: BarChart3, iconColorClass: 'bg-icon-reports' },
+  { href: "/dashboard/settings/manage-notices", label: "Manage Notice Board", icon: Bell, iconColorClass: 'bg-icon-notifications' },
   { href: '/dashboard/hr/settings', label: 'HRM Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 
