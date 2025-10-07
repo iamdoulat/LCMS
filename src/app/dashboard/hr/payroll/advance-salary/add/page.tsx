@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -21,7 +22,7 @@ export default function AddAdvanceSalaryPage() {
                 </Button>
                 </Link>
             </div>
-            <Card className="shadow-xl max-w-4xl mx-auto">
+            <Card className="shadow-xl mx-auto">
                 <CardHeader>
                 <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
                     <DollarSign className="h-7 w-7 text-primary" />
