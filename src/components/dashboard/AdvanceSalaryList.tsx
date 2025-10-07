@@ -42,12 +42,11 @@ export function AdvanceSalaryList() {
         }
     }, [user, userRole]);
 
-    // useFirestoreQuery will only run if advancesQuery is not null
     const { data: advances, isLoading, error, refetch } = useFirestoreQuery<AdvanceSalaryDocument[]>(
-        advancesQuery!, 
+        advancesQuery, 
         undefined,
-        ['advance_salary', user?.uid, userRole?.join('-')], 
-        !!advancesQuery
+        ['advance_salary', user?.uid, userRole?.join('-')], // A more specific query key
+        !!advancesQuery // This query is only enabled if advancesQuery is not null
     );
 
     const [searchTerm, setSearchTerm] = React.useState('');

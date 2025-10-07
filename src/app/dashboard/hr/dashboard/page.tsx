@@ -8,7 +8,7 @@ import { BarChart3, Calendar, Users, Briefcase, FileText, UserCheck, Cake, UserX
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument, BranchDocument, DepartmentDocument, NoticeBoardSettings } from '@/types';
+import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument, BranchDocument, DepartmentDocument, NoticeBoardSettings, AdvanceSalaryDocument } from '@/types';
 import { format, startOfTomorrow, isWithinInterval, startOfDay, endOfDay, parseISO, isToday, isFuture, subDays, eachDayOfInterval, getDay, endOfMonth, startOfMonth, differenceInDays } from 'date-fns';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Input } from '@/components/ui/input';
@@ -49,6 +49,7 @@ interface HrmDashboardStats {
     onLeaveTomorrow: number;
     pendingLeaveApplications: number;
     upcomingBirthdays: number;
+    pendingAdvanceSalaryRequests: number;
 }
 
 const getInitials = (name?: string) => {
@@ -71,12 +72,15 @@ export default function HrmDashboardPage() {
         onLeaveTomorrow: 0,
         pendingLeaveApplications: 0,
         upcomingBirthdays: 0,
+        pendingAdvanceSalaryRequests: 0,
     });
     
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_hrm_dashboard']);
     const { data: leaves, isLoading: isLoadingLeaves } = useFirestoreQuery<LeaveApplicationDocument[]>(collection(firestore, 'leave_applications'), undefined, ['leaves_hrm_dashboard']);
     const { data: holidays, isLoading: isLoadingHolidays } = useFirestoreQuery<HolidayDocument[]>(collection(firestore, 'holidays'), undefined, ['holidays_hrm_dashboard']);
     const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings"), where("isEnabled", "==", true)), undefined, ['notices_hrm_dashboard']);
+    const { data: advanceSalaryRequests, isLoading: isLoadingAdvanceSalary } = useFirestoreQuery<AdvanceSalaryDocument[]>(query(collection(firestore, 'advance_salary'), where('status', '==', 'Pending')), undefined, ['pending_advance_salary']);
+
     const [attendance, setAttendance] = React.useState<AttendanceDocument[]>([]);
     const [isLoadingAttendance, setIsLoadingAttendance] = React.useState(true);
     
@@ -101,7 +105,7 @@ export default function HrmDashboardPage() {
     const [leaveFilterBranch, setLeaveFilterBranch] = React.useState(ALL_BRANCHES_FILTER_VALUE);
     const [leaveFilterDept, setLeaveFilterDept] = React.useState(ALL_DEPTS_FILTER_VALUE);
 
-    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts || isLoadingNotices;
+    const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts || isLoadingNotices || isLoadingAdvanceSalary;
     
     React.useEffect(() => {
         const todayStart = format(startOfDay(new Date()), "yyyy-MM-dd'T'00:00:00.000xxx");
@@ -183,7 +187,7 @@ export default function HrmDashboardPage() {
     }, [employees, attendance, searchTerm, statusFilter]);
 
     React.useEffect(() => {
-        if (employees && leaves && attendance) {
+        if (employees && leaves && attendance && advanceSalaryRequests) {
             const today = new Date();
             const tomorrow = startOfTomorrow();
             
@@ -215,9 +219,10 @@ export default function HrmDashboardPage() {
                 onLeaveTomorrow: onLeaveTomorrowCount,
                 pendingLeaveApplications: pendingLeaveApplicationsCount,
                 upcomingBirthdays: upcomingBirthdaysCount,
+                pendingAdvanceSalaryRequests: advanceSalaryRequests.length,
             });
         }
-    }, [employees, leaves, attendance]);
+    }, [employees, leaves, attendance, advanceSalaryRequests]);
     
     React.useEffect(() => {
       const processChartData = async () => {
@@ -408,11 +413,11 @@ export default function HrmDashboardPage() {
                         className="bg-indigo-500"
                     />
                     <StatCard
-                        title="Pending Attendance Recon."
-                        value="1"
-                        icon={<UserPlus />}
-                        description="Discrepancies to resolve"
-                        className="bg-teal-500"
+                        title="Pending Advance Salary"
+                        value={stats.pendingAdvanceSalaryRequests}
+                        icon={<Wallet />}
+                        description="Advance salary requests"
+                        className="bg-rose-500"
                     />
                      <StatCard
                         title="On Break Now"
@@ -443,10 +448,10 @@ export default function HrmDashboardPage() {
                         className="bg-rose-500"
                     />
                      <StatCard
-                        title="Pending Advance Salary"
+                        title="Pending Loan Application"
                         value="0"
                         icon={<Wallet />}
-                        description="Advance salary requests"
+                        description="Loan requests"
                         className="bg-lime-500"
                     />
                </div>
@@ -720,4 +725,3 @@ export default function HrmDashboardPage() {
     </div>
   );
 }
-
