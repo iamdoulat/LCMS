@@ -32,6 +32,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import type { DateRange } from 'react-day-picker';
+import { Badge } from '@/components/ui/badge';
 
 
 const accountDetailsSchema = z.object({
@@ -99,6 +102,43 @@ export default function AccountDetailsPage() {
 
   const [payslips, setPayslips] = React.useState<Payslip[]>([]);
   const [isLoadingPayslips, setIsLoadingPayslips] = React.useState(true);
+
+  const [attendanceDateRange, setAttendanceDateRange] = React.useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  });
+  const [filteredAttendance, setFilteredAttendance] = React.useState<AttendanceDocument[]>([]);
+  const [isAttendanceLoading, setIsAttendanceLoading] = React.useState(true);
+
+
+  React.useEffect(() => {
+    if (user && employeeData?.id && attendanceDateRange?.from) {
+      const fetchAttendance = async () => {
+        setIsAttendanceLoading(true);
+        const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
+        const toDate = format(attendanceDateRange.to || attendanceDateRange.from!, "yyyy-MM-dd'T'23:59:59.999xxx");
+        
+        const q = query(
+          collection(firestore, 'attendance'),
+          where('employeeId', '==', employeeData.id),
+          where('date', '>=', fromDate),
+          where('date', '<=', toDate),
+          orderBy('date', 'desc')
+        );
+
+        try {
+          const snapshot = await getDocs(q);
+          const attendanceData = snapshot.docs.map(doc => doc.data() as AttendanceDocument);
+          setFilteredAttendance(attendanceData);
+        } catch (err) {
+          console.error("Error fetching filtered attendance:", err);
+        } finally {
+          setIsAttendanceLoading(false);
+        }
+      };
+      fetchAttendance();
+    }
+  }, [user, employeeData, attendanceDateRange]);
 
 
   useEffect(() => {
@@ -830,6 +870,84 @@ export default function AccountDetailsPage() {
                         <TableCell>{formatCurrency(payslip.advanceDeduction)}</TableCell>
                         <TableCell>{formatCurrency(payslip.totalDeductions)}</TableCell>
                         <TableCell className="font-semibold">{formatCurrency(payslip.netSalary)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+              <div>
+                <CardTitle className="flex items-center gap-2 font-bold text-xl lg:text-2xl text-primary bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
+                  <CalendarDays className="h-6 w-6 text-primary" /> Quick Attendance View
+                </CardTitle>
+                <CardDescription>
+                  Your attendance records for the selected period.
+                </CardDescription>
+              </div>
+              <DatePickerWithRange date={attendanceDateRange} onDateChange={setAttendanceDateRange} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isAttendanceLoading ? (
+              <div className="flex justify-center items-center h-48">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredAttendance.length === 0 ? (
+              <p className="text-muted-foreground text-center">No attendance data found for the selected range.</p>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>In Time</TableHead>
+                      <TableHead>In Time Remarks</TableHead>
+                      <TableHead>Out Time</TableHead>
+                      <TableHead>Out Time Remarks</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAttendance.map((att) => (
+                      <TableRow key={att.id}>
+                        <TableCell>{formatDisplayDate(att.date)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {att.inTime || 'N/A'}
+                            {att.inTimeLocation && (
+                              <Button
+                                type="button" variant="ghost" size="icon" className="h-6 w-6"
+                                onClick={() => handleViewLocation(att.inTimeLocation)} title="View In-Time Location">
+                                <MapPin className="h-3.5 w-3.5 text-blue-500" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{att.inTimeRemarks || 'N/A'}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {att.outTime || 'N/A'}
+                            {att.outTimeLocation && (
+                              <Button
+                                type="button" variant="ghost" size="icon" className="h-6 w-6"
+                                onClick={() => handleViewLocation(att.outTimeLocation)} title="View Out-Time Location">
+                                <MapPin className="h-3.5 w-3.5 text-orange-500" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{att.outTimeRemarks || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant={att.flag === 'P' ? 'default' : att.flag === 'D' ? 'destructive' : 'secondary'}>
+                            {att.flag}
+                          </Badge>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
