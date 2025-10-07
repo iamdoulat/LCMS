@@ -1,6 +1,6 @@
 
 import { AppSidebarNavContent } from './AppSidebarNavContent';
 
-export async function AppSidebarNav() {
+export function AppSidebarNav() {
   return <AppSidebarNavContent />;
 }
