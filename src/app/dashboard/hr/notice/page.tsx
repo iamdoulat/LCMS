@@ -187,7 +187,7 @@ export default function ManageNoticesPage() {
                         notices.map(notice => (
                             <TableRow key={notice.id}>
                                 <TableCell className="font-medium">{notice.title || '(No Title)'}</TableCell>
-                                <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground" title={notice.content}>
+                                <TableCell className="max-w-[300px] text-sm text-muted-foreground whitespace-pre-wrap" title={notice.content}>
                                   <div dangerouslySetInnerHTML={{ __html: notice.content ? DOMPurify.sanitize(notice.content.substring(0, 100) + (notice.content.length > 100 ? '...' : '')) : '' }} />
                                 </TableCell>
                                 <TableCell>
