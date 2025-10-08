@@ -171,6 +171,7 @@ export default function ManageNoticesPage() {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Title</TableHead>
+                        <TableHead>Notice Content*</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Target Roles</TableHead>
                         <TableHead>Last Updated</TableHead>
@@ -179,13 +180,16 @@ export default function ManageNoticesPage() {
                 </TableHeader>
                 <TableBody>
                     {isLoading ? (
-                        <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />Loading notices...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />Loading notices...</TableCell></TableRow>
                     ) : notices.length === 0 && !fetchError ? (
-                        <TableRow><TableCell colSpan={5} className="h-24 text-center">No notices found.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={6} className="h-24 text-center">No notices found.</TableCell></TableRow>
                     ) : (
                         notices.map(notice => (
                             <TableRow key={notice.id}>
                                 <TableCell className="font-medium">{notice.title || '(No Title)'}</TableCell>
+                                <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground" title={notice.content}>
+                                  <div dangerouslySetInnerHTML={{ __html: notice.content ? DOMPurify.sanitize(notice.content.substring(0, 100) + (notice.content.length > 100 ? '...' : '')) : '' }} />
+                                </TableCell>
                                 <TableCell>
                                   <Badge variant={notice.isEnabled ? 'default' : 'outline'} className={cn(notice.isEnabled && "bg-green-600 hover:bg-green-700")}>
                                     {notice.isEnabled ? 'Enabled' : 'Disabled'}
