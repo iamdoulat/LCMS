@@ -127,81 +127,79 @@ export default function AccountDetailsPage() {
             if (!querySnapshot.empty) {
               const employeeDoc = querySnapshot.docs[0];
               setEmployeeData({ id: employeeDoc.id, ...employeeDoc.data() } as EmployeeDocument);
+            } else {
+              setError("No detailed employee profile found for this user.");
             }
           } catch (err) {
             console.error("Error fetching employee data:", err);
             setError("Could not load detailed employee profile.");
           }
         }
-        // Always finish loading, even if there's no email or employee doc
         setIsEmployeeDataLoading(false);
       };
       fetchEmployeeData();
-    } else {
-        // If there's no user, we are not loading employee data
-        setIsEmployeeDataLoading(false);
+    } else if (!authLoading) {
+      setIsEmployeeDataLoading(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   // Step 2: Fetch other auxiliary data, some of which may depend on employeeData
   useEffect(() => {
-    if (user && !isEmployeeDataLoading) { // Run after employee data check is complete
+    if (user && !isEmployeeDataLoading && employeeData) { 
       const fetchAuxData = async () => {
         setIsDayStatusLoading(true);
         try {
           const today = startOfDay(new Date());
           const startOfCurrentMonth = startOfMonth(today);
           const endOfCurrentMonth = endOfMonth(today);
-          
-          // Fetch holidays (doesn't depend on employeeData)
-          const holidaysQuery = query(collection(firestore, 'holidays'));
-          const holidaysSnapshot = await getDocs(holidaysQuery);
-          const fetchedHolidays = holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument);
-          setHolidays(fetchedHolidays);
-          
-          // Fetch all employees for birthday calculation (doesn't depend on employeeData)
-          const employeesSnapshot = await getDocs(collection(firestore, 'employees'));
-          const fetchedEmployees = employeesSnapshot.docs.map(doc => doc.data() as EmployeeDocument);
-          setAllEmployees(fetchedEmployees);
 
-          // These fetches depend on having employeeData
-          if (employeeData?.id) {
-              const [leavesSnapshot, visitsSnapshot, advanceSalarySnapshot, monthlyAttendanceSnapshot, monthlyAdvanceSalarySnapshot, payslipsSnapshot] = await Promise.all([
-                  getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id))),
-                  getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', '==', employeeData.id))),
-                  getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id))),
-                  getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', startOfCurrentMonth.toISOString()), where('date', '<=', endOfCurrentMonth.toISOString()))),
-                  getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id), where('applyDate', '>=', startOfCurrentMonth.toISOString()), where('applyDate', '<=', endOfCurrentMonth.toISOString()), where('status', '==', 'Approved'))),
-                  getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id), orderBy("createdAt", "desc"))),
-              ]);
+          const fromDate = format(startOfCurrentMonth, "yyyy-MM-dd'T'00:00:00.000xxx");
+          const toDate = format(endOfCurrentMonth, "yyyy-MM-dd'T'23:59:59.999xxx");
+          
+          const [holidaysSnapshot, employeesSnapshot, leavesSnapshot, visitsSnapshot, advanceSalarySnapshot, monthlyAttendanceSnapshot, monthlyAdvanceSalarySnapshot, payslipsSnapshot] = await Promise.all([
+              getDocs(query(collection(firestore, 'holidays'))),
+              getDocs(collection(firestore, 'employees')),
+              getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id))),
+              getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', '==', employeeData.id))),
+              getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id))),
+              getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', fromDate), where('date', '<=', toDate))),
+              getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id), where('applyDate', '>=', fromDate), where('applyDate', '<=', toDate), where('status', '==', 'Approved'))),
+              getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id), orderBy("createdAt", "desc"))),
+          ]);
               
-              setLeaves(leavesSnapshot.docs.map(doc => doc.data() as LeaveApplicationDocument));
-              setVisits(visitsSnapshot.docs.map(doc => doc.data() as VisitApplicationDocument));
-              setUserAdvanceSalary(advanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument));
+          setHolidays(holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument));
+          setAllEmployees(employeesSnapshot.docs.map(doc => doc.data() as EmployeeDocument));
+          setLeaves(leavesSnapshot.docs.map(doc => doc.data() as LeaveApplicationDocument));
+          setVisits(visitsSnapshot.docs.map(doc => doc.data() as VisitApplicationDocument));
+          setUserAdvanceSalary(advanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument));
+          setPayslips(payslipsSnapshot.docs.map(d => d.data() as Payslip));
 
-              const monthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
-              const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
-              
-              setMonthlyStats({
-                  present: monthlyAttendance.filter(a => a.flag === 'P').length,
-                  delayed: monthlyAttendance.filter(a => a.flag === 'D').length,
-                  absent: monthlyAttendance.filter(a => a.flag === 'A').length,
-                  leave: monthlyAttendance.filter(a => a.flag === 'L').length,
-                  visit: monthlyAttendance.filter(a => a.flag === 'V').length,
-                  advanceSalary: monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0),
-              });
-              setPayslips(payslipsSnapshot.docs.map(d => d.data() as Payslip));
-          }
+          const monthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
+          const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
+          
+          setMonthlyStats({
+              present: monthlyAttendance.filter(a => a.flag === 'P').length,
+              delayed: monthlyAttendance.filter(a => a.flag === 'D').length,
+              absent: monthlyAttendance.filter(a => a.flag === 'A').length,
+              leave: monthlyAttendance.filter(a => a.flag === 'L').length,
+              visit: monthlyAttendance.filter(a => a.flag === 'V').length,
+              advanceSalary: monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0),
+          });
+
         } catch (err) {
-          console.error("Error fetching auxiliary data:", err);
+          console.error("Could not load all account data.", err);
+          setError("Could not load all account data.");
         } finally {
           setIsDayStatusLoading(false);
           setIsLoadingPayslips(false);
         }
       };
       fetchAuxData();
+    } else if (!isEmployeeDataLoading) {
+        setIsDayStatusLoading(false);
+        setIsLoadingPayslips(false);
     }
-  }, [user, isEmployeeDataLoading, employeeData]); // Depend on the completion of employee data loading
+  }, [user, employeeData, isEmployeeDataLoading]);
 
   React.useEffect(() => {
     if (user && employeeData?.id && attendanceDateRange?.from) {
@@ -958,8 +956,8 @@ export default function AccountDetailsPage() {
         <Card className="shadow-xl">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Advance Salary</CardTitle>
-                    <CardDescription>Your advance salary requests.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Advance Salary Requests</CardTitle>
+                    <CardDescription>Your recent advance salary applications.</CardDescription>
                 </div>
                 <Button asChild><Link href="/dashboard/hr/payroll/advance-salary/add"><PlusCircle className="mr-2 h-4 w-4"/>Apply</Link></Button>
             </CardHeader>
@@ -976,8 +974,8 @@ export default function AccountDetailsPage() {
         <Card className="shadow-xl">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle className="flex items-center gap-2"><Plane className="h-5 w-5 text-primary"/>Leave Management</CardTitle>
-                    <CardDescription>Your leave applications.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><Plane className="h-5 w-5 text-primary"/>Leave Applications</CardTitle>
+                    <CardDescription>Your recent leave applications.</CardDescription>
                 </div>
                 <Button asChild><Link href="/dashboard/hr/leaves/add"><PlusCircle className="mr-2 h-4 w-4"/>Apply</Link></Button>
             </CardHeader>
@@ -1002,7 +1000,7 @@ export default function AccountDetailsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle className="flex items-center gap-2"><Briefcase className="h-5 w-5 text-primary"/>Visit Applications</CardTitle>
-                    <CardDescription>Your official visit applications.</CardDescription>
+                    <CardDescription>Your recent official visit applications.</CardDescription>
                 </div>
                 <Button asChild><Link href="/dashboard/hr/visit-applications/add"><PlusCircle className="mr-2 h-4 w-4"/>Apply</Link></Button>
             </CardHeader>
@@ -1140,4 +1138,3 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
-
