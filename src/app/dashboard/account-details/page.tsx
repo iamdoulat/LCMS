@@ -154,8 +154,8 @@ export default function AccountDetailsPage() {
           const startOfCurrentMonth = startOfMonth(today);
           const endOfCurrentMonth = endOfMonth(today);
   
-          const fromDate = format(startOfCurrentMonth, "yyyy-MM-dd'T'00:00:00.000xxx");
-          const toDate = format(endOfCurrentMonth, "yyyy-MM-dd'T'23:59:59.999xxx");
+          const fromDate = startOfCurrentMonth.toISOString();
+          const toDate = endOfCurrentMonth.toISOString();
           
           // Fetch holidays
           const holidaysSnapshot = await getDocs(query(collection(firestore, 'holidays')));
