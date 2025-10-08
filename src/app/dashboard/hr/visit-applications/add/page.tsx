@@ -8,15 +8,19 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import React from 'react';
 
 export default function AddVisitApplicationPage() {
   const router = useRouter();
+  const { userRole } = useAuth();
+  const canNavigateBack = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
 
   return (
     <div className="container mx-auto py-8 px-5">
        <div className="mb-6">
         <Link href="/dashboard/hr/visit-applications" passHref>
-          <Button variant="outline">
+          <Button variant="outline" disabled={!canNavigateBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Visit Applications
           </Button>
@@ -29,7 +33,7 @@ export default function AddVisitApplicationPage() {
                 <Plane className="h-7 w-7 text-primary"/>New Visit Application
             </CardTitle>
              <Link href="/dashboard/hr/visit-applications" passHref>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" disabled={!canNavigateBack}>
                     <X className="h-6 w-6" />
                 </Button>
             </Link>

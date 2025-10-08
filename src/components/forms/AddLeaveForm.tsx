@@ -23,11 +23,13 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import type { ComboboxOption } from '@/components/ui/combobox';
 import { Input } from '@/components/ui/input';
+import { z } from 'zod';
+import { leaveTypeOptions } from '@/types';
 
 
 const leaveApplicationSchema = z.object({
   employeeId: z.string().min(1, "Employee is required."),
-  leaveType: z.string().min(1, "Leave type is required."),
+  leaveType: z.enum(leaveTypeOptions, { required_error: "Leave type is required." }),
   fromDate: z.date({ required_error: "Start date is required." }),
   toDate: z.date({ required_error: "End date is required." }),
   reason: z.string().min(10, "Reason must be at least 10 characters long."),
@@ -191,11 +193,9 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
                     </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                    <SelectItem value="Annual">Annual Leave</SelectItem>
-                    <SelectItem value="Sick">Sick Leave</SelectItem>
-                    <SelectItem value="Paternity">Paternity Leave</SelectItem>
-                    <SelectItem value="Maternity">Maternity Leave</SelectItem>
-                    <SelectItem value="Unpaid">Unpaid Leave</SelectItem>
+                        {leaveTypeOptions.map(option => (
+                           <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
                 <FormMessage />

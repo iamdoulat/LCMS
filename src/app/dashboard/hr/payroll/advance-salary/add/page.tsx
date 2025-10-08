@@ -9,14 +9,18 @@ import { AddAdvanceSalaryForm } from '@/components/forms/AddAdvanceSalaryForm';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export default function AddAdvanceSalaryPage() {
     const router = useRouter();
+    const { userRole } = useAuth();
+    const canNavigateBack = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+
     return (
         <div className="container mx-auto py-8 px-5">
             <div className="mb-6">
                 <Link href="/dashboard/hr/payroll/advance-salary" passHref>
-                <Button variant="outline">
+                <Button variant="outline" disabled={!canNavigateBack}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Advance Salary List
                 </Button>

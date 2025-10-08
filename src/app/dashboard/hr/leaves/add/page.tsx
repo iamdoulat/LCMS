@@ -8,15 +8,19 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import React from 'react';
 
 export default function AddLeavePage() {
   const router = useRouter();
+  const { userRole } = useAuth();
+  const canNavigateBack = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
 
   return (
     <div className="container mx-auto py-8 px-5">
       <div className="mb-6">
         <Link href="/dashboard/hr/leaves" passHref>
-          <Button variant="outline">
+          <Button variant="outline" disabled={!canNavigateBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Leave Management
           </Button>
