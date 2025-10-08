@@ -238,8 +238,8 @@ export default function AccountDetailsPage() {
       const fetchAttendance = async () => {
         setIsAttendanceLoading(true);
         try {
-          const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
-          const toDate = format(attendanceDateRange.to || attendanceDateRange.from, "yyyy-MM-dd'T'23:59:59.999xxx");
+          const fromDate = format(attendanceDateRange.from!, "yyyy-MM-dd'T'00:00:00.000xxx");
+          const toDate = format(attendanceDateRange.to || attendanceDateRange.from!, "yyyy-MM-dd'T'23:59:59.999xxx");
           
           const q = query(
             collection(firestore, 'attendance'),
@@ -935,7 +935,7 @@ export default function AccountDetailsPage() {
                             <TableHead>Date</TableHead>
                             <TableHead>In Time</TableHead>
                             <TableHead>Out Time</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead>Flag</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
