@@ -167,13 +167,13 @@ export default function AccountDetailsPage() {
 
           // Fetch user-specific data
           const leavesSnapshot = await getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id)));
-          setLeaves(leavesSnapshot.docs.map(doc => doc.data() as LeaveApplicationDocument));
+          setLeaves(leavesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data() } as LeaveApplicationDocument)));
           
           const visitsSnapshot = await getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', '==', employeeData.id)));
-          setVisits(visitsSnapshot.docs.map(doc => doc.data() as VisitApplicationDocument));
+          setVisits(visitsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as VisitApplicationDocument)));
           
           const advanceSalarySnapshot = await getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id)));
-          setUserAdvanceSalary(advanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument));
+          setUserAdvanceSalary(advanceSalarySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as AdvanceSalaryDocument)));
           
           const payslipsSnapshot = await getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id)));
           setPayslips(payslipsSnapshot.docs.map(d => d.data() as Payslip));
@@ -186,7 +186,7 @@ export default function AccountDetailsPage() {
           const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
           
           setMonthlyStats({
-              present: monthlyAttendance.filter(a => a.flag === 'P').length,
+              present: monthlyAttendance.filter(a => a.flag === 'P' || a.flag === 'D').length,
               delayed: monthlyAttendance.filter(a => a.flag === 'D').length,
               absent: monthlyAttendance.filter(a => a.flag === 'A').length,
               leave: monthlyAttendance.filter(a => a.flag === 'L').length,
