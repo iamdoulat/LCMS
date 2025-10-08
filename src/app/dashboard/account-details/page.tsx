@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -941,7 +940,7 @@ export default function AccountDetailsPage() {
                         </TableHeader>
                         <TableBody>
                             {displayedAttendance.map((att, index) => (
-                            <TableRow key={att?.id || index}>
+                            <TableRow key={att?.date || index}>
                                 <TableCell>{formatDisplayDate(att?.date)}</TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
@@ -1196,4 +1195,5 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
 
