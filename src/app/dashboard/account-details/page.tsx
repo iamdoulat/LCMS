@@ -238,6 +238,10 @@ export default function AccountDetailsPage() {
       const fetchAttendance = async () => {
         setIsAttendanceLoading(true);
         try {
+          if (!attendanceDateRange.from) {
+            setIsAttendanceLoading(false);
+            return;
+          }
           const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
           const toDate = format(attendanceDateRange.to || attendanceDateRange.from, "yyyy-MM-dd'T'23:59:59.999xxx");
           
@@ -1195,6 +1199,7 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
 
 
 
