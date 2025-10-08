@@ -10,7 +10,6 @@ import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { firestore, storage } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { CompanyProfile } from '@/types';
 import Image from 'next/image';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
@@ -193,7 +192,7 @@ export default function PISettingsPage() {
 
   return (
     <div className="container mx-auto py-8 px-5">
-      <Card className="max-w-7xl mx-auto shadow-xl">
+      <Card className="mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Settings className="h-7 w-7 text-primary" />
