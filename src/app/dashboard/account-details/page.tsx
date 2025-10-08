@@ -220,7 +220,7 @@ export default function AccountDetailsPage() {
 
         try {
           const snapshot = await getDocs(q);
-          const attendanceData = snapshot.docs.map(doc => doc.data() as AttendanceDocument);
+          const attendanceData = snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as AttendanceDocument));
           setFilteredAttendance(attendanceData);
         } catch (err) {
           console.error("Error fetching filtered attendance:", err);
