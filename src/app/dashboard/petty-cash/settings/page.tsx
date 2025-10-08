@@ -1,13 +1,12 @@
 
-
 "use client";
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, PlusCircle, Trash2, Loader2, Info, AlertTriangle, Wallet, List, Edit, MoreHorizontal } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Wallet, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,32 +21,49 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { firestore } from '@/lib/firebase/config';
-import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import type { PettyCashAccountDocument, PettyCashCategoryDocument } from '@/types';
 import Swal from 'sweetalert2';
+import { useAuth } from '@/context/AuthContext';
 import { AddPettyCashAccountForm } from '@/components/forms/AddPettyCashAccountForm';
 import { AddPettyCashCategoryForm } from '@/components/forms/AddPettyCashCategoryForm';
 import { EditPettyCashAccountForm } from '@/components/forms/EditPettyCashAccountForm';
 import { EditPettyCashCategoryForm } from '@/components/forms/EditPettyCashCategoryForm';
-import { useAuth } from '@/context/AuthContext';
+import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { Skeleton } from '@/components/ui/skeleton';
+
+
+const DataTableSkeleton = () => (
+    <div className="rounded-md border">
+        <Table>
+            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
+            <TableBody>
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    </div>
+);
 
 const formatCurrency = (value?: number) => {
-  if (typeof value !== 'number' || isNaN(value)) return `BDT N/A`;
-  return `BDT ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (typeof value !== 'number' || isNaN(value)) return `BDT N/A`;
+    return `BDT ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
+
 
 export default function PettyCashSettingsPage() {
     const { userRole } = useAuth();
     const isReadOnly = userRole?.includes('Viewer');
 
-    const [accounts, setAccounts] = React.useState<PettyCashAccountDocument[]>([]);
-    const [categories, setCategories] = React.useState<PettyCashCategoryDocument[]>([]);
-    const [isLoadingAccounts, setIsLoadingAccounts] = React.useState(true);
-    const [isLoadingCategories, setIsLoadingCategories] = React.useState(true);
-    const [fetchError, setFetchError] = React.useState<string | null>(null);
+    const { data: accounts, isLoading: isLoadingAccounts } = useFirestoreQuery<PettyCashAccountDocument[]>(query(collection(firestore, 'petty_cash_accounts'), orderBy("name", "asc")), undefined, ['petty_cash_accounts']);
+    const { data: categories, isLoading: isLoadingCategories } = useFirestoreQuery<PettyCashCategoryDocument[]>(query(collection(firestore, 'petty_cash_categories'), orderBy("name", "asc")), undefined, ['petty_cash_categories']);
+    
 
     const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = React.useState(false);
     const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = React.useState(false);
@@ -58,42 +74,10 @@ export default function PettyCashSettingsPage() {
     const [editingCategory, setEditingCategory] = React.useState<PettyCashCategoryDocument | null>(null);
     const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = React.useState(false);
 
-    React.useEffect(() => {
-        const accountsQuery = query(collection(firestore, "petty_cash_accounts"), orderBy("name"));
-        const categoriesQuery = query(collection(firestore, "petty_cash_categories"), orderBy("name"));
 
-        const unsubAccounts = onSnapshot(accountsQuery, (snapshot) => {
-            setAccounts(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as PettyCashAccountDocument)));
-            setIsLoadingAccounts(false);
-        }, (error) => {
-            console.error("Error fetching accounts:", error);
-            setFetchError("Could not load accounts. Check permissions and console.");
-            setIsLoadingAccounts(false);
-        });
-
-        const unsubCategories = onSnapshot(categoriesQuery, (snapshot) => {
-            setCategories(snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as PettyCashCategoryDocument)));
-            setIsLoadingCategories(false);
-        }, (error) => {
-            console.error("Error fetching categories:", error);
-            setFetchError(fetchError ? `${fetchError} & categories.` : "Could not load categories. Check permissions and console.");
-            setIsLoadingCategories(false);
-        });
-
-        return () => {
-            unsubAccounts();
-            unsubCategories();
-        };
-    }, [fetchError]);
-
-    const handleEditAccount = (account: PettyCashAccountDocument) => {
-        setEditingAccount(account);
-        setIsEditAccountDialogOpen(true);
-    };
-
-    const handleEditCategory = (category: PettyCashCategoryDocument) => {
-        setEditingCategory(category);
-        setIsEditCategoryDialogOpen(true);
+    const handleEdit = (item: any, setEditingItem: React.Dispatch<any>, setIsEditDialogOpen: React.Dispatch<any>) => {
+        setEditingItem(item);
+        setIsEditDialogOpen(true);
     };
 
     const handleDelete = async (collectionName: string, docId: string, docName: string) => {
@@ -129,8 +113,7 @@ export default function PettyCashSettingsPage() {
                         Manage source accounts and transaction categories for your petty cash.
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-8">
-                    {/* Source Accounts Card */}
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <Dialog open={isAddAccountDialogOpen} onOpenChange={setIsAddAccountDialogOpen}>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
@@ -138,14 +121,11 @@ export default function PettyCashSettingsPage() {
                                     <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-primary"/>Source of Accounts</CardTitle>
                                     <CardDescription>Manage accounts for transactions.</CardDescription>
                                 </div>
-                                <DialogTrigger asChild>
-                                    <Button size="sm" disabled={isReadOnly}><PlusCircle className="mr-2 h-4 w-4"/>Add Account</Button>
-                                </DialogTrigger>
+                                <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddAccountDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Account</Button>
                             </CardHeader>
                             <CardContent>
-                                {isLoadingAccounts ? <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div> :
-                                 fetchError ? <div className="text-destructive text-center p-4">{fetchError}</div> :
-                                 accounts.length === 0 ? <div className="text-muted-foreground text-center p-4">No accounts found.</div> :
+                                {isLoadingAccounts ? <DataTableSkeleton /> :
+                                 !accounts || accounts.length === 0 ? <div className="text-muted-foreground text-center p-4">No accounts found.</div> :
                                 (
                                     <div className="rounded-md border">
                                         <Table><TableHeader><TableRow><TableHead>Account Name</TableHead><TableHead className="text-right">Balance</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
@@ -156,15 +136,10 @@ export default function PettyCashSettingsPage() {
                                                     <TableCell className="text-right font-medium">{formatCurrency(acc.balance)}</TableCell>
                                                     <TableCell className="text-right">
                                                         <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}>
-                                                                    <span className="sr-only">Open menu</span>
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                <DropdownMenuItem onClick={() => handleEditAccount(acc)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleEdit(acc, setEditingAccount, setIsEditAccountDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
                                                                 <DropdownMenuItem onClick={() => handleDelete('petty_cash_accounts', acc.id, acc.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
                                                             </DropdownMenuContent>
@@ -194,14 +169,11 @@ export default function PettyCashSettingsPage() {
                                     <CardTitle className="flex items-center gap-2"><List className="h-5 w-5 text-primary"/>Transaction Categories</CardTitle>
                                     <CardDescription>Organize your transactions.</CardDescription>
                                 </div>
-                                <DialogTrigger asChild>
-                                    <Button size="sm" disabled={isReadOnly}><PlusCircle className="mr-2 h-4 w-4"/>Add Category</Button>
-                                </DialogTrigger>
+                                <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddCategoryDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Category</Button>
                             </CardHeader>
                             <CardContent>
-                                {isLoadingCategories ? <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div> :
-                                 fetchError ? <div className="text-destructive text-center p-4">{fetchError}</div> :
-                                 categories.length === 0 ? <div className="text-muted-foreground text-center p-4">No categories found.</div> :
+                                {isLoadingCategories ? <DataTableSkeleton /> :
+                                 !categories || categories.length === 0 ? <div className="text-muted-foreground text-center p-4">No categories found.</div> :
                                 (
                                     <div className="rounded-md border">
                                         <Table><TableHeader><TableRow><TableHead>Category Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
@@ -211,15 +183,10 @@ export default function PettyCashSettingsPage() {
                                                     <TableCell>{cat.name}</TableCell>
                                                     <TableCell className="text-right">
                                                         <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}>
-                                                                    <span className="sr-only">Open menu</span>
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                <DropdownMenuItem onClick={() => handleEditCategory(cat)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleEdit(cat, setEditingCategory, setIsEditCategoryDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
                                                                 <DropdownMenuItem onClick={() => handleDelete('petty_cash_categories', cat.id, cat.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
                                                             </DropdownMenuContent>
