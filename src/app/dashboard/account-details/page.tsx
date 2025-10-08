@@ -238,8 +238,8 @@ export default function AccountDetailsPage() {
       const fetchAttendance = async () => {
         setIsAttendanceLoading(true);
         try {
-          const fromDate = format(attendanceDateRange.from!, "yyyy-MM-dd'T'00:00:00.000xxx");
-          const toDate = format(attendanceDateRange.to || attendanceDateRange.from!, "yyyy-MM-dd'T'23:59:59.999xxx");
+          const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
+          const toDate = format(attendanceDateRange.to || attendanceDateRange.from, "yyyy-MM-dd'T'23:59:59.999xxx");
           
           const q = query(
             collection(firestore, 'attendance'),
@@ -944,11 +944,11 @@ export default function AccountDetailsPage() {
                                 <TableCell>{formatDisplayDate(att?.date)}</TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
-                                    {att?.inTime || 'N/A'}
-                                    {att?.inTimeLocation && (
+                                    {'inTime' in att ? att.inTime || 'N/A' : 'N/A'}
+                                    {'inTimeLocation' in att && att.inTimeLocation && (
                                     <Button
                                         type="button" variant="ghost" size="icon" className="h-6 w-6"
-                                        onClick={() => handleViewLocation(att?.inTimeLocation)} title="View In-Time Location">
+                                        onClick={() => handleViewLocation(att.inTimeLocation)} title="View In-Time Location">
                                         <MapPin className="h-3.5 w-3.5 text-blue-500" />
                                     </Button>
                                     )}
@@ -956,11 +956,11 @@ export default function AccountDetailsPage() {
                                 </TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
-                                    {att?.outTime || 'N/A'}
-                                    {att?.outTimeLocation && (
+                                    {'outTime' in att ? att.outTime || 'N/A' : 'N/A'}
+                                    {'outTimeLocation' in att && att.outTimeLocation && (
                                     <Button
                                         type="button" variant="ghost" size="icon" className="h-6 w-6"
-                                        onClick={() => handleViewLocation(att?.outTimeLocation)} title="View Out-Time Location">
+                                        onClick={() => handleViewLocation(att.outTimeLocation)} title="View Out-Time Location">
                                         <MapPin className="h-3.5 w-3.5 text-orange-500" />
                                     </Button>
                                     )}
@@ -1195,5 +1195,6 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
 
 
