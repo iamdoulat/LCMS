@@ -115,6 +115,94 @@ export default function AccountDetailsPage() {
   const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings"), where("isEnabled", "==", true)), undefined, ['notices_hrm_dashboard']);
 
 
+  // Step 1: Fetch employee data based on user's email
+  useEffect(() => {
+    if (user) {
+      const fetchEmployeeData = async () => {
+        setIsEmployeeDataLoading(true);
+        if (user.email) {
+          try {
+            const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+              const employeeDoc = querySnapshot.docs[0];
+              setEmployeeData({ id: employeeDoc.id, ...employeeDoc.data() } as EmployeeDocument);
+            }
+          } catch (err) {
+            console.error("Error fetching employee data:", err);
+            setError("Could not load detailed employee profile.");
+          }
+        }
+        // Always finish loading, even if there's no email or employee doc
+        setIsEmployeeDataLoading(false);
+      };
+      fetchEmployeeData();
+    } else {
+        // If there's no user, we are not loading employee data
+        setIsEmployeeDataLoading(false);
+    }
+  }, [user]);
+
+  // Step 2: Fetch other auxiliary data, some of which may depend on employeeData
+  useEffect(() => {
+    if (user && !isEmployeeDataLoading) { // Run after employee data check is complete
+      const fetchAuxData = async () => {
+        setIsDayStatusLoading(true);
+        try {
+          const today = startOfDay(new Date());
+          const startOfCurrentMonth = startOfMonth(today);
+          const endOfCurrentMonth = endOfMonth(today);
+          
+          // Fetch holidays (doesn't depend on employeeData)
+          const holidaysQuery = query(collection(firestore, 'holidays'));
+          const holidaysSnapshot = await getDocs(holidaysQuery);
+          const fetchedHolidays = holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument);
+          setHolidays(fetchedHolidays);
+          
+          // Fetch all employees for birthday calculation (doesn't depend on employeeData)
+          const employeesSnapshot = await getDocs(collection(firestore, 'employees'));
+          const fetchedEmployees = employeesSnapshot.docs.map(doc => doc.data() as EmployeeDocument);
+          setAllEmployees(fetchedEmployees);
+
+          // These fetches depend on having employeeData
+          if (employeeData?.id) {
+              const [leavesSnapshot, visitsSnapshot, advanceSalarySnapshot, monthlyAttendanceSnapshot, monthlyAdvanceSalarySnapshot, payslipsSnapshot] = await Promise.all([
+                  getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id))),
+                  getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', '==', employeeData.id))),
+                  getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id))),
+                  getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', startOfCurrentMonth.toISOString()), where('date', '<=', endOfCurrentMonth.toISOString()))),
+                  getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id), where('applyDate', '>=', startOfCurrentMonth.toISOString()), where('applyDate', '<=', endOfCurrentMonth.toISOString()), where('status', '==', 'Approved'))),
+                  getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id), orderBy("createdAt", "desc"))),
+              ]);
+              
+              setLeaves(leavesSnapshot.docs.map(doc => doc.data() as LeaveApplicationDocument));
+              setVisits(visitsSnapshot.docs.map(doc => doc.data() as VisitApplicationDocument));
+              setUserAdvanceSalary(advanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument));
+
+              const monthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
+              const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
+              
+              setMonthlyStats({
+                  present: monthlyAttendance.filter(a => a.flag === 'P').length,
+                  delayed: monthlyAttendance.filter(a => a.flag === 'D').length,
+                  absent: monthlyAttendance.filter(a => a.flag === 'A').length,
+                  leave: monthlyAttendance.filter(a => a.flag === 'L').length,
+                  visit: monthlyAttendance.filter(a => a.flag === 'V').length,
+                  advanceSalary: monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0),
+              });
+              setPayslips(payslipsSnapshot.docs.map(d => d.data() as Payslip));
+          }
+        } catch (err) {
+          console.error("Error fetching auxiliary data:", err);
+        } finally {
+          setIsDayStatusLoading(false);
+          setIsLoadingPayslips(false);
+        }
+      };
+      fetchAuxData();
+    }
+  }, [user, isEmployeeDataLoading, employeeData]); // Depend on the completion of employee data loading
+
   React.useEffect(() => {
     if (user && employeeData?.id && attendanceDateRange?.from) {
       const fetchAttendance = async () => {
@@ -143,118 +231,6 @@ export default function AccountDetailsPage() {
       fetchAttendance();
     }
   }, [user, employeeData, attendanceDateRange]);
-
-
-  useEffect(() => {
-    const fetchAuxData = async () => {
-      if (!user || !employeeData?.id) return;
-      setIsDayStatusLoading(true);
-      try {
-        const today = startOfDay(new Date());
-        const startOfCurrentMonth = startOfMonth(today);
-        const endOfCurrentMonth = endOfMonth(today);
-        
-        // Fetch holidays
-        const holidaysQuery = query(collection(firestore, 'holidays'));
-        const holidaysSnapshot = await getDocs(holidaysQuery);
-        const fetchedHolidays = holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument);
-        setHolidays(fetchedHolidays);
-  
-        // Fetch approved leaves for user
-        const leavesQuery = query(
-          collection(firestore, 'leave_applications'),
-          where('employeeId', '==', employeeData.id),
-          // where('status', '==', 'Approved') // Fetch all statuses to display in list
-        );
-        const leavesSnapshot = await getDocs(leavesQuery);
-        const fetchedLeaves = leavesSnapshot.docs.map(doc => doc.data() as LeaveApplicationDocument);
-        setLeaves(fetchedLeaves);
-
-        // Fetch approved visits for user
-        const visitsQuery = query(
-          collection(firestore, 'visit_applications'),
-          where('employeeId', '==', employeeData.id),
-          // where('status', '==', 'Approved') // Fetch all statuses
-        );
-        const visitsSnapshot = await getDocs(visitsQuery);
-        const fetchedVisits = visitsSnapshot.docs.map(doc => doc.data() as VisitApplicationDocument);
-        setVisits(fetchedVisits);
-        
-        // Fetch advance salary requests for user
-        const advanceSalaryQuery = query(
-            collection(firestore, 'advance_salary'),
-            where('employeeId', '==', employeeData.id)
-        );
-        const advanceSalarySnapshot = await getDocs(advanceSalaryQuery);
-        setUserAdvanceSalary(advanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument));
-
-        // --- Fetch data for monthly stats ---
-        const monthlyAttendanceQuery = query(
-          collection(firestore, 'attendance'),
-          where('employeeId', '==', employeeData.id),
-          where('date', '>=', startOfCurrentMonth.toISOString()),
-          where('date', '<=', endOfCurrentMonth.toISOString())
-        );
-        const monthlyAttendanceSnapshot = await getDocs(monthlyAttendanceQuery);
-        const monthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
-
-        const monthlyAdvanceSalaryQuery = query(
-          collection(firestore, 'advance_salary'),
-          where('employeeId', '==', employeeData.id),
-          where('applyDate', '>=', startOfCurrentMonth.toISOString()),
-          where('applyDate', '<=', endOfCurrentMonth.toISOString()),
-          where('status', '==', 'Approved')
-        );
-        const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
-
-
-        // --- Calculate stats ---
-        const presentCount = monthlyAttendance.filter(a => a.flag === 'P').length;
-        const delayedCount = monthlyAttendance.filter(a => a.flag === 'D').length;
-        const absentCount = monthlyAttendance.filter(a => a.flag === 'A').length;
-        const leaveCount = monthlyAttendance.filter(a => a.flag === 'L').length;
-        const visitCount = monthlyAttendance.filter(a => a.flag === 'V').length;
-        const advanceTotal = monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0);
-        
-        setMonthlyStats({
-            present: presentCount,
-            absent: absentCount,
-            delayed: delayedCount,
-            leave: leaveCount,
-            visit: visitCount,
-            advanceSalary: advanceTotal,
-        });
-
-
-        // Fetch all employees for birthday calculation
-        const employeesSnapshot = await getDocs(collection(firestore, 'employees'));
-        const fetchedEmployees = employeesSnapshot.docs.map(doc => doc.data() as EmployeeDocument);
-        setAllEmployees(fetchedEmployees);
-
-        // Fetch payslips for the user
-        setIsLoadingPayslips(true);
-        const payslipsQuery = query(
-          collection(firestore, "payslips"),
-          where("employeeId", "==", employeeData.id),
-          orderBy("createdAt", "desc")
-        );
-        const payslipsSnapshot = await getDocs(payslipsQuery);
-        setPayslips(payslipsSnapshot.docs.map(d => d.data() as Payslip));
-        setIsLoadingPayslips(false);
-
-        
-      } catch (err) {
-        console.error("Error fetching auxiliary data:", err);
-        setIsLoadingPayslips(false);
-      } finally {
-        setIsDayStatusLoading(false);
-      }
-    };
-    if (user && employeeData) {
-      fetchAuxData();
-    }
-  }, [user, employeeData]);
-
 
   useEffect(() => {
     const today = startOfDay(new Date());
@@ -330,29 +306,6 @@ export default function AccountDetailsPage() {
   useEffect(() => {
     if (user) {
       form.reset({ displayName: user.displayName || '' });
-      
-      const fetchEmployeeData = async () => {
-        if (!user.email) {
-            setIsEmployeeDataLoading(false);
-            return;
-        };
-        setIsEmployeeDataLoading(true);
-        try {
-            const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-                const employeeDoc = querySnapshot.docs[0];
-                setEmployeeData({ id: employeeDoc.id, ...employeeDoc.data() } as EmployeeDocument);
-            }
-        } catch (err) {
-            console.error("Error fetching employee data:", err);
-            setError("Could not load detailed employee profile.");
-        } finally {
-            setIsEmployeeDataLoading(false);
-        }
-      };
-      
-      fetchEmployeeData();
     }
   }, [user, form]);
   
@@ -1187,3 +1140,4 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
