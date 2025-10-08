@@ -27,12 +27,12 @@ interface AddVisitApplicationFormProps {
 const PLACEHOLDER_EMPLOYEE_VALUE = "__ADD_VISIT_APP_EMPLOYEE__";
 
 export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFormProps) {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [employeeOptions, setEmployeeOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = React.useState(true);
   const [dayCount, setDayCount] = React.useState<number>(1);
-
+  const [isUserRestricted, setIsUserRestricted] = React.useState(false);
 
   const form = useForm<VisitApplicationFormValues>({
     resolver: zodResolver(VisitApplicationSchema),
@@ -63,23 +63,40 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
       try {
         const employeesQuery = query(collection(firestore, "employees"), orderBy("fullName"));
         const snapshot = await getDocs(employeesQuery);
-        setEmployeeOptions(
-          snapshot.docs.map(doc => {
-            const data = doc.data() as EmployeeDocument;
-            return {
-              value: doc.id,
-              label: `${data.fullName} (${data.employeeCode})`
-            };
-          })
-        );
+        const allEmployees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmployeeDocument));
+        
+        const canViewAll = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+        
+        if (canViewAll) {
+          setEmployeeOptions(allEmployees.map(data => ({
+            value: data.id,
+            label: `${data.fullName} (${data.employeeCode})`
+          })));
+          setIsUserRestricted(false);
+        } else if (user) {
+          const loggedInEmployee = allEmployees.find(emp => emp.id === user.uid || emp.email === user.email);
+          if (loggedInEmployee) {
+             setEmployeeOptions([{
+                value: loggedInEmployee.id,
+                label: `${loggedInEmployee.fullName} (${loggedInEmployee.employeeCode})`
+             }]);
+             form.setValue('employeeId', loggedInEmployee.id, { shouldValidate: true });
+             setIsUserRestricted(true);
+          } else {
+            setEmployeeOptions([]);
+            setIsUserRestricted(true);
+          }
+        }
       } catch (error) {
         Swal.fire("Error", "Could not load employees.", "error");
       } finally {
         setIsLoadingEmployees(false);
       }
     };
-    fetchEmployees();
-  }, []);
+    if (user && userRole) {
+        fetchEmployees();
+    }
+  }, [user, userRole, form]);
 
   async function onSubmit(data: VisitApplicationFormValues) {
     if (!user) {
@@ -131,14 +148,18 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
             render={({ field }) => (
                 <FormItem className="lg:col-span-1 xl:col-span-1">
                 <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
-                <Combobox
-                    options={employeeOptions}
-                    value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
-                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
-                    placeholder="Search Employee by Code or Name"
-                    selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee by Code or Name"}
-                    disabled={isLoadingEmployees}
-                />
+                 {isUserRestricted ? (
+                    <Input value={employeeOptions[0]?.label || 'Loading...'} readOnly disabled className="bg-muted/50" />
+                ) : (
+                    <Combobox
+                        options={employeeOptions}
+                        value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
+                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
+                        placeholder="Search Employee by Code or Name"
+                        selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee by Code or Name"}
+                        disabled={isLoadingEmployees}
+                    />
+                )}
                 <FormMessage />
                 </FormItem>
             )}

@@ -4,7 +4,6 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -19,9 +18,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import type { ComboboxOption } from '@/components/ui/combobox';
+import { Input } from '@/components/ui/input';
+
 
 const leaveApplicationSchema = z.object({
   employeeId: z.string().min(1, "Employee is required."),
@@ -41,11 +43,21 @@ const leaveApplicationSchema = z.object({
 
 type LeaveApplicationFormValues = z.infer<typeof leaveApplicationSchema>;
 
+interface AddLeaveFormProps {
+  onFormSubmit: () => void;
+}
 
-export function AddLeaveForm({ onFormSubmit }: { onFormSubmit: () => void }) {
-  const { user } = useAuth();
+const PLACEHOLDER_EMPLOYEE_VALUE = "__ADD_LEAVE_EMPLOYEE__";
+
+
+export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
+  const { user, userRole } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(
+  const [employeeOptions, setEmployeeOptions] = React.useState<ComboboxOption[]>([]);
+  const [isLoadingEmployees, setIsLoadingEmployees] = React.useState(true);
+  const [isUserRestricted, setIsUserRestricted] = React.useState(false);
+  
+  const { data: employees } = useFirestoreQuery<EmployeeDocument[]>(
     query(collection(firestore, "employees"), orderBy("fullName")),
     undefined,
     ['employees_for_leave']
@@ -72,10 +84,34 @@ export function AddLeaveForm({ onFormSubmit }: { onFormSubmit: () => void }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const employeeOptions = React.useMemo(() => {
-    if (!employees) return [];
-    return employees.map(emp => ({ value: emp.id, label: `${emp.fullName} (${emp.employeeCode})` }));
-  }, [employees]);
+  React.useEffect(() => {
+    if (employees && user && userRole) {
+      const canViewAll = userRole.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+      
+      if (canViewAll) {
+         setEmployeeOptions(employees.map(emp => ({
+          value: emp.id,
+          label: `${emp.fullName} (${emp.employeeCode})`
+        })));
+        setIsUserRestricted(false);
+      } else {
+        const loggedInEmployee = employees.find(emp => emp.id === user.uid || emp.email === user.email);
+        if (loggedInEmployee) {
+           setEmployeeOptions([{
+              value: loggedInEmployee.id,
+              label: `${loggedInEmployee.fullName} (${loggedInEmployee.employeeCode})`
+           }]);
+           form.setValue('employeeId', loggedInEmployee.id, { shouldValidate: true });
+           setIsUserRestricted(true);
+        } else {
+          setEmployeeOptions([]);
+          setIsUserRestricted(true);
+        }
+      }
+      setIsLoadingEmployees(false);
+    }
+  }, [employees, user, userRole, form]);
+
 
   const onSubmit = async (data: LeaveApplicationFormValues) => {
     if (!user) {
@@ -88,7 +124,7 @@ export function AddLeaveForm({ onFormSubmit }: { onFormSubmit: () => void }) {
 
     const dataToSave = {
         ...data,
-        employeeName: selectedEmployee?.label || 'N/A', // Denormalize for easier display
+        employeeName: selectedEmployee?.label.split(' (')[0] || 'N/A', // Denormalize for easier display
         fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
         toDate: format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
         status: 'Pending',
@@ -126,14 +162,18 @@ export function AddLeaveForm({ onFormSubmit }: { onFormSubmit: () => void }) {
             render={({ field }) => (
             <FormItem className="lg:col-span-1">
                 <FormLabel>Employee*</FormLabel>
-                <Combobox
-                options={employeeOptions}
-                value={field.value}
-                onValueChange={field.onChange}
-                placeholder="Search Employee..."
-                selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
-                disabled={isLoadingEmployees}
-                />
+                {isUserRestricted ? (
+                    <Input value={employeeOptions[0]?.label || "Loading..."} readOnly disabled className="bg-muted/50" />
+                ) : (
+                    <Combobox
+                    options={employeeOptions}
+                    value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
+                    placeholder="Search Employee..."
+                    selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
+                    disabled={isLoadingEmployees}
+                    />
+                )}
                 <FormMessage />
             </FormItem>
             )} />
