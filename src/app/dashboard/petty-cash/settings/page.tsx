@@ -101,6 +101,56 @@ export default function PettyCashSettingsPage() {
         });
     };
 
+    const renderTableSection = (
+      title: string,
+      description: string,
+      data: any[] | undefined,
+      isLoading: boolean,
+      onAddClick: () => void,
+      onEditClick: (item: any) => void,
+      collectionName: string,
+      className?: string
+    ) => (
+      <Card className={className}>
+          <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                  <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>{title}</CardTitle>
+                  <CardDescription>{description}</CardDescription>
+              </div>
+              <Button size="sm" disabled={isReadOnly} onClick={onAddClick}><PlusCircle className="mr-2 h-4 w-4"/>Add New</Button>
+          </CardHeader>
+          <CardContent>
+              {isLoading ? <DataTableSkeleton /> :
+               !data || data.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+              (
+                  <div className="rounded-md border">
+                      <Table>
+                          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
+                          <TableBody>
+                              {data.map(item => (
+                                  <TableRow key={item.id}>
+                                      <TableCell>{item.name}</TableCell>
+                                      <TableCell className="text-right">
+                                         <DropdownMenu>
+                                              <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                  <DropdownMenuItem onClick={() => onEditClick(item)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                  <DropdownMenuSeparator />
+                                                  <DropdownMenuItem onClick={() => handleDelete(collectionName, item.id, item.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                          </DropdownMenu>
+                                      </TableCell>
+                                  </TableRow>
+                              ))}
+                          </TableBody>
+                      </Table>
+                  </div>
+              )}
+          </CardContent>
+      </Card>
+    );
+
     return (
         <div className="container mx-auto py-8 px-5">
             <Card className="shadow-xl">
@@ -114,6 +164,52 @@ export default function PettyCashSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                     <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
+                         <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2"><List className="h-5 w-5 text-primary"/>Transaction Categories</CardTitle>
+                                    <CardDescription>Organize your transactions.</CardDescription>
+                                </div>
+                                <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddCategoryDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Category</Button>
+                            </CardHeader>
+                            <CardContent>
+                                {isLoadingCategories ? <DataTableSkeleton /> :
+                                 !categories || categories.length === 0 ? <div className="text-muted-foreground text-center p-4">No categories found.</div> :
+                                (
+                                    <div className="rounded-md border">
+                                        <Table><TableHeader><TableRow><TableHead>Category Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {categories.map(cat => (
+                                                <TableRow key={cat.id}>
+                                                    <TableCell>{cat.name}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                <DropdownMenuItem onClick={() => handleEdit(cat, setEditingCategory, setIsEditCategoryDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem onClick={() => handleDelete('petty_cash_categories', cat.id, cat.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody></Table>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Add New Category</DialogTitle>
+                                <DialogDescription>Create a new category to classify transactions.</DialogDescription>
+                            </DialogHeader>
+                            <AddPettyCashCategoryForm onFormSubmit={() => setIsAddCategoryDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+
                     <Dialog open={isAddAccountDialogOpen} onOpenChange={setIsAddAccountDialogOpen}>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
@@ -160,57 +256,9 @@ export default function PettyCashSettingsPage() {
                             <AddPettyCashAccountForm onFormSubmit={() => setIsAddAccountDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
-
-                    {/* Transaction Categories Card */}
-                    <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle className="flex items-center gap-2"><List className="h-5 w-5 text-primary"/>Transaction Categories</CardTitle>
-                                    <CardDescription>Organize your transactions.</CardDescription>
-                                </div>
-                                <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddCategoryDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4"/>Add Category</Button>
-                            </CardHeader>
-                            <CardContent>
-                                {isLoadingCategories ? <DataTableSkeleton /> :
-                                 !categories || categories.length === 0 ? <div className="text-muted-foreground text-center p-4">No categories found.</div> :
-                                (
-                                    <div className="rounded-md border">
-                                        <Table><TableHeader><TableRow><TableHead>Category Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
-                                        <TableBody>
-                                            {categories.map(cat => (
-                                                <TableRow key={cat.id}>
-                                                    <TableCell>{cat.name}</TableCell>
-                                                    <TableCell className="text-right">
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                <DropdownMenuItem onClick={() => handleEdit(cat, setEditingCategory, setIsEditCategoryDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem onClick={() => handleDelete('petty_cash_categories', cat.id, cat.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody></Table>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                        <DialogContent className="sm:max-w-[425px]">
-                            <DialogHeader>
-                                <DialogTitle>Add New Category</DialogTitle>
-                                <DialogDescription>Create a new category to classify transactions.</DialogDescription>
-                            </DialogHeader>
-                            <AddPettyCashCategoryForm onFormSubmit={() => setIsAddCategoryDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
                 </CardContent>
             </Card>
 
-            {/* Edit Account Dialog */}
             {editingAccount && (
                 <Dialog open={isEditAccountDialogOpen} onOpenChange={setIsEditAccountDialogOpen}>
                     <DialogContent className="sm:max-w-[425px]">
@@ -226,7 +274,6 @@ export default function PettyCashSettingsPage() {
                 </Dialog>
             )}
 
-            {/* Edit Category Dialog */}
             {editingCategory && (
                 <Dialog open={isEditCategoryDialogOpen} onOpenChange={setIsEditCategoryDialogOpen}>
                     <DialogContent className="sm:max-w-[425px]">
