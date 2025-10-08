@@ -213,18 +213,18 @@ export default function AccountDetailsPage() {
     if (user && employeeData?.id && attendanceDateRange?.from) {
       const fetchAttendance = async () => {
         setIsAttendanceLoading(true);
-        const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
-        const toDate = format(attendanceDateRange.to || attendanceDateRange.from!, "yyyy-MM-dd'T'23:59:59.999xxx");
-        
-        const q = query(
-          collection(firestore, 'attendance'),
-          where('employeeId', '==', employeeData.id),
-          where('date', '>=', fromDate),
-          where('date', '<=', toDate),
-          orderBy('date', 'desc')
-        );
-
         try {
+          const fromDate = format(attendanceDateRange.from!, "yyyy-MM-dd'T'00:00:00.000xxx");
+          const toDate = format(attendanceDateRange.to || attendanceDateRange.from!, "yyyy-MM-dd'T'23:59:59.999xxx");
+          
+          const q = query(
+            collection(firestore, 'attendance'),
+            where('employeeId', '==', employeeData.id),
+            where('date', '>=', fromDate),
+            where('date', '<=', toDate),
+            orderBy('date', 'desc')
+          );
+
           const snapshot = await getDocs(q);
           const attendanceData = snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as AttendanceDocument));
           setFilteredAttendance(attendanceData);
