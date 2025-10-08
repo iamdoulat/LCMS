@@ -288,7 +288,7 @@ export default function AccountDetailsPage() {
         }
 
         return null; // Future working day
-    }).filter(Boolean).sort((a, b) => new Date(b!.date).getTime() - new Date(a!.date).getTime());
+    }).filter(Boolean);
   }, [attendanceDateRange, monthlyAttendance, holidays, leaves, visits]);
 
   useEffect(() => {
@@ -940,12 +940,12 @@ export default function AccountDetailsPage() {
                         </TableHeader>
                         <TableBody>
                             {displayedAttendance.map((att, index) => (
-                            <TableRow key={att?.date || index}>
+                            <TableRow key={att?.date ? att.date.toString() : index}>
                                 <TableCell>{formatDisplayDate(att?.date)}</TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
-                                    {'inTime' in att ? att.inTime || 'N/A' : 'N/A'}
-                                    {'inTimeLocation' in att && att.inTimeLocation && (
+                                    {'inTime' in att! ? att.inTime || 'N/A' : 'N/A'}
+                                    {'inTimeLocation' in att! && att.inTimeLocation && (
                                     <Button
                                         type="button" variant="ghost" size="icon" className="h-6 w-6"
                                         onClick={() => handleViewLocation(att.inTimeLocation)} title="View In-Time Location">
@@ -956,8 +956,8 @@ export default function AccountDetailsPage() {
                                 </TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
-                                    {'outTime' in att ? att.outTime || 'N/A' : 'N/A'}
-                                    {'outTimeLocation' in att && att.outTimeLocation && (
+                                    {'outTime' in att! ? att.outTime || 'N/A' : 'N/A'}
+                                    {'outTimeLocation' in att! && att.outTimeLocation && (
                                     <Button
                                         type="button" variant="ghost" size="icon" className="h-6 w-6"
                                         onClick={() => handleViewLocation(att.outTimeLocation)} title="View Out-Time Location">
@@ -1195,6 +1195,7 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
 
 
 
