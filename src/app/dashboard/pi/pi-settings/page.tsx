@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { firestore, storage } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { CompanyProfile } from '@/types';
 import Image from 'next/image';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
@@ -205,15 +206,25 @@ export default function PISettingsPage() {
         <CardContent>
            <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Enter a name" {...field} value={field.value ?? ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+                     <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="236A Serangoon Road, #02-236A, Singapore 218084&#x0a;Registration No. 201610840K" {...field} value={field.value ?? ""} rows={1} className="h-10" disabled={isReadOnly} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input type="tel" placeholder="Enter a phone number" {...field} value={field.value ?? ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
                     <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="Enter an email" {...field} value={field.value ?? ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
                 </div>
-                 <div className="grid grid-cols-1">
-                    <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Address</FormLabel><FormControl><Textarea placeholder="236A Serangoon Road, #02-236A, Singapore 218084&#x0a;Registration No. 201610840K" {...field} value={field.value ?? ""} rows={4} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-                </div>
-
+                 
                  <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
                     <DialogContent className="max-w-xl">
                         <DialogHeader><DialogTitle>Crop PI Logo (413x28px)</DialogTitle></DialogHeader>
@@ -278,3 +289,4 @@ export default function PISettingsPage() {
     </div>
   );
 }
+
