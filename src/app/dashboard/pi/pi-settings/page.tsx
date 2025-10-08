@@ -193,7 +193,7 @@ export default function PISettingsPage() {
 
   return (
     <div className="container mx-auto py-8 px-5">
-      <Card className="max-w-full mx-auto shadow-xl">
+      <Card className="max-w-7xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <Settings className="h-7 w-7 text-primary" />
