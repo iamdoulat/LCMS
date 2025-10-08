@@ -164,7 +164,7 @@ export default function AccountDetailsPage() {
               getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id))),
               getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', fromDate), where('date', '<=', toDate))),
               getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id), where('applyDate', '>=', fromDate), where('applyDate', '<=', toDate), where('status', '==', 'Approved'))),
-              getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id), orderBy("createdAt", "desc"))),
+              getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id))),
           ]);
               
           setHolidays(holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument));
