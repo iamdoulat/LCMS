@@ -145,36 +145,44 @@ export default function AccountDetailsPage() {
 
   // Step 2: Fetch other auxiliary data, some of which may depend on employeeData
   useEffect(() => {
-    if (user && !isEmployeeDataLoading && employeeData) { 
+    if (user && !isEmployeeDataLoading && employeeData) {
       const fetchAuxData = async () => {
         setIsDayStatusLoading(true);
+        setError(null);
         try {
           const today = startOfDay(new Date());
           const startOfCurrentMonth = startOfMonth(today);
           const endOfCurrentMonth = endOfMonth(today);
-
+  
           const fromDate = format(startOfCurrentMonth, "yyyy-MM-dd'T'00:00:00.000xxx");
           const toDate = format(endOfCurrentMonth, "yyyy-MM-dd'T'23:59:59.999xxx");
           
-          const [holidaysSnapshot, employeesSnapshot, leavesSnapshot, visitsSnapshot, advanceSalarySnapshot, monthlyAttendanceSnapshot, monthlyAdvanceSalarySnapshot, payslipsSnapshot] = await Promise.all([
-              getDocs(query(collection(firestore, 'holidays'))),
-              getDocs(collection(firestore, 'employees')),
-              getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id))),
-              getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', '==', employeeData.id))),
-              getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id))),
-              getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', fromDate), where('date', '<=', toDate))),
-              getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id), where('applyDate', '>=', fromDate), where('applyDate', '<=', toDate), where('status', '==', 'Approved'))),
-              getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id))),
-          ]);
-              
+          // Fetch holidays
+          const holidaysSnapshot = await getDocs(query(collection(firestore, 'holidays')));
           setHolidays(holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument));
+
+          // Fetch all employees for birthday checks
+          const employeesSnapshot = await getDocs(collection(firestore, 'employees'));
           setAllEmployees(employeesSnapshot.docs.map(doc => doc.data() as EmployeeDocument));
+
+          // Fetch user-specific data
+          const leavesSnapshot = await getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id)));
           setLeaves(leavesSnapshot.docs.map(doc => doc.data() as LeaveApplicationDocument));
+          
+          const visitsSnapshot = await getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', '==', employeeData.id)));
           setVisits(visitsSnapshot.docs.map(doc => doc.data() as VisitApplicationDocument));
+          
+          const advanceSalarySnapshot = await getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id)));
           setUserAdvanceSalary(advanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument));
+          
+          const payslipsSnapshot = await getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id)));
           setPayslips(payslipsSnapshot.docs.map(d => d.data() as Payslip));
 
+          // Fetch data for monthly stats
+          const monthlyAttendanceSnapshot = await getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', fromDate), where('date', '<=', toDate)));
           const monthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
+
+          const monthlyAdvanceSalarySnapshot = await getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id), where('applyDate', '>=', fromDate), where('applyDate', '<=', toDate), where('status', '==', 'Approved')));
           const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
           
           setMonthlyStats({
