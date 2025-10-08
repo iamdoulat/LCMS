@@ -26,8 +26,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
-import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings } from '@/types';
-import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays } from 'date-fns';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag } from '@/types';
+import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
@@ -110,7 +110,7 @@ export default function AccountDetailsPage() {
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
-  const [filteredAttendance, setFilteredAttendance] = React.useState<AttendanceDocument[]>([]);
+  const [monthlyAttendance, setMonthlyAttendance] = React.useState<AttendanceDocument[]>([]);
   const [isAttendanceLoading, setIsAttendanceLoading] = React.useState(true);
   const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings"), where("isEnabled", "==", true)), undefined, ['notices_hrm_dashboard']);
 
@@ -157,20 +157,20 @@ export default function AccountDetailsPage() {
           const fromDate = startOfCurrentMonth.toISOString();
           const toDate = endOfCurrentMonth.toISOString();
           
-          // Fetch holidays
           const holidaysSnapshot = await getDocs(query(collection(firestore, 'holidays')));
-          setHolidays(holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument));
+          const allHolidays = holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument);
+          setHolidays(allHolidays);
 
-          // Fetch all employees for birthday checks
           const employeesSnapshot = await getDocs(collection(firestore, 'employees'));
           setAllEmployees(employeesSnapshot.docs.map(doc => doc.data() as EmployeeDocument));
 
-          // Fetch user-specific data
           const leavesSnapshot = await getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id)));
-          setLeaves(leavesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data() } as LeaveApplicationDocument)));
+          const allLeaves = leavesSnapshot.docs.map(doc => ({id: doc.id, ...doc.data() } as LeaveApplicationDocument));
+          setLeaves(allLeaves);
           
           const visitsSnapshot = await getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', '==', employeeData.id)));
-          setVisits(visitsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as VisitApplicationDocument)));
+          const allVisits = visitsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as VisitApplicationDocument));
+          setVisits(allVisits);
           
           const advanceSalarySnapshot = await getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id)));
           setUserAdvanceSalary(advanceSalarySnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as AdvanceSalaryDocument)));
@@ -178,19 +178,43 @@ export default function AccountDetailsPage() {
           const payslipsSnapshot = await getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id)));
           setPayslips(payslipsSnapshot.docs.map(d => d.data() as Payslip));
 
-          // Fetch data for monthly stats
           const monthlyAttendanceSnapshot = await getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', fromDate), where('date', '<=', toDate)));
-          const monthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
+          const currentMonthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
 
           const monthlyAdvanceSalarySnapshot = await getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id), where('applyDate', '>=', fromDate), where('applyDate', '<=', toDate), where('status', '==', 'Approved')));
           const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
           
+          const approvedLeavesThisMonth = allLeaves.filter(l => l.status === 'Approved' && isWithinInterval(parseISO(l.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth}));
+          const approvedVisitsThisMonth = allVisits.filter(v => v.status === 'Approved' && isWithinInterval(parseISO(v.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth}));
+
+          const presentDays = currentMonthlyAttendance.filter(a => a.flag === 'P' || a.flag === 'D').length;
+          const delayedDays = currentMonthlyAttendance.filter(a => a.flag === 'D').length;
+          const leaveDays = approvedLeavesThisMonth.length;
+          const visitDays = approvedVisitsThisMonth.length;
+          
+          const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
+          let absentDays = 0;
+          daysInMonth.forEach(day => {
+              if (day > today) return; // Don't count future days as absent
+              const dayOfWeek = getDay(day);
+              const isWeekend = dayOfWeek === 5;
+              const isHoliday = allHolidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+              const isOnLeave = approvedLeavesThisMonth.some(l => isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+              const isOnVisit = approvedVisitsThisMonth.some(l => isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+              const attendanceRecord = currentMonthlyAttendance.find(a => format(parseISO(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+
+              if (!isWeekend && !isHoliday && !isOnLeave && !isOnVisit && !attendanceRecord) {
+                  absentDays++;
+              }
+          });
+
+
           setMonthlyStats({
-              present: monthlyAttendance.filter(a => a.flag === 'P' || a.flag === 'D').length,
-              delayed: monthlyAttendance.filter(a => a.flag === 'D').length,
-              absent: monthlyAttendance.filter(a => a.flag === 'A').length,
-              leave: monthlyAttendance.filter(a => a.flag === 'L').length,
-              visit: monthlyAttendance.filter(a => a.flag === 'V').length,
+              present: presentDays,
+              delayed: delayedDays,
+              absent: absentDays,
+              leave: leaveDays,
+              visit: visitDays,
               advanceSalary: monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0),
           });
 
@@ -227,7 +251,7 @@ export default function AccountDetailsPage() {
 
           const snapshot = await getDocs(q);
           const attendanceData = snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as AttendanceDocument));
-          setFilteredAttendance(attendanceData);
+          setMonthlyAttendance(attendanceData);
         } catch (err) {
           console.error("Error fetching filtered attendance:", err);
         } finally {
@@ -237,6 +261,35 @@ export default function AccountDetailsPage() {
       fetchAttendance();
     }
   }, [user, employeeData, attendanceDateRange]);
+
+  const displayedAttendance = useMemo(() => {
+    if (!attendanceDateRange?.from || !attendanceDateRange?.to) return [];
+    
+    const days = eachDayOfInterval({ start: attendanceDateRange.from, end: attendanceDateRange.to });
+    return days.map(day => {
+        const attendanceRecord = monthlyAttendance.find(att => format(parseISO(att.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+        if (attendanceRecord) {
+            return attendanceRecord;
+        }
+
+        const isHoliday = holidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+        if (isHoliday) return { date: day.toISOString(), flag: 'H' as AttendanceFlag };
+
+        const isOnLeave = leaves.some(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+        if (isOnLeave) return { date: day.toISOString(), flag: 'L' as AttendanceFlag };
+
+        const isOnVisit = visits.some(v => v.status === 'Approved' && isWithinInterval(day, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
+        if (isOnVisit) return { date: day.toISOString(), flag: 'V' as AttendanceFlag };
+
+        if (getDay(day) === 5) return { date: day.toISOString(), flag: 'W' as AttendanceFlag }; // Friday
+
+        if (day <= new Date()) {
+          return { date: day.toISOString(), flag: 'A' as AttendanceFlag };
+        }
+
+        return null; // Future working day
+    }).filter(Boolean).sort((a, b) => new Date(b!.date).getTime() - new Date(a!.date).getTime());
+  }, [attendanceDateRange, monthlyAttendance, holidays, leaves, visits]);
 
   useEffect(() => {
     const today = startOfDay(new Date());
@@ -872,7 +925,7 @@ export default function AccountDetailsPage() {
                     <div className="flex justify-center items-center h-48">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
-                    ) : filteredAttendance.length === 0 ? (
+                    ) : displayedAttendance.length === 0 ? (
                     <p className="text-muted-foreground text-center">No attendance data found for the selected range.</p>
                     ) : (
                     <div className="rounded-md border">
@@ -881,45 +934,41 @@ export default function AccountDetailsPage() {
                             <TableRow>
                             <TableHead>Date</TableHead>
                             <TableHead>In Time</TableHead>
-                            <TableHead>In Time Remarks</TableHead>
                             <TableHead>Out Time</TableHead>
-                            <TableHead>Out Time Remarks</TableHead>
                             <TableHead>Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredAttendance.map((att) => (
-                            <TableRow key={att.id}>
-                                <TableCell>{formatDisplayDate(att.date)}</TableCell>
+                            {displayedAttendance.map((att, index) => (
+                            <TableRow key={att?.id || index}>
+                                <TableCell>{formatDisplayDate(att?.date)}</TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
-                                    {att.inTime || 'N/A'}
-                                    {att.inTimeLocation && (
+                                    {att?.inTime || 'N/A'}
+                                    {att?.inTimeLocation && (
                                     <Button
                                         type="button" variant="ghost" size="icon" className="h-6 w-6"
-                                        onClick={() => handleViewLocation(att.inTimeLocation)} title="View In-Time Location">
+                                        onClick={() => handleViewLocation(att?.inTimeLocation)} title="View In-Time Location">
                                         <MapPin className="h-3.5 w-3.5 text-blue-500" />
                                     </Button>
                                     )}
                                 </div>
                                 </TableCell>
-                                <TableCell>{att.inTimeRemarks || 'N/A'}</TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
-                                    {att.outTime || 'N/A'}
-                                    {att.outTimeLocation && (
+                                    {att?.outTime || 'N/A'}
+                                    {att?.outTimeLocation && (
                                     <Button
                                         type="button" variant="ghost" size="icon" className="h-6 w-6"
-                                        onClick={() => handleViewLocation(att.outTimeLocation)} title="View Out-Time Location">
+                                        onClick={() => handleViewLocation(att?.outTimeLocation)} title="View Out-Time Location">
                                         <MapPin className="h-3.5 w-3.5 text-orange-500" />
                                     </Button>
                                     )}
                                 </div>
                                 </TableCell>
-                                <TableCell>{att.outTimeRemarks || 'N/A'}</TableCell>
                                 <TableCell>
-                                <Badge variant={att.flag === 'P' ? 'default' : att.flag === 'D' ? 'destructive' : 'secondary'}>
-                                    {att.flag}
+                                <Badge variant={att?.flag === 'P' ? 'default' : att?.flag === 'D' ? 'destructive' : 'secondary'}>
+                                    {att?.flag}
                                 </Badge>
                                 </TableCell>
                             </TableRow>
