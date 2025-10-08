@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag } from '@/types';
-import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval } from 'date-fns';
+import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, endOfDay } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
@@ -107,8 +107,8 @@ export default function AccountDetailsPage() {
   const [isLoadingPayslips, setIsLoadingPayslips] = React.useState(true);
 
   const [attendanceDateRange, setAttendanceDateRange] = React.useState<DateRange | undefined>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
+    from: startOfDay(subDays(new Date(), 6)),
+    to: endOfDay(new Date()),
   });
   const [monthlyAttendance, setMonthlyAttendance] = React.useState<AttendanceDocument[]>([]);
   const [isAttendanceLoading, setIsAttendanceLoading] = React.useState(true);
@@ -238,8 +238,8 @@ export default function AccountDetailsPage() {
       const fetchAttendance = async () => {
         setIsAttendanceLoading(true);
         try {
-          const fromDate = format(attendanceDateRange.from!, "yyyy-MM-dd'T'00:00:00.000xxx");
-          const toDate = format(attendanceDateRange.to || attendanceDateRange.from!, "yyyy-MM-dd'T'23:59:59.999xxx");
+          const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
+          const toDate = format(attendanceDateRange.to || attendanceDateRange.from, "yyyy-MM-dd'T'23:59:59.999xxx");
           
           const q = query(
             collection(firestore, 'attendance'),
@@ -263,9 +263,9 @@ export default function AccountDetailsPage() {
   }, [user, employeeData, attendanceDateRange]);
 
   const displayedAttendance = useMemo(() => {
-    if (!attendanceDateRange?.from || !attendanceDateRange?.to) return [];
+    if (!attendanceDateRange?.from) return [];
     
-    const days = eachDayOfInterval({ start: attendanceDateRange.from, end: attendanceDateRange.to });
+    const days = eachDayOfInterval({ start: attendanceDateRange.from, end: attendanceDateRange.to || attendanceDateRange.from });
     return days.map(day => {
         const attendanceRecord = monthlyAttendance.find(att => format(parseISO(att.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
         if (attendanceRecord) {
