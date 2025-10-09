@@ -572,7 +572,7 @@ export default function AccountDetailsPage() {
         return;
     }
 
-    if (!user) {
+    if (!user || !auth.currentUser) {
         Swal.fire("Error", "You must be logged in to upload an image.", "error");
         setIsUploading(false);
         return;
@@ -583,20 +583,14 @@ export default function AccountDetailsPage() {
         const snapshot = await uploadBytes(storageRef, croppedImageBlob);
         const downloadURL = await getDownloadURL(snapshot.ref);
 
-        await updateProfile(auth.currentUser!, { photoURL: downloadURL });
+        await updateProfile(auth.currentUser, { photoURL: downloadURL });
+        await auth.currentUser.reload(); // Force refresh of the user object to get new photoURL
 
-        if (user.uid) {
-            const userDocRef = doc(firestore, "users", user.uid);
-            await updateDoc(userDocRef, { photoURL: downloadURL, updatedAt: serverTimestamp() });
-        }
+        const userDocRef = doc(firestore, "users", user.uid);
+        await updateDoc(userDocRef, { photoURL: downloadURL, updatedAt: serverTimestamp() });
         
-        if (setAuthUser) {
-            // Create a temporary User object that matches what the context expects
-            const updatedUser = {
-                ...auth.currentUser,
-                photoURL: downloadURL
-            } as User;
-            setAuthUser(updatedUser);
+        if (setAuthUser && auth.currentUser) {
+            setAuthUser(auth.currentUser); // Update context with reloaded user
         }
 
         setIsCroppingDialogOpen(false);
@@ -629,7 +623,8 @@ export default function AccountDetailsPage() {
         await updateDoc(userDocRef, { displayName: data.displayName, updatedAt: serverTimestamp() });
       }
       if (setAuthUser && auth.currentUser) {
-        setAuthUser({ ...auth.currentUser, displayName: data.displayName });
+        await auth.currentUser.reload();
+        setAuthUser({ ...auth.currentUser });
       }
       Swal.fire({
         title: "Profile Updated",
@@ -1207,9 +1202,3 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
-
-
-
-
-
-
