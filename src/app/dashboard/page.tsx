@@ -629,7 +629,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-[140px] sm:w-[100px] bg-card shadow-sm">
+            <SelectTrigger className="w-[140px] sm:w-[100px] bg-card shadow-sm mt-[5px] sm:mt-0">
               <CalendarIconLucide className="mr-2 h-4 w-4 text-muted-foreground" />
               <SelectValue placeholder="Select Year" />
             </SelectTrigger>
@@ -836,7 +836,7 @@ export default function DashboardPage() {
                     <div className="w-full sm:w-auto">
                         <Label htmlFor="chart-year-select-main" className="sr-only">Select Year</Label>
                         <Select value={selectedChartYear} onValueChange={setSelectedChartYear}>
-                            <SelectTrigger id="chart-year-select-main" className="w-full sm:w-[100px]">
+                            <SelectTrigger id="chart-year-select-main" className="w-full sm:w-[180px]">
                                 <SelectValue placeholder="Select Year" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1016,4 +1016,5 @@ export default function DashboardPage() {
     
 
     
+
 
