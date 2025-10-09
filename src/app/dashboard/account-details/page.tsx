@@ -234,36 +234,35 @@ export default function AccountDetailsPage() {
   }, [user, employeeData, isEmployeeDataLoading]);
 
   React.useEffect(() => {
-    if (user && employeeData?.id && attendanceDateRange?.from) {
-      const fetchAttendance = async () => {
-        setIsAttendanceLoading(true);
-        try {
-          if (!attendanceDateRange.from) {
-            setIsAttendanceLoading(false);
-            return;
-          }
-          const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
-          const toDate = format(attendanceDateRange.to || attendanceDateRange.from, "yyyy-MM-dd'T'23:59:59.999xxx");
-          
-          const q = query(
-            collection(firestore, 'attendance'),
-            where('employeeId', '==', employeeData.id),
-            where('date', '>=', fromDate),
-            where('date', '<=', toDate),
-            orderBy('date', 'desc')
-          );
+    const fetchAttendance = async () => {
+      if (!user || !employeeData?.id || !attendanceDateRange?.from) {
+        setMonthlyAttendance([]); // Clear data if inputs are missing
+        setIsAttendanceLoading(false);
+        return;
+      }
+      setIsAttendanceLoading(true);
+      try {
+        const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
+        const toDate = format(attendanceDateRange.to || attendanceDateRange.from, "yyyy-MM-dd'T'23:59:59.999xxx");
+        
+        const q = query(
+          collection(firestore, 'attendance'),
+          where('employeeId', '==', employeeData.id),
+          where('date', '>=', fromDate),
+          where('date', '<=', toDate),
+          orderBy('date', 'desc')
+        );
 
-          const snapshot = await getDocs(q);
-          const attendanceData = snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as AttendanceDocument));
-          setMonthlyAttendance(attendanceData);
-        } catch (err) {
-          console.error("Error fetching filtered attendance:", err);
-        } finally {
-          setIsAttendanceLoading(false);
-        }
-      };
-      fetchAttendance();
-    }
+        const snapshot = await getDocs(q);
+        const attendanceData = snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as AttendanceDocument));
+        setMonthlyAttendance(attendanceData);
+      } catch (err) {
+        console.error("Error fetching filtered attendance:", err);
+      } finally {
+        setIsAttendanceLoading(false);
+      }
+    };
+    fetchAttendance();
   }, [user, employeeData, attendanceDateRange]);
 
   const displayedAttendance = useMemo(() => {
@@ -554,10 +553,9 @@ export default function AccountDetailsPage() {
   }
 
   const handleCropAndUpload = async () => {
-    const image = imgRef.current;
-    if (!completedCrop || !image || !selectedFile) {
-      Swal.fire("Error", "Could not process the image crop.", "error");
-      return;
+    if (!completedCrop || !imgRef.current || !selectedFile) {
+        Swal.fire("Error", "Could not process the image crop.", "error");
+        return;
     }
 
     if (completedCrop.width === 0 || completedCrop.height === 0) {
@@ -566,7 +564,7 @@ export default function AccountDetailsPage() {
     }
 
     setIsUploading(true);
-    const croppedImageBlob = await getCroppedImg(image, completedCrop, selectedFile.name, 256, 256);
+    const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop, selectedFile.name, 256, 256);
 
     if (!croppedImageBlob) {
         Swal.fire("Error", "Failed to create cropped image.", "error");
@@ -574,21 +572,31 @@ export default function AccountDetailsPage() {
         return;
     }
 
+    if (!user) {
+        Swal.fire("Error", "You must be logged in to upload an image.", "error");
+        setIsUploading(false);
+        return;
+    }
+
     try {
-        const storageRef = ref(storage, `profileImages/${user!.uid}/profile.jpg`);
+        const storageRef = ref(storage, `profileImages/${user.uid}/profile.jpg`);
         const snapshot = await uploadBytes(storageRef, croppedImageBlob);
         const downloadURL = await getDownloadURL(snapshot.ref);
 
         await updateProfile(auth.currentUser!, { photoURL: downloadURL });
 
-        if (auth.currentUser!.uid) {
-            const userDocRef = doc(firestore, "users", auth.currentUser!.uid);
+        if (user.uid) {
+            const userDocRef = doc(firestore, "users", user.uid);
             await updateDoc(userDocRef, { photoURL: downloadURL, updatedAt: serverTimestamp() });
         }
         
-        if (setAuthUser && auth.currentUser) {
-            const refreshedUser = { ...auth.currentUser, photoURL: downloadURL };
-            setAuthUser(refreshedUser);
+        if (setAuthUser) {
+            // Create a temporary User object that matches what the context expects
+            const updatedUser = {
+                ...auth.currentUser,
+                photoURL: downloadURL
+            } as User;
+            setAuthUser(updatedUser);
         }
 
         setIsCroppingDialogOpen(false);
@@ -944,7 +952,7 @@ export default function AccountDetailsPage() {
                         </TableHeader>
                         <TableBody>
                             {displayedAttendance.map((att, index) => (
-                            <TableRow key={att?.date ? att.date.toString() : index}>
+                            <TableRow key={att?.date.toString() || index}>
                                 <TableCell>{formatDisplayDate(att?.date)}</TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
@@ -1199,6 +1207,7 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
 
 
 
