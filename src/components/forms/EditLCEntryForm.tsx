@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -113,6 +114,7 @@ const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--
 
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_EDIT_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_EDIT_BENEFICIARY_PLACEHOLDER__";
+const NONE_COURIER_VALUE = "__NONE_LC_NEW_COURIER__";
 
 export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -404,6 +406,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       portOfLoading: finalData.portOfLoading,
       portOfDischarge: finalData.portOfDischarge,
       consigneeBankNameAddress: finalData.consigneeBankNameAddress,
+      vesselOrFlightName: finalData.vesselOrFlightName,
+      vesselImoNumber: finalData.vesselImoNumber,
+      flightNumber: finalData.flightNumber,
+      trackingCourier: finalData.trackingCourier,
+      trackingNumber: (finalData.trackingCourier === "" || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
+      etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       certificateOfOrigin: finalData.certificateOfOrigin,
       shippingMarks: finalData.shippingMarks,
       purchaseOrderUrl: finalData.purchaseOrderUrl,
@@ -1024,10 +1033,171 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         {/* Section: Shipping Information */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Ship className="mr-2 h-5 w-5 text-primary" />
-          Shipment Notes
+          Shipping Information
         </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+           <FormField
+              control={control}
+              name="shipmentMode"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Shipment Mode*</FormLabel>
+                   <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                    >
+                      {shipmentModeOptions.map((option) => (
+                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                          <FormControl><RadioGroupItem value={option} /></FormControl>
+                          <FormLabel className="font-normal text-sm">
+                              {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
+                              {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
+                              {option}
+                          </FormLabel>
+                        </FormItem>
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          <FormField
+            control={control}
+            name="vesselOrFlightName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{viaLabel}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder={getValues("shipmentMode") ? `Enter ${getValues("shipmentMode") === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
+                    {...field}
+                    disabled={!getValues("shipmentMode")}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                {!getValues("shipmentMode") && <FormDescription>Select shipment mode first.</FormDescription>}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        {getValues("shipmentMode") === 'Sea' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+            <FormField
+              control={control}
+              name="vesselImoNumber"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Vessel IMO Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleTrackVessel}
+              disabled={!watch("vesselImoNumber") || isSubmitting}
+              className="md:col-span-1"
+              title="Track Vessel via IMO Number"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              Track Vessel
+            </Button>
+          </div>
+        )}
+        {getValues("shipmentMode") === 'Air' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+            <FormField
+              control={control}
+              name="flightNumber"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Flight Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Flight Number (e.g., EK582)" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleTrackFlight}
+              disabled={!watch("flightNumber") || isSubmitting}
+              className="md:col-span-1"
+              title="Track Flight on FlightRadar24"
+            >
+              <Search className="mr-2 h-4 w-4" />
+              Track Flight
+            </Button>
+          </div>
+        )}
+        
+        <div className="mt-6">
+          <h4 className="text-base font-medium text-foreground flex items-center mb-2">
+            <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
+             <FormField
+                control={control}
+                name="trackingCourier"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-1 space-y-3">
+                    <FormLabel>Courier By</FormLabel>
+                    <FormControl>
+                       <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value ?? ""}
+                          className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                        >
+                          {trackingCourierOptions.map((courier) => (
+                            <FormItem key={courier} className="flex items-center space-x-2 space-y-0">
+                              <FormControl><RadioGroupItem value={courier} /></FormControl>
+                              <FormLabel className="font-normal text-sm">{courier}</FormLabel>
+                            </FormItem>
+                          ))}
+                        </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            <FormField
+              control={control}
+              name="trackingNumber"
+              render={({ field }) => (
+                <FormItem className="md:col-span-1">
+                  <FormLabel>Tracking Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter tracking number" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleTrackDocument}
+              disabled={!watch("trackingNumber") || !watch("trackingCourier") || isSubmitting}
+              className="md:col-span-1 mt-4 md:mt-0"
+              title="Track Original Document"
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Track
+            </Button>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
           <FormField
             control={form.control}
             name="isFirstShipment"
@@ -1114,6 +1284,30 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <FormField
+            control={control}
+            name="etd"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>ETD (Estimated Time of Departure)</FormLabel>
+                <DatePickerField field={field} placeholder="Select date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="eta"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>ETA (Estimated Time of Arrival)</FormLabel>
+                <DatePickerField field={field} placeholder="Select date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <Separator />
 
         {/* Section: Consignee Bank Details */}
