@@ -385,7 +385,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     const selectedApplicant = applicantOptions.find(opt => opt.value === finalData.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === finalData.beneficiaryId);
 
-    const dataToUpdate: Partial<Omit<LCEntryDocument, 'id' | 'createdAt' | 'year'>> & { updatedAt: any } = {
+    const dataToUpdate: Partial<Omit<LCEntryDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
       applicantId: finalData.applicantId,
       applicantName: selectedApplicant ? selectedApplicant.label : initialData.applicantName,
       beneficiaryId: finalData.beneficiaryId,
@@ -513,6 +513,61 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   }
 
+  const handleTrackDocument = () => {
+    const courier = getValues("trackingCourier");
+    const number = getValues("trackingNumber");
+
+    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
+      Swal.fire({
+        title: "Information Missing",
+        text: "Please select a courier and enter a tracking number.",
+        icon: "info",
+      });
+      return;
+    }
+
+    let url = "";
+    if (courier === "DHL") {
+      url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
+    } else if (courier === "FedEx") {
+      url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
+    }
+
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      Swal.fire({
+        title: "Courier Not Supported",
+        text: "Tracking for the selected courier is not implemented.",
+        icon: "warning",
+      });
+    }
+  };
+
+  const handleTrackVessel = () => {
+    const imoNumber = getValues("vesselImoNumber");
+    if (!imoNumber || String(imoNumber).trim() === "") {
+       Swal.fire({
+        title: "IMO Number Missing",
+        text: "Please enter a Vessel IMO number to track.",
+        icon: "info",
+      });
+      return;
+    }
+    const url = `https://www.vesselfinder.com/vessels/details/${encodeURIComponent(String(imoNumber).trim())}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleTrackFlight = () => {
+    const flightNum = getValues("flightNumber");
+    if (!flightNum || String(flightNum).trim() === "") {
+      Swal.fire("Info", "Please enter a flight number to track.", "info");
+      return;
+    }
+    const url = `https://www.flightradar24.com/${encodeURIComponent(String(flightNum).trim())}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && String(url).trim() !== "") {
       try {
@@ -529,6 +584,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   if (isLoadingApplicants || isLoadingBeneficiaries) {
     return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <span className="ml-2">Loading form options...</span></div>;
+  }
+  
+  const shipmentModeValue = getValues("shipmentMode");
+  let viaLabel = "Vessel/Flight Name";
+  if (shipmentModeValue === "Sea") {
+    viaLabel = "Vessel Name";
+  } else if (shipmentModeValue === "Air") {
+    viaLabel = "Flight Name";
   }
 
   return (
@@ -774,7 +837,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               )}
             />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <FormField
                 control={control}
                 name="partialShipments"
@@ -813,6 +876,30 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormMessage />
                 </FormItem>
                 )}
+            />
+            <FormField
+              control={form.control}
+              name="shipmentTerms"
+              render={({ field }) => (
+                  <FormItem className="space-y-3">
+                      <FormLabel>Shipment Terms</FormLabel>
+                      <FormControl>
+                          <RadioGroup
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              className="flex flex-wrap items-center gap-x-4 gap-y-2"
+                          >
+                              {piShipmentModeOptions.map((option) => (
+                                  <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                                      <FormControl><RadioGroupItem value={option} /></FormControl>
+                                      <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                                  </FormItem>
+                              ))}
+                          </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+              )}
             />
         </div>
         <FormField
