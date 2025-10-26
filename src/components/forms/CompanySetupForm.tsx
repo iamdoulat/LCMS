@@ -38,8 +38,11 @@ interface FinancialSettingsProfile {
   emailId?: string;
   cellNumber?: string;
   hideCompanyName?: boolean;
-  hideCompanyLogo?: boolean; // For sidebar logo
-  hideInvoiceLogo?: boolean; // For invoice logo
+  hideCompanyLogo?: boolean; 
+  hideInvoiceLogo?: boolean;
+  contactPerson?: string;
+  binNumber?: string;
+  tinNumber?: string;
   updatedAt?: any;
 }
 
@@ -54,6 +57,9 @@ const financialSettingsSchema = z.object({
   hideInvoiceLogo: z.boolean().optional().default(false),
   companyLogoUrl: z.string().url("Invalid URL format").optional().or(z.literal('')),
   invoiceLogoUrl: z.string().url("Invalid URL format").optional().or(z.literal('')),
+  contactPerson: z.string().optional(),
+  binNumber: z.string().optional(),
+  tinNumber: z.string().optional(),
 });
 
 type FinancialSettingsFormValues = z.infer<typeof financialSettingsSchema>;
@@ -104,6 +110,9 @@ export function CompanySetupForm() {
       hideInvoiceLogo: false,
       companyLogoUrl: '',
       invoiceLogoUrl: '',
+      contactPerson: '',
+      binNumber: '',
+      tinNumber: '',
     },
   });
 
@@ -124,6 +133,9 @@ export function CompanySetupForm() {
           hideCompanyName: false,
           hideCompanyLogo: false,
           hideInvoiceLogo: false,
+          contactPerson: '',
+          binNumber: '',
+          tinNumber: '',
         };
 
         if (profileDocSnap.exists()) {
@@ -258,7 +270,6 @@ export function CompanySetupForm() {
             throw new Error("Failed to create cropped image blob.");
         }
         
-        // This is a temporary preview URL. The actual upload happens on form submission.
         const tempUrl = URL.createObjectURL(croppedImageBlob);
         setUrl(tempUrl);
         setFile(croppedImageBlob);
@@ -388,3 +399,5 @@ export function CompanySetupForm() {
         setCropFn(centerCrop(makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height), width, height));
     }
 }
+
+    
