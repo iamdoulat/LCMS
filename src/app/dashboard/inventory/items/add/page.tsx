@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 export default function AddNewItemPage() {
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <Card className="max-w-3xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -24,4 +24,3 @@ export default function AddNewItemPage() {
     </div>
   );
 }
-
