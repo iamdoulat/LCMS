@@ -16,7 +16,7 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserDocumentForAdmin, UserRole } from '@/types';
 import { userRoles } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -114,7 +114,7 @@ export default function EditUserPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 flex justify-center items-center">
+      <div className="container mx-auto py-8 px-5 flex justify-center items-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
@@ -122,7 +122,7 @@ export default function EditUserPage() {
 
   if (error) {
     return (
-        <div className="container mx-auto py-8 text-center text-destructive">{error}</div>
+        <div className="container mx-auto py-8 px-5 text-center text-destructive">{error}</div>
     );
   }
   
