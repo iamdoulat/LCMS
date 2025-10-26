@@ -134,7 +134,7 @@ export function AddItemForm() {
         <h3 className={cn(sectionHeadingClass)}>
           <Package className="h-5 w-5" /> Item Details
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <FormField
             control={form.control}
             name="itemName"
@@ -167,8 +167,6 @@ export function AddItemForm() {
               </FormItem>
             )}
           />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="itemCode"
@@ -196,7 +194,49 @@ export function AddItemForm() {
             )}
           />
         </div>
-
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <FormField
+                control={form.control}
+                name="unit"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Unit</FormLabel>
+                    <FormControl>
+                    <Input placeholder="e.g., pcs, kg, m" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="salesPrice"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />Sales Price</FormLabel>
+                    <FormControl>
+                    <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="purchasePrice"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="flex items-center"><DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />Purchase Price</FormLabel>
+                    <FormControl>
+                    <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+        
         <FormField
           control={form.control}
           name="description"
@@ -211,47 +251,6 @@ export function AddItemForm() {
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField
-            control={form.control}
-            name="unit"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Unit</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., pcs, kg, m" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="salesPrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />Sales Price</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="purchasePrice"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center"><DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />Purchase Price</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
 
         <Separator />
 
@@ -284,7 +283,7 @@ export function AddItemForm() {
         {watchManageStock && (
           <Card className="bg-muted/30 p-6">
             <CardContent className="space-y-4 pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <FormField
                     control={form.control}
                     name="currentQuantity"
@@ -311,8 +310,6 @@ export function AddItemForm() {
                     </FormItem>
                     )}
                 />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="idealQuantity"
