@@ -611,7 +611,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-8 mx-[10px]">
       {notice && <NoticeBoardDialog notice={notice} />}
-      <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
+      <div className="flex flex-row justify-between items-start gap-4 sm:items-center md:px-5">
         <div>
            {greeting && authUser && (
             <h2 className="text-base font-semibold text-foreground mb-1 mt-[5px]">
@@ -1018,3 +1018,6 @@ export default function DashboardPage() {
     
 
 
+
+
+    
