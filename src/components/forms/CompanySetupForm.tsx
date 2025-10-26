@@ -22,12 +22,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
 
 
 const COMPANY_PROFILE_COLLECTION = 'company_profile';
-const COMPANY_PROFILE_DOC_ID = 'main_profile';
+const COMPANY_PROFILE_DOC_ID = 'main_settings';
 
 interface CompanySetupProfile {
   companyName?: string;
@@ -40,6 +41,8 @@ interface CompanySetupProfile {
   binNumber?: string;
   tinNumber?: string;
   updatedAt?: any;
+  hideCompanyName?: boolean;
+  hideCompanyLogo?: boolean;
 }
 
 
@@ -51,6 +54,9 @@ const companySetupSchema = z.object({
   emailId: z.string().email("Invalid email address").optional().or(z.literal('')),
   binNumber: z.string().optional(),
   tinNumber: z.string().optional(),
+  hideCompanyName: z.boolean().optional().default(false),
+  hideCompanyLogo: z.boolean().optional().default(false),
+  companyLogoUrl: z.string().url("Invalid URL format").optional().or(z.literal('')),
 });
 
 type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
@@ -95,6 +101,9 @@ export function CompanySetupForm() {
       address: DEFAULT_ADDRESS,
       emailId: DEFAULT_EMAIL,
       contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
+      hideCompanyName: false,
+      hideCompanyLogo: false,
+      companyLogoUrl: '',
     },
   });
 
@@ -105,13 +114,15 @@ export function CompanySetupForm() {
         const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
         const profileDocSnap = await getDoc(profileDocRef);
         
-        let initialProfileData = {
+        let initialProfileData: CompanySetupProfile & {companyName: string} = {
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
           address: DEFAULT_ADDRESS,
           emailId: DEFAULT_EMAIL,
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL, // Default invoice logo
           contactPerson: '', cellNumber: '', binNumber: '', tinNumber: '',
+          hideCompanyName: false,
+          hideCompanyLogo: false,
         };
 
         if (profileDocSnap.exists()) {
@@ -174,7 +185,10 @@ export function CompanySetupForm() {
     try {
         if(companyLogoSelectedFile){
             newCompanyLogoUrl = await handleLogoUpload(companyLogoSelectedFile, 'companyLogos/main_logo.jpg');
+        } else if (data.companyLogoUrl) {
+            newCompanyLogoUrl = data.companyLogoUrl;
         }
+
         if(invoiceLogoSelectedFile){
             newInvoiceLogoUrl = await handleLogoUpload(invoiceLogoSelectedFile, 'companyLogos/invoice_logo.jpg');
         }
@@ -187,9 +201,10 @@ export function CompanySetupForm() {
         };
         
         Object.keys(dataToSave).forEach(key => {
-            if (dataToSave[key as keyof CompanySetupProfile] === undefined) {
-                delete dataToSave[key as keyof CompanySetupProfile];
-            }
+          const typedKey = key as keyof CompanySetupProfile;
+          if (dataToSave[typedKey] === undefined || dataToSave[typedKey] === "") {
+            delete dataToSave[typedKey];
+          }
         });
 
         const profileDocRef = doc(firestore, COMPANY_PROFILE_COLLECTION, COMPANY_PROFILE_DOC_ID);
@@ -232,23 +247,13 @@ export function CompanySetupForm() {
          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-6">
             <FormField control={form.control} name="companyName" render={({ field }) => (<FormItem><FormLabel>Company Name*</FormLabel><FormControl><Input placeholder="Your company's name" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormDescription>This name will appear on all documents.</FormDescription><FormMessage /></FormItem>)} />
+            <FormField control={form.control} name="hideCompanyName" render={({ field }) => (<FormItem className="flex items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="hideCompanyName" disabled={isReadOnly} /></FormControl><div className="space-y-1 leading-none"><FormLabel htmlFor="hideCompanyName" className="text-sm font-medium hover:cursor-pointer">Hide Company Name on Documents</FormLabel><FormDescription className="text-xs">If checked, the company name will not be printed.</FormDescription></div></FormItem>)}/>
             <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Company Address*</FormLabel><FormControl><Textarea placeholder={DEFAULT_ADDRESS} {...field} value={field.value || ""} rows={3} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={form.control} name="emailId" render={({ field }) => (<FormItem><FormLabel>Email ID</FormLabel><FormControl><Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-                <FormField control={form.control} name="cellNumber" render={({ field }) => (<FormItem><FormLabel>Cell Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-             </div>
           </div>
           <div className="space-y-6">
-            <FormItem>
-              <Label>Company Logo (for sidebar)</Label>
-              <div className="flex items-center gap-4">
-                <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                  {companyLogoUrl ? <Image src={companyLogoUrl} alt="Company Logo" width={96} height={96} className="object-contain" data-ai-hint="company logo"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
-                </div>
-                <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setCompanyLogoSrc, setCompanyLogoSelectedFile, setIsCompanyLogoCropping)} className="flex-1" disabled={isReadOnly} />
-              </div>
-            </FormItem>
-            <FormItem>
+            <FormField control={form.control} name="emailId" render={({ field }) => (<FormItem><FormLabel>Email ID</FormLabel><FormControl><Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+            <FormField control={form.control} name="cellNumber" render={({ field }) => (<FormItem><FormLabel>Cell Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
+             <FormItem>
               <Label>Invoice Logo</Label>
                <div className="flex items-center gap-4">
                 <div className="w-24 h-auto aspect-[396/58] rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
@@ -261,6 +266,25 @@ export function CompanySetupForm() {
           </div>
         </div>
         
+        <Separator />
+        
+         <div className="space-y-6">
+            <FormField control={form.control} name="hideCompanyLogo" render={({ field }) => (<FormItem className="flex items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="hideCompanyLogo" disabled={isReadOnly} /></FormControl><div className="space-y-1 leading-none"><FormLabel htmlFor="hideCompanyLogo" className="text-sm font-medium hover:cursor-pointer">Hide Company Logo on Sidebar</FormLabel><FormDescription className="text-xs">If checked, the logo will be hidden from the main sidebar.</FormDescription></div></FormItem>)}/>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <FormItem>
+                <Label>Company Logo (for sidebar)</Label>
+                <div className="flex items-center gap-4">
+                  <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                    {companyLogoUrl ? <Image src={companyLogoUrl} alt="Company Logo" width={96} height={96} className="object-contain" data-ai-hint="company logo"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                  </div>
+                  <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setCompanyLogoSrc, setCompanyLogoSelectedFile, setIsCompanyLogoCropping)} className="flex-1" disabled={isReadOnly} />
+                </div>
+                <FormDescription>Upload a square logo (e.g., 256x256) for the main sidebar.</FormDescription>
+              </FormItem>
+              <FormField control={form.control} name="companyLogoUrl" render={({ field }) => (<FormItem><FormLabel>External Logo URL</FormLabel><FormControl><Input placeholder="https://example.com/logo.png" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormDescription>Use this URL if no file is uploaded. Overrides uploaded logo.</FormDescription><FormMessage /></FormItem>)} />
+            </div>
+        </div>
+
         <Separator />
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -303,7 +327,7 @@ export function CompanySetupForm() {
             )}
             <DialogFooter>
                 <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
-                <Button onClick={() => handleCropAndSet(invoiceLogoImgRef, invoiceLogoCompletedCrop, invoiceLogoSelectedFile, setInvoiceLogoSelectedFile, setInvoiceLogoUrl, setIsInvoiceLogoCropping)}>
+                <Button onClick={handleCropAndUpload} disabled={isUploading || !invoiceLogoCompletedCrop?.width}>
                     {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4"/>Set Logo</>}
                 </Button>
             </DialogFooter>
