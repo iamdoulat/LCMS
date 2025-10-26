@@ -64,7 +64,8 @@ export function AppHeader() {
             "font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
           )}
         >
-          Indenting & LC Management System
+            <span className="md:hidden">Indenting & LCMS</span>
+            <span className="hidden md:inline">Indenting & LC Management System</span>
         </Link>
       </div>
 
