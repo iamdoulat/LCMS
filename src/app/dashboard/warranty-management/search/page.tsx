@@ -25,16 +25,6 @@ const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYe
 
 const ITEMS_PER_PAGE = 10;
 
-const formatDisplayDate = (dateString?: string | null): string => {
-  if (!dateString) return 'N/A';
-  try {
-    const date = parseISO(dateString);
-    return isValid(date) ? format(date, 'PPP') : 'N/A';
-  } catch (e) {
-    return 'N/A';
-  }
-};
-
 interface WarrantySearchResultItem {
   reportId: string;
   commercialInvoiceNumber?: string;
@@ -367,7 +357,7 @@ export default function WarrantySearchPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8 px-5">
+    <div className="py-8 space-y-8 px-5">
       <Card 
         className="shadow-xl relative overflow-hidden"
       >
