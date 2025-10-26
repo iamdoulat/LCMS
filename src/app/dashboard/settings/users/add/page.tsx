@@ -11,7 +11,7 @@ import { AddUserForm } from '@/components/forms/AddUserForm';
 
 export default function AddUserPage() {
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
        <div className="mb-6">
             <Link href="/dashboard/settings/users" passHref>
                 <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to User List</Button>
