@@ -50,8 +50,8 @@ interface WarrantySearchResultItem {
 
 const WarrantySearchSkeleton = () => (
     <div className="space-y-8">
-        <Card className="shadow-xl max-w-6xl mx-auto"><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
-        <Card className="shadow-xl max-w-6xl mx-auto">
+        <Card className="shadow-xl mx-auto"><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+        <Card className="shadow-xl mx-auto">
             <CardHeader><Skeleton className="h-8 w-1/3" /><Skeleton className="h-4 w-1/2 mt-2" /></CardHeader>
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -369,132 +369,134 @@ export default function WarrantySearchPage() {
   return (
     <div className="container mx-auto py-8 space-y-8 px-5">
       <Card 
-        className="shadow-xl max-w-6xl mx-auto"
+        className="shadow-xl mx-auto relative overflow-hidden"
       >
-        <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2 font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
-              <Microscope className="h-7 w-7 text-primary" />
-              Warranty Search Engine
-            </CardTitle>
-          <CardDescription className="text-center pt-2 text-card-foreground/80">
-            Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSearchSubmit} className="flex w-full max-w-md mx-auto items-center space-x-2 mb-8">
-            <Input
-              type="search"
-              placeholder="Search by Machine Model/Serial, Ctl. Box Model/Serial, L/C No, Applicant, Beneficiary..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1"
-              aria-label="Warranty Search Input"
-            />
-            <Button type="submit" variant="default" disabled={isSearching}>
-              {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SearchIcon className="mr-2 h-4 w-4" />}
-              Search
-            </Button>
-          </form>
+        <div className="relative z-10 bg-card/90 dark:bg-card/80 rounded-lg">
+            <CardHeader className="text-center">
+                <CardTitle className={cn("flex items-center justify-center gap-2 font-bold text-2xl lg:text-3xl text-card-foreground", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                  <Microscope className="h-7 w-7 text-primary" />
+                  Warranty Search Engine
+                </CardTitle>
+                <CardDescription className="text-center pt-2 text-card-foreground/80">
+                  Search for warranty information for year {selectedYear === "All Years" ? "Overall" : selectedYear}.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+            <form onSubmit={handleSearchSubmit} className="flex w-full max-w-xl mx-auto items-center space-x-2 mb-8">
+                <Input
+                  type="search"
+                  placeholder="Search by Machine Model/Serial, Ctl. Box Model/Serial, L/C No, Applicant, Beneficiary..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1"
+                  aria-label="Warranty Search Input"
+                />
+                <Button type="submit" variant="default" disabled={isSearching || isLoading}>
+                  {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SearchIcon className="mr-2 h-4 w-4" />}
+                  Search
+                </Button>
+            </form>
 
-          {displayedSearchTerm && !isSearching && searchResults.length === 0 && !searchError && (
-            <div className="text-center text-card-foreground/70 py-10">
-                <Info className="mx-auto h-12 w-12 mb-4" />
-                <p className="text-lg">No warranty-related installation report details found for &quot;{displayedSearchTerm}&quot; in {selectedYear === "All Years" ? "any year" : selectedYear}.</p>
-                 <p className="text-sm">Ensure data exists in Firestore and check filter criteria.</p>
-            </div>
-          )}
-          {searchError && !isSearching && (
+            {isSearching && (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+                <p className="text-card-foreground/80">Searching reports...</p>
+              </div>
+            )}
+
+            {!isSearching && displayedSearchTerm && searchResults.length === 0 && !searchError && (
+                <div className="text-center text-card-foreground/70 py-10">
+                    <Info className="mx-auto h-12 w-12 mb-4" />
+                    <p className="text-lg">No warranty-related installation report details found for &quot;{displayedSearchTerm}&quot; in {selectedYear === "All Years" ? "any year" : selectedYear}.</p>
+                    <p className="text-sm">Ensure data exists in Firestore and check filter criteria.</p>
+                </div>
+            )}
+            {searchError && !isSearching && (
              <div className="text-center text-destructive py-10">
                 <AlertTriangle className="mx-auto h-12 w-12 mb-4" />
                 <p className="text-lg">{searchError}</p>
             </div>
-          )}
+            )}
 
-          {!displayedSearchTerm && !isSearching && !searchError && (
-            <div className="text-center text-card-foreground/70 py-10">
-                <iframe src="https://lottie.host/embed/1b954d50-dbd6-4e85-a947-9c8fc4fa093c/Jkw6b9BbW1.lottie" style={{border: 'none', width: '150px', height: '150px', margin: '0 auto 1rem'}}></iframe>
-                <p className="text-lg">
-                  Enter terms above to search warranty-related information for{' '}
-                  {selectedYear === "All Years" ? "all years" : selectedYear}.
-                </p>
-            </div>
-          )}
+            {!displayedSearchTerm && !isSearching && !searchError && (
+                 <div className="text-center text-card-foreground/70 py-10">
+                    <iframe src="https://lottie.host/embed/1b954d50-dbd6-4e85-a947-9c8fc4fa093c/Jkw6b9BbW1.lottie" style={{border: 'none', width: '150px', height: '150px', margin: '0 auto 1rem'}}></iframe>
+                    <p className="text-lg">
+                      Enter terms above to search warranty-related information for{' '}
+                      {selectedYear === "All Years" ? "all years" : selectedYear}.
+                    </p>
+                </div>
+            )}
 
-          {isSearching && (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-              <p className="text-card-foreground/80">Searching reports...</p>
-            </div>
-          )}
-
-          {currentSearchItems.length > 0 && !isSearching && (
-            <div className="space-y-6 mt-8">
-                 <h3 className="text-lg font-semibold text-card-foreground mt-6 mb-2 text-center">
-                    Search Results for &quot;{displayedSearchTerm}&quot; in {selectedYear === "All Years" ? "All Years" : selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching entries):
-                 </h3>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-card-foreground/90">Machine Model</TableHead>
-                          <TableHead className="text-card-foreground/90">Machine S/N</TableHead>
-                          <TableHead className="text-card-foreground/90">Ctl. Box Model</TableHead>
-                          <TableHead className="text-card-foreground/90">Ctl. Box S/N</TableHead>
-                          <TableHead className="text-card-foreground/90">Warranty</TableHead>
-                          <TableHead className="text-card-foreground/90">Applicant</TableHead>
-                          <TableHead className="text-right text-card-foreground/90">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentSearchItems.map((item, idx) => (
-                          <TableRow key={`${item.reportId}-${item.serialNo || idx}-${item.ctlBoxSerial || idx}`}>
-                            <TableCell className="text-card-foreground/80">{item.machineModel || 'N/A'}</TableCell>
-                            <TableCell className="text-card-foreground/80">{item.serialNo || 'N/A'}</TableCell>
-                            <TableCell className="text-card-foreground/80">{item.ctlBoxModel || 'N/A'}</TableCell>
-                            <TableCell className="text-card-foreground/80">{item.ctlBoxSerial || 'N/A'}</TableCell>
-                            <TableCell
-                              className={cn(
-                                "font-medium",
-                                item.warrantyStatus === "Expired" ? "text-destructive" : "text-green-600"
-                              )}
-                            >
-                              {item.warrantyStatus}
-                            </TableCell>
-                            <TableCell className="truncate max-w-xs text-card-foreground/80">{item.applicantName || 'N/A'}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="outline" size="sm" asChild>
-                                <Link href={`/dashboard/warranty-management/edit-installation-report/${item.reportId}`}>
-                                  <FileEdit className="mr-1.5 h-3.5 w-3.5" /> View Report
-                                </Link>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                      <TableCaption className="text-card-foreground/70 py-4">
-                        Displaying {indexOfFirstSearchItem + 1} - {Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching machine/control box entries.
-                      </TableCaption>
-                    </Table>
-                  </div>
-
-                {totalSearchPages > 1 && (
-                    <div className="flex items-center justify-center space-x-2 py-4 mt-4">
-                    <Button variant="outline" size="sm" onClick={() => handleSearchPageChange(Math.max(1, currentSearchPage - 1))} disabled={currentSearchPage === 1}><ChevronLeft className="h-4 w-4" /> Previous</Button>
-                    {getSearchPageNumbers().map((page, index) =>
-                        typeof page === 'number' ? (
-                        <Button key={`search-page-${page}`} variant={currentSearchPage === page ? 'default' : 'outline'} size="sm" onClick={() => handleSearchPageChange(page)} className="w-9 h-9 p-0">{page}</Button>
-                        ) : (<span key={`ellipsis-search-${index}`} className="px-2 py-1 text-sm">{page}</span>)
-                    )}
-                    <Button variant="outline" size="sm" onClick={() => handleSearchPageChange(Math.min(totalSearchPages, currentSearchPage + 1))} disabled={currentSearchPage === totalSearchPages}>Next <ChevronRight className="h-4 w-4" /></Button>
+            {currentSearchItems.length > 0 && !isSearching && (
+                <div className="space-y-6 mt-8">
+                     <h3 className="text-lg font-semibold text-card-foreground mt-6 mb-2 text-center">
+                        Search Results for &quot;{displayedSearchTerm}&quot; in {selectedYear === "All Years" ? "All Years" : selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching entries):
+                    </h3>
+                      <div className="rounded-md border">
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead className="text-card-foreground/90">Machine Model</TableHead>
+                            <TableHead className="text-card-foreground/90">Machine S/N</TableHead>
+                            <TableHead className="text-card-foreground/90">Ctl. Box Model</TableHead>
+                            <TableHead className="text-card-foreground/90">Ctl. Box S/N</TableHead>
+                            <TableHead className="text-card-foreground/90">Warranty</TableHead>
+                            <TableHead className="text-card-foreground/90">Applicant</TableHead>
+                            <TableHead className="text-right text-card-foreground/90">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {currentSearchItems.map((item, idx) => (
+                            <TableRow key={`${item.reportId}-${item.serialNo || idx}-${item.ctlBoxSerial || idx}`}>
+                                <TableCell className="text-card-foreground/80">{item.machineModel || 'N/A'}</TableCell>
+                                <TableCell className="text-card-foreground/80">{item.serialNo || 'N/A'}</TableCell>
+                                <TableCell className="text-card-foreground/80">{item.ctlBoxModel || 'N/A'}</TableCell>
+                                <TableCell className="text-card-foreground/80">{item.ctlBoxSerial || 'N/A'}</TableCell>
+                                <TableCell
+                                className={cn(
+                                    "font-medium",
+                                    item.warrantyStatus === "Expired" ? "text-destructive" : "text-green-600"
+                                )}
+                                >
+                                {item.warrantyStatus}
+                                </TableCell>
+                                <TableCell className="truncate max-w-xs text-card-foreground/80">{item.applicantName || 'N/A'}</TableCell>
+                                <TableCell className="text-right">
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/dashboard/warranty-management/edit-installation-report/${item.reportId}`}>
+                                    <FileEdit className="mr-1.5 h-3.5 w-3.5" /> View Report
+                                    </Link>
+                                </Button>
+                                </TableCell>
+                            </TableRow>
+                            ))}
+                        </TableBody>
+                        <TableCaption className="text-card-foreground/70 py-4">
+                            Displaying {indexOfFirstSearchItem + 1} - {Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching machine/control box entries.
+                        </TableCaption>
+                        </Table>
                     </div>
-                )}
-            </div>
-          )}
-        </CardContent>
+
+                    {totalSearchPages > 1 && (
+                        <div className="flex items-center justify-center space-x-2 py-4 mt-4">
+                        <Button variant="outline" size="sm" onClick={() => handleSearchPageChange(Math.max(1, currentSearchPage - 1))} disabled={currentSearchPage === 1}><ChevronLeft className="h-4 w-4" /> Previous</Button>
+                        {getSearchPageNumbers().map((page, index) =>
+                            typeof page === 'number' ? (
+                            <Button key={`search-page-${page}`} variant={currentSearchPage === page ? 'default' : 'outline'} size="sm" onClick={() => handleSearchPageChange(page)} className="w-9 h-9 p-0">{page}</Button>
+                            ) : (<span key={`ellipsis-search-${index}`} className="px-2 py-1 text-sm">{page}</span>)
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => handleSearchPageChange(Math.min(totalSearchPages, currentSearchPage + 1))} disabled={currentSearchPage === totalSearchPages}>Next <ChevronRight className="h-4 w-4" /></Button>
+                        </div>
+                    )}
+                </div>
+            )}
+            </CardContent>
+        </div>
       </Card>
 
-      <Card 
-        className="shadow-xl max-w-6xl mx-auto"
+      <Card
+        className="shadow-xl mx-auto"
       >
          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
            <div className="flex-1 text-center sm:text-left">
@@ -572,4 +574,3 @@ export default function WarrantySearchPage() {
     </div>
   );
 }
-
