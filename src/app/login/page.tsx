@@ -30,11 +30,9 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-const logoUrl = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
-
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading: authLoading, signInWithGoogle, login: contextLogin } = useAuth();
+  const { user, loading: authLoading, signInWithGoogle, login: contextLogin, companyLogoUrl } = useAuth();
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -149,7 +147,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
             <Image
-              src={logoUrl}
+              src={companyLogoUrl}
               alt="LC Management System Logo"
               width={56}
               height={56}
