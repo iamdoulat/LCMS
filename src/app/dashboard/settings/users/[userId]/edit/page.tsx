@@ -129,7 +129,7 @@ export default function EditUserPage() {
   const canEditRole = (currentUserRoles?.includes('Super Admin') || currentUserRoles?.includes('Admin')) && (!userData?.role?.includes('Super Admin') || userData.id === currentUser?.uid);
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
        <div className="mb-6">
             <Link href="/dashboard/settings/users" passHref>
                 <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to User List</Button>
