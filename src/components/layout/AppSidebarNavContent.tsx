@@ -250,41 +250,41 @@ export function AppSidebarNavContent() {
 
   return (
     <>
-<SidebarHeader className="border-b sticky top-0 bg-sidebar z-50">
-  <div className="flex items-center justify-between p-2 gap-2">
-    <Link href="/dashboard" className="flex items-center gap-2 min-w-0 flex-1">
-      <Image
-        src={companyLogoUrlFromSettings}
-        alt="Company Logo"
-        width={32}
-        height={32}
-        className="rounded-sm object-contain flex-shrink-0"
-        priority
-        data-ai-hint="company logo"
-      />
-      <span
-        className={cn(
-          "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
-          "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-        )}
-      >
-        {displayCompanyNameFromSettings}
-      </span>
-    </Link>
-    {!sidebar.isMobile && (
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex-shrink-0"
-        onClick={sidebar.toggleSidebar}
-        aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
-      >
-        {sidebar.state === 'expanded' ? <PanelLeft className="h-5 w-5" /> : <PanelRight className="h-5 w-5" />}
-        <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
-      </Button>
-    )}
-  </div>
-</SidebarHeader>
+      <SidebarHeader className="border-b sticky top-0 bg-sidebar z-50">
+        <div className="flex items-center justify-between p-2 gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2 min-w-0 flex-1">
+            <Image
+              src={companyLogoUrlFromSettings}
+              alt="Company Logo"
+              width={32}
+              height={32}
+              className="rounded-sm object-contain flex-shrink-0"
+              priority
+              data-ai-hint="company logo"
+            />
+            <span
+              className={cn(
+                "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
+                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+              )}
+            >
+              {displayCompanyNameFromSettings}
+            </span>
+          </Link>
+          {!sidebar.isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex-shrink-0"
+              onClick={sidebar.toggleSidebar}
+              aria-label={sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}
+            >
+              {sidebar.state === 'expanded' ? <PanelLeft className="h-5 w-5" /> : <PanelRight className="h-5 w-5" />}
+              <span className="sr-only">{sidebar.state === 'expanded' ? "Collapse Sidebar" : "Expand Sidebar"}</span>
+            </Button>
+          )}
+        </div>
+      </SidebarHeader>
       <SidebarContent className="p-0">
           {canViewDashboard && (
             <SidebarMenu key="main-navigation" className="gap-0 px-2 py-2">
