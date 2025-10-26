@@ -412,14 +412,7 @@ export default function WarrantySearchPage() {
 
           {!displayedSearchTerm && !isSearching && !searchError && (
             <div className="text-center text-card-foreground/70 py-10">
-                <Image
-                  src="https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/search_ani.gif?alt=media&token=cce7e0dd-9ff9-4af9-8e75-254699bd8283"
-                  alt="Search Animation"
-                  width={150}
-                  height={150}
-                  className="mx-auto mb-4"
-                  unoptimized data-ai-hint="search animation"
-                />
+                <iframe src="https://lottie.host/embed/1b954d50-dbd6-4e85-a947-9c8fc4fa093c/Jkw6b9BbW1.lottie" style={{border: 'none', width: '150px', height: '150px', margin: '0 auto 1rem'}}></iframe>
                 <p className="text-lg">
                   Enter terms above to search warranty-related information for{' '}
                   {selectedYear === "All Years" ? "all years" : selectedYear}.
