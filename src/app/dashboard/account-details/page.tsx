@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag } from '@/types';
-import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, endOfDay } from 'date-fns';
+import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, endOfDay, isFuture } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
@@ -271,6 +271,8 @@ export default function AccountDetailsPage() {
     
     const days = eachDayOfInterval({ start: attendanceDateRange.from, end: attendanceDateRange.to || attendanceDateRange.from });
     return days.map(day => {
+        if (isFuture(day)) return null;
+
         const attendanceRecord = monthlyAttendance.find(att => format(parseISO(att.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
         if (attendanceRecord) {
             return attendanceRecord;
@@ -287,11 +289,12 @@ export default function AccountDetailsPage() {
 
         if (getDay(day) === 5) return { date: day.toISOString(), flag: 'W' as AttendanceFlag }; // Friday
 
+        // Only mark as absent if the day is not in the future.
         if (day <= new Date()) {
           return { date: day.toISOString(), flag: 'A' as AttendanceFlag };
         }
 
-        return null; // Future working day
+        return null; // Future working day with no record yet
     }).filter(Boolean);
   }, [attendanceDateRange, monthlyAttendance, holidays, leaves, visits]);
 
