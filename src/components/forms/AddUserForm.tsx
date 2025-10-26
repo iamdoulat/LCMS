@@ -116,7 +116,7 @@ export function AddUserForm() {
                 <FormLabel className="text-base">User Roles</FormLabel>
                 <FormDescription>Select the roles to assign to this user.</FormDescription>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                 {userRoles.map((role) => (
                   <FormField
                     key={role}
