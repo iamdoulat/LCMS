@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Save, Image as ImageIcon, Crop as CropIcon } from 'lucide-react';
+import { Loader2, Save, Image as ImageIcon, Crop as CropIcon, Settings } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { firestore, storage } from '@/lib/firebase/config';
@@ -20,12 +20,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const PI_SETTINGS_COLLECTION = 'pi_layout_settings';
 const PI_SETTINGS_DOC_ID = 'main_settings';
@@ -35,7 +35,8 @@ const piSettingsSchema = z.object({
   address: z.string().optional(),
   email: z.string().email("Invalid email address").optional().or(z.literal('')),
   phone: z.string().optional(),
-  piLogoUrl: z.string().url().optional().or(z.literal('')), // For storing the final URL
+  piLogoUrl: z.string().url("Invalid URL format").optional().or(z.literal('')),
+  hidePiHeaderLogo: z.boolean().optional().default(false),
 });
 
 type PiSettingsFormValues = z.infer<typeof piSettingsSchema>;
@@ -46,7 +47,6 @@ export default function PISettingsPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
 
-  // States for image cropping
   const [imgSrc, setImgSrc] = React.useState('');
   const [crop, setCrop] = React.useState<Crop>();
   const [completedCrop, setCompletedCrop] = React.useState<PixelCrop>();
@@ -56,7 +56,6 @@ export default function PISettingsPage() {
   const [isUploading, setIsUploading] = React.useState(false);
   const [piLogoPreviewUrl, setPiLogoPreviewUrl] = React.useState<string | undefined>(undefined);
 
-
   const form = useForm<PiSettingsFormValues>({
     resolver: zodResolver(piSettingsSchema),
     defaultValues: {
@@ -65,6 +64,7 @@ export default function PISettingsPage() {
       email: '',
       phone: '',
       piLogoUrl: '',
+      hidePiHeaderLogo: false,
     },
   });
 
@@ -76,7 +76,10 @@ export default function PISettingsPage() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          form.reset(data);
+          form.reset({
+              ...data,
+              hidePiHeaderLogo: data.hidePiHeaderLogo ?? false,
+          });
           if (data.piLogoUrl) {
             setPiLogoPreviewUrl(data.piLogoUrl);
           }
@@ -94,7 +97,7 @@ export default function PISettingsPage() {
 
   const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setCrop(undefined); // Reset crop state
+      setCrop(undefined);
       const file = e.target.files[0];
       setSelectedFile(file);
       const reader = new FileReader();
@@ -103,13 +106,13 @@ export default function PISettingsPage() {
         setIsCroppingDialogOpen(true);
       });
       reader.readAsDataURL(file);
-      e.target.value = ''; // Reset file input
+      e.target.value = '';
     }
   };
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
-    const aspect = 413 / 28; // Aspect ratio for the logo
+    const aspect = 413 / 28;
     const crop = centerCrop(
       makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height),
       width, height
@@ -130,7 +133,7 @@ export default function PISettingsPage() {
     if (croppedImageBlob) {
       const tempUrl = URL.createObjectURL(croppedImageBlob);
       setPiLogoPreviewUrl(tempUrl);
-      setSelectedFile(croppedImageBlob); // Important: Use the cropped blob for submission
+      setSelectedFile(croppedImageBlob);
       setIsCroppingDialogOpen(false);
       Swal.fire("Logo Staged", "New logo is ready. Click 'Save Settings' to apply the change.", "info");
     } else {
@@ -144,7 +147,6 @@ export default function PISettingsPage() {
     let finalLogoUrl = form.getValues('piLogoUrl');
 
     try {
-      // If a new file was selected and cropped, upload it
       if (selectedFile) {
         setIsUploading(true);
         const storageRef = ref(storage, `piLayoutSettings/pi_logo.jpg`);
@@ -155,7 +157,7 @@ export default function PISettingsPage() {
 
       const dataToSave = {
         ...data,
-        piLogoUrl: finalLogoUrl, // Use the new or existing URL
+        piLogoUrl: finalLogoUrl,
         updatedAt: serverTimestamp(),
       };
 
@@ -170,7 +172,6 @@ export default function PISettingsPage() {
         showConfirmButton: false,
       });
 
-      // Clear the file state after successful save
       setSelectedFile(null);
 
     } catch (error) {
@@ -248,27 +249,75 @@ export default function PISettingsPage() {
                     </DialogContent>
                 </Dialog>
 
-                <FormItem>
-                  <Label>PI Header Logo</Label>
-                  <div className="flex items-center gap-4">
-                      <div className="w-48 h-auto aspect-[413/28] rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                          {piLogoPreviewUrl ? (
-                              <Image
-                                src={piLogoPreviewUrl}
-                                alt="PI logo preview"
-                                width={413}
-                                height={28}
-                                className="object-contain"
-                                data-ai-hint="company logo"
-                              />
-                          ) : (
-                              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                          )}
-                      </div>
-                      <Input id="pi-logo-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" disabled={isReadOnly} />
-                  </div>
-                  <FormDescription>Upload a 413x28 pixels logo for the PI header.</FormDescription>
-                </FormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                    <div className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="hidePiHeaderLogo"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                                <FormControl>
+                                    <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    id="hidePiHeaderLogo"
+                                    disabled={isReadOnly}
+                                    />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel htmlFor="hidePiHeaderLogo" className="hover:cursor-pointer">
+                                    Hide PI Header Logo
+                                    </FormLabel>
+                                    <FormDescription>
+                                    If checked, the logo will not be printed on the PI header.
+                                    </FormDescription>
+                                </div>
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="piLogoUrl"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>External PI Header Logo URL</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                        type="url"
+                                        placeholder="https://example.com/logo.png"
+                                        {...field}
+                                        value={field.value || ""}
+                                        disabled={isReadOnly}
+                                        />
+                                    </FormControl>
+                                    <FormDescription>Use this URL if no file is uploaded.</FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                     <FormItem>
+                        <Label>PI Header Logo</Label>
+                        <div className="flex items-center gap-4">
+                            <div className="w-48 h-auto aspect-[413/28] rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                                {piLogoPreviewUrl ? (
+                                    <Image
+                                        src={piLogoPreviewUrl}
+                                        alt="PI logo preview"
+                                        width={413}
+                                        height={28}
+                                        className="object-contain"
+                                        data-ai-hint="company logo"
+                                    />
+                                ) : (
+                                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                )}
+                            </div>
+                            <Input id="pi-logo-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" disabled={isReadOnly} />
+                        </div>
+                        <FormDescription>Upload a 413x28 pixels logo for the PI header.</FormDescription>
+                     </FormItem>
+                </div>
 
 
               <Button type="submit" disabled={isSubmitting || isReadOnly}>
@@ -289,4 +338,3 @@ export default function PISettingsPage() {
     </div>
   );
 }
-
