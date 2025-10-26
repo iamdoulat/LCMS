@@ -40,8 +40,8 @@ interface WarrantySearchResultItem {
 
 const WarrantySearchSkeleton = () => (
     <div className="space-y-8">
-        <Card className="shadow-xl"><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
-        <Card className="shadow-xl">
+        <Card className="shadow-xl max-w-6xl mx-auto"><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+        <Card className="shadow-xl max-w-6xl mx-auto">
             <CardHeader><Skeleton className="h-8 w-1/3" /><Skeleton className="h-4 w-1/2 mt-2" /></CardHeader>
             <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -418,10 +418,10 @@ export default function WarrantySearchPage() {
                 </div>
             )}
 
-            {currentSearchItems.length > 0 && !isSearching && (
+            {currentSearchItems.length > 0 && !isSearching && !searchError && (
                 <div className="space-y-6 mt-8">
                      <h3 className="text-lg font-semibold text-card-foreground mt-6 mb-2 text-center">
-                        Search Results for &quot;{displayedSearchTerm}&quot; in {selectedYear === "All Years" ? "All Years" : selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching entries):
+                        Search Results for &quot;{displayedSearchTerm || 'All Demo Machines'}&quot; in {selectedYear === "All Years" ? "All Years" : selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching entries):
                     </h3>
                       <div className="rounded-md border">
                         <Table>
