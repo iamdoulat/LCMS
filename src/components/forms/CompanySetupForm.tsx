@@ -27,7 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { getCroppedImg } from '@/lib/image-utils';
 
 
-const COMPANY_PROFILE_COLLECTION = 'company_profile';
+const COMPANY_PROFILE_COLLECTION = 'financial_settings';
 const COMPANY_PROFILE_DOC_ID = 'main_settings';
 
 interface CompanySetupProfile {
@@ -62,7 +62,7 @@ const companySetupSchema = z.object({
 type CompanySetupFormValues = z.infer<typeof companySetupSchema>;
 
 const DEFAULT_COMPANY_NAME = 'Smart Solution';
-const DEFAULT_ADDRESS = 'House#50/A, Road#10, Sector#10, Uttara Model Town, Dhaka-1230';
+const DEFAULT_ADDRESS = 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230';
 const DEFAULT_EMAIL = 'info@smartsolution-bd.com';
 const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
@@ -232,6 +232,51 @@ export function CompanySetupForm() {
     }
   }
 
+  const handleCropAndUpload = async (
+    imgRefParam: React.RefObject<HTMLImageElement>,
+    completedCrop: PixelCrop | undefined,
+    selectedFileParam: File | null,
+    setFile: React.Dispatch<React.SetStateAction<File | null>>,
+    setUrl: React.Dispatch<React.SetStateAction<string | undefined>>,
+    setCropping: React.Dispatch<React.SetStateAction<boolean>>
+  ) => {
+    if (!completedCrop || !imgRefParam.current || !selectedFileParam) {
+        Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
+        return;
+    }
+    setIsUploading(true);
+    try {
+        const croppedImageBlob = await getCroppedImg(
+            imgRefParam.current,
+            completedCrop,
+            selectedFileParam.name
+        );
+        if (!croppedImageBlob) {
+            throw new Error("Failed to create cropped image blob.");
+        }
+        
+        // This is a temporary preview URL. The actual upload happens on form submission.
+        const tempUrl = URL.createObjectURL(croppedImageBlob);
+        setUrl(tempUrl);
+        setFile(croppedImageBlob);
+        setCropping(false);
+        
+        Swal.fire({
+            title: "Logo Staged",
+            text: "Your new logo is ready. Click 'Save Settings' to apply it.",
+            icon: "info",
+            timer: 3000,
+            showConfirmButton: false,
+        });
+    } catch (err: any) {
+        console.error("Error handling crop and upload:", err);
+        Swal.fire("Upload Failed", `Failed to prepare image: ${err.message}`, "error");
+    } finally {
+        setIsUploading(false);
+    }
+  };
+
+
   if (isLoadingData || authLoading) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -309,7 +354,7 @@ export function CompanySetupForm() {
             )}
             <DialogFooter>
                 <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                <Button onClick={() => handleCropAndSet(companyLogoImgRef, companyLogoCompletedCrop, companyLogoSelectedFile, setCompanyLogoSelectedFile, setCompanyLogoUrl, setIsCompanyLogoCropping)}>
+                <Button onClick={() => handleCropAndUpload(companyLogoImgRef, companyLogoCompletedCrop, companyLogoSelectedFile, setCompanyLogoSelectedFile, setCompanyLogoUrl, setIsCompanyLogoCropping)}>
                     <CropIcon className="mr-2 h-4 w-4"/>Set Logo
                 </Button>
             </DialogFooter>
@@ -327,7 +372,7 @@ export function CompanySetupForm() {
             )}
             <DialogFooter>
                 <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
-                <Button onClick={handleCropAndUpload} disabled={isUploading || !invoiceLogoCompletedCrop?.width}>
+                <Button onClick={() => handleCropAndUpload(invoiceLogoImgRef, invoiceLogoCompletedCrop, invoiceLogoSelectedFile, setInvoiceLogoSelectedFile, setInvoiceLogoUrl, setIsInvoiceLogoCropping)} disabled={isUploading || !invoiceLogoCompletedCrop?.width}>
                     {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4"/>Set Logo</>}
                 </Button>
             </DialogFooter>
@@ -339,27 +384,5 @@ export function CompanySetupForm() {
     function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>, aspect: number, setCropFn: React.Dispatch<React.SetStateAction<Crop | undefined>>) {
         const { width, height } = e.currentTarget;
         setCropFn(centerCrop(makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height), width, height));
-    }
-
-    async function handleCropAndSet(
-        imgRef: React.RefObject<HTMLImageElement>,
-        completedCrop: PixelCrop | undefined,
-        selectedFile: File | null,
-        setFile: React.Dispatch<React.SetStateAction<File | null>>,
-        setUrl: React.Dispatch<React.SetStateAction<string | undefined>>,
-        setCropping: React.Dispatch<React.SetStateAction<boolean>>
-    ) {
-        if (!completedCrop || !imgRef.current || !selectedFile) {
-            Swal.fire("Error", "Could not process image crop.", "error");
-            return;
-        }
-        const croppedImageBlob = await getCroppedImg(imgRef.current, completedCrop, selectedFile.name);
-        if (croppedImageBlob) {
-            setUrl(URL.createObjectURL(croppedImageBlob));
-            setFile(croppedImageBlob);
-            setCropping(false);
-        } else {
-            Swal.fire("Error", "Failed to create cropped image.", "error");
-        }
     }
 }
