@@ -16,7 +16,7 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserDocumentForAdmin, UserRole } from '@/types';
 import { userRoles } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 
