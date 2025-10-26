@@ -42,6 +42,7 @@ import Link from 'next/link';
 
 const accountDetailsSchema = z.object({
   displayName: z.string().min(1, "Display name cannot be empty.").max(50, "Display name is too long."),
+  photoURL: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
 });
 
 type AccountDetailsFormValues = z.infer<typeof accountDetailsSchema>;
@@ -345,7 +346,7 @@ export default function AccountDetailsPage() {
 
   const form = useForm<AccountDetailsFormValues>({
     resolver: zodResolver(accountDetailsSchema),
-    defaultValues: { displayName: '' },
+    defaultValues: { displayName: '', photoURL: '' },
   });
 
   useEffect(() => {
@@ -367,7 +368,7 @@ export default function AccountDetailsPage() {
 
   useEffect(() => {
     if (user) {
-      form.reset({ displayName: user.displayName || '' });
+      form.reset({ displayName: user.displayName || '', photoURL: user.photoURL || '' });
     }
   }, [user, form]);
   
@@ -584,32 +585,26 @@ export default function AccountDetailsPage() {
         const downloadURL = await getDownloadURL(snapshot.ref);
 
         await updateProfile(auth.currentUser, { photoURL: downloadURL });
-        await auth.currentUser.reload(); // Force refresh of the user object to get new photoURL
-
-        const userDocRef = doc(firestore, "users", user.uid);
-        await updateDoc(userDocRef, { photoURL: downloadURL, updatedAt: serverTimestamp() });
+        form.setValue('photoURL', downloadURL, { shouldDirty: true }); // Update form state
         
-        if (setAuthUser && auth.currentUser) {
-            setAuthUser(auth.currentUser); // Update context with reloaded user
-        }
-
+        // This will be saved to Firestore on form submit
+        
         setIsCroppingDialogOpen(false);
         Swal.fire({
-            title: "Profile Picture Updated",
-            icon: "success",
-            timer: 2000,
-            showConfirmButton: false,
+            title: "Image Staged",
+            text: "Your new profile picture is ready. Click 'Save Changes' to apply it.",
+            icon: "info"
         });
 
     } catch (err: any) {
-        console.error("Error uploading profile picture:", err);
-        Swal.fire("Upload Failed", `Failed to upload image: ${err.message}`, "error");
+        console.error("Error staging profile picture:", err);
+        Swal.fire("Upload Failed", `Failed to stage image: ${err.message}`, "error");
     } finally {
         setIsUploading(false);
     }
   };
 
-  const onSubmitDisplayName = async (data: AccountDetailsFormValues) => {
+  const onSubmitProfile = async (data: AccountDetailsFormValues) => {
     if (!auth.currentUser) {
       Swal.fire("Error", "No user logged in.", "error");
       return;
@@ -617,18 +612,28 @@ export default function AccountDetailsPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      await updateProfile(auth.currentUser, { displayName: data.displayName });
+      await updateProfile(auth.currentUser, { 
+        displayName: data.displayName,
+        photoURL: data.photoURL,
+      });
+
       if (auth.currentUser.uid) {
         const userDocRef = doc(firestore, "users", auth.currentUser.uid);
-        await updateDoc(userDocRef, { displayName: data.displayName, updatedAt: serverTimestamp() });
+        await updateDoc(userDocRef, { 
+            displayName: data.displayName, 
+            photoURL: data.photoURL,
+            updatedAt: serverTimestamp() 
+        });
       }
+      
+      await auth.currentUser.reload();
       if (setAuthUser && auth.currentUser) {
-        await auth.currentUser.reload();
         setAuthUser({ ...auth.currentUser });
       }
+
       Swal.fire({
         title: "Profile Updated",
-        text: "Display name updated successfully.",
+        text: "Your profile has been updated successfully.",
         icon: "success",
         timer: 2000,
         showConfirmButton: false,
@@ -720,13 +725,13 @@ export default function AccountDetailsPage() {
                     <DialogFooter>
                         <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
                         <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
-                            {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Upload</>}
+                            {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Processing...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Set</>}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
               </Dialog>
 
-              <form onSubmit={form.handleSubmit(onSubmitDisplayName)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onSubmitProfile)} className="space-y-6">
                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-x-8 gap-y-6 items-center">
                     <div className="lg:col-span-1 flex items-center gap-4">
                        <Avatar className="h-24 w-24 border-2 border-primary shadow-md">
@@ -763,6 +768,20 @@ export default function AccountDetailsPage() {
                             </FormControl>
                             <FormDescription>Your email address cannot be changed.</FormDescription>
                         </FormItem>
+                        <FormField
+                            control={form.control}
+                            name="photoURL"
+                            render={({ field }) => (
+                                <FormItem className="sm:col-span-2">
+                                <FormLabel>External Profile Picture URL</FormLabel>
+                                <FormControl>
+                                    <Input type="url" placeholder="https://example.com/photo.jpg" {...field} />
+                                </FormControl>
+                                <FormDescription>Or, provide a URL for your profile picture.</FormDescription>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     </div>
 
                     <div className="lg:col-span-1">
@@ -839,7 +858,7 @@ export default function AccountDetailsPage() {
 
                 <div className="flex justify-start pt-2">
                   <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
-                    {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Name</>)}
+                    {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Changes</>)}
                   </Button>
                 </div>
               </form>
