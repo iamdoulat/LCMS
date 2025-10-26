@@ -135,7 +135,7 @@ export default function EditUserPage() {
                 <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to User List</Button>
             </Link>
         </div>
-      <Card className="max-w-2xl mx-auto shadow-xl">
+      <Card className="max-w-7xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl font-bold">
             <UserCog className="h-7 w-7 text-primary" />{isReadOnly ? 'View User' : 'Edit User'}
@@ -165,7 +165,7 @@ export default function EditUserPage() {
                                     Select the roles to assign to this user.
                                 </FormDescription>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                                 {userRoles.map((role) => (
                                     <FormField
                                         key={role}
@@ -176,7 +176,7 @@ export default function EditUserPage() {
                                         return (
                                             <FormItem
                                             key={role}
-                                            className="flex flex-row items-start space-x-3 space-y-0"
+                                            className="flex flex-row items-center space-x-3 space-y-0"
                                             >
                                             <FormControl>
                                                 <Checkbox
