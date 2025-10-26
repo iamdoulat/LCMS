@@ -4,7 +4,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
 import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle } from 'lucide-react';
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
@@ -234,37 +234,39 @@ export default function AccountDetailsPage() {
     }
   }, [user, employeeData, isEmployeeDataLoading]);
 
-  React.useEffect(() => {
-    const fetchAttendance = async () => {
-      if (!user || !employeeData?.id || !attendanceDateRange?.from) {
-        setMonthlyAttendance([]); // Clear data if inputs are missing
-        setIsAttendanceLoading(false);
-        return;
-      }
-      setIsAttendanceLoading(true);
-      try {
-        const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
-        const toDate = format(attendanceDateRange.to || attendanceDateRange.from, "yyyy-MM-dd'T'23:59:59.999xxx");
-        
-        const q = query(
-          collection(firestore, 'attendance'),
-          where('employeeId', '==', employeeData.id),
-          where('date', '>=', fromDate),
-          where('date', '<=', toDate),
-          orderBy('date', 'desc')
-        );
+  const fetchAttendanceForRange = useCallback(async () => {
+    if (!user || !employeeData?.id || !attendanceDateRange?.from) {
+      setMonthlyAttendance([]);
+      setIsAttendanceLoading(false);
+      return;
+    }
+    setIsAttendanceLoading(true);
+    try {
+      const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
+      const toDate = format(attendanceDateRange.to || attendanceDateRange.from, "yyyy-MM-dd'T'23:59:59.999xxx");
 
-        const snapshot = await getDocs(q);
-        const attendanceData = snapshot.docs.map(doc => ({...doc.data(), id: doc.id} as AttendanceDocument));
-        setMonthlyAttendance(attendanceData);
-      } catch (err) {
-        console.error("Error fetching filtered attendance:", err);
-      } finally {
-        setIsAttendanceLoading(false);
-      }
-    };
-    fetchAttendance();
+      const q = query(
+        collection(firestore, 'attendance'),
+        where('employeeId', '==', employeeData.id),
+        where('date', '>=', fromDate),
+        where('date', '<=', toDate),
+        orderBy('date', 'desc')
+      );
+
+      const snapshot = await getDocs(q);
+      const attendanceData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as AttendanceDocument));
+      setMonthlyAttendance(attendanceData);
+    } catch (err) {
+      console.error("Error fetching filtered attendance:", err);
+    } finally {
+      setIsAttendanceLoading(false);
+    }
   }, [user, employeeData, attendanceDateRange]);
+
+  useEffect(() => {
+    fetchAttendanceForRange();
+  }, [fetchAttendanceForRange]);
+
 
   const displayedAttendance = useMemo(() => {
     if (!attendanceDateRange?.from) return [];
@@ -458,6 +460,7 @@ export default function AccountDetailsPage() {
                     };
                     await setDoc(docRef, dataToSet, { merge: true });
                     setDailyAttendance(dataToSet as AttendanceDocument);
+                    fetchAttendanceForRange();
                     Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
                 } else {
                     const currentDoc = await getDoc(docRef);
@@ -474,6 +477,7 @@ export default function AccountDetailsPage() {
                     };
                     await updateDoc(docRef, dataToSet);
                     setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
+                    fetchAttendanceForRange();
                     Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
                 }
             } catch (error: any) {
