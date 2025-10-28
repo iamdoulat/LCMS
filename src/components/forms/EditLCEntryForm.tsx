@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -292,6 +293,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const watchedTermsOfPay = watch("termsOfPay");
   const watchedStatus = watch("status");
   const isDeferredPayment = watchedTermsOfPay && watchedTermsOfPay.startsWith("Deferred");
+
+  const shipmentModeValue = getValues("shipmentMode");
+  let viaLabel = "Vessel/Flight Name";
+  if (shipmentModeValue === "Sea") {
+    viaLabel = "Vessel Name";
+  } else if (shipmentModeValue === "Air") {
+    viaLabel = "Flight Name";
+  }
 
   React.useEffect(() => {
     if (watchedTermsOfPay === "T/T In Advance") {
@@ -781,49 +790,49 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start pt-4">
             <FormField
+            control={control}
+            name="termsOfPay"
+            render={({ field }) => (
+              <FormItem className="space-y-3">
+                <FormLabel>Terms of Pay*</FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                  >
+                    {termsOfPayOptions.map((option) => (
+                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                        <FormControl><RadioGroupItem value={option} /></FormControl>
+                        <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                      </FormItem>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {isDeferredPayment && (
+            <FormField
               control={control}
-              name="termsOfPay"
+              name="paymentMaturityDate"
               render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Terms of Pay*</FormLabel>
+                <FormItem>
+                  <FormLabel>Payment Maturity Date (Optional)</FormLabel>
                   <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                    >
-                      {termsOfPayOptions.map((option) => (
-                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                          <FormControl><RadioGroupItem value={option} /></FormControl>
-                          <FormLabel className="font-normal text-sm">{option}</FormLabel>
-                        </FormItem>
-                      ))}
-                    </RadioGroup>
+                    <Textarea
+                      placeholder="Specify maturity details for deferred payment"
+                      {...field}
+                      value={field.value ?? ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {isDeferredPayment && (
-              <FormField
-                control={control}
-                name="paymentMaturityDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Payment Maturity Date (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Specify maturity details for deferred payment"
-                        {...field}
-                        value={field.value ?? ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            <FormField
+          )}
+          <FormField
               control={control}
               name="status"
               render={() => (
@@ -1767,3 +1776,4 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
