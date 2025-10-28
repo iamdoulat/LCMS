@@ -673,35 +673,31 @@ export default function TotalLCPage() {
                                   {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                             <Button variant="default" size="icon" className="h-7 w-7 rounded-full p-0 text-xs font-bold bg-green-500 hover:bg-green-600">
+                                            <Button variant="default" size="icon" className="h-7 w-7 rounded-full p-0 text-xs font-bold bg-green-500 hover:bg-green-600">
                                                 {getShipmentTermLabel(lc.shipmentTerms)}
-                                             </Button>
+                                            </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-2">
-                                             <p className="text-sm font-medium">{lc.shipmentTerms}</p>
+                                            <p className="text-sm font-medium">{lc.shipmentTerms}</p>
                                         </PopoverContent>
                                     </Popover>
                                   )}
-                                {lc.paymentMaturityDate && (
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant={"default"}
-                                        size="icon"
-                                        className={"h-7 w-7 rounded-full p-0 bg-green-500 hover:bg-green-600 text-white border-transparent"}
-                                      >
-                                        <Landmark className="h-4 w-4" />
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-2">
-                                      <div className="text-sm space-y-1">
-                                        <p className="font-semibold text-foreground">Payment Maturity Date</p>
-                                        <Separator className="my-1" />
-                                        <p>{lc.paymentMaturityDate}</p>
-                                      </div>
-                                    </PopoverContent>
-                                  </Popover>
-                                )}
+                                  {lc.paymentMaturityDate && (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="default" size="icon" className="h-7 w-7 rounded-full p-0 bg-green-500 hover:bg-green-600 text-white">
+                                                <Landmark className="h-4 w-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-2">
+                                            <div className="text-sm space-y-1">
+                                                <p className="font-semibold text-foreground">Payment Maturity Date</p>
+                                                <Separator className="my-1" />
+                                                <p>{lc.paymentMaturityDate}</p>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                  )}
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <Button
@@ -905,5 +901,7 @@ export default function TotalLCPage() {
 
 
 
+
+    
 
     
