@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { EditInventoryOrderForm } from '@/components/forms/EditInventoryOrderForm';
@@ -7,13 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
+import type { OrderDocument } from '@/types';
 
+interface EditPurchaseOrderFormProps {
+  initialData: OrderDocument;
+  orderId: string;
+}
 
-export function EditPurchaseOrderForm() {
-    return <EditInventoryOrderForm />;
+export function EditPurchaseOrderForm({ initialData, orderId }: EditPurchaseOrderFormProps) {
+    return <EditInventoryOrderForm initialData={initialData} orderId={orderId} />;
 }
 
 export default function EditNewPurchaseOrderPage() {
+  // This default export is for page-level components, which is not the case here.
+  // The primary export 'EditPurchaseOrderForm' is the one being used.
+  // This can be left as is or cleaned up, but it's not causing the current error.
   return (
     <div className="container mx-auto py-8">
       <Card className="max-w-screen-2xl mx-auto shadow-xl">
@@ -27,10 +34,9 @@ export default function EditNewPurchaseOrderPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <EditInventoryOrderForm />
+          {/* This part is illustrative; the page directly uses the form component */}
         </CardContent>
       </Card>
     </div>
   );
 }
-
