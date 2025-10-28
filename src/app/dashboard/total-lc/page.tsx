@@ -87,7 +87,6 @@ const sortOptions = [
 const currentSystemYear = new Date().getFullYear();
 const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
 
-
 const ALL_YEARS_VALUE = "__ALL_YEARS__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
 const ITEMS_PER_PAGE = 10;
@@ -171,6 +170,8 @@ export default function TotalLCPage() {
   const [filterShipmentDate, setFilterShipmentDate] = useState<Date | null>(null);
   const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('Shipment Pending');
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
+  const [filterTermsOfPay, setFilterTermsOfPay] = useState('');
+
 
   const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<DropdownOption[]>([]);
@@ -261,6 +262,7 @@ export default function TotalLCPage() {
     if (filterBeneficiaryId) {
       filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
     }
+    
     if (filterShipmentDate) {
       const targetDate = startOfDay(filterShipmentDate);
       filtered = filtered.filter(lc => {
@@ -273,6 +275,7 @@ export default function TotalLCPage() {
         }
       });
     }
+    
     if (filterStatus) {
       filtered = filtered.filter(lc => {
         if (Array.isArray(lc.status)) {
@@ -283,11 +286,14 @@ export default function TotalLCPage() {
         return false;
       });
     }
+    
     if (filterYear && filterYear !== ALL_YEARS_VALUE) {
       const yearNum = parseInt(filterYear);
       filtered = filtered.filter(lc => lc.year === yearNum);
     }
-
+    if (filterTermsOfPay) {
+      filtered = filtered.filter(lc => lc.termsOfPay === filterTermsOfPay);
+    }
 
     if (sortBy) {
       filtered.sort((a, b) => {
@@ -316,7 +322,7 @@ export default function TotalLCPage() {
     }
     setDisplayedLcEntries(filtered);
     setCurrentPage(1);
-  }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, sortBy, sortOrder]);
+  }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, filterTermsOfPay, sortBy, sortOrder]);
 
   const handleEditLC = (lcId: string) => {
     if (!lcId) {
@@ -375,6 +381,7 @@ export default function TotalLCPage() {
     setFilterLcNumber(''); setFilterApplicantId(''); setFilterBeneficiaryId('');
     setFilterShipmentDate(null); setFilterStatus('');
     setFilterYear(new Date().getFullYear().toString());
+    setFilterTermsOfPay('');
     setSortBy('lcIssueDate'); setSortOrder('desc');
     setCurrentPage(1);
   };
@@ -444,11 +451,34 @@ export default function TotalLCPage() {
     return null;
   };
 
+  const handleTrackDocument = (lc: LCEntryDocument) => {
+    const courier = lc.trackingCourier;
+    const number = lc.trackingNumber;
+
+    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
+        Swal.fire({ title: "Information Missing", text: "Courier or tracking number is not available for this entry.", icon: "info" });
+        return;
+    }
+
+    let url = "";
+    if (courier === "DHL") {
+        url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
+    } else if (courier === "FedEx") {
+        url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
+    }
+
+    if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+        Swal.fire({ title: "Courier Not Supported", text: "Tracking for the selected courier is not implemented.", icon: "warning" });
+    }
+  };
+
 
   return (
     <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
-        <CardHeader>
+        <CardHeader className="noprint">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className={cn(
@@ -479,15 +509,15 @@ export default function TotalLCPage() {
             </Alert>
           ) : (
             <div>
-              <Card className="mb-6 shadow-md p-4">
+              <Card className="mb-6 shadow-md p-4 noprint">
                 <CardHeader className="p-2 pb-4">
                   <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter &amp; Sort Options</CardTitle>
                 </CardHeader>
                 <CardContent className="p-2 space-y-4">
                  <Form {...filterForm}>
-                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
                     <div className="space-y-1">
-                      <label htmlFor="lcNumberFilter" className="text-sm font-medium">T/T OR L/C Number</label>
+                      <Label htmlFor="lcNumberFilter">T/T OR L/C Number</Label>
                       <Input
                         id="lcNumberFilter"
                         placeholder="Search by L/C No..."
@@ -496,7 +526,7 @@ export default function TotalLCPage() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label htmlFor="applicantFilter" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</label>
+                      <Label htmlFor="applicantFilter">Applicant</Label>
                       <Combobox
                         options={applicantOptions}
                         value={filterApplicantId}
@@ -508,7 +538,7 @@ export default function TotalLCPage() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label htmlFor="beneficiaryFilter" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</label>
+                      <Label htmlFor="beneficiaryFilter">Beneficiary</Label>
                       <Combobox
                         options={beneficiaryOptions}
                         value={filterBeneficiaryId}
@@ -520,7 +550,7 @@ export default function TotalLCPage() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label htmlFor="yearFilter" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year</label>
+                      <Label htmlFor="yearFilter">Year</Label>
                       <Select
                         value={filterYear === '' ? ALL_YEARS_VALUE : filterYear}
                         onValueChange={(v) => setFilterYear(v === ALL_YEARS_VALUE ? '' : v)}
@@ -532,22 +562,19 @@ export default function TotalLCPage() {
                       </Select>
                     </div>
                     <div className="space-y-1">
-                       <FormField
-                          control={filterForm.control}
-                          name="filterShipmentDate"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Latest Shipment Date (On/After)</FormLabel>
-                                <DatePickerField 
-                                    field={{...field, value: filterShipmentDate, onChange: setFilterShipmentDate, ref: () => {} }}
-                                    placeholder="MM/DD/YYYY"
-                                />
-                            </FormItem>
-                          )}
-                        />
+                      <Label htmlFor="termsOfPayFilter">Terms of Pay</Label>
+                        <Select value={filterTermsOfPay} onValueChange={setFilterTermsOfPay}>
+                            <SelectTrigger id="termsOfPayFilter">
+                                <SelectValue placeholder="All Terms"/>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">All Terms</SelectItem>
+                                {termsOfPayOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="space-y-1">
-                      <label htmlFor="statusFilter" className="text-sm font-medium flex items-center"><CheckSquare className="mr-1 h-4 w-4 text-muted-foreground"/>Status</label>
+                      <Label htmlFor="statusFilter">Status</Label>
                       <Select
                         value={filterStatus === '' ? ALL_STATUSES_VALUE : filterStatus}
                         onValueChange={(v) => setFilterStatus(v === ALL_STATUSES_VALUE ? '' : v as LCStatus | '')}
@@ -562,7 +589,7 @@ export default function TotalLCPage() {
                       </Select>
                     </div>
                     <div className="space-y-1">
-                        <label htmlFor="sortBy" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground"/>Sort By</label>
+                        <Label htmlFor="sortBy">Sort By</Label>
                         <Select value={sortBy} onValueChange={setSortBy}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>{sortOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
@@ -643,7 +670,7 @@ export default function TotalLCPage() {
                             <TableCell className="text-right px-2 sm:px-4">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                    <Button className="h-8 w-8 p-0 bg-green-500 hover:bg-green-600 text-white" disabled={!lc.id}>
+                                    <Button className="h-8 w-8 p-0" disabled={!lc.id || isReadOnly}>
                                         <span className="sr-only">Open menu</span>
                                         <MoreHorizontal className="h-4 w-4" />
                                     </Button>
@@ -673,7 +700,7 @@ export default function TotalLCPage() {
                                   {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="default" size="icon" className="h-7 w-7 rounded-full p-0 text-xs font-bold bg-green-500 hover:bg-green-600">
+                                            <Button variant="outline" size="sm" className="h-7 cursor-default">
                                                 {getShipmentTermLabel(lc.shipmentTerms)}
                                             </Button>
                                         </PopoverTrigger>
@@ -682,81 +709,18 @@ export default function TotalLCPage() {
                                         </PopoverContent>
                                     </Popover>
                                   )}
-                                  {lc.paymentMaturityDate && (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="default" size="icon" className="h-7 w-7 rounded-full p-0 bg-green-500 hover:bg-green-600 text-white">
-                                                <Landmark className="h-4 w-4" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-2">
-                                            <div className="text-sm space-y-1">
-                                                <p className="font-semibold text-foreground">Payment Maturity Date</p>
-                                                <Separator className="my-1" />
-                                                <p>{lc.paymentMaturityDate}</p>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                  )}
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                        variant={lc.etd && lc.eta ? "default" : "outline"}
-                                        size="icon"
-                                        className={cn(
-                                            "h-7 w-7 rounded-full p-0",
-                                            lc.etd && lc.eta && "bg-green-500 hover:bg-green-600 text-white border-transparent"
-                                        )}
-                                    >
-                                        <CalendarDays className="h-4 w-4" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-2">
-                                    <div className="text-sm space-y-1">
-                                        <p className="font-semibold text-foreground">Shipment Info</p>
-                                        <Separator className="my-1"/>
-                                        <p>ETD: <span className="font-medium">{formatDisplayDate(lc.etd)}</span></p>
-                                        <p>ETA: <span className="font-medium">{formatDisplayDate(lc.eta)}</span></p>
-                                    </div>
-                                  </PopoverContent>
-                                </Popover>
-                                <Button
-                                    variant={ (lc.shipmentMode === "Sea" && lc.vesselImoNumber) || (lc.shipmentMode === "Air" && lc.flightNumber) ? "default" : "outline" }
+                                  <Button
+                                    variant={lc.trackingCourier && lc.trackingNumber ? "default" : "outline"}
                                     size="sm"
-                                    onClick={() => {
-                                    let url;
-                                    if (lc.shipmentMode === "Sea" && lc.vesselImoNumber) {
-                                        url = `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}`;
-                                    } else if (lc.shipmentMode === "Air" && lc.flightNumber) {
-                                        url = `https://www.flightradar24.com/${lc.flightNumber}`;
-                                    }
-                                    handleOpenLink(url);
-                                    }}
-                                    disabled={!((lc.shipmentMode === "Sea" && lc.vesselImoNumber) || (lc.shipmentMode === "Air" && lc.flightNumber))}
-                                    title={lc.shipmentMode === "Sea" ? "Track Vessel" : lc.shipmentMode === "Air" ? "Track Flight" : "Track Shipment"}
+                                    onClick={() => handleTrackDocument(lc)}
+                                    disabled={!lc.trackingCourier || !lc.trackingNumber}
+                                    title="Track Original Document"
+                                    className="h-7"
                                 >
-                                    {lc.shipmentMode === "Sea" ? <Ship className="mr-1.5 h-3.5 w-3.5" /> : lc.shipmentMode === "Air" ? <Plane className="mr-1.5 h-3.5 w-3.5" /> : <Search className="mr-1.5 h-3.5 w-3.5" />}
-                                    {lc.shipmentMode === "Sea" ? "Vessel" : lc.shipmentMode === "Air" ? "Flight" : "Track"}
-                                </Button>
-                                <Button
-                                variant={lc.trackingCourier && lc.trackingNumber ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => {
-                                    let trackUrl = "";
-                                    if (lc.trackingCourier === "DHL" && lc.trackingNumber) {
-                                    trackUrl = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(lc.trackingNumber.trim())}&submit=1`;
-                                    } else if (lc.trackingCourier === "FedEx" && lc.trackingNumber) {
-                                    trackUrl = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(lc.trackingNumber.trim())}`;
-                                    }
-                                    handleOpenLink(trackUrl || undefined);
-                                }}
-                                disabled={!lc.trackingCourier || !lc.trackingNumber}
-                                title="Track Original Document"
-                                >
-                                {lc.trackingCourier === "DHL" ? <img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo"/> :
-                                lc.trackingCourier === "FedEx" ? <img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo"/> :
-                                <PackageCheck className="mr-1.5 h-3.5 w-3.5" />}
-                                {lc.trackingCourier ? lc.trackingCourier : "Docs"}
+                                    {lc.trackingCourier === "DHL" ? <img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo"/> :
+                                    lc.trackingCourier === "FedEx" ? <img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo"/> :
+                                    <PackageCheck className="mr-1.5 h-3.5 w-3.5" />}
+                                    Track Docs
                                 </Button>
                                 <Button
                                 variant={lc.finalLcUrl ? "default" : "outline"}
@@ -764,6 +728,7 @@ export default function TotalLCPage() {
                                 onClick={() => handleOpenLink(lc.finalLcUrl)}
                                 disabled={!lc.finalLcUrl}
                                 title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'}
+                                className="h-7"
                                 >
                                 <FileTextIcon className="mr-1.5 h-3.5 w-3.5" />
                                 {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
@@ -774,6 +739,7 @@ export default function TotalLCPage() {
                                 onClick={() => handleOpenLink(lc.finalPIUrl)}
                                 disabled={!lc.finalPIUrl}
                                 title="View Final Proforma Invoice"
+                                className="h-7"
                                 >
                                 <FileTextIcon className="mr-1.5 h-3.5 w-3.5" /> PI
                                 </Button>
@@ -783,6 +749,7 @@ export default function TotalLCPage() {
                                 onClick={() => handleOpenLink(lc.shippingDocumentsUrl)}
                                 disabled={!lc.shippingDocumentsUrl}
                                 title="View Shipping Documents"
+                                className="h-7"
                                 >
                                 DOC
                                 </Button>
@@ -792,6 +759,7 @@ export default function TotalLCPage() {
                                 onClick={() => handleOpenLink(lc.packingListUrl)}
                                 disabled={!lc.packingListUrl}
                                 title="View Packing List"
+                                className="h-7"
                                 >
                                 <FileTextIcon className="mr-1.5 h-3.5 w-3.5" /> PL
                                 </Button>
@@ -801,37 +769,72 @@ export default function TotalLCPage() {
                                 onClick={() => handleOpenLink(lc.purchaseOrderUrl)}
                                 disabled={!lc.purchaseOrderUrl}
                                 title="View OCS / Purchase Order"
+                                className="h-7"
                                 >
                                 OCS / PO
                                 </Button>
-                                {[
-                                    { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
-                                    { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
-                                    { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
-                                ].map((shipment, idx) => (
-                                    <Popover key={idx}>
+                                <Button
+                                    variant={lc.isFirstShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                        lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title={`1st Shipment Note: ${lc.firstShipmentNote || 'None'}`}
+                                >
+                                    1st
+                                </Button>
+                                <Button
+                                    variant={lc.isSecondShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                        lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title={`2nd Shipment Note: ${lc.secondShipmentNote || 'None'}`}
+                                >
+                                    2nd
+                                </Button>
+                                <Button
+                                    variant={lc.isThirdShipment ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                        lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                    )}
+                                    title={`3rd Shipment Note: ${lc.thirdShipmentNote || 'None'}`}
+                                >
+                                    3rd
+                                </Button>
+                                {isDeferredPayment && (
+                                    <Popover>
                                         <PopoverTrigger asChild>
-                                             <Button
-                                                variant={shipment.flag ? "default" : "outline"}
-                                                size="icon"
-                                                className={cn(
-                                                    "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                                    shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                                )}
-                                            >
-                                                {shipment.label}
+                                             <Button variant="outline" size="sm" className="h-7 cursor-default">
+                                                <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                                                Maturity
                                             </Button>
                                         </PopoverTrigger>
-                                        {shipment.note && (
-                                        <PopoverContent className="w-80">
-                                            <div className="space-y-2">
-                                                <h4 className="font-medium leading-none">{`${shipment.label} Shipment Note`}</h4>
-                                                <p className="text-sm text-muted-foreground">{shipment.note}</p>
-                                            </div>
+                                        <PopoverContent className="w-auto p-2">
+                                            <p className="text-sm font-medium">{lc.paymentMaturityDate || "Not Specified"}</p>
                                         </PopoverContent>
-                                        )}
                                     </Popover>
-                                ))}
+                                )}
+                                {(lc.firstPartialAmount || lc.firstPartialQty) && (
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button variant="outline" size="sm" className="h-7 cursor-default">
+                                          <Landmark className="mr-1.5 h-3.5 w-3.5" />
+                                          Partial Shipments
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-4 space-y-2 text-xs">
+                                        <p className="font-semibold text-sm mb-1">Partial Shipment Details</p>
+                                        {lc.firstPartialAmount || lc.firstPartialQty ? <p><strong className="font-medium">1st shipment: </strong> {formatCurrencyValue(lc.currency, lc.firstPartialAmount)} <span className="text-muted-foreground">({lc.firstPartialQty} qty)</span> - {formatDisplayDate(lc.etd)}</p> : null}
+                                        {lc.secondPartialAmount || lc.secondPartialQty ? <p><strong className="font-medium">2nd shipment: </strong> {formatCurrencyValue(lc.currency, lc.secondPartialAmount)} <span className="text-muted-foreground">({lc.secondPartialQty} qty)</span> - {formatDisplayDate(lc.latestShipmentDate)}</p> : null}
+                                        {lc.thirdPartialAmount || lc.thirdPartialQty ? <p><strong className="font-medium">3rd shipment: </strong> {formatCurrencyValue(lc.currency, lc.thirdPartialAmount)} <span className="text-muted-foreground">({lc.thirdPartialQty} qty)</span></p> : null}
+                                      </PopoverContent>
+                                    </Popover>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
