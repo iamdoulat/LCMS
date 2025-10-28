@@ -8,8 +8,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues, PIShipmentMode } from '@/types';
-import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions, piShipmentModeOptions } from '@/types';
+import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues, ShipmentTerms } from '@/types';
+import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -435,7 +435,7 @@ export function CreateInventoryOrderForm() {
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Order Details</h3>
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
              <FormItem>
               <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel>
               <Input value={generatedOrderId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
