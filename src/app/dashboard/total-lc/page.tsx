@@ -462,7 +462,7 @@ export default function TotalLCPage() {
                 </CardHeader>
                 <CardContent className="p-2 space-y-4">
                  <Form {...filterForm}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-end">
                     <div className="space-y-1">
                       <Label htmlFor="lcNumberFilter">T/T OR L/C Number</Label>
                       <Input
@@ -508,7 +508,7 @@ export default function TotalLCPage() {
                         <SelectContent>{yearFilterOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                     <div className="space-y-1">
+                    <div className="space-y-1">
                         <Label htmlFor="termsOfPayFilter">Terms of Pay*</Label>
                         <Select value={filterTermsOfPay || ALL_TERMS_VALUE} onValueChange={(value) => setFilterTermsOfPay(value === ALL_TERMS_VALUE ? '' : value)}>
                             <SelectTrigger id="termsOfPayFilter">
@@ -720,66 +720,31 @@ export default function TotalLCPage() {
                                 >
                                 OCS / PO
                                 </Button>
-                                <Button
-                                    variant={lc.isFirstShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                        lc.isFirstShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title={`1st Shipment Note: ${lc.firstShipmentNote || 'None'}`}
-                                >
-                                    1st
-                                </Button>
-                                <Button
-                                    variant={lc.isSecondShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                        lc.isSecondShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title={`2nd Shipment Note: ${lc.secondShipmentNote || 'None'}`}
-                                >
-                                    2nd
-                                </Button>
-                                <Button
-                                    variant={lc.isThirdShipment ? "default" : "outline"}
-                                    size="icon"
-                                    className={cn(
-                                        "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                        lc.isThirdShipment ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                    )}
-                                    title={`3rd Shipment Note: ${lc.thirdShipmentNote || 'None'}`}
-                                >
-                                    3rd
-                                </Button>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="sm" className="h-7 cursor-default">
+                                            <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                                            ETD/ETA
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-2">
+                                        <div className="space-y-1 text-sm">
+                                            <p><strong>ETD:</strong> {formatDisplayDate(lc.etd)}</p>
+                                            <p><strong>ETA:</strong> {formatDisplayDate(lc.eta)}</p>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                                 {isDeferredPayment && (
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <Button variant="outline" size="sm" className="h-7 cursor-default">
-                                                <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
+                                                <Landmark className="mr-1.5 h-3.5 w-3.5" />
                                                 Maturity
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-2">
                                             <p className="text-sm font-medium">{lc.paymentMaturityDate || "Not Specified"}</p>
                                         </PopoverContent>
-                                    </Popover>
-                                )}
-                                {(lc.firstPartialAmount || lc.firstPartialQty) && (
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-7 cursor-default">
-                                          <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
-                                          ETD/ETA
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-4 space-y-2 text-xs">
-                                        <p className="font-semibold text-sm mb-1">Shipment Breakdown</p>
-                                        {lc.firstPartialAmount || lc.firstPartialQty ? <p><strong className="font-medium">1st shipment: </strong> {formatCurrencyValue(lc.currency, lc.firstPartialAmount)} <span className="text-muted-foreground">({lc.firstPartialQty} qty)</span> - {formatDisplayDate(lc.etd)}</p> : null}
-                                        {lc.secondPartialAmount || lc.secondPartialQty ? <p><strong className="font-medium">2nd shipment: </strong> {formatCurrencyValue(lc.currency, lc.secondPartialAmount)} <span className="text-muted-foreground">({lc.secondPartialQty} qty)</span> - {formatDisplayDate(lc.latestShipmentDate)}</p> : null}
-                                        {lc.thirdPartialAmount || lc.thirdPartialQty ? <p><strong className="font-medium">3rd shipment: </strong> {formatCurrencyValue(lc.currency, lc.thirdPartialAmount)} <span className="text-muted-foreground">({lc.thirdPartialQty} qty)</span></p> : null}
-                                      </PopoverContent>
                                     </Popover>
                                 )}
                               </div>
@@ -855,6 +820,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
