@@ -79,6 +79,7 @@ const sortOptions = [
   { value: "beneficiaryName", label: "Beneficiary Name" },
   { value: "lcIssueDate", label: "Issue Date" },
   { value: "expireDate", label: "Expire Date" },
+  { value: "latestShipmentDate", label: "Latest Shipment Date" },
   { value: "amount", label: "Amount" },
   { value: "status", label: "Status" },
   { value: "year", label: "Year" },
@@ -152,6 +153,9 @@ const TableSkeleton = () => (
 export default function TotalLCPage() {
   const router = useRouter();
   const { user, userRole, loading: authLoading } = useAuth();
+  const [etdEtaPopoverOpen, setEtdEtaPopoverOpen] = React.useState<Record<string, boolean>>({});
+  const [maturityPopoverOpen, setMaturityPopoverOpen] = React.useState<Record<string, boolean>>({});
+
   
   const isReadOnly = useMemo(() => {
     if (!userRole) return true;
@@ -204,6 +208,20 @@ export default function TotalLCPage() {
     } else {
         Swal.fire({ title: "Courier Not Supported", text: "Tracking for the selected courier is not implemented.", icon: "warning" });
     }
+  };
+
+  const handleTrackVessel = (lc: LCEntryDocument) => {
+    const imoNumber = lc.vesselImoNumber;
+    if (!imoNumber || String(imoNumber).trim() === "") {
+        Swal.fire({
+            title: "IMO Number Missing",
+            text: "Please enter a Vessel IMO number to track.",
+            icon: "info",
+        });
+        return;
+    }
+    const url = `https://www.vesselfinder.com/vessels/details/${encodeURIComponent(String(imoNumber).trim())}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
 
@@ -261,14 +279,7 @@ export default function TotalLCPage() {
     }
     
     if (filterStatus) {
-      filtered = filtered.filter(lc => {
-        if (Array.isArray(lc.status)) {
-            return lc.status.includes(filterStatus);
-        } else if (typeof lc.status === 'string') {
-            return lc.status === filterStatus;
-        }
-        return false;
-      });
+      filtered = filtered.filter(lc => Array.isArray(lc.status) ? lc.status.includes(filterStatus) : lc.status === filterStatus);
     }
     
     if (filterYear && filterYear !== ALL_YEARS_VALUE) {
@@ -641,53 +652,44 @@ export default function TotalLCPage() {
                                 </DropdownMenu>
                             </TableCell>
                           </TableRow>
-                          <TableRow key={`${lc.id}-actions`} className="bg-muted/20">
-                            <TableCell colSpan={9} className="py-2 px-4">
+                           <TableRow key={`${lc.id}-actions`} className="bg-muted/20">
+                            <TableCell colSpan={8} className="py-2 px-4">
                               <div className="flex flex-wrap items-center gap-2">
-                                  {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="outline" size="sm" className={cn("h-7 cursor-default", {
-                                                "bg-green-500 text-white hover:bg-green-600": lc.shipmentTerms.includes("CFR"),
-                                            })}>
-                                                {getShipmentTermLabel(lc.shipmentTerms)}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-2">
-                                            <p className="text-sm font-medium">{lc.shipmentTerms}</p>
-                                        </PopoverContent>
-                                    </Popover>
-                                  )}
-                                   <Popover>
-                                      <PopoverTrigger asChild>
-                                          <Button variant="outline" size="sm" className="h-7 cursor-default">
-                                              <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
-                                              ETD/ETA
-                                          </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-2">
-                                          <div className="space-y-1 text-sm">
-                                              <p><strong>ETD:</strong> {formatDisplayDate(lc.etd)}</p>
-                                              <p><strong>ETA:</strong> {formatDisplayDate(lc.eta)}</p>
-                                          </div>
-                                      </PopoverContent>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="sm" className="h-7 cursor-default">
+                                            <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                                            ETD/ETA
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-2">
+                                        <div className="space-y-1 text-sm">
+                                            <p><strong>ETD:</strong> {formatDisplayDate(lc.etd)}</p>
+                                            <p><strong>ETA:</strong> {formatDisplayDate(lc.eta)}</p>
+                                        </div>
+                                    </PopoverContent>
                                   </Popover>
                                   {isDeferredPayment && (
                                       <Popover>
-                                          <PopoverTrigger asChild>
+                                        <PopoverTrigger asChild>
                                             <Button variant="outline" size="sm" className="h-7 cursor-default">
                                                 <Landmark className="mr-1.5 h-3.5 w-3.5" />
                                                 Maturity
                                             </Button>
-                                          </PopoverTrigger>
-                                          <PopoverContent className="w-auto p-2">
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-2">
                                             <p className="text-sm font-medium">{lc.paymentMaturityDate || "Not Specified"}</p>
-                                          </PopoverContent>
+                                        </PopoverContent>
                                       </Popover>
                                   )}
                                   <Button variant="outline" size="sm" onClick={() => handleTrackDocument(lc)} disabled={!lc.trackingCourier || !lc.trackingNumber} title="Track Original Document" className="h-7">
                                     <Search className="mr-1.5 h-3.5 w-3.5" /> Track Docs
                                   </Button>
+                                  {lc.vesselImoNumber && (
+                                    <Button variant="outline" size="sm" onClick={() => handleTrackVessel(lc)} title="Track Vessel" className="h-7">
+                                        <Ship className="mr-1.5 h-3.5 w-3.5" /> Track Vessel
+                                    </Button>
+                                  )}
                                   <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.finalLcUrl)} disabled={!lc.finalLcUrl} title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'} className="h-7">
                                     {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
                                   </Button>
@@ -794,6 +796,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
