@@ -56,7 +56,7 @@ const formatDisplayDate = (dateString?: string) => {
   if (!dateString || !isValid(parseISO(dateString))) return 'N/A';
   try {
     const date = parseISO(dateString);
-    return format(date, 'PPP');
+    return format(date, 'MMM do, yyyy');
   } catch (e) {
     return 'N/A';
   }
@@ -642,7 +642,7 @@ export default function TotalLCPage() {
                             </TableCell>
                           </TableRow>
                           <TableRow key={`${lc.id}-actions`} className="bg-muted/20">
-                            <TableCell colSpan={8} className="py-2 px-4">
+                            <TableCell colSpan={9} className="py-2 px-4">
                               <div className="flex flex-wrap items-center gap-2">
                                   {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
                                     <Popover>
@@ -656,75 +656,11 @@ export default function TotalLCPage() {
                                         </PopoverContent>
                                     </Popover>
                                   )}
-                                  <Button
-                                    variant={lc.trackingCourier && lc.trackingNumber ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => handleTrackDocument(lc)}
-                                    disabled={!lc.trackingCourier || !lc.trackingNumber}
-                                    title="Track Original Document"
-                                    className="h-7"
-                                  >
-                                    {lc.trackingCourier === "DHL" ? <img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo"/> :
-                                    lc.trackingCourier === "FedEx" ? <img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo"/> :
-                                    <PackageCheck className="mr-1.5 h-3.5 w-3.5" />}
-                                    Track Docs
-                                </Button>
-                                <Button
-                                variant={lc.finalLcUrl ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handleOpenLink(lc.finalLcUrl)}
-                                disabled={!lc.finalLcUrl}
-                                title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'}
-                                className="h-7"
-                                >
-                                <FileTextIcon className="mr-1.5 h-3.5 w-3.5" />
-                                {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
-                                </Button>
-                                <Button
-                                variant={lc.finalPIUrl ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handleOpenLink(lc.finalPIUrl)}
-                                disabled={!lc.finalPIUrl}
-                                title="View Final Proforma Invoice"
-                                className="h-7"
-                                >
-                                <FileTextIcon className="mr-1.5 h-3.5 w-3.5" /> PI
-                                </Button>
-                                <Button
-                                variant={lc.shippingDocumentsUrl ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handleOpenLink(lc.shippingDocumentsUrl)}
-                                disabled={!lc.shippingDocumentsUrl}
-                                title="View Shipping Documents"
-                                className="h-7"
-                                >
-                                DOC
-                                </Button>
-                                <Button
-                                variant={lc.packingListUrl ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handleOpenLink(lc.packingListUrl)}
-                                disabled={!lc.packingListUrl}
-                                title="View Packing List"
-                                className="h-7"
-                                >
-                                <FileTextIcon className="mr-1.5 h-3.5 w-3.5" /> PL
-                                </Button>
-                                <Button
-                                variant={lc.purchaseOrderUrl ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => handleOpenLink(lc.purchaseOrderUrl)}
-                                disabled={!lc.purchaseOrderUrl}
-                                title="View OCS / Purchase Order"
-                                className="h-7"
-                                >
-                                OCS / PO
-                                </Button>
-                                <Popover>
+                                  <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-7 cursor-default">
-                                            <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
-                                            ETD/ETA
+                                        <Button variant="outline" size="sm" className="h-7 cursor-default data-[state=open]:bg-green-500 data-[state=open]:text-white">
+                                        <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
+                                        ETD/ETA
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-2">
@@ -734,19 +670,48 @@ export default function TotalLCPage() {
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-                                {isDeferredPayment && (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" size="sm" className="h-7 cursor-default">
+                                        <Landmark className="mr-1.5 h-3.5 w-3.5" />
+                                        Partials
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-2 text-sm">
+                                        <div className="font-bold border-b pb-1 mb-1">1st Shipment:</div>
+                                        <div><span className="font-semibold">Qty:</span> {lc.firstPartialQty}</div>
+                                        <div><span className="font-semibold">Amount:</span> {formatCurrencyValue(lc.currency, lc.firstPartialAmount)}</div>
+                                        <div className="font-bold border-b pb-1 mb-1 mt-2">2nd Shipment:</div>
+                                        <div><span className="font-semibold">Qty:</span> {lc.secondPartialQty}</div>
+                                        <div><span className="font-semibold">Amount:</span> {formatCurrencyValue(lc.currency, lc.secondPartialAmount)}</div>
+                                        <div className="font-bold border-b pb-1 mb-1 mt-2">3rd Shipment:</div>
+                                        <div><span className="font-semibold">Qty:</span> {lc.thirdPartialQty}</div>
+                                        <div><span className="font-semibold">Amount:</span> {formatCurrencyValue(lc.currency, lc.thirdPartialAmount)}</div>
+                                    </PopoverContent>
+                                </Popover>
+                                  {isDeferredPayment && (
+                                      <Popover>
+                                          <PopoverTrigger asChild>
                                             <Button variant="outline" size="sm" className="h-7 cursor-default">
                                                 <Landmark className="mr-1.5 h-3.5 w-3.5" />
                                                 Maturity
                                             </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-2">
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-auto p-2">
                                             <p className="text-sm font-medium">{lc.paymentMaturityDate || "Not Specified"}</p>
-                                        </PopoverContent>
-                                    </Popover>
-                                )}
+                                          </PopoverContent>
+                                      </Popover>
+                                  )}
+                                  <Button variant={lc.finalLcUrl ? "default" : "outline"} size="sm" onClick={() => handleOpenLink(lc.finalLcUrl)} disabled={!lc.finalLcUrl} title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'} className="h-7">
+                                    <FileTextIcon className="mr-1.5 h-3.5 w-3.5" />
+                                    {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
+                                  </Button>
+                                  <Button variant={lc.finalPIUrl ? "default" : "outline"} size="sm" onClick={() => handleOpenLink(lc.finalPIUrl)} disabled={!lc.finalPIUrl} title="View Final Proforma Invoice" className="h-7">
+                                    <FileTextIcon className="mr-1.5 h-3.5 w-3.5" /> PI
+                                  </Button>
+                                  <Button variant={lc.shippingDocumentsUrl ? "default" : "outline"} size="sm" onClick={() => handleOpenLink(lc.shippingDocumentsUrl)} disabled={!lc.shippingDocumentsUrl} title="View Shipping Documents" className="h-7">DOC</Button>
+                                  <Button variant={lc.packingListUrl ? "default" : "outline"} size="sm" onClick={() => handleOpenLink(lc.packingListUrl)} disabled={!lc.packingListUrl} title="View Packing List" className="h-7">PL</Button>
+                                  <Button variant={lc.purchaseOrderUrl ? "default" : "outline"} size="sm" onClick={() => handleOpenLink(lc.purchaseOrderUrl)} disabled={!lc.purchaseOrderUrl} title="View OCS / Purchase Order" className="h-7">OCS/PO</Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -820,6 +785,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
