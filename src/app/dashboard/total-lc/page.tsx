@@ -10,14 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet, PlusCircle, MoreHorizontal, ShieldAlert } from 'lucide-react';
+import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet, PlusCircle, MoreHorizontal, ShieldAlert, Landmark } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile } from '@/types';
 import { lcStatusOptions, currencyOptions } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, isValid, startOfDay, isAfter, isEqual } from 'date-fns';
+import { format, parseISO, isValid, startOfDay, isAfter, isEqual, getYear } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
@@ -682,6 +682,26 @@ export default function TotalLCPage() {
                                         </PopoverContent>
                                     </Popover>
                                   )}
+                                {lc.paymentMaturityDate && (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant={"default"}
+                                        size="icon"
+                                        className={"h-7 w-7 rounded-full p-0 bg-green-500 hover:bg-green-600 text-white border-transparent"}
+                                      >
+                                        <Landmark className="h-4 w-4" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-2">
+                                      <div className="text-sm space-y-1">
+                                        <p className="font-semibold text-foreground">Payment Maturity Date</p>
+                                        <Separator className="my-1" />
+                                        <p>{lc.paymentMaturityDate}</p>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <Button
@@ -858,9 +878,7 @@ export default function TotalLCPage() {
                         {page}
                       </Button>
                     ) : (
-                      <span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">
-                        {page}
-                      </span>
+                      <span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">{page}</span>
                     )
                   )}
                   <Button
@@ -886,3 +904,6 @@ export default function TotalLCPage() {
 
 
 
+
+
+    
