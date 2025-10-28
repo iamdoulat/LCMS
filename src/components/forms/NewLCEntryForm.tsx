@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -34,6 +35,7 @@ const defaultFormValues: NewLCFormValues = {
   currency: currencyOptions[0],
   amount: 0,
   termsOfPay: termsOfPayOptions[0],
+  paymentMaturityDate: '',
   documentaryCreditNumber: '',
   proformaInvoiceNumber: '',
   invoiceDate: undefined,
@@ -54,6 +56,30 @@ const defaultFormValues: NewLCFormValues = {
   lcIssueDate: undefined,
   expireDate: undefined,
   latestShipmentDate: undefined,
+  purchaseOrderUrl: '',
+  finalPIUrl: '',
+  finalLcUrl: '',
+  shippingDocumentsUrl: '',
+  packingListUrl: '',
+  isFirstShipment: true,
+  isSecondShipment: false,
+  isThirdShipment: false,
+  firstShipmentNote: '',
+  secondShipmentNote: '',
+  thirdShipmentNote: '',
+  trackingCourier: "",
+  trackingNumber: "",
+  etd: undefined,
+  eta: undefined,
+  shipmentMode: undefined,
+  shipmentTerms: undefined,
+  vesselOrFlightName: '',
+  vesselImoNumber: '',
+  flightNumber: '',
+  totalPackageQty: 0,
+  totalNetWeight: 0,
+  totalGrossWeight: 0,
+  totalCbm: 0,
   partialShipmentAllowed: "No",
   firstPartialQty: 0,
   secondPartialQty: 0,
@@ -73,10 +99,6 @@ const defaultFormValues: NewLCFormValues = {
   thirdPartialNetWeight: 0,
   thirdPartialGrossWeight: 0,
   thirdPartialCbm: 0,
-  totalPackageQty: 0,
-  totalNetWeight: 0,
-  totalGrossWeight: 0,
-  totalCbm: 0,
   originalBlQty: 0,
   copyBlQty: 0,
   originalCooQty: 0,
@@ -91,17 +113,6 @@ const defaultFormValues: NewLCFormValues = {
   billOfExchangeQty: 0,
   certificateOfOrigin: [],
   shippingMarks: '',
-  purchaseOrderUrl: '',
-  finalPIUrl: '',
-  finalLcUrl: '',
-  shippingDocumentsUrl: '',
-  packingListUrl: '',
-  isFirstShipment: true,
-  isSecondShipment: false,
-  isThirdShipment: false,
-  firstShipmentNote: '',
-  secondShipmentNote: '',
-  thirdShipmentNote: '',
 };
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
@@ -117,11 +128,11 @@ export function NewLCEntryForm() {
   const [isLoadingApplicants, setIsLoadingApplicants] = React.useState(true);
   const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = React.useState(true);
 
+  const [activeSection46A, setActiveSection46A] = React.useState<string | undefined>(undefined);
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
-  const [activeSection46A, setActiveSection46A] = React.useState<string | undefined>(undefined);
   const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
-
+  
 
   const form = useForm<NewLCFormValues>({
     resolver: zodResolver(lcEntrySchema),
@@ -260,43 +271,39 @@ export function NewLCEntryForm() {
     if (totalCalculatedPartialAmount !== newTotalAmount) {
       setTotalCalculatedPartialAmount(newTotalAmount);
     }
-
+    
     if (watchedPartialShipmentAllowed === "Yes") {
-      const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
-      const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
-      const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
-      const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
-      const currentTotalPkgs = Number(getValues("totalPackageQty") || 0);
-      if (currentTotalPkgs !== newTotalPkgs) {
-          setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
-      }
+        const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
+        const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
+        const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
+        const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
+        if(Number(getValues("totalPackageQty") || 0) !== newTotalPkgs){
+             setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
+        }
 
-      const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
-      const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
-      const thirdPartialNetW = Number(getValues("thirdPartialNetWeight") || 0);
-      const newTotalNetW = firstPartialNetW + secondPartialNetW + thirdPartialNetW;
-      const currentTotalNetW = Number(getValues("totalNetWeight") || 0);
-       if (currentTotalNetW !== newTotalNetW) {
-        setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
-      }
+        const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
+        const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
+        const thirdPartialNetW = Number(getValues("thirdPartialNetWeight") || 0);
+        const newTotalNetW = firstPartialNetW + secondPartialNetW + thirdPartialNetW;
+        if(Number(getValues("totalNetWeight") || 0) !== newTotalNetW){
+             setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
+        }
 
-      const firstPartialGrossW = Number(getValues("firstPartialGrossWeight") || 0);
-      const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
-      const thirdPartialGrossW = Number(getValues("thirdPartialGrossWeight") || 0);
-      const newTotalGrossW = firstPartialGrossW + secondPartialGrossW + thirdPartialGrossW;
-      const currentTotalGrossW = Number(getValues("totalGrossWeight") || 0);
-       if (currentTotalGrossW !== newTotalGrossW) {
-        setValue("totalGrossWeight", newTotalGrossW, { shouldValidate: true, shouldDirty: true });
-      }
-
-      const firstPartialCbm = Number(getValues("firstPartialCbm") || 0);
-      const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
-      const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
-      const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
-      const currentTotalCbm = Number(getValues("totalCbm") || 0);
-       if (currentTotalCbm !== newTotalCbm) {
-        setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
-      }
+        const firstPartialGrossW = Number(getValues("firstPartialGrossWeight") || 0);
+        const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
+        const thirdPartialGrossW = Number(getValues("thirdPartialGrossWeight") || 0);
+        const newTotalGrossW = firstPartialGrossW + secondPartialGrossW + thirdPartialGrossW;
+        if(Number(getValues("totalGrossWeight") || 0) !== newTotalGrossW){
+             setValue("totalGrossWeight", newTotalGrossW, { shouldValidate: true, shouldDirty: true });
+        }
+        
+        const firstPartialCbm = Number(getValues("firstPartialCbm") || 0);
+        const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
+        const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
+        const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
+        if(Number(getValues("totalCbm") || 0) !== newTotalCbm){
+            setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
+        }
     }
   }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues, setValue, totalCalculatedPartialQty, totalCalculatedPartialAmount]);
 
@@ -317,6 +324,7 @@ export function NewLCEntryForm() {
       beneficiaryName: selectedBeneficiary ? selectedBeneficiary.label : 'N/A',
       currency: finalData.currency,
       termsOfPay: finalData.termsOfPay,
+      paymentMaturityDate: finalData.paymentMaturityDate,
       status: finalData.status,
       shipmentMode: finalData.shipmentMode,
       shipmentTerms: finalData.shipmentTerms,
@@ -512,6 +520,9 @@ export function NewLCEntryForm() {
     return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <span className="ml-2">Loading form options...</span></div>;
   }
 
+  const isDeferredPayment = watchedTermsOfPay && watchedTermsOfPay.startsWith("Deferred");
+
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -615,7 +626,7 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
-          <FormField
+                    <FormField
             control={control}
             name="proformaInvoiceNumber"
             render={({ field }) => (
@@ -716,6 +727,25 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
+          {isDeferredPayment && (
+            <FormField
+              control={control}
+              name="paymentMaturityDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Payment Maturity Date (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Specify maturity details for deferred payment"
+                      {...field}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
           <FormField
               control={control}
               name="status"
@@ -796,7 +826,7 @@ export function NewLCEntryForm() {
                 )}
             />
             <FormField
-              control={control}
+              control={form.control}
               name="shipmentTerms"
               render={({ field }) => (
                   <FormItem className="space-y-3">
@@ -1598,7 +1628,7 @@ export function NewLCEntryForm() {
                 <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Shipping Documents URL</FormLabel>
                  <div className="flex items-center gap-2">
                     <FormControl className="flex-grow">
-                        <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} value={field.value ?? ""} />
+                    <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} value={field.value ?? ""} />
                     </FormControl>
                      <Button
                         type="button"

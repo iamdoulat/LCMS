@@ -68,6 +68,7 @@ export interface LCEntry {
   currency: Currency;
   amount: number | undefined;
   termsOfPay?: TermsOfPay;
+  paymentMaturityDate?: string; // New field
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
   invoiceDate?: Date | null | undefined;
@@ -156,6 +157,7 @@ export const lcEntrySchema = z.object({
     z.number({ invalid_type_error: "Amount must be a number" }).positive("Amount must be positive")
   ),
   termsOfPay: z.enum(termsOfPayOptions, { required_error: "Terms of Pay is required" }),
+  paymentMaturityDate: z.string().optional(), // New field
   documentaryCreditNumber: z.string().min(1, "Documentary Credit Number is required"),
   proformaInvoiceNumber: z.string().optional(),
   invoiceDate: z.date().optional().nullable(),
@@ -278,6 +280,7 @@ export interface LCEntryDocument {
   currency: Currency;
   amount: number;
   termsOfPay?: TermsOfPay;
+  paymentMaturityDate?: string; // New field
   documentaryCreditNumber: string;
   proformaInvoiceNumber?: string;
   invoiceDate?: string; // ISO string
