@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -51,12 +50,12 @@ interface BeneficiaryOption extends ComboboxOption {
   address?: string;
 }
 
-interface EditInventoryOrderFormProps {
+interface EditPurchaseOrderFormProps {
   initialData: OrderDocument;
   orderId: string;
 }
 
-export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOrderFormProps) {
+export function EditInventoryOrderForm({ initialData, orderId }: EditPurchaseOrderFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [beneficiaryOptions, setBeneficiaryOptions] = React.useState<BeneficiaryOption[]>([]);
@@ -505,6 +504,3 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
     </Form>
   );
 }
-
-
-```
