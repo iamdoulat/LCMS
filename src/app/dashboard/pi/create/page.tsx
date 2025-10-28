@@ -1,7 +1,7 @@
 
 "use client";
 
-import { CreateInvoiceForm } from '@/components/forms/CreateInvoiceForm'; // Import the new form
+import { CreateSaleInvoiceForm } from '@/components/forms/CreateInvoiceForm'; // Import the correct form
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FilePlus2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,7 @@ export default function CreateNewInvoicePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CreateInvoiceForm /> {/* Use the imported form component */}
+          <CreateSaleInvoiceForm /> {/* Use the correct component */}
         </CardContent>
       </Card>
     </div>
