@@ -6,7 +6,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { InvoiceDocument, CustomerDocument, PIShipmentMode } from '@/types';
+import type { InvoiceDocument, CustomerDocument, ShipmentTerms } from '@/types';
 import { Loader2, Printer, AlertTriangle, Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -428,5 +428,6 @@ export default function PrintInvoicePage() {
     </div>
   );
 }
+
 
 

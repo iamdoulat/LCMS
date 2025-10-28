@@ -1,5 +1,7 @@
-"use client";
-
+import { CreateInvoiceForm } from '@/components/forms/CreateInvoiceForm'; // Import the new form
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { FilePlus2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,15 +9,14 @@ import Swal from 'sweetalert2';
 import { format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
-import type { CustomerDocument, ItemDocument as ItemDoc, QuoteFormValues as PageQuoteFormValues, QuoteLineItemFormValues as PageQuoteLineItemFormValues } from '@/types';
-import { QuoteSchema, quoteTaxTypes, piShipmentModeOptions } from '@/types';
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteFormValues as PageQuoteFormValues, QuoteLineItemFormValues as PageQuoteLineItemFormValues, ShipmentTerms } from '@/types';
+import { QuoteSchema, quoteTaxTypes, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, CalendarDays, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Mail, Ship } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Textarea } from '@/components/ui/textarea';
@@ -78,12 +79,12 @@ export function CreateQuoteForm() {
       showItemCodeColumn: false,
       showDiscountColumn: false,
       showTaxColumn: false,
-      shipmentMode: piShipmentModeOptions[0],
+      shipmentMode: shipmentTermsOptions[0],
       freightCharges: 0,
     },
   });
 
-  const { control, setValue, watch, handleSubmit } = form;
+  const { control, setValue, watch, getValues, reset, handleSubmit } = form;
   
   const { fields, append, remove } = useFieldArray({
     control,
@@ -103,7 +104,7 @@ export function CreateQuoteForm() {
     let currentTotalDiscount = 0;
 
     if (Array.isArray(watchedLineItems)) {
-      watchedLineItems.forEach((item) => {
+      watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
@@ -120,6 +121,13 @@ export function CreateQuoteForm() {
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
+        
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
+        
+        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
+        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
+          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
+        }
       });
     }
 
@@ -131,7 +139,7 @@ export function CreateQuoteForm() {
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedFreightCharges]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges]);
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -379,7 +387,7 @@ export function CreateQuoteForm() {
       showItemCodeColumn: false,
       showDiscountColumn: false,
       showTaxColumn: false,
-      shipmentMode: piShipmentModeOptions[0],
+      shipmentMode: shipmentTermsOptions[0],
       freightCharges: 0,
     });
     setGeneratedQuoteId(null);
@@ -937,5 +945,26 @@ export function CreateQuoteForm() {
         </div>
       </form>
     </Form>
+  );
+}
+
+export default function CreateNewQuotePage() {
+  return (
+    <div className="container mx-auto py-8">
+      <Card className="max-w-screen-2xl mx-auto shadow-xl">
+        <CardHeader>
+          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <FilePlus2 className="h-7 w-7 text-primary" />
+            Create New Quote
+          </CardTitle>
+          <CardDescription>
+            Fill in the details below to generate a new sales quotation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CreateQuoteForm />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
