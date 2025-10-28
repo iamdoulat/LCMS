@@ -37,8 +37,6 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Ship, PackageCheck, FileText as FileTextIcon, Plane, Minus, Plus } from 'lucide-react';
 import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form';
-import { Label } from '@/components/ui/label';
-
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -509,7 +507,7 @@ export default function TotalLCPage() {
                       </Select>
                     </div>
                     <div className="space-y-1">
-                        <Label htmlFor="termsOfPayFilter">Terms of Pay*</Label>
+                        <Label htmlFor="termsOfPayFilter">Terms of Pay</Label>
                         <Select value={filterTermsOfPay || ALL_TERMS_VALUE} onValueChange={(value) => setFilterTermsOfPay(value === ALL_TERMS_VALUE ? '' : value)}>
                             <SelectTrigger id="termsOfPayFilter">
                                 <SelectValue placeholder="All Terms"/>
@@ -558,7 +556,7 @@ export default function TotalLCPage() {
                       <TableHead className="px-2 sm:px-4">Beneficiary</TableHead>
                       <TableHead className="px-2 sm:px-4">Amount</TableHead>
                       <TableHead className="px-2 sm:px-4">Issue Date</TableHead>
-                      <TableHead className="px-2 sm:px-4">Expire Date*</TableHead>
+                      <TableHead className="px-2 sm:px-4">Expire Date</TableHead>
                       <TableHead className="px-2 sm:px-4">Status</TableHead>
                       <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
                     </TableRow>
@@ -642,12 +640,14 @@ export default function TotalLCPage() {
                             </TableCell>
                           </TableRow>
                           <TableRow key={`${lc.id}-actions`} className="bg-muted/20">
-                            <TableCell colSpan={9} className="py-2 px-4">
+                            <TableCell colSpan={8} className="py-2 px-4">
                               <div className="flex flex-wrap items-center gap-2">
                                   {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="outline" size="sm" className="h-7 cursor-default">
+                                            <Button variant="outline" size="sm" className={cn("h-7 cursor-default", {
+                                                "bg-green-500 text-white hover:bg-green-600": lc.shipmentTerms.includes("CFR"),
+                                            })}>
                                                 {getShipmentTermLabel(lc.shipmentTerms)}
                                             </Button>
                                         </PopoverTrigger>
@@ -659,8 +659,8 @@ export default function TotalLCPage() {
                                   <Popover>
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" size="sm" className="h-7 cursor-default data-[state=open]:bg-green-500 data-[state=open]:text-white">
-                                        <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
-                                        ETD/ETA
+                                            <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
+                                            ETD/ETA
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto p-2">
@@ -669,26 +669,7 @@ export default function TotalLCPage() {
                                             <p><strong>ETA:</strong> {formatDisplayDate(lc.eta)}</p>
                                         </div>
                                     </PopoverContent>
-                                </Popover>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-7 cursor-default">
-                                        <Landmark className="mr-1.5 h-3.5 w-3.5" />
-                                        Partials
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-2 text-sm">
-                                        <div className="font-bold border-b pb-1 mb-1">1st Shipment:</div>
-                                        <div><span className="font-semibold">Qty:</span> {lc.firstPartialQty}</div>
-                                        <div><span className="font-semibold">Amount:</span> {formatCurrencyValue(lc.currency, lc.firstPartialAmount)}</div>
-                                        <div className="font-bold border-b pb-1 mb-1 mt-2">2nd Shipment:</div>
-                                        <div><span className="font-semibold">Qty:</span> {lc.secondPartialQty}</div>
-                                        <div><span className="font-semibold">Amount:</span> {formatCurrencyValue(lc.currency, lc.secondPartialAmount)}</div>
-                                        <div className="font-bold border-b pb-1 mb-1 mt-2">3rd Shipment:</div>
-                                        <div><span className="font-semibold">Qty:</span> {lc.thirdPartialQty}</div>
-                                        <div><span className="font-semibold">Amount:</span> {formatCurrencyValue(lc.currency, lc.thirdPartialAmount)}</div>
-                                    </PopoverContent>
-                                </Popover>
+                                  </Popover>
                                   {isDeferredPayment && (
                                       <Popover>
                                           <PopoverTrigger asChild>
@@ -702,16 +683,47 @@ export default function TotalLCPage() {
                                           </PopoverContent>
                                       </Popover>
                                   )}
-                                  <Button variant={lc.finalLcUrl ? "default" : "outline"} size="sm" onClick={() => handleOpenLink(lc.finalLcUrl)} disabled={!lc.finalLcUrl} title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'} className="h-7">
+                                  <Button variant="outline" size="sm" onClick={() => handleTrackDocument(lc)} disabled={!lc.trackingCourier || !lc.trackingNumber} title="Track Original Document" className="h-7">
+                                    <Search className="mr-1.5 h-3.5 w-3.5" /> Docs
+                                  </Button>
+                                  <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.finalLcUrl)} disabled={!lc.finalLcUrl} title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'} className="h-7">
                                     <FileTextIcon className="mr-1.5 h-3.5 w-3.5" />
                                     {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
                                   </Button>
-                                  <Button variant={lc.finalPIUrl ? "default" : "outline"} size="sm" onClick={() => handleOpenLink(lc.finalPIUrl)} disabled={!lc.finalPIUrl} title="View Final Proforma Invoice" className="h-7">
+                                  <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.finalPIUrl)} disabled={!lc.finalPIUrl} title="View Final Proforma Invoice" className="h-7">
                                     <FileTextIcon className="mr-1.5 h-3.5 w-3.5" /> PI
                                   </Button>
-                                  <Button variant={lc.shippingDocumentsUrl ? "default" : "outline"} size="sm" onClick={() => handleOpenLink(lc.shippingDocumentsUrl)} disabled={!lc.shippingDocumentsUrl} title="View Shipping Documents" className="h-7">DOC</Button>
-                                  <Button variant={lc.packingListUrl ? "default" : "outline"} size="sm" onClick={() => handleOpenLink(lc.packingListUrl)} disabled={!lc.packingListUrl} title="View Packing List" className="h-7">PL</Button>
-                                  <Button variant={lc.purchaseOrderUrl ? "default" : "outline"} size="sm" onClick={() => handleOpenLink(lc.purchaseOrderUrl)} disabled={!lc.purchaseOrderUrl} title="View OCS / Purchase Order" className="h-7">OCS/PO</Button>
+                                  <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.shippingDocumentsUrl)} disabled={!lc.shippingDocumentsUrl} title="View Shipping Documents" className="h-7">DOC</Button>
+                                  <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.packingListUrl)} disabled={!lc.packingListUrl} title="View Packing List" className="h-7">PL</Button>
+                                  <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.purchaseOrderUrl)} disabled={!lc.purchaseOrderUrl} title="View OCS / Purchase Order" className="h-7">OCS/PO</Button>
+                                  <div className="flex gap-1.5">
+                                    {[
+                                        { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
+                                        { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
+                                        { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
+                                    ].map((shipment, idx) => (
+                                      shipment.label && (
+                                      <TooltipProvider key={idx} delayDuration={100}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                                <Button
+                                                    variant={shipment.flag ? "default" : "outline"}
+                                                    size="icon"
+                                                    className={cn("h-7 w-7 rounded-full p-0 text-xs font-bold", shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                                >
+                                                    {shipment.label}
+                                                </Button>
+                                          </TooltipTrigger>
+                                          {shipment.note && (
+                                            <TooltipContent side="top">
+                                              <p className="max-w-xs">{shipment.note}</p>
+                                            </TooltipContent>
+                                          )}
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      )
+                                    ))}
+                                  </div>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -785,6 +797,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
