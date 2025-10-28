@@ -129,12 +129,11 @@ const TableSkeleton = () => (
                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                 <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                 <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
             </TableRow>
              <TableRow key={`${i}-actions`} className="bg-muted/20">
-                <TableCell colSpan={9} className="py-2 px-4">
+                <TableCell colSpan={8} className="py-2 px-4">
                     <div className="flex flex-wrap items-center gap-2">
                         <Skeleton className="h-7 w-7 rounded-full" />
                         <Skeleton className="h-7 w-20 rounded-md" />
@@ -183,6 +182,30 @@ export default function TotalLCPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const filterForm = useForm();
+
+  const handleTrackDocument = (lc: LCEntryDocument) => {
+    const courier = lc.trackingCourier;
+    const number = lc.trackingNumber;
+
+    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
+        Swal.fire({ title: "Information Missing", text: "Courier or tracking number is not available for this entry.", icon: "info" });
+        return;
+    }
+
+    let url = "";
+    if (courier === "DHL") {
+        url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
+    } else if (courier === "FedEx") {
+        url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
+    }
+
+    if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+        Swal.fire({ title: "Courier Not Supported", text: "Tracking for the selected courier is not implemented.", icon: "warning" });
+    }
+  };
+
 
   useEffect(() => {
     const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(role));
@@ -258,24 +281,11 @@ export default function TotalLCPage() {
 
     if (sortBy) {
       filtered.sort((a, b) => {
-        let valA = (a as any)[sortBy];
-        let valB = (b as any)[sortBy];
-
+        let valA = (a as any)[sortBy]; let valB = (b as any)[sortBy];
         if (sortBy.includes('Date') && typeof valA === 'string' && typeof valB === 'string') {
-          try {
-            valA = parseISO(valA);
-            valB = parseISO(valB);
-             if (!isValid(valA) && isValid(valB)) return sortOrder === 'asc' ? 1 :-1;
-             if (isValid(valA) && !isValid(valB)) return sortOrder === 'asc' ? -1 : 1;
-             if (!isValid(valA) && !isValid(valB)) return 0;
-          } catch { /* ignore parsing error, will compare as strings or fall through */ }
+          try { valA = parseISO(valA); valB = parseISO(valB); } catch {}
         }
-
-        if (sortBy === 'amount' || sortBy === 'year') {
-            valA = Number(valA) || 0;
-            valB = Number(valB) || 0;
-        }
-
+        if (sortBy === 'amount' || sortBy === 'year') { valA = Number(valA) || 0; valB = Number(valB) || 0; }
         if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
@@ -337,30 +347,6 @@ export default function TotalLCPage() {
       Swal.fire("No URL", "No URL provided to view.", "info");
     }
   };
-
-  const handleTrackDocument = (lc: LCEntryDocument) => {
-    const courier = lc.trackingCourier;
-    const number = lc.trackingNumber;
-
-    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
-        Swal.fire({ title: "Information Missing", text: "Courier or tracking number is not available for this entry.", icon: "info" });
-        return;
-    }
-
-    let url = "";
-    if (courier === "DHL") {
-        url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
-    } else if (courier === "FedEx") {
-        url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
-    }
-
-    if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-    } else {
-        Swal.fire({ title: "Courier Not Supported", text: "Tracking for the selected courier is not implemented.", icon: "warning" });
-    }
-  };
-
 
   const clearFilters = () => {
     setFilterLcNumber(''); setFilterApplicantId(''); setFilterBeneficiaryId('');
@@ -447,7 +433,7 @@ export default function TotalLCPage() {
                 "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
               )}>
                 <ListChecks className="h-7 w-7 text-primary" />
-                Total T/T OR L/C Overview
+                Total T/T OR L/C List
               </CardTitle>
               <CardDescription>
                 View, manage, and filter all Letters of Credit.
@@ -522,9 +508,9 @@ export default function TotalLCPage() {
                         <SelectContent>{yearFilterOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
+                     <div className="space-y-1">
                         <Label htmlFor="termsOfPayFilter">Terms of Pay*</Label>
-                        <Select value={filterTermsOfPay} onValueChange={(value) => setFilterTermsOfPay(value === ALL_TERMS_VALUE ? '' : value)}>
+                        <Select value={filterTermsOfPay || ALL_TERMS_VALUE} onValueChange={(value) => setFilterTermsOfPay(value === ALL_TERMS_VALUE ? '' : value)}>
                             <SelectTrigger id="termsOfPayFilter">
                                 <SelectValue placeholder="All Terms"/>
                             </SelectTrigger>
@@ -572,7 +558,6 @@ export default function TotalLCPage() {
                       <TableHead className="px-2 sm:px-4">Beneficiary</TableHead>
                       <TableHead className="px-2 sm:px-4">Amount</TableHead>
                       <TableHead className="px-2 sm:px-4">Issue Date</TableHead>
-                      <TableHead className="px-2 sm:px-4">Latest Shipment Date</TableHead>
                       <TableHead className="px-2 sm:px-4">Expire Date*</TableHead>
                       <TableHead className="px-2 sm:px-4">Status</TableHead>
                       <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
@@ -592,7 +577,6 @@ export default function TotalLCPage() {
                             <TableCell className="px-2 sm:px-4">{lc.beneficiaryName || 'N/A'}</TableCell>
                             <TableCell className="px-2 sm:px-4">{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
                             <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.lcIssueDate)}</TableCell>
-                            <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
                             <TableCell className="px-2 sm:px-4">{formatDisplayDate(lc.expireDate)}</TableCell>
                             <TableCell className="px-2 sm:px-4">
                                 <div className="flex flex-wrap gap-1">
@@ -658,7 +642,7 @@ export default function TotalLCPage() {
                             </TableCell>
                           </TableRow>
                           <TableRow key={`${lc.id}-actions`} className="bg-muted/20">
-                            <TableCell colSpan={9} className="py-2 px-4">
+                            <TableCell colSpan={8} className="py-2 px-4">
                               <div className="flex flex-wrap items-center gap-2">
                                   {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
                                     <Popover>
@@ -772,7 +756,7 @@ export default function TotalLCPage() {
                                 {isDeferredPayment && (
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                             <Button variant="outline" size="sm" className="h-7 cursor-default">
+                                            <Button variant="outline" size="sm" className="h-7 cursor-default">
                                                 <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
                                                 Maturity
                                             </Button>
@@ -786,12 +770,12 @@ export default function TotalLCPage() {
                                     <Popover>
                                       <PopoverTrigger asChild>
                                         <Button variant="outline" size="sm" className="h-7 cursor-default">
-                                          <Landmark className="mr-1.5 h-3.5 w-3.5" />
-                                          Partials
+                                          <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                                          ETD/ETA
                                         </Button>
                                       </PopoverTrigger>
                                       <PopoverContent className="w-auto p-4 space-y-2 text-xs">
-                                        <p className="font-semibold text-sm mb-1">Partial Shipment Details</p>
+                                        <p className="font-semibold text-sm mb-1">Shipment Breakdown</p>
                                         {lc.firstPartialAmount || lc.firstPartialQty ? <p><strong className="font-medium">1st shipment: </strong> {formatCurrencyValue(lc.currency, lc.firstPartialAmount)} <span className="text-muted-foreground">({lc.firstPartialQty} qty)</span> - {formatDisplayDate(lc.etd)}</p> : null}
                                         {lc.secondPartialAmount || lc.secondPartialQty ? <p><strong className="font-medium">2nd shipment: </strong> {formatCurrencyValue(lc.currency, lc.secondPartialAmount)} <span className="text-muted-foreground">({lc.secondPartialQty} qty)</span> - {formatDisplayDate(lc.latestShipmentDate)}</p> : null}
                                         {lc.thirdPartialAmount || lc.thirdPartialQty ? <p><strong className="font-medium">3rd shipment: </strong> {formatCurrencyValue(lc.currency, lc.thirdPartialAmount)} <span className="text-muted-foreground">({lc.thirdPartialQty} qty)</span></p> : null}
@@ -805,7 +789,7 @@ export default function TotalLCPage() {
                       )})
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
+                        <TableCell colSpan={8} className="h-24 text-center px-2 sm:px-4">
                           No L/C entries found matching your criteria.
                         </TableCell>
                       </TableRow>
@@ -871,5 +855,6 @@ export default function TotalLCPage() {
     
 
     
+
 
 
