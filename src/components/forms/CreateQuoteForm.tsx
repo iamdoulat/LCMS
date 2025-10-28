@@ -1,7 +1,6 @@
 
 "use client";
 
-import { CreateInvoiceForm } from '@/components/forms/CreateInvoiceForm'; // Import the new form
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FilePlus2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -9,7 +8,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { format } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
 import type { CustomerDocument, ItemDocument as ItemDoc, QuoteFormValues as PageQuoteFormValues, QuoteLineItemFormValues as PageQuoteLineItemFormValues, ShipmentTerms } from '@/types';
@@ -297,7 +296,7 @@ export function CreateQuoteForm() {
 
         const newCounters = {
           yearlyCounts: {
-            ...(counterDoc.exists() ? counterDoc.data()?.yearlyCounts : {}),
+            ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}),
             [currentYear]: newCount,
           }
         };
@@ -546,9 +545,7 @@ export function CreateQuoteForm() {
             )}
           />
         </div>
-        
         <Separator className="my-6" />
-        
         <FormField
           control={control}
           name="subject"
@@ -571,7 +568,6 @@ export function CreateQuoteForm() {
             </FormItem>
           )}
         />
-        
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
