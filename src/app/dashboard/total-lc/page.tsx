@@ -9,13 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerField } from '@/components/forms/DatePickerField';
-import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet, PlusCircle, MoreHorizontal, ShieldAlert, Landmark } from 'lucide-react';
+import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet, PlusCircle, MoreHorizontal, ShieldAlert, Landmark, CalendarClock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile } from '@/types';
-import { lcStatusOptions, currencyOptions } from '@/types';
+import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile, TermsOfPay } from '@/types';
+import { lcStatusOptions, currencyOptions, termsOfPayOptions } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual, getYear } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
@@ -23,7 +22,6 @@ import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
-import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
@@ -38,6 +36,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Ship, PackageCheck, FileText as FileTextIcon, Plane, Minus, Plus } from 'lucide-react';
 import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
@@ -167,7 +166,6 @@ export default function TotalLCPage() {
   const [filterLcNumber, setFilterLcNumber] = useState('');
   const [filterApplicantId, setFilterApplicantId] = useState('');
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
-  const [filterShipmentDate, setFilterShipmentDate] = useState<Date | null>(null);
   const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('Shipment Pending');
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
   const [filterTermsOfPay, setFilterTermsOfPay] = useState('');
@@ -199,16 +197,10 @@ export default function TotalLCPage() {
         setIsLoading(true);
         setFetchError(null);
         try {
-            const lcQuery = query(collection(firestore, "lc_entries"), firestoreOrderBy("createdAt", "desc"));
-            const querySnapshot = await getDocs(lcQuery);
-            const fetchedLCs = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-            } as LCEntryDocument;
-            });
+            const { allLcEntries: fetchedLCs, applicantOptions: fetchedApplicants, beneficiaryOptions: fetchedBeneficiaries } = await getInitialReportData();
             setAllLcEntries(fetchedLCs);
+            setApplicantOptions(fetchedApplicants);
+            setBeneficiaryOptions(fetchedBeneficiaries);
         } catch (error: any) {
             console.error("Error fetching L/C entries: ", error);
             let errorMsg = `Could not fetch L/C data. Ensure you have the necessary permissions.`;
@@ -221,32 +213,12 @@ export default function TotalLCPage() {
             Swal.fire("Error", errorMsg, "error");
         } finally {
             setIsLoading(false);
-        }
-        };
-
-        const fetchFilterOptions = async () => {
-        setIsLoadingApplicants(true);
-        setIsLoadingBeneficiaries(true);
-        try {
-            const customersSnapshot = await getDocs(collection(firestore, "customers"));
-            setApplicantOptions(
-            customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
-            );
-            const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
-            setBeneficiaryOptions(
-            suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
-            );
-        } catch (error: any) {
-            console.error("Error fetching filter options:", error);
-            Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
-        } finally {
             setIsLoadingApplicants(false);
             setIsLoadingBeneficiaries(false);
         }
         };
 
         fetchInitialData();
-        fetchFilterOptions();
     }
   }, [userRole, authLoading, user]);
 
@@ -262,20 +234,7 @@ export default function TotalLCPage() {
     if (filterBeneficiaryId) {
       filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
     }
-    
-    if (filterShipmentDate) {
-      const targetDate = startOfDay(filterShipmentDate);
-      filtered = filtered.filter(lc => {
-        if (!lc.latestShipmentDate) return false;
-        try {
-          const lcDate = startOfDay(parseISO(lc.latestShipmentDate));
-          return isValid(lcDate) && (isAfter(lcDate, targetDate) || isEqual(lcDate, targetDate));
-        } catch {
-          return false;
-        }
-      });
-    }
-    
+        
     if (filterStatus) {
       filtered = filtered.filter(lc => {
         if (Array.isArray(lc.status)) {
@@ -322,7 +281,7 @@ export default function TotalLCPage() {
     }
     setDisplayedLcEntries(filtered);
     setCurrentPage(1);
-  }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterShipmentDate, filterStatus, filterYear, filterTermsOfPay, sortBy, sortOrder]);
+  }, [allLcEntries, filterLcNumber, filterApplicantId, filterBeneficiaryId, filterStatus, filterYear, filterTermsOfPay, sortBy, sortOrder]);
 
   const handleEditLC = (lcId: string) => {
     if (!lcId) {
@@ -377,9 +336,32 @@ export default function TotalLCPage() {
     }
   };
 
+  const handleTrackDocument = (lc: LCEntryDocument) => {
+    const courier = lc.trackingCourier;
+    const number = lc.trackingNumber;
+
+    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
+        Swal.fire({ title: "Information Missing", text: "Courier or tracking number is not available for this entry.", icon: "info" });
+        return;
+    }
+
+    let url = "";
+    if (courier === "DHL") {
+        url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
+    } else if (courier === "FedEx") {
+        url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
+    }
+
+    if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+        Swal.fire({ title: "Courier Not Supported", text: "Tracking for the selected courier is not implemented.", icon: "warning" });
+    }
+  };
+
   const clearFilters = () => {
     setFilterLcNumber(''); setFilterApplicantId(''); setFilterBeneficiaryId('');
-    setFilterShipmentDate(null); setFilterStatus('');
+    setFilterStatus('');
     setFilterYear(new Date().getFullYear().toString());
     setFilterTermsOfPay('');
     setSortBy('lcIssueDate'); setSortOrder('desc');
@@ -450,30 +432,6 @@ export default function TotalLCPage() {
     if (term === "EXW") return "EXW";
     return null;
   };
-
-  const handleTrackDocument = (lc: LCEntryDocument) => {
-    const courier = lc.trackingCourier;
-    const number = lc.trackingNumber;
-
-    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
-        Swal.fire({ title: "Information Missing", text: "Courier or tracking number is not available for this entry.", icon: "info" });
-        return;
-    }
-
-    let url = "";
-    if (courier === "DHL") {
-        url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
-    } else if (courier === "FedEx") {
-        url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
-    }
-
-    if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-    } else {
-        Swal.fire({ title: "Courier Not Supported", text: "Tracking for the selected courier is not implemented.", icon: "warning" });
-    }
-  };
-
 
   return (
     <div className="container mx-auto py-8 px-5">
@@ -561,8 +519,8 @@ export default function TotalLCPage() {
                         <SelectContent>{yearFilterOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="termsOfPayFilter">Terms of Pay</Label>
+                     <div className="space-y-1">
+                        <Label htmlFor="termsOfPayFilter">Terms of Pay</Label>
                         <Select value={filterTermsOfPay} onValueChange={setFilterTermsOfPay}>
                             <SelectTrigger id="termsOfPayFilter">
                                 <SelectValue placeholder="All Terms"/>
@@ -621,7 +579,9 @@ export default function TotalLCPage() {
                     {isLoading ? (
                        <TableSkeleton />
                     ) : currentItems.length > 0 ? (
-                      currentItems.map((lc) => (
+                      currentItems.map((lc) => {
+                        const isDeferredPayment = lc.termsOfPay && lc.termsOfPay.startsWith("Deferred");
+                        return (
                         <React.Fragment key={lc.id}>
                           <TableRow className="border-b-0">
                             <TableCell className="font-medium px-2 sm:px-4">{lc.documentaryCreditNumber || 'N/A'}</TableCell>
@@ -716,7 +676,7 @@ export default function TotalLCPage() {
                                     disabled={!lc.trackingCourier || !lc.trackingNumber}
                                     title="Track Original Document"
                                     className="h-7"
-                                >
+                                  >
                                     {lc.trackingCourier === "DHL" ? <img src="/icons/dhl-logo.svg" alt="DHL" className="mr-1.5 h-3.5 w-auto" data-ai-hint="dhl logo"/> :
                                     lc.trackingCourier === "FedEx" ? <img src="/icons/fedex-logo.svg" alt="FedEx" className="mr-1.5 h-3.5 w-auto" data-ai-hint="fedex logo"/> :
                                     <PackageCheck className="mr-1.5 h-3.5 w-3.5" />}
@@ -824,7 +784,7 @@ export default function TotalLCPage() {
                                       <PopoverTrigger asChild>
                                         <Button variant="outline" size="sm" className="h-7 cursor-default">
                                           <Landmark className="mr-1.5 h-3.5 w-3.5" />
-                                          Partial Shipments
+                                          Partials
                                         </Button>
                                       </PopoverTrigger>
                                       <PopoverContent className="w-auto p-4 space-y-2 text-xs">
@@ -839,7 +799,7 @@ export default function TotalLCPage() {
                             </TableCell>
                           </TableRow>
                         </React.Fragment>
-                      ))
+                      )})
                     ) : (
                       <TableRow>
                         <TableCell colSpan={9} className="h-24 text-center px-2 sm:px-4">
@@ -908,3 +868,4 @@ export default function TotalLCPage() {
     
 
     
+
