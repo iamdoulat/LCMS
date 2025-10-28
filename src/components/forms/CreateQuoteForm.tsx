@@ -100,6 +100,7 @@ export function CreateQuoteForm() {
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedFreightCharges = watch("freightCharges");
+  const watchedShipmentMode = watch("shipmentMode");
   
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
@@ -835,7 +836,7 @@ export function CreateQuoteForm() {
                   <Textarea 
                     placeholder="Enter terms and conditions visible to the customer" 
                     {...field} 
-                    rows={10} 
+                    rows={3} 
                   />
                 </FormControl>
                 <FormMessage />
@@ -852,7 +853,7 @@ export function CreateQuoteForm() {
                   <Textarea 
                     placeholder="Internal notes, not visible to customer" 
                     {...field} 
-                    rows={10} 
+                    rows={3} 
                   />
                 </FormControl>
                 <FormMessage />

@@ -6,7 +6,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { QuoteDocument, CustomerDocument, PIShipmentMode } from '@/types';
+import type { QuoteDocument, CustomerDocument, ShipmentTerms, CompanyProfile } from '@/types';
 import { Loader2, Printer, AlertTriangle, Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -165,7 +165,6 @@ export default function PrintQuotePage() {
       return;
     }
     
-    // Temporarily hide utility buttons to not include them in the PDF
     const utilityButtons = input.querySelector('.print-only-utility-buttons') as HTMLElement;
     if (utilityButtons) utilityButtons.style.display = 'none';
 
@@ -243,7 +242,7 @@ export default function PrintQuotePage() {
   const showTaxColumn = quoteData.showTaxColumn ?? false;
 
   const qrCodeValue = `QUOTATION\nQuote Number: ${quoteData.id}\nDate: ${formatDisplayDate(quoteData.quoteDate)}\nSales Person: ${quoteData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(quoteData.totalAmount)} (USD)`;
-
+  
   const grandTotalLabel = "TOTAL (USD):";
 
   return (
@@ -414,6 +413,3 @@ export default function PrintQuotePage() {
     </div>
   );
 }
-
-
-

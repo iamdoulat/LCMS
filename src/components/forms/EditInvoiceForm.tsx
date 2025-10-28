@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc } from 'firebase/firestore';
-import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, PIShipmentMode } from '@/types';
+import type { InvoiceDocument, InvoiceFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, InvoiceLineItemFormValues, ShipmentTerms } from '@/types';
 import { InvoiceSchema, quoteTaxTypes, invoiceStatusOptions, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -134,7 +134,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             showDiscountColumn: initialData.showDiscountColumn ?? true,
             showTaxColumn: initialData.showTaxColumn ?? true,
             convertedFromQuoteId: initialData.convertedFromQuoteId,
-            shipmentMode: (initialData as any).shipmentMode ?? shipmentTermsOptions[0],
+            shipmentMode: initialData.shipmentMode ?? shipmentTermsOptions[0],
             packingCharge: initialData.packingCharge,
             handlingCharge: initialData.handlingCharge,
             otherCharges: initialData.otherCharges,
@@ -201,7 +201,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
       grandTotal: currentGrandTotal,
     };
   }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges]);
-
 
   React.useEffect(() => {
     if (watchedCustomerId) {
@@ -321,7 +320,6 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
 
   const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
 
-
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
   }
@@ -426,7 +424,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
+                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
+            </h3>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
@@ -511,6 +511,9 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                 showItemCodeColumn: initialData.showItemCodeColumn,
                 showDiscountColumn: initialData.showDiscountColumn,
                 showTaxColumn: initialData.showTaxColumn,
+                packingCharge: initialData.packingCharge,
+                handlingCharge: initialData.handlingCharge,
+                otherCharges: initialData.otherCharges,
               } : {} )}>
                 <X className="mr-2 h-4 w-4" />Reset
             </Button>
@@ -522,4 +525,3 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
     </Form>
   );
 }
-
