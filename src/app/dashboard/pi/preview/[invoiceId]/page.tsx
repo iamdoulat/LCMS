@@ -256,8 +256,10 @@ export default function PrintInvoicePage() {
                 <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
                 )}
                 <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-                {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
-                {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}
+                <div className="flex items-center gap-4 text-xs text-gray-600">
+                    {displayCompanyEmail && <span>Email: {displayCompanyEmail}</span>}
+                    {displayCompanyPhone && <span>Phone: {displayCompanyPhone}</span>}
+                </div>
             </div>
 
             <div className="text-right">
@@ -346,40 +348,23 @@ export default function PrintInvoicePage() {
                 )}
             </div>
             <div className="w-auto text-sm space-y-1 min-w-[250px]">
-                <div className="grid grid-cols-2 gap-x-0">
-                    <span className="text-gray-600 font-medium text-right">Subtotal:</span>
-                    <span className="text-gray-800 text-right">{formatCurrency(invoiceData.subtotal)}</span>
-                </div>
-                 {showDiscountColumn && (
-                    <div className="grid grid-cols-2 gap-x-0">
-                        <span className="text-gray-600 font-medium text-right">Total Discount:</span>
-                        <span className="text-gray-800 text-right">(-) {formatCurrency(invoiceData.totalDiscountAmount)}</span>
-                    </div>
+                <div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Subtotal:</span><span className="text-gray-800 text-right">{formatCurrency(invoiceData.subtotal)}</span></div>
+                {showDiscountColumn && (<div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Total Discount:</span><span className="text-gray-800 text-right">(-) {formatCurrency(invoiceData.totalDiscountAmount)}</span></div>)}
+                {showTaxColumn && (<div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Total Tax ({invoiceData.taxType}):</span><span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.totalTaxAmount)}</span></div>)}
+                 {(invoiceData.freightCharges || 0) > 0 && (
+                     <div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Freight Charges:</span><span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.freightCharges)}</span></div>
                 )}
-                {showTaxColumn && (
-                    <div className="grid grid-cols-2 gap-x-0">
-                        <span className="text-gray-600 font-medium text-right">Total Tax ({invoiceData.taxType}):</span>
-                        <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.totalTaxAmount)}</span>
-                    </div>
+                {(invoiceData.packingCharge || 0) > 0 && (
+                     <div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Packing Charge:</span><span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.packingCharge)}</span></div>
                 )}
-                {(invoiceData.freightCharges || 0) > 0 && (
-                     <div className="grid grid-cols-2 gap-x-0">
-                        <span className="text-gray-600 font-medium text-right">Freight Charges:</span>
-                        <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.freightCharges)}</span>
-                    </div>
+                {(invoiceData.handlingCharge || 0) > 0 && (
+                     <div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Handling Charge:</span><span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.handlingCharge)}</span></div>
                 )}
-                {(invoiceData.otherCharges || 0) > 0 && (
-                     <div className="grid grid-cols-2 gap-x-0">
-                        <span className="text-gray-600 font-medium text-right">Freight Charges:</span>
-                        <span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.otherCharges)}</span>
-                    </div>
+                 {(invoiceData.otherCharges || 0) > 0 && (
+                     <div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Other Charges:</span><span className="text-gray-800 text-right">(+) {formatCurrency(invoiceData.otherCharges)}</span></div>
                 )}
-
                 <Separator className="my-2 border-gray-300" />
-                <div className="grid grid-cols-2 gap-x-0 text-base font-bold">
-                    <span className="text-gray-900 text-right" style={{fontSize: '14px'}}>{grandTotalLabel}</span>
-                    <span className="text-blue-600 text-right">{formatCurrency(invoiceData.totalAmount)}</span>
-                </div>
+                <div className="flex justify-between text-base font-bold"><span className="text-gray-900 text-right" style={{fontSize: '14px'}}>{grandTotalLabel}</span><span className="text-blue-600 text-right">{formatCurrency(invoiceData.totalAmount)}</span></div>
             </div>
         </div>
       </div>
@@ -428,6 +413,7 @@ export default function PrintInvoicePage() {
     </div>
   );
 }
+
 
 
 

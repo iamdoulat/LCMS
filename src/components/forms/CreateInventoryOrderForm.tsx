@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -88,7 +87,7 @@ export function CreateInventoryOrderForm() {
       shipVia: '',
       portOfLoading: '',
       portOfDischarge: '',
-      shipmentMode: piShipmentModeOptions[0],
+      shipmentMode: shipmentTermsOptions[0],
       freightCharges: undefined,
       otherCharges: undefined,
     },
@@ -163,7 +162,7 @@ export function CreateInventoryOrderForm() {
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         setBeneficiaryOptions(
@@ -329,11 +328,11 @@ export function CreateInventoryOrderForm() {
         return formattedOrderId;
       });
       return newOrderId;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error in saveOrderLogic: ", error);
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to save purchase order: ${error.message}`,
+        text: `Failed to save purchase order: ${(error as Error).message}`,
         icon: "error",
       });
       return null;
@@ -488,14 +487,14 @@ export function CreateInventoryOrderForm() {
               render={({ field }) => (
                   <FormItem>
                       <FormLabel>Shipment Mode</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? piShipmentModeOptions[0]}>
+                      <Select onValueChange={field.onChange} value={field.value ?? shipmentTermsOptions[0]}>
                           <FormControl>
                               <SelectTrigger>
                                   <SelectValue placeholder="Select shipment mode" />
                               </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                              {piShipmentModeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                              {shipmentTermsOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                           </SelectContent>
                       </Select>
                       <FormMessage />
@@ -511,7 +510,7 @@ export function CreateInventoryOrderForm() {
                 <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
             <div className="flex items-center gap-2">
-                <Link href="/dashboard/quotes/items/add" target="_blank">
+                <Link href="/dashboard/quotations/items/add" target="_blank">
                     <Button variant="outline" size="sm" type="button">
                         <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
                     </Button>

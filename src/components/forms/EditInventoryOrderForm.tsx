@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -9,7 +10,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc } from 'firebase/firestore';
 import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues, PIShipmentMode } from '@/types';
-import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions, piShipmentModeOptions } from '@/types';
+import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -389,14 +390,14 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
               render={({ field }) => (
                   <FormItem>
                       <FormLabel>Shipment Mode</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? piShipmentModeOptions[0]}>
+                      <Select onValueChange={field.onChange} value={field.value ?? shipmentTermsOptions[0]}>
                           <FormControl>
                               <SelectTrigger>
                                   <SelectValue placeholder="Select shipment mode" />
                               </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                              {piShipmentModeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                              {shipmentTermsOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                           </SelectContent>
                       </Select>
                       <FormMessage />
@@ -504,3 +505,4 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
     </Form>
   );
 }
+

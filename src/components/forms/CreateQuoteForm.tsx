@@ -1,3 +1,6 @@
+
+"use client";
+
 import { CreateInvoiceForm } from '@/components/forms/CreateInvoiceForm'; // Import the new form
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FilePlus2 } from 'lucide-react';
@@ -8,7 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, getDocs, runTransaction } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
 import type { CustomerDocument, ItemDocument as ItemDoc, QuoteFormValues as PageQuoteFormValues, QuoteLineItemFormValues as PageQuoteLineItemFormValues, ShipmentTerms } from '@/types';
 import { QuoteSchema, quoteTaxTypes, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -364,7 +367,7 @@ export function CreateQuoteForm() {
   };
 
   const handleReset = () => {
-    form.reset({
+    reset({
       customerId: '',
       billingAddress: '',
       shippingAddress: '',
@@ -409,7 +412,7 @@ export function CreateQuoteForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit(() => {})} className="space-y-8">
+      <form className="space-y-8">
         
         <h3 className={cn(sectionHeadingClass)}>
           <Users className="mr-2 h-5 w-5 text-primary" />

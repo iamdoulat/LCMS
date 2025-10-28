@@ -1,3 +1,6 @@
+
+"use client";
+
 import { CreateQuoteForm } from '@/components/forms/CreateQuoteForm'; // Import the form
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FilePlus2 } from 'lucide-react';
