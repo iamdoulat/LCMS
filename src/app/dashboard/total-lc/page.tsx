@@ -687,10 +687,11 @@ export default function TotalLCPage() {
                                       </Popover>
                                   )}
                                   <Button variant="outline" size="sm" onClick={() => handleTrackDocument(lc)} disabled={!lc.trackingCourier || !lc.trackingNumber} title="Track Original Document" className="h-7">
-                                    <Search className="mr-1.5 h-3.5 w-3.5" /> Track Docs
+                                    <Search className="mr-1.5 h-3.5 w-3.5" />
+                                    {lc.trackingCourier === 'DHL' ? 'DHL' : lc.trackingCourier === 'FedEx' ? 'FedEx' : 'Track Docs'}
                                   </Button>
                                   {(lc.vesselImoNumber || lc.flightNumber) && (
-                                      <Button variant="outline" size="sm" onClick={() => lc.shipmentMode === 'Air' ? router.push(`https://www.flightradar24.com/${lc.flightNumber}`) : handleTrackVessel(lc)} title={lc.shipmentMode === 'Air' ? 'Track Flight' : 'Track Vessel'} className="h-7">
+                                      <Button variant="outline" size="sm" onClick={() => lc.shipmentMode === 'Air' && lc.flightNumber ? router.push(`https://www.flightradar24.com/${lc.flightNumber}`) : handleTrackVessel(lc)} title={lc.shipmentMode === 'Air' ? 'Track Flight' : 'Track Vessel'} className="h-7">
                                           {lc.shipmentMode === 'Air' ? <Plane className="mr-1.5 h-3.5 w-3.5" /> : <Ship className="mr-1.5 h-3.5 w-3.5" />}
                                           {lc.shipmentMode === 'Air' ? 'Air' : 'Vessel'}
                                       </Button>
@@ -804,6 +805,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
