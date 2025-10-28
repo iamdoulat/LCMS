@@ -22,6 +22,7 @@ import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
+import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
@@ -33,7 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Ship, PackageCheck, FileText as FileTextIcon, Plane, Minus, Plus } from 'lucide-react';
 import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
@@ -88,6 +89,7 @@ const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYe
 
 const ALL_YEARS_VALUE = "__ALL_YEARS__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
+const ALL_TERMS_VALUE = "__ALL_TERMS_OF_PAY__";
 const ITEMS_PER_PAGE = 10;
 
 const escapeCsvCell = (cellData: any): string => {
@@ -234,7 +236,7 @@ export default function TotalLCPage() {
     if (filterBeneficiaryId) {
       filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
     }
-        
+    
     if (filterStatus) {
       filtered = filtered.filter(lc => {
         if (Array.isArray(lc.status)) {
@@ -358,6 +360,7 @@ export default function TotalLCPage() {
         Swal.fire({ title: "Courier Not Supported", text: "Tracking for the selected courier is not implemented.", icon: "warning" });
     }
   };
+
 
   const clearFilters = () => {
     setFilterLcNumber(''); setFilterApplicantId(''); setFilterBeneficiaryId('');
@@ -519,14 +522,14 @@ export default function TotalLCPage() {
                         <SelectContent>{yearFilterOptions.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
                       </Select>
                     </div>
-                     <div className="space-y-1">
-                        <Label htmlFor="termsOfPayFilter">Terms of Pay</Label>
-                        <Select value={filterTermsOfPay} onValueChange={setFilterTermsOfPay}>
+                    <div className="space-y-1">
+                        <Label htmlFor="termsOfPayFilter">Terms of Pay*</Label>
+                        <Select value={filterTermsOfPay} onValueChange={(value) => setFilterTermsOfPay(value === ALL_TERMS_VALUE ? '' : value)}>
                             <SelectTrigger id="termsOfPayFilter">
                                 <SelectValue placeholder="All Terms"/>
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">All Terms</SelectItem>
+                                <SelectItem value={ALL_TERMS_VALUE}>All Terms</SelectItem>
                                 {termsOfPayOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                             </SelectContent>
                         </Select>
@@ -770,7 +773,7 @@ export default function TotalLCPage() {
                                     <Popover>
                                         <PopoverTrigger asChild>
                                              <Button variant="outline" size="sm" className="h-7 cursor-default">
-                                                <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                                                <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
                                                 Maturity
                                             </Button>
                                         </PopoverTrigger>
@@ -868,4 +871,5 @@ export default function TotalLCPage() {
     
 
     
+
 
