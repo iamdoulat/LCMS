@@ -13,8 +13,8 @@ import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDo
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile, TermsOfPay } from '@/types';
-import { lcStatusOptions, currencyOptions, termsOfPayOptions } from '@/types';
+import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile, TermsOfPay, PartialShipmentAllowed } from '@/types';
+import { lcStatusOptions, currencyOptions, termsOfPayOptions, shipmentTermsOptions } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual, getYear } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
@@ -36,8 +36,9 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Ship, PackageCheck, FileText as FileTextIcon, Plane, Minus, Plus } from 'lucide-react';
-import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { Form, FormField, FormItem } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/DatePickerField';
+import { Label } from '@/components/ui/label';
 
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
@@ -78,7 +79,6 @@ const sortOptions = [
   { value: "beneficiaryName", label: "Beneficiary Name" },
   { value: "lcIssueDate", label: "Issue Date" },
   { value: "expireDate", label: "Expire Date" },
-  { value: "latestShipmentDate", label: "Latest Shipment Date" },
   { value: "amount", label: "Amount" },
   { value: "status", label: "Status" },
   { value: "year", label: "Year" },
@@ -642,7 +642,7 @@ export default function TotalLCPage() {
                             </TableCell>
                           </TableRow>
                           <TableRow key={`${lc.id}-actions`} className="bg-muted/20">
-                            <TableCell colSpan={8} className="py-2 px-4">
+                            <TableCell colSpan={9} className="py-2 px-4">
                               <div className="flex flex-wrap items-center gap-2">
                                   {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
                                     <Popover>
@@ -660,8 +660,8 @@ export default function TotalLCPage() {
                                   )}
                                    <Popover>
                                       <PopoverTrigger asChild>
-                                          <Button variant="outline" size="sm" className={cn("h-7 cursor-default", {"bg-green-500 text-white hover:bg-green-600": lc.etd || lc.eta})}>
-                                              <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                                          <Button variant="outline" size="sm" className="h-7 cursor-default">
+                                              <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
                                               ETD/ETA
                                           </Button>
                                       </PopoverTrigger>
@@ -794,6 +794,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
