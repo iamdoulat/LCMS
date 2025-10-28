@@ -5,8 +5,8 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument, PIShipmentMode } from '@/types';
-import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined, piShipmentModeOptions } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument, ShipmentTerms } from '@/types';
+import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined, shipmentTermsOptions } from '@/types';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -72,7 +72,7 @@ const defaultFormValues: NewLCFormValues = {
   etd: undefined,
   eta: undefined,
   shipmentMode: undefined,
-  shipmentTerms: undefined,
+  shipmentTerms: shipmentTermsOptions[0],
   vesselOrFlightName: '',
   vesselImoNumber: '',
   flightNumber: '',
@@ -217,6 +217,7 @@ export function NewLCEntryForm() {
 
   const amountLabel = currencyOptions.includes(watchedCurrency as Currency) ? `${watchedCurrency} Amount*` : "Amount*";
 
+  const isDeferredPayment = watchedTermsOfPay && watchedTermsOfPay.startsWith("Deferred");
 
   const partialFieldsToWatch = [
     "firstPartialQty", "secondPartialQty", "thirdPartialQty",
@@ -519,9 +520,7 @@ export function NewLCEntryForm() {
   if (isLoadingApplicants || isLoadingBeneficiaries) {
     return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <span className="ml-2">Loading form options...</span></div>;
   }
-
-  const isDeferredPayment = watchedTermsOfPay && watchedTermsOfPay.startsWith("Deferred");
-
+  
 
   return (
     <Form {...form}>
@@ -830,14 +829,14 @@ export function NewLCEntryForm() {
               name="shipmentTerms"
               render={({ field }) => (
                   <FormItem className="space-y-3">
-                      <FormLabel>Shipment Terms</FormLabel>
+                      <FormLabel>Shipment Terms*</FormLabel>
                       <FormControl>
                           <RadioGroup
                               onValueChange={field.onChange}
                               value={field.value}
                               className="flex flex-wrap items-center gap-x-4 gap-y-2"
                           >
-                              {piShipmentModeOptions.map((option) => (
+                              {shipmentTermsOptions.map((option) => (
                                   <FormItem key={option} className="flex items-center space-x-2 space-y-0">
                                       <FormControl><RadioGroupItem value={option} /></FormControl>
                                       <FormLabel className="font-normal text-sm">{option}</FormLabel>

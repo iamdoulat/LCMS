@@ -33,12 +33,12 @@ export const certificateOfOriginCountries = [
 ] as const;
 export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[number];
 
-// --- Proforma Invoice Types - MOVED HERE BEFORE USE ---
+// --- Proforma Invoice & Order Types ---
 export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as const;
 export type FreightChargeOption = typeof freightChargeOptions[number];
-export const piShipmentModeOptions = ["CFR CHATTOGRAM", "CPT DHAKA", "FOB", "EXW"] as const;
-export type PIShipmentMode = typeof piShipmentModeOptions[number];
-// --- END Moved Types ---
+export const shipmentTermsOptions = ["CFR CHATTOGRAM", "CPT DHAKA", "FOB", "EXW"] as const;
+export type ShipmentTerms = typeof shipmentTermsOptions[number];
+// --- END Types ---
 
 export const toNumberOrUndefined = (val: unknown): number | undefined => {
   if (val === "" || val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
@@ -99,7 +99,7 @@ export interface LCEntry {
   etd?: Date | null | undefined;
   eta?: Date | null | undefined;
   shipmentMode?: ShipmentMode;
-  shipmentTerms?: PIShipmentMode;
+  shipmentTerms?: ShipmentTerms;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
   flightNumber?: string;
@@ -191,7 +191,7 @@ export const lcEntrySchema = z.object({
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
   shipmentMode: z.enum(shipmentModeOptions).optional(),
-  shipmentTerms: z.enum(piShipmentModeOptions).optional(),
+  shipmentTerms: z.enum(shipmentTermsOptions).optional(),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
@@ -311,7 +311,7 @@ export interface LCEntryDocument {
   etd?: string; // ISO string
   eta?: string; // ISO string
   shipmentMode?: ShipmentMode;
-  shipmentTerms?: PIShipmentMode;
+  shipmentTerms?: ShipmentTerms;
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
   flightNumber?: string;
@@ -527,7 +527,7 @@ export interface ProformaInvoice {
   freightChargeOption: FreightChargeOption;
   freightChargeAmount?: number;
   miscellaneousExpenses?: number;
-  shipmentMode?: PIShipmentMode;
+  shipmentMode?: ShipmentTerms;
   freightCharges?: number;
   otherCharges?: number;
   totalQty: number;
@@ -877,7 +877,7 @@ export const QuoteSchema = z.object({
   showDiscountColumn: z.boolean().optional().default(true),
   showTaxColumn: z.boolean().optional().default(true),
   convertedToInvoiceId: z.string().optional(),
-  shipmentMode: z.enum(piShipmentModeOptions).optional(),
+  shipmentMode: z.enum(shipmentTermsOptions).optional(),
   freightCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
 export type QuoteFormValues = z.infer<typeof QuoteSchema>;
@@ -918,7 +918,7 @@ export interface QuoteDocument {
   showDiscountColumn?: boolean;
   showTaxColumn?: boolean;
   convertedToInvoiceId?: string;
-  shipmentMode?: PIShipmentMode;
+  shipmentMode?: ShipmentTerms;
   freightCharges?: number;
 }
 // --- END Quote Types ---
@@ -962,7 +962,7 @@ export const InvoiceSchema = z.object({
   showDiscountColumn: z.boolean().optional().default(true),
   showTaxColumn: z.boolean().optional().default(true),
   convertedFromQuoteId: z.string().optional(),
-  shipmentMode: z.enum(piShipmentModeOptions).optional(),
+  shipmentMode: z.enum(shipmentTermsOptions).optional(),
   packingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   handlingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   freightCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
@@ -1015,7 +1015,7 @@ export interface InvoiceDocument {
   showDiscountColumn?: boolean;
   showTaxColumn?: boolean;
   convertedFromQuoteId?: string;
-  shipmentMode?: PIShipmentMode;
+  shipmentMode?: ShipmentTerms;
 }
 // --- END Invoice Types ---
 
@@ -1056,7 +1056,7 @@ export const OrderSchema = z.object({
   shipVia: z.string().optional(),
   portOfLoading: z.string().optional(),
   portOfDischarge: z.string().optional(),
-  shipmentMode: z.enum(piShipmentModeOptions).optional(),
+  shipmentMode: z.enum(shipmentTermsOptions).optional(),
   freightCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
   otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
@@ -1100,7 +1100,7 @@ export interface OrderDocument {
   shipVia?: string;
   portOfLoading?: string;
   portOfDischarge?: string;
-  shipmentMode?: PIShipmentMode;
+  shipmentMode?: ShipmentTerms;
   freightCharges?: number;
   otherCharges?: number;
 }
