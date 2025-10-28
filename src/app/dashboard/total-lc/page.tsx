@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile, TermsOfPay, PartialShipmentAllowed } from '@/types';
-import { lcStatusOptions, currencyOptions, termsOfPayOptions, shipmentTermsOptions } from '@/types';
+import { lcStatusOptions, currencyOptions, trackingCourierOptions, termsOfPayOptions, shipmentTermsOptions } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual, getYear } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where } from 'firebase/firestore';
@@ -655,10 +655,15 @@ export default function TotalLCPage() {
                            <TableRow key={`${lc.id}-actions`} className="bg-muted/20">
                             <TableCell colSpan={8} className="py-2 px-4">
                               <div className="flex flex-wrap items-center gap-2">
-                                  <Popover>
+                                  {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
+                                    <Button variant="outline" size="sm" className="h-7 cursor-default">
+                                      <Ship className="mr-1.5 h-3.5 w-3.5" /> {getShipmentTermLabel(lc.shipmentTerms)}
+                                    </Button>
+                                  )}
+                                  <Popover open={etdEtaPopoverOpen[lc.id]} onOpenChange={(open) => setEtdEtaPopoverOpen(prev => ({...prev, [lc.id]: open}))}>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-7 cursor-default">
-                                            <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                                        <Button variant="outline" size="sm" className={cn("h-7", etdEtaPopoverOpen[lc.id] && "bg-green-500 hover:bg-green-600 text-white")}>
+                                            <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
                                             ETD/ETA
                                         </Button>
                                     </PopoverTrigger>
@@ -670,11 +675,10 @@ export default function TotalLCPage() {
                                     </PopoverContent>
                                   </Popover>
                                   {isDeferredPayment && (
-                                      <Popover>
+                                      <Popover open={maturityPopoverOpen[lc.id]} onOpenChange={(open) => setMaturityPopoverOpen(prev => ({...prev, [lc.id]: open}))}>
                                         <PopoverTrigger asChild>
                                             <Button variant="outline" size="sm" className="h-7 cursor-default">
-                                                <Landmark className="mr-1.5 h-3.5 w-3.5" />
-                                                Maturity
+                                                <Landmark className="mr-1.5 h-3.5 w-3.5" /> Maturity
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-2">
@@ -709,7 +713,10 @@ export default function TotalLCPage() {
                                           <Button
                                             variant={shipment.flag ? "default" : "outline"}
                                             size="icon"
-                                            className={cn("h-7 w-7 rounded-full p-0 text-xs font-bold", shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                            className={cn(
+                                                "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                                shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                            )}
                                           >
                                             {shipment.label}
                                           </Button>
@@ -796,6 +803,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
