@@ -655,7 +655,7 @@ export default function TotalLCPage() {
                            <TableRow key={`${lc.id}-actions`} className="bg-muted/20">
                             <TableCell colSpan={8} className="py-2 px-4">
                               <div className="flex flex-wrap items-center gap-2">
-                                  {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
+                                {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
                                     <Button variant="outline" size="sm" className="h-7 cursor-default">
                                       <Ship className="mr-1.5 h-3.5 w-3.5" /> {getShipmentTermLabel(lc.shipmentTerms)}
                                     </Button>
@@ -689,10 +689,11 @@ export default function TotalLCPage() {
                                   <Button variant="outline" size="sm" onClick={() => handleTrackDocument(lc)} disabled={!lc.trackingCourier || !lc.trackingNumber} title="Track Original Document" className="h-7">
                                     <Search className="mr-1.5 h-3.5 w-3.5" /> Track Docs
                                   </Button>
-                                  {lc.vesselImoNumber && (
-                                    <Button variant="outline" size="sm" onClick={() => handleTrackVessel(lc)} title="Track Vessel" className="h-7">
-                                        <Ship className="mr-1.5 h-3.5 w-3.5" /> Track Vessel
-                                    </Button>
+                                  {(lc.vesselImoNumber || lc.flightNumber) && (
+                                      <Button variant="outline" size="sm" onClick={() => lc.shipmentMode === 'Air' ? router.push(`https://www.flightradar24.com/${lc.flightNumber}`) : handleTrackVessel(lc)} title={lc.shipmentMode === 'Air' ? 'Track Flight' : 'Track Vessel'} className="h-7">
+                                          {lc.shipmentMode === 'Air' ? <Plane className="mr-1.5 h-3.5 w-3.5" /> : <Ship className="mr-1.5 h-3.5 w-3.5" />}
+                                          {lc.shipmentMode === 'Air' ? 'Air' : 'Vessel'}
+                                      </Button>
                                   )}
                                   <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.finalLcUrl)} disabled={!lc.finalLcUrl} title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'} className="h-7">
                                     {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
@@ -803,6 +804,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
