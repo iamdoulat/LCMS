@@ -37,6 +37,8 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Ship, PackageCheck, FileText as FileTextIcon, Plane, Minus, Plus } from 'lucide-react';
 import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { DatePickerField } from '@/components/forms/DatePickerField';
+
 
 const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
   switch (status) {
@@ -656,19 +658,19 @@ export default function TotalLCPage() {
                                         </PopoverContent>
                                     </Popover>
                                   )}
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-7 cursor-default data-[state=open]:bg-green-500 data-[state=open]:text-white">
-                                            <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
-                                            ETD/ETA
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-2">
-                                        <div className="space-y-1 text-sm">
-                                            <p><strong>ETD:</strong> {formatDisplayDate(lc.etd)}</p>
-                                            <p><strong>ETA:</strong> {formatDisplayDate(lc.eta)}</p>
-                                        </div>
-                                    </PopoverContent>
+                                   <Popover>
+                                      <PopoverTrigger asChild>
+                                          <Button variant="outline" size="sm" className={cn("h-7 cursor-default", {"bg-green-500 text-white hover:bg-green-600": lc.etd || lc.eta})}>
+                                              <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                                              ETD/ETA
+                                          </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-2">
+                                          <div className="space-y-1 text-sm">
+                                              <p><strong>ETD:</strong> {formatDisplayDate(lc.etd)}</p>
+                                              <p><strong>ETA:</strong> {formatDisplayDate(lc.eta)}</p>
+                                          </div>
+                                      </PopoverContent>
                                   </Popover>
                                   {isDeferredPayment && (
                                       <Popover>
@@ -684,15 +686,12 @@ export default function TotalLCPage() {
                                       </Popover>
                                   )}
                                   <Button variant="outline" size="sm" onClick={() => handleTrackDocument(lc)} disabled={!lc.trackingCourier || !lc.trackingNumber} title="Track Original Document" className="h-7">
-                                    <Search className="mr-1.5 h-3.5 w-3.5" /> Docs
+                                    <Search className="mr-1.5 h-3.5 w-3.5" /> Track Docs
                                   </Button>
                                   <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.finalLcUrl)} disabled={!lc.finalLcUrl} title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'} className="h-7">
-                                    <FileTextIcon className="mr-1.5 h-3.5 w-3.5" />
                                     {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
                                   </Button>
-                                  <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.finalPIUrl)} disabled={!lc.finalPIUrl} title="View Final Proforma Invoice" className="h-7">
-                                    <FileTextIcon className="mr-1.5 h-3.5 w-3.5" /> PI
-                                  </Button>
+                                  <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.finalPIUrl)} disabled={!lc.finalPIUrl} title="View Final Proforma Invoice" className="h-7">PI</Button>
                                   <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.shippingDocumentsUrl)} disabled={!lc.shippingDocumentsUrl} title="View Shipping Documents" className="h-7">DOC</Button>
                                   <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.packingListUrl)} disabled={!lc.packingListUrl} title="View Packing List" className="h-7">PL</Button>
                                   <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.purchaseOrderUrl)} disabled={!lc.purchaseOrderUrl} title="View OCS / Purchase Order" className="h-7">OCS/PO</Button>
@@ -703,24 +702,22 @@ export default function TotalLCPage() {
                                         { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
                                     ].map((shipment, idx) => (
                                       shipment.label && (
-                                      <TooltipProvider key={idx} delayDuration={100}>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                                <Button
-                                                    variant={shipment.flag ? "default" : "outline"}
-                                                    size="icon"
-                                                    className={cn("h-7 w-7 rounded-full p-0 text-xs font-bold", shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
-                                                >
-                                                    {shipment.label}
-                                                </Button>
-                                          </TooltipTrigger>
-                                          {shipment.note && (
-                                            <TooltipContent side="top">
-                                              <p className="max-w-xs">{shipment.note}</p>
-                                            </TooltipContent>
-                                          )}
-                                        </Tooltip>
-                                      </TooltipProvider>
+                                      <Popover key={idx}>
+                                        <PopoverTrigger asChild>
+                                          <Button
+                                            variant={shipment.flag ? "default" : "outline"}
+                                            size="icon"
+                                            className={cn("h-7 w-7 rounded-full p-0 text-xs font-bold", shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10")}
+                                          >
+                                            {shipment.label}
+                                          </Button>
+                                        </PopoverTrigger>
+                                        {shipment.note && (
+                                          <PopoverContent className="w-auto max-w-sm p-2 text-sm" side="top">
+                                            {shipment.note}
+                                          </PopoverContent>
+                                        )}
+                                      </Popover>
                                       )
                                     ))}
                                   </div>
@@ -797,6 +794,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
