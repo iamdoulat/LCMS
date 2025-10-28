@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc } from 'firebase/firestore';
-import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues, PIShipmentMode } from '@/types';
+import type { OrderDocument, OrderFormValues, SupplierDocument, ItemDocument as ItemDoc, QuoteTaxType, OrderLineItemFormValues, ShipmentTerms } from '@/types';
 import { OrderLineItemSchema, OrderSchema, quoteTaxTypes, orderStatusOptions, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -506,3 +506,5 @@ export function EditInventoryOrderForm({ initialData, orderId }: EditInventoryOr
   );
 }
 
+
+```
