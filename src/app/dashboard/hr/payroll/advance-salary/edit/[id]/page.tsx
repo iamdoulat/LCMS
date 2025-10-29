@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2, AlertTriangle, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { AdvanceSalaryDocument } from '@/types';
 import { EditAdvanceSalaryForm } from '@/components/forms/EditAdvanceSalaryForm';
@@ -57,7 +57,7 @@ export default function EditAdvanceSalaryPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8 px-5">
          <div className="mb-6"><Skeleton className="h-10 w-40" /></div>
           <Card className="max-w-4xl mx-auto shadow-xl">
              <CardHeader><Skeleton className="h-8 w-1/3" /><Skeleton className="h-4 w-1/2 mt-2" /></CardHeader>
@@ -69,7 +69,7 @@ export default function EditAdvanceSalaryPage() {
 
   if (error || !advanceData) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8 px-5">
         <Card className="max-w-4xl mx-auto shadow-xl border-destructive">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive">
@@ -91,7 +91,7 @@ export default function EditAdvanceSalaryPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <div className="mb-6">
         <Link href="/dashboard/hr/payroll/advance-salary" passHref>
           <Button variant="outline">
