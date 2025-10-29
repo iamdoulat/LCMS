@@ -327,7 +327,7 @@ export default function AccountDetailsPage() {
       })
       .filter((item): item is AttendanceDocument => item !== null);
     
-    return result;
+    return result.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
   }, [attendanceDateRange, monthlyAttendance, holidays, leaves, visits, employeeData]);
 
   useEffect(() => {
