@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -281,19 +282,19 @@ export default function AccountDetailsPage() {
         }
 
         const isHoliday = holidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
-        if (isHoliday) return { date: day.toISOString(), flag: 'H' as AttendanceFlag };
+        if (isHoliday) return { date: day.toISOString(), flag: 'H' as AttendanceFlag, inTime: null, outTime: null };
 
         const isOnLeave = leaves.some(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
-        if (isOnLeave) return { date: day.toISOString(), flag: 'L' as AttendanceFlag };
+        if (isOnLeave) return { date: day.toISOString(), flag: 'L' as AttendanceFlag, inTime: null, outTime: null };
 
         const isOnVisit = visits.some(v => v.status === 'Approved' && isWithinInterval(day, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
-        if (isOnVisit) return { date: day.toISOString(), flag: 'V' as AttendanceFlag };
+        if (isOnVisit) return { date: day.toISOString(), flag: 'V' as AttendanceFlag, inTime: null, outTime: null };
 
-        if (getDay(day) === 5) return { date: day.toISOString(), flag: 'W' as AttendanceFlag }; // Friday
+        if (getDay(day) === 5) return { date: day.toISOString(), flag: 'W' as AttendanceFlag, inTime: null, outTime: null }; // Friday
 
         // Only mark as absent if the day is not in the future.
         if (day <= new Date()) {
-          return { date: day.toISOString(), flag: 'A' as AttendanceFlag };
+          return { date: day.toISOString(), flag: 'A' as AttendanceFlag, inTime: null, outTime: null };
         }
 
         return null; // Future working day with no record yet
@@ -977,7 +978,7 @@ export default function AccountDetailsPage() {
                                 <TableCell>{formatDisplayDate(att?.date)}</TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
-                                    {'inTime' in att! ? att.inTime || 'N/A' : 'N/A'}
+                                    {'inTime' in att! && att.inTime ? att.inTime : 'N/A'}
                                     {'inTimeLocation' in att! && att.inTimeLocation && (
                                     <Button
                                         type="button" variant="ghost" size="icon" className="h-6 w-6"
@@ -989,7 +990,7 @@ export default function AccountDetailsPage() {
                                 </TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
-                                    {'outTime' in att! ? att.outTime || 'N/A' : 'N/A'}
+                                    {'outTime' in att! && att.outTime ? att.outTime : 'N/A'}
                                     {'outTimeLocation' in att! && att.outTimeLocation && (
                                     <Button
                                         type="button" variant="ghost" size="icon" className="h-6 w-6"
