@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag } from '@/types';
-import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, endOfDay, isFuture } from 'date-fns';
+import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, endOfDay, isFuture, isToday } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
@@ -151,7 +151,7 @@ export default function AccountDetailsPage() {
         setIsDayStatusLoading(true);
         setError(null);
         try {
-          const today = startOfDay(new Date());
+          const today = new Date();
           const startOfCurrentMonth = startOfMonth(today);
           const endOfCurrentMonth = endOfMonth(today);
   
@@ -182,45 +182,41 @@ export default function AccountDetailsPage() {
           const monthlyAttendanceSnapshot = await getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', fromDate), where('date', '<=', toDate)));
           const currentMonthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
 
+          // Correct calculation for monthly stats
+          let present = 0, delayed = 0, absent = 0;
+          const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
+          
+          daysInMonth.forEach(day => {
+              if (!isFuture(day)) {
+                  const dayStr = format(day, 'yyyy-MM-dd');
+                  const attendanceRecord = currentMonthlyAttendance.find(a => a.date.startsWith(dayStr));
+
+                  if (attendanceRecord) {
+                      if (attendanceRecord.flag === 'P') present++;
+                      if (attendanceRecord.flag === 'D') delayed++;
+                  } else {
+                      const dayOfWeek = getDay(day);
+                      const isWeekend = dayOfWeek === 5; // Friday
+                      const isOnLeave = allLeaves.some(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+                      const isOnVisit = allVisits.some(v => v.status === 'Approved' && isWithinInterval(day, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
+                      const isHoliday = allHolidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+
+                      if (!isWeekend && !isOnLeave && !isOnVisit && !isHoliday && !isToday(day)) {
+                          absent++;
+                      }
+                  }
+              }
+          });
+          
           const monthlyAdvanceSalarySnapshot = await getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id), where('applyDate', '>=', fromDate), where('applyDate', '<=', toDate), where('status', '==', 'Approved')));
           const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
           
-          const approvedLeavesThisMonth = allLeaves.filter(l => l.status === 'Approved' && isWithinInterval(parseISO(l.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth}));
-          const approvedVisitsThisMonth = allVisits.filter(v => v.status === 'Approved' && isWithinInterval(parseISO(v.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth}));
-          const approvedLeavesSpanningMonth = allLeaves.filter(l => l.status === 'Approved' && isWithinInterval(startOfCurrentMonth, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) || isWithinInterval(endOfCurrentMonth, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
-
-          const presentDays = currentMonthlyAttendance.filter(a => a.flag === 'P' || a.flag === 'D').length;
-          const delayedDays = currentMonthlyAttendance.filter(a => a.flag === 'D').length;
-          
-          const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
-          let workingDays = 0;
-          let leaveDaysCount = 0;
-
-          daysInMonth.forEach(day => {
-              if (day > today) return; 
-
-              const dayOfWeek = getDay(day);
-              const isWeekend = dayOfWeek === 5;
-              const isHoliday = allHolidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
-              
-              if (!isWeekend && !isHoliday) {
-                  workingDays++;
-              }
-
-              const isOnLeave = approvedLeavesSpanningMonth.some(l => isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
-              if (isOnLeave) {
-                  leaveDaysCount++;
-              }
-          });
-
-          const absentDays = Math.max(0, workingDays - presentDays - leaveDaysCount);
-          
           setMonthlyStats({
-              present: presentDays,
-              delayed: delayedDays,
-              absent: absentDays,
-              leave: approvedLeavesThisMonth.length, // Keep this for "applications this month"
-              visit: approvedVisitsThisMonth.length,
+              present: present,
+              delayed: delayed,
+              absent: absent,
+              leave: allLeaves.filter(l => l.status === 'Approved' && isWithinInterval(parseISO(l.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth})).length,
+              visit: allVisits.filter(v => v.status === 'Approved' && isWithinInterval(parseISO(v.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth})).length,
               advanceSalary: monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0),
           });
 
@@ -260,10 +256,6 @@ export default function AccountDetailsPage() {
 
       const snapshot = await getDocs(q);
       const attendanceData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as AttendanceDocument));
-      
-      console.log('Fetched Attendance Data:', attendanceData);
-      console.log('Date Range:', { from: fromDate, to: toDate });
-      
       setMonthlyAttendance(attendanceData);
     } catch (err) {
       console.error("Error fetching filtered attendance:", err);
@@ -279,7 +271,6 @@ export default function AccountDetailsPage() {
 
   const displayedAttendance = useMemo(() => {
     if (!attendanceDateRange?.from || !employeeData?.id) {
-      console.log('Missing date range or employee data');
       return [];
     }
     
@@ -287,9 +278,6 @@ export default function AccountDetailsPage() {
       start: attendanceDateRange.from, 
       end: attendanceDateRange.to || attendanceDateRange.from 
     });
-    
-    console.log('Processing days:', days.length);
-    console.log('Monthly attendance records:', monthlyAttendance.length);
     
     const createPlaceholder = (day: Date, flag: AttendanceFlag): AttendanceDocument => ({
       date: day.toISOString(),
@@ -309,91 +297,39 @@ export default function AccountDetailsPage() {
     
     const result = days
       .map(day => {
-        // Skip future days
         if (isFuture(day)) {
-          console.log('Skipping future day:', format(day, 'yyyy-MM-dd'));
           return null;
         }
 
         const dayString = format(day, 'yyyy-MM-dd');
         
-        // Find actual attendance record with improved date matching
         const record = monthlyAttendance.find(att => {
           try {
-            const attDate = parseISO(att.date);
-            const attDateString = format(attDate, 'yyyy-MM-dd');
-            return attDateString === dayString;
-          } catch (error) {
-            console.error('Error parsing attendance date:', att.date, error);
+            return format(parseISO(att.date), 'yyyy-MM-dd') === dayString;
+          } catch {
             return false;
           }
         });
         
         if (record) {
-          console.log('Found attendance record for', dayString, record);
           return record;
         }
         
-        console.log('No attendance record for', dayString, '- checking other statuses');
+        if (getDay(day) === 5) return createPlaceholder(day, 'W');
         
-        // Determine the appropriate flag for non-attendance days
-        if (getDay(day) === 5) {
-          console.log('Weekend:', dayString);
-          return createPlaceholder(day, 'W');
-        }
+        const isHoliday = holidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+        if (isHoliday) return createPlaceholder(day, 'H');
         
-        const isHoliday = holidays.some(h => {
-          try {
-            return isWithinInterval(day, { 
-              start: parseISO(h.fromDate), 
-              end: parseISO(h.toDate || h.fromDate) 
-            });
-          } catch {
-            return false;
-          }
-        });
-        if (isHoliday) {
-          console.log('Holiday:', dayString);
-          return createPlaceholder(day, 'H');
-        }
+        const isOnLeave = leaves.some(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+        if (isOnLeave) return createPlaceholder(day, 'L');
         
-        const isOnLeave = leaves.some(l => {
-          try {
-            return l.status === 'Approved' && isWithinInterval(day, { 
-              start: parseISO(l.fromDate), 
-              end: parseISO(l.toDate) 
-            });
-          } catch {
-            return false;
-          }
-        });
-        if (isOnLeave) {
-          console.log('On Leave:', dayString);
-          return createPlaceholder(day, 'L');
-        }
+        const isOnVisit = visits.some(v => v.status === 'Approved' && isWithinInterval(day, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
+        if (isOnVisit) return createPlaceholder(day, 'V');
         
-        const isOnVisit = visits.some(v => {
-          try {
-            return v.status === 'Approved' && isWithinInterval(day, { 
-              start: parseISO(v.fromDate), 
-              end: parseISO(v.toDate) 
-            });
-          } catch {
-            return false;
-          }
-        });
-        if (isOnVisit) {
-          console.log('On Visit:', dayString);
-          return createPlaceholder(day, 'V');
-        }
-        
-        // Mark as absent
-        console.log('Absent:', dayString);
         return createPlaceholder(day, 'A');
       })
       .filter((item): item is AttendanceDocument => item !== null);
     
-    console.log('Final displayed attendance:', result);
     return result;
   }, [attendanceDateRange, monthlyAttendance, holidays, leaves, visits, employeeData]);
 
