@@ -3,7 +3,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -32,8 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
-import type { DateRange } from 'react-day-picker';
+import { DatePickerField } from '@/components/forms/DatePickerField';
 import { Badge } from '@/components/ui/badge';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -107,11 +106,8 @@ export default function AccountDetailsPage() {
   const [payslips, setPayslips] = React.useState<Payslip[]>([]);
   const [isLoadingPayslips, setIsLoadingPayslips] = React.useState(true);
 
-  const [attendanceDateRange, setAttendanceDateRange] = React.useState<DateRange | undefined>({
-    from: startOfDay(subDays(new Date(), 6)),
-    to: endOfDay(new Date()),
-  });
-  const [monthlyAttendance, setMonthlyAttendance] = React.useState<AttendanceDocument[]>([]);
+  const [attendanceDate, setAttendanceDate] = React.useState<Date>(new Date());
+  const [singleDayAttendance, setSingleDayAttendance] = React.useState<AttendanceDocument | null>(null);
   const [isAttendanceLoading, setIsAttendanceLoading] = React.useState(true);
   const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings"), where("isEnabled", "==", true)), undefined, ['notices_hrm_dashboard']);
 
@@ -187,7 +183,7 @@ export default function AccountDetailsPage() {
           const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
           
           daysInMonth.forEach(day => {
-              if (isFuture(day)) return; // Don't count future days
+              if (isFuture(day) && !isToday(day)) return;
 
               const dayStr = format(day, 'yyyy-MM-dd');
               const attendanceRecord = currentMonthlyAttendance.find(a => a.date.startsWith(dayStr));
@@ -232,103 +228,70 @@ export default function AccountDetailsPage() {
     }
   }, [user, employeeData, isEmployeeDataLoading]);
 
-  const fetchAttendanceForRange = useCallback(async () => {
-    if (!user || !employeeData?.id || !attendanceDateRange?.from) {
-      setMonthlyAttendance([]);
+  const fetchAttendanceForDate = useCallback(async () => {
+    if (!user || !employeeData?.id || !attendanceDate) {
+      setSingleDayAttendance(null);
       setIsAttendanceLoading(false);
       return;
     }
     setIsAttendanceLoading(true);
     try {
-      const fromDate = startOfDay(attendanceDateRange.from).toISOString();
-      const toDate = endOfDay(attendanceDateRange.to || attendanceDateRange.from).toISOString();
+      const formattedDate = format(attendanceDate, 'yyyy-MM-dd');
+      const docId = `${employeeData.id}_${formattedDate}`;
+      const docRef = doc(firestore, 'attendance', docId);
 
-      const q = query(
-        collection(firestore, 'attendance'),
-        where('employeeId', '==', employeeData.id),
-        where('date', '>=', fromDate),
-        where('date', '<=', toDate),
-        orderBy('date', 'desc')
-      );
-
-      const snapshot = await getDocs(q);
-      const attendanceData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as AttendanceDocument));
-      setMonthlyAttendance(attendanceData);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setSingleDayAttendance({ ...docSnap.data(), id: docSnap.id } as AttendanceDocument);
+      } else {
+        setSingleDayAttendance(null);
+      }
     } catch (err) {
-      console.error("Error fetching filtered attendance:", err);
+      console.error("Error fetching single day attendance:", err);
     } finally {
       setIsAttendanceLoading(false);
     }
-  }, [user, employeeData, attendanceDateRange]);
+  }, [user, employeeData, attendanceDate]);
 
   useEffect(() => {
-    fetchAttendanceForRange();
-  }, [fetchAttendanceForRange]);
+    fetchAttendanceForDate();
+  }, [fetchAttendanceForDate]);
 
 
   const displayedAttendance = useMemo(() => {
-    if (!attendanceDateRange?.from || !employeeData?.id) {
-      return [];
+    if (!employeeData?.id) {
+        return [];
     }
     
-    const days = eachDayOfInterval({ 
-      start: attendanceDateRange.from, 
-      end: attendanceDateRange.to || attendanceDateRange.from 
-    });
-    
+    const day = attendanceDate;
     const createPlaceholder = (day: Date, flag: AttendanceFlag): AttendanceDocument => ({
-      date: day.toISOString(),
-      flag,
-      employeeId: employeeData.id,
-      employeeName: employeeData.fullName,
-      inTime: undefined,
-      outTime: undefined,
-      inTimeRemarks: undefined,
-      outTimeRemarks: undefined,
-      inTimeLocation: undefined,
-      outTimeLocation: undefined,
-      updatedBy: '',
-      createdAt: null,
-      updatedAt: null,
+        date: day.toISOString(),
+        flag,
+        employeeId: employeeData.id,
+        employeeName: employeeData.fullName,
     } as AttendanceDocument);
     
-    const result = days
-      .map(day => {
-        if (isFuture(day)) {
-          return null;
-        }
+    if (isFuture(day) && !isToday(day)) {
+        return [];
+    }
 
-        const dayString = format(day, 'yyyy-MM-dd');
-        
-        const record = monthlyAttendance.find(att => {
-          try {
-            return format(parseISO(att.date), 'yyyy-MM-dd') === dayString;
-          } catch {
-            return false;
-          }
-        });
-        
-        if (record) {
-          return record;
-        }
-        
-        if (getDay(day) === 5) return createPlaceholder(day, 'W');
-        
-        const isHoliday = holidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
-        if (isHoliday) return createPlaceholder(day, 'H');
-        
-        const isOnLeave = leaves.some(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
-        if (isOnLeave) return createPlaceholder(day, 'L');
-        
-        const isOnVisit = visits.some(v => v.status === 'Approved' && isWithinInterval(day, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
-        if (isOnVisit) return createPlaceholder(day, 'V');
-        
-        return createPlaceholder(day, 'A');
-      })
-      .filter((item): item is AttendanceDocument => item !== null);
+    if (singleDayAttendance) {
+        return [singleDayAttendance];
+    }
     
-    return result.sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
-  }, [attendanceDateRange, monthlyAttendance, holidays, leaves, visits, employeeData]);
+    if (getDay(day) === 5) return [createPlaceholder(day, 'W')];
+    
+    const isHoliday = holidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+    if (isHoliday) return [createPlaceholder(day, 'H')];
+    
+    const isOnLeave = leaves.some(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+    if (isOnLeave) return [createPlaceholder(day, 'L')];
+    
+    const isOnVisit = visits.some(v => v.status === 'Approved' && isWithinInterval(day, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
+    if (isOnVisit) return [createPlaceholder(day, 'V')];
+    
+    return [createPlaceholder(day, 'A')];
+  }, [attendanceDate, singleDayAttendance, holidays, leaves, visits, employeeData]);
 
   useEffect(() => {
     const today = startOfDay(new Date());
@@ -490,7 +453,7 @@ export default function AccountDetailsPage() {
                     };
                     await setDoc(docRef, dataToSet, { merge: true });
                     setDailyAttendance(dataToSet as AttendanceDocument);
-                    fetchAttendanceForRange();
+                    fetchAttendanceForDate();
                     Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
                 } else {
                     const currentDoc = await getDoc(docRef);
@@ -507,7 +470,7 @@ export default function AccountDetailsPage() {
                     };
                     await updateDoc(docRef, dataToSet);
                     setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
-                    fetchAttendanceForRange();
+                    fetchAttendanceForDate();
                     Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
                 }
             } catch (error: any) {
@@ -974,13 +937,22 @@ export default function AccountDetailsPage() {
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <CardTitle className="flex items-center gap-2 font-bold text-xl lg:text-2xl text-primary bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
-                        <CalendarDays className="h-6 w-6 text-primary" /> Quick Attendance View
+                        <CalendarIcon className="h-6 w-6 text-primary" /> Quick Attendance View
                         </CardTitle>
                         <CardDescription>
-                        Your attendance records for the selected period.
+                        Your attendance record for the selected day.
                         </CardDescription>
                     </div>
-                    <DatePickerWithRange date={attendanceDateRange} onDateChange={setAttendanceDateRange} />
+                    <DatePickerField
+                        field={{
+                            name: 'attendanceDate',
+                            value: attendanceDate,
+                            onChange: (date) => setAttendanceDate(date || new Date()),
+                            onBlur: () => {},
+                            ref: () => {}
+                        }}
+                        placeholder="Select a date"
+                    />
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -989,7 +961,7 @@ export default function AccountDetailsPage() {
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                     ) : displayedAttendance.length === 0 ? (
-                    <p className="text-muted-foreground text-center">No attendance data found for the selected range.</p>
+                    <p className="text-muted-foreground text-center">No attendance data found for the selected day.</p>
                     ) : (
                     <div className="rounded-md border">
                         <Table>
@@ -1258,3 +1230,4 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
