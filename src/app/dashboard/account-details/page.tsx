@@ -187,24 +187,21 @@ export default function AccountDetailsPage() {
           const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
           
           daysInMonth.forEach(day => {
-              if (!isFuture(day)) {
-                  const dayStr = format(day, 'yyyy-MM-dd');
-                  const attendanceRecord = currentMonthlyAttendance.find(a => a.date.startsWith(dayStr));
+              if (isFuture(day)) return; // Don't count future days
 
-                  if (attendanceRecord) {
-                      if (attendanceRecord.flag === 'P') present++;
-                      if (attendanceRecord.flag === 'D') delayed++;
-                  } else {
-                      const dayOfWeek = getDay(day);
-                      const isWeekend = dayOfWeek === 5; // Friday
-                      const isOnLeave = allLeaves.some(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
-                      const isOnVisit = allVisits.some(v => v.status === 'Approved' && isWithinInterval(day, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
-                      const isHoliday = allHolidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
-
-                      if (!isWeekend && !isOnLeave && !isOnVisit && !isHoliday && !isToday(day)) {
-                          absent++;
-                      }
-                  }
+              const dayStr = format(day, 'yyyy-MM-dd');
+              const attendanceRecord = currentMonthlyAttendance.find(a => a.date.startsWith(dayStr));
+              const dayOfWeek = getDay(day);
+              const isWeekend = dayOfWeek === 5; // Assuming Friday is the weekend
+              const isOnLeave = allLeaves.some(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+              const isOnVisit = allVisits.some(v => v.status === 'Approved' && isWithinInterval(day, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
+              const isHoliday = allHolidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+              
+              if (attendanceRecord) {
+                  if (attendanceRecord.flag === 'P') present++;
+                  if (attendanceRecord.flag === 'D') delayed++;
+              } else if (!isWeekend && !isOnLeave && !isOnVisit && !isHoliday) {
+                  absent++;
               }
           });
           
@@ -1261,4 +1258,3 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
-
