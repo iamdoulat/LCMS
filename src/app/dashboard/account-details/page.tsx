@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag } from '@/types';
-import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, endOfDay, isFuture, isToday } from 'date-fns';
+import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, endOfDay, isFuture, isToday, startOfYear, endOfYear } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
@@ -150,6 +151,8 @@ export default function AccountDetailsPage() {
           const today = new Date();
           const startOfCurrentMonth = startOfMonth(today);
           const endOfCurrentMonth = endOfMonth(today);
+          const startOfCurrentYear = startOfYear(today);
+          const endOfCurrentYear = endOfYear(today);
   
           const fromDate = format(startOfCurrentMonth, "yyyy-MM-dd'T'00:00:00.000xxx");
           const toDate = format(endOfCurrentMonth, "yyyy-MM-dd'T'23:59:59.999xxx");
@@ -214,7 +217,7 @@ export default function AccountDetailsPage() {
               delayed: delayed,
               absent: absent,
               leave: allLeaves.filter(l => l.status === 'Approved' && isWithinInterval(parseISO(l.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth})).length,
-              visit: allVisits.filter(v => v.status === 'Approved' && isWithinInterval(parseISO(v.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth})).length,
+              visit: allVisits.filter(v => v.status === 'Approved' && isWithinInterval(parseISO(v.fromDate), { start: startOfCurrentYear, end: endOfCurrentYear })).length,
               advanceSalary: monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0),
           });
 
@@ -883,7 +886,7 @@ export default function AccountDetailsPage() {
                   <StatCard title="Total Absent" value={monthlyStats.absent} icon={<UserX />} description="Days absent this month" className="bg-red-500"/>
                   <StatCard title="Total Delayed" value={monthlyStats.delayed} icon={<Clock />} description="Late arrivals this month" className="bg-yellow-500" />
                   <StatCard title="Total On Leave" value={monthlyStats.leave} icon={<Plane />} description="Leave days this month" className="bg-blue-500" />
-                  <StatCard title="Total On Visit" value={monthlyStats.visit} icon={<Briefcase />} description="Official visit days" className="bg-indigo-500"/>
+                  <StatCard title="Total On Visit" value={monthlyStats.visit} icon={<Briefcase />} description="Official visit days this year" className="bg-indigo-500"/>
                   <StatCard title="Advance Salary" value={formatCurrency(monthlyStats.advanceSalary)} icon={<Wallet />} description="Taken this month" className="bg-purple-500"/>
               </div>
           </CardContent>
@@ -1235,5 +1238,6 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
 
 
