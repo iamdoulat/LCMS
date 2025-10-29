@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag } from '@/types';
-import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, endOfDay, isFuture, isToday, startOfYear, endOfYear } from 'date-fns';
+import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, endOfDay, isFuture, isToday, startOfYear, endOfYear, max, min } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
@@ -181,9 +181,21 @@ export default function AccountDetailsPage() {
           const monthlyAttendanceSnapshot = await getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', fromDate), where('date', '<=', toDate)));
           const currentMonthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
           
-          let present = 0, delayed = 0, absent = 0;
+          let present = 0, delayed = 0, absent = 0, leaveDaysInMonth = 0;
           const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
           
+          allLeaves.forEach(l => {
+              if (l.status === 'Approved') {
+                  const leaveStart = parseISO(l.fromDate);
+                  const leaveEnd = parseISO(l.toDate);
+                  const effectiveStart = max([leaveStart, startOfCurrentMonth]);
+                  const effectiveEnd = min([leaveEnd, endOfCurrentMonth]);
+                  if (effectiveEnd >= effectiveStart) {
+                      leaveDaysInMonth += differenceInCalendarDays(effectiveEnd, effectiveStart) + 1;
+                  }
+              }
+          });
+
           daysInMonth.forEach(day => {
               if (isFuture(day) && !isToday(day)) return;
 
@@ -216,7 +228,7 @@ export default function AccountDetailsPage() {
               present: present,
               delayed: delayed,
               absent: absent,
-              leave: allLeaves.filter(l => l.status === 'Approved' && isWithinInterval(parseISO(l.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth})).length,
+              leave: leaveDaysInMonth,
               visit: allVisits.filter(v => v.status === 'Approved' && isWithinInterval(parseISO(v.fromDate), { start: startOfCurrentYear, end: endOfCurrentYear })).length,
               advanceSalary: monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0),
           });
@@ -1238,6 +1250,7 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
 
 
 
