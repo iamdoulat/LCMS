@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -243,8 +241,8 @@ export default function AccountDetailsPage() {
     }
     setIsAttendanceLoading(true);
     try {
-      const fromDate = format(attendanceDateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
-      const toDate = format(attendanceDateRange.to || attendanceDateRange.from, "yyyy-MM-dd'T'23:59:59.999xxx");
+      const fromDate = startOfDay(attendanceDateRange.from).toISOString();
+      const toDate = endOfDay(attendanceDateRange.to || attendanceDateRange.from).toISOString();
 
       const q = query(
         collection(firestore, 'attendance'),
@@ -256,6 +254,10 @@ export default function AccountDetailsPage() {
 
       const snapshot = await getDocs(q);
       const attendanceData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as AttendanceDocument));
+      
+      console.log('Fetched Attendance Data:', attendanceData);
+      console.log('Date Range:', { from: fromDate, to: toDate });
+      
       setMonthlyAttendance(attendanceData);
     } catch (err) {
       console.error("Error fetching filtered attendance:", err);
@@ -270,36 +272,124 @@ export default function AccountDetailsPage() {
 
 
   const displayedAttendance = useMemo(() => {
-    if (!attendanceDateRange?.from) return [];
+    if (!attendanceDateRange?.from || !employeeData?.id) {
+      console.log('Missing date range or employee data');
+      return [];
+    }
     
-    const days = eachDayOfInterval({ start: attendanceDateRange.from, end: attendanceDateRange.to || attendanceDateRange.from });
-    return days.map(day => {
-        if (isFuture(day)) return null;
-
-        const attendanceRecord = monthlyAttendance.find(att => format(parseISO(att.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
-        if (attendanceRecord) {
-            return attendanceRecord;
+    const days = eachDayOfInterval({ 
+      start: attendanceDateRange.from, 
+      end: attendanceDateRange.to || attendanceDateRange.from 
+    });
+    
+    console.log('Processing days:', days.length);
+    console.log('Monthly attendance records:', monthlyAttendance.length);
+    
+    const createPlaceholder = (day: Date, flag: AttendanceFlag): AttendanceDocument => ({
+      date: day.toISOString(),
+      flag,
+      employeeId: employeeData.id,
+      employeeName: employeeData.fullName,
+      inTime: undefined,
+      outTime: undefined,
+      inTimeRemarks: undefined,
+      outTimeRemarks: undefined,
+      inTimeLocation: undefined,
+      outTimeLocation: undefined,
+      updatedBy: '',
+      createdAt: null,
+      updatedAt: null,
+    } as AttendanceDocument);
+    
+    const result = days
+      .map(day => {
+        // Skip future days
+        if (isFuture(day)) {
+          console.log('Skipping future day:', format(day, 'yyyy-MM-dd'));
+          return null;
         }
 
-        const isHoliday = holidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
-        if (isHoliday) return { date: day.toISOString(), flag: 'H' as AttendanceFlag, inTime: null, outTime: null };
-
-        const isOnLeave = leaves.some(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
-        if (isOnLeave) return { date: day.toISOString(), flag: 'L' as AttendanceFlag, inTime: null, outTime: null };
-
-        const isOnVisit = visits.some(v => v.status === 'Approved' && isWithinInterval(day, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
-        if (isOnVisit) return { date: day.toISOString(), flag: 'V' as AttendanceFlag, inTime: null, outTime: null };
-
-        if (getDay(day) === 5) return { date: day.toISOString(), flag: 'W' as AttendanceFlag, inTime: null, outTime: null }; // Friday
-
-        // Only mark as absent if the day is not in the future.
-        if (day <= new Date()) {
-          return { date: day.toISOString(), flag: 'A' as AttendanceFlag, inTime: null, outTime: null };
+        const dayString = format(day, 'yyyy-MM-dd');
+        
+        // Find actual attendance record with improved date matching
+        const record = monthlyAttendance.find(att => {
+          try {
+            const attDate = parseISO(att.date);
+            const attDateString = format(attDate, 'yyyy-MM-dd');
+            return attDateString === dayString;
+          } catch (error) {
+            console.error('Error parsing attendance date:', att.date, error);
+            return false;
+          }
+        });
+        
+        if (record) {
+          console.log('Found attendance record for', dayString, record);
+          return record;
         }
-
-        return null; // Future working day with no record yet
-    }).filter(Boolean);
-  }, [attendanceDateRange, monthlyAttendance, holidays, leaves, visits]);
+        
+        console.log('No attendance record for', dayString, '- checking other statuses');
+        
+        // Determine the appropriate flag for non-attendance days
+        if (getDay(day) === 5) {
+          console.log('Weekend:', dayString);
+          return createPlaceholder(day, 'W');
+        }
+        
+        const isHoliday = holidays.some(h => {
+          try {
+            return isWithinInterval(day, { 
+              start: parseISO(h.fromDate), 
+              end: parseISO(h.toDate || h.fromDate) 
+            });
+          } catch {
+            return false;
+          }
+        });
+        if (isHoliday) {
+          console.log('Holiday:', dayString);
+          return createPlaceholder(day, 'H');
+        }
+        
+        const isOnLeave = leaves.some(l => {
+          try {
+            return l.status === 'Approved' && isWithinInterval(day, { 
+              start: parseISO(l.fromDate), 
+              end: parseISO(l.toDate) 
+            });
+          } catch {
+            return false;
+          }
+        });
+        if (isOnLeave) {
+          console.log('On Leave:', dayString);
+          return createPlaceholder(day, 'L');
+        }
+        
+        const isOnVisit = visits.some(v => {
+          try {
+            return v.status === 'Approved' && isWithinInterval(day, { 
+              start: parseISO(v.fromDate), 
+              end: parseISO(v.toDate) 
+            });
+          } catch {
+            return false;
+          }
+        });
+        if (isOnVisit) {
+          console.log('On Visit:', dayString);
+          return createPlaceholder(day, 'V');
+        }
+        
+        // Mark as absent
+        console.log('Absent:', dayString);
+        return createPlaceholder(day, 'A');
+      })
+      .filter((item): item is AttendanceDocument => item !== null);
+    
+    console.log('Final displayed attendance:', result);
+    return result;
+  }, [attendanceDateRange, monthlyAttendance, holidays, leaves, visits, employeeData]);
 
   useEffect(() => {
     const today = startOfDay(new Date());
@@ -942,7 +1032,7 @@ export default function AccountDetailsPage() {
             <div className="lg:col-span-2">
                 <Card className="shadow-xl h-full">
                 <CardHeader>
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <CardTitle className="flex items-center gap-2 font-bold text-xl lg:text-2xl text-primary bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
                         <CalendarDays className="h-6 w-6 text-primary" /> Quick Attendance View
@@ -974,12 +1064,12 @@ export default function AccountDetailsPage() {
                         </TableHeader>
                         <TableBody>
                             {displayedAttendance.map((att, index) => (
-                            <TableRow key={att?.date.toString() || index}>
+                            <TableRow key={att?.date || index}>
                                 <TableCell>{formatDisplayDate(att?.date)}</TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
-                                    {'inTime' in att! && att.inTime ? att.inTime : 'N/A'}
-                                    {'inTimeLocation' in att! && att.inTimeLocation && (
+                                    {att?.inTime || 'N/A'}
+                                    {att?.inTimeLocation && (
                                     <Button
                                         type="button" variant="ghost" size="icon" className="h-6 w-6"
                                         onClick={() => handleViewLocation(att.inTimeLocation)} title="View In-Time Location">
@@ -990,8 +1080,8 @@ export default function AccountDetailsPage() {
                                 </TableCell>
                                 <TableCell>
                                 <div className="flex items-center gap-1">
-                                    {'outTime' in att! && att.outTime ? att.outTime : 'N/A'}
-                                    {'outTimeLocation' in att! && att.outTimeLocation && (
+                                    {att?.outTime || 'N/A'}
+                                    {att?.outTimeLocation && (
                                     <Button
                                         type="button" variant="ghost" size="icon" className="h-6 w-6"
                                         onClick={() => handleViewLocation(att.outTimeLocation)} title="View Out-Time Location">
