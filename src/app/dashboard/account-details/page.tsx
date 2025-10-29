@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -186,35 +187,40 @@ export default function AccountDetailsPage() {
           
           const approvedLeavesThisMonth = allLeaves.filter(l => l.status === 'Approved' && isWithinInterval(parseISO(l.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth}));
           const approvedVisitsThisMonth = allVisits.filter(v => v.status === 'Approved' && isWithinInterval(parseISO(v.fromDate), {start: startOfCurrentMonth, end: endOfCurrentMonth}));
+          const approvedLeavesSpanningMonth = allLeaves.filter(l => l.status === 'Approved' && isWithinInterval(startOfCurrentMonth, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) || isWithinInterval(endOfCurrentMonth, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
 
           const presentDays = currentMonthlyAttendance.filter(a => a.flag === 'P' || a.flag === 'D').length;
           const delayedDays = currentMonthlyAttendance.filter(a => a.flag === 'D').length;
-          const leaveDays = approvedLeavesThisMonth.length;
-          const visitDays = approvedVisitsThisMonth.length;
           
           const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
-          let absentDays = 0;
+          let workingDays = 0;
+          let leaveDaysCount = 0;
+
           daysInMonth.forEach(day => {
-              if (day > today) return; // Don't count future days as absent
+              if (day > today) return; 
+
               const dayOfWeek = getDay(day);
               const isWeekend = dayOfWeek === 5;
               const isHoliday = allHolidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
-              const isOnLeave = approvedLeavesThisMonth.some(l => isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
-              const isOnVisit = approvedVisitsThisMonth.some(l => isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
-              const attendanceRecord = currentMonthlyAttendance.find(a => format(parseISO(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+              
+              if (!isWeekend && !isHoliday) {
+                  workingDays++;
+              }
 
-              if (!isWeekend && !isHoliday && !isOnLeave && !isOnVisit && !attendanceRecord) {
-                  absentDays++;
+              const isOnLeave = approvedLeavesSpanningMonth.some(l => isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+              if (isOnLeave) {
+                  leaveDaysCount++;
               }
           });
 
-
+          const absentDays = Math.max(0, workingDays - presentDays - leaveDaysCount);
+          
           setMonthlyStats({
               present: presentDays,
               delayed: delayedDays,
               absent: absentDays,
-              leave: leaveDays,
-              visit: visitDays,
+              leave: approvedLeavesThisMonth.length, // Keep this for "applications this month"
+              visit: approvedVisitsThisMonth.length,
               advanceSalary: monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0),
           });
 
@@ -1319,3 +1325,4 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
