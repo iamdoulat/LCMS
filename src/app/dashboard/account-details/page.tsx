@@ -151,8 +151,8 @@ export default function AccountDetailsPage() {
           const startOfCurrentMonth = startOfMonth(today);
           const endOfCurrentMonth = endOfMonth(today);
   
-          const fromDate = startOfCurrentMonth.toISOString();
-          const toDate = endOfCurrentMonth.toISOString();
+          const fromDate = format(startOfCurrentMonth, "yyyy-MM-dd'T'00:00:00.000xxx");
+          const toDate = format(endOfCurrentMonth, "yyyy-MM-dd'T'23:59:59.999xxx");
           
           const holidaysSnapshot = await getDocs(query(collection(firestore, 'holidays')));
           const allHolidays = holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument);
@@ -177,8 +177,7 @@ export default function AccountDetailsPage() {
 
           const monthlyAttendanceSnapshot = await getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', fromDate), where('date', '<=', toDate)));
           const currentMonthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
-
-          // Correct calculation for monthly stats
+          
           let present = 0, delayed = 0, absent = 0;
           const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
           
@@ -201,7 +200,13 @@ export default function AccountDetailsPage() {
               }
           });
           
-          const monthlyAdvanceSalarySnapshot = await getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id), where('applyDate', '>=', fromDate), where('applyDate', '<=', toDate), where('status', '==', 'Approved')));
+          const monthlyAdvanceSalarySnapshot = await getDocs(query(
+            collection(firestore, 'advance_salary'), 
+            where('employeeId', '==', employeeData.id), 
+            where('applyDate', '>=', fromDate), 
+            where('applyDate', '<=', toDate), 
+            where('status', '==', 'Approved')
+          ));
           const monthlyAdvance = monthlyAdvanceSalarySnapshot.docs.map(doc => doc.data() as AdvanceSalaryDocument);
           
           setMonthlyStats({
@@ -1230,4 +1235,5 @@ export default function AccountDetailsPage() {
     </div>
   );
 }
+
 
