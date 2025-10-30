@@ -234,7 +234,7 @@ export function PaymentTrackingEntryForm() {
         <Separator/>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
             <FormField control={control} name="shipmentValue" render={({ field }) => (<FormItem><FormLabel>Shipment Value*</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>)}/>
-            <div className="flex items-center space-x-4 pt-6">
+             <div className="flex items-center space-x-4 pt-6">
               <FormField control={control} name="isFirstShipment" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><Label>1st Shipment</Label></FormItem>)} />
               <FormField control={control} name="isSecondShipment" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><Label>2nd Shipment</Label></FormItem>)} />
               <FormField control={control} name="isThirdShipment" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><Label>3rd Shipment</Label></FormItem>)} />
