@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -22,6 +21,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
+
 
 interface DeferredPaymentRecord {
     id: string;
@@ -59,6 +60,7 @@ const formatCurrencyValue = (currency?: string, amount?: number) => {
 };
 
 export default function DeferredPaymentTrackerPage() {
+  const router = useRouter();
   const [deferredPayments, setDeferredPayments] = useState<DeferredPaymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -95,6 +97,10 @@ export default function DeferredPaymentTrackerPage() {
     fetchDeferredPayments();
   }, []);
   
+  const handleEdit = (id: string) => {
+    router.push(`/dashboard/deferred-payment-tracker/edit/${id}`);
+  };
+
   const handleDelete = async (id: string) => {
     Swal.fire({
         title: 'Are you sure?',
@@ -207,7 +213,7 @@ export default function DeferredPaymentTrackerPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                  <DropdownMenuItem disabled>
+                                  <DropdownMenuItem onClick={() => handleEdit(entry.id)}>
                                       <Edit className="mr-2 h-4 w-4" />
                                       <span>Edit</span>
                                   </DropdownMenuItem>
