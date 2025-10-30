@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -14,7 +15,7 @@ export function AppFooter() {
         <p>
           &copy; {currentYear} - Designed and Developed by{" "}
           <Link
-            href="https://cards.mddoulat.com/iamdoulat"
+            href="https://vcard.mddoulat.com/iamdoulat"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline"
