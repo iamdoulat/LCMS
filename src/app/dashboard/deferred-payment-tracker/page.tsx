@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -124,7 +125,7 @@ export default function DeferredPaymentTrackerPage() {
 
   return (
     <div className="container mx-auto py-8 px-5">
-      <Card className="shadow-xl">
+      <Card className="shadow-xl max-w-7xl mx-auto">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -163,7 +164,7 @@ export default function DeferredPaymentTrackerPage() {
               <p className="text-sm text-muted-foreground text-center">There are no deferred payment tracking entries in the database yet.</p>
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
