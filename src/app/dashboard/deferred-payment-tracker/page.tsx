@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, PlusCircle, MoreHorizontal, Edit, Trash2, Ship } from 'lucide-react';
-import type { LCEntryDocument, Currency } from '@/types';
+import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, PlusCircle, MoreHorizontal, Edit, Trash2, Ship, Filter, XCircle, Users, Building, CalendarDays } from 'lucide-react';
+import type { LCEntryDocument, Currency, CustomerDocument, SupplierDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy as firestoreOrderBy, doc, deleteDoc } from 'firebase/firestore';
 import Link from 'next/link';
@@ -23,12 +23,19 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { termsOfPayOptions } from '@/types';
 
 
 interface DeferredPaymentRecord {
     id: string;
     documentaryCreditNumber?: string;
+    applicantId?: string;
     applicantName?: string;
+    beneficiaryId?: string;
     beneficiaryName?: string;
     lcValue?: number;
     lcCurrency?: Currency;
@@ -43,7 +50,6 @@ interface DeferredPaymentRecord {
     status?: 'Payment Pending' | 'Payment Done';
     shipmentMode?: 'Sea' | 'Air';
 }
-
 
 const formatDisplayDate = (dateString?: string | Date) => {
   if (!dateString) return 'N/A';
@@ -60,11 +66,29 @@ const formatCurrencyValue = (currency?: string, amount?: number) => {
   return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const PLACEHOLDER_APPLICANT_VALUE = "__DEFERRED_TRACKER_APPLICANT__";
+const PLACEHOLDER_BENEFICIARY_VALUE = "__DEFERRED_TRACKER_BENEFICIARY__";
+const ALL_STATUSES = "__ALL_STATUSES__";
+const ALL_TERMS = "__ALL_TERMS__";
+
+
 export default function DeferredPaymentTrackerPage() {
   const router = useRouter();
-  const [deferredPayments, setDeferredPayments] = useState<DeferredPaymentRecord[]>([]);
+  const [allDeferredPayments, setAllDeferredPayments] = useState<DeferredPaymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Filter states
+  const [filterLcNo, setFilterLcNo] = useState('');
+  const [filterApplicantId, setFilterApplicantId] = useState('');
+  const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterDeferredPeriod, setFilterDeferredPeriod] = useState('');
+  
+  const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
+  const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
+  const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
+  const [isLoadingBeneficiaries, setIsLoadingBeneficiaries] = useState(true);
 
   const fetchDeferredPayments = async () => {
       setIsLoading(true);
@@ -74,7 +98,7 @@ export default function DeferredPaymentTrackerPage() {
         const q = query(trackerRef, firestoreOrderBy("maturityDate", "asc"));
         const querySnapshot = await getDocs(q);
         const fetchedRecords = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DeferredPaymentRecord));
-        setDeferredPayments(fetchedRecords);
+        setAllDeferredPayments(fetchedRecords);
       } catch (error: any) {
         console.error("Error fetching deferred payment tracker data: ", error);
         let errorMessage = `Could not fetch tracker data. Please ensure Firestore rules allow reads.`;
@@ -96,7 +120,39 @@ export default function DeferredPaymentTrackerPage() {
 
   useEffect(() => {
     fetchDeferredPayments();
+     const fetchFilterOptions = async () => {
+      setIsLoadingApplicants(true);
+      setIsLoadingBeneficiaries(true);
+      try {
+        const customersSnapshot = await getDocs(collection(firestore, "customers"));
+        setApplicantOptions(
+          customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
+        );
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        setBeneficiaryOptions(
+          suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+        );
+      } catch (error: any) {
+        console.error("Error fetching filter options:", error);
+      } finally {
+        setIsLoadingApplicants(false);
+        setIsLoadingBeneficiaries(false);
+      }
+    };
+    fetchFilterOptions();
   }, []);
+
+  const filteredPayments = useMemo(() => {
+    return allDeferredPayments.filter(payment => {
+        const lcNoMatch = !filterLcNo || payment.documentaryCreditNumber?.toLowerCase().includes(filterLcNo.toLowerCase());
+        const applicantMatch = !filterApplicantId || payment.applicantId === filterApplicantId;
+        const beneficiaryMatch = !filterBeneficiaryId || payment.beneficiaryId === filterBeneficiaryId;
+        const statusMatch = !filterStatus || payment.status === filterStatus;
+        const deferredPeriodMatch = !filterDeferredPeriod || payment.termsOfPay === filterDeferredPeriod;
+        return lcNoMatch && applicantMatch && beneficiaryMatch && statusMatch && deferredPeriodMatch;
+    });
+  }, [allDeferredPayments, filterLcNo, filterApplicantId, filterBeneficiaryId, filterStatus, filterDeferredPeriod]);
+
   
   const handleEdit = (id: string) => {
     router.push(`/dashboard/deferred-payment-tracker/edit/${id}`);
@@ -122,11 +178,20 @@ export default function DeferredPaymentTrackerPage() {
         }
     });
   };
+  
+  const clearFilters = () => {
+    setFilterLcNo('');
+    setFilterApplicantId('');
+    setFilterBeneficiaryId('');
+    setFilterStatus('');
+    setFilterDeferredPeriod('');
+  };
+
 
   return (
     <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
-        <CardHeader className="max-w-5xl mx-auto w-full">
+        <CardHeader className="max-w-6xl mx-auto w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -146,6 +211,33 @@ export default function DeferredPaymentTrackerPage() {
           </div>
         </CardHeader>
         <CardContent className="max-w-5xl mx-auto w-full">
+          <Card className="mb-6 shadow-md p-4">
+              <CardHeader className="p-2 pb-4"><CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle></CardHeader>
+              <CardContent className="p-2 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                      <div><Label htmlFor="lcNoFilter">L/C No.</Label><Input id="lcNoFilter" placeholder="Search by L/C No..." value={filterLcNo} onChange={(e) => setFilterLcNo(e.target.value)} /></div>
+                      <div><Label htmlFor="applicantFilter" className="flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</Label>
+                          <Combobox options={applicantOptions} value={filterApplicantId || PLACEHOLDER_APPLICANT_VALUE} onValueChange={(v) => setFilterApplicantId(v === PLACEHOLDER_APPLICANT_VALUE ? '' : v)} placeholder="Search Applicant..." selectPlaceholder="All Applicants" disabled={isLoadingApplicants}/>
+                      </div>
+                      <div><Label htmlFor="beneficiaryFilter" className="flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
+                          <Combobox options={beneficiaryOptions} value={filterBeneficiaryId || PLACEHOLDER_BENEFICIARY_VALUE} onValueChange={(v) => setFilterBeneficiaryId(v === PLACEHOLDER_BENEFICIARY_VALUE ? '' : v)} placeholder="Search Beneficiary..." selectPlaceholder="All Beneficiaries" disabled={isLoadingBeneficiaries}/>
+                      </div>
+                      <div><Label htmlFor="statusFilter">Status</Label>
+                          <Select value={filterStatus || ALL_STATUSES} onValueChange={(value) => setFilterStatus(value === ALL_STATUSES ? '' : value)}>
+                              <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
+                              <SelectContent><SelectItem value={ALL_STATUSES}>All Statuses</SelectItem><SelectItem value="Payment Pending">Payment Pending</SelectItem><SelectItem value="Payment Done">Payment Done</SelectItem></SelectContent>
+                          </Select>
+                      </div>
+                      <div><Label htmlFor="deferredPeriodFilter">Deferred Period</Label>
+                          <Select value={filterDeferredPeriod || ALL_TERMS} onValueChange={(value) => setFilterDeferredPeriod(value === ALL_TERMS ? '' : value)}>
+                              <SelectTrigger><SelectValue placeholder="All Periods" /></SelectTrigger>
+                              <SelectContent><SelectItem value={ALL_TERMS}>All Periods</SelectItem>{termsOfPayOptions.filter(t => t.startsWith("Deferred")).map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                          </Select>
+                      </div>
+                      <div className="pt-6"><Button onClick={clearFilters} variant="outline" className="w-full"><XCircle className="mr-2 h-4 w-4" /> Clear Filters</Button></div>
+                  </div>
+              </CardContent>
+          </Card>
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -157,11 +249,11 @@ export default function DeferredPaymentTrackerPage() {
               <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Data</p>
               <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}></p>
             </div>
-          ) : deferredPayments.length === 0 ? (
+          ) : filteredPayments.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-xl font-semibold text-muted-foreground">No Deferred Payment Records Found</p>
-              <p className="text-sm text-muted-foreground text-center">There are no deferred payment tracking entries in the database yet.</p>
+              <p className="text-xl font-semibold text-muted-foreground">No Records Found</p>
+              <p className="text-sm text-muted-foreground text-center">{allDeferredPayments.length > 0 ? "No records match your current filters." : "There are no deferred payment tracking entries yet."}</p>
             </div>
           ) : (
             <div className="rounded-md border overflow-x-auto">
@@ -184,7 +276,7 @@ export default function DeferredPaymentTrackerPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {deferredPayments.map((entry, index) => (
+                  {filteredPayments.map((entry, index) => (
                     <TableRow key={entry.id}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell className="font-medium">{entry.documentaryCreditNumber || 'N/A'}</TableCell>
@@ -238,3 +330,5 @@ export default function DeferredPaymentTrackerPage() {
     </div>
   );
 }
+
+    
