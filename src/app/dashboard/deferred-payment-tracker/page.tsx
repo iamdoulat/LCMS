@@ -40,8 +40,6 @@ interface DeferredPaymentRecord {
     shipmentDate: string;
     maturityDate: string;
     remainingDays?: number;
-    shipmentMode?: string;
-    status: 'Payment Pending' | 'Payment Done';
 }
 
 
@@ -125,7 +123,7 @@ export default function DeferredPaymentTrackerPage() {
 
   return (
     <div className="container mx-auto py-8 px-5">
-      <Card className="shadow-xl max-w-full lg:max-w-6xl mx-auto">
+      <Card className="shadow-xl">
         <CardHeader className="max-w-4xl mx-auto w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -145,7 +143,7 @@ export default function DeferredPaymentTrackerPage() {
             </Link>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="max-w-4xl mx-auto w-full">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
