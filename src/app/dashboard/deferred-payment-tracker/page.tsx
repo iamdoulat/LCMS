@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, PlusCircle, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, PlusCircle, MoreHorizontal, Edit, Trash2, Ship } from 'lucide-react';
 import type { LCEntryDocument, Currency } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy as firestoreOrderBy, doc, deleteDoc } from 'firebase/firestore';
@@ -41,6 +41,7 @@ interface DeferredPaymentRecord {
     maturityDate: string;
     remainingDays?: number;
     status?: 'Payment Pending' | 'Payment Done';
+    shipmentMode?: 'Sea' | 'Air';
 }
 
 
@@ -125,7 +126,7 @@ export default function DeferredPaymentTrackerPage() {
   return (
     <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
-        <CardHeader className="max-w-5xl mx-auto w-full">
+        <CardHeader className="max-w-7xl mx-auto w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -144,7 +145,7 @@ export default function DeferredPaymentTrackerPage() {
             </Link>
           </div>
         </CardHeader>
-        <CardContent className="max-w-5xl mx-auto w-full">
+        <CardContent className="max-w-7xl mx-auto w-full">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -177,6 +178,7 @@ export default function DeferredPaymentTrackerPage() {
                     <TableHead>Shipment Date</TableHead>
                     <TableHead>Maturity Date</TableHead>
                     <TableHead>Remaining</TableHead>
+                    <TableHead>Shipment Mode</TableHead>
                     <TableHead>Status*</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -198,6 +200,7 @@ export default function DeferredPaymentTrackerPage() {
                       <TableCell>{formatDisplayDate(entry.shipmentDate)}</TableCell>
                       <TableCell>{formatDisplayDate(entry.maturityDate)}</TableCell>
                       <TableCell className="font-semibold text-destructive">{entry.remainingDays ? `${entry.remainingDays} days` : 'N/A'}</TableCell>
+                      <TableCell>{entry.shipmentMode || 'N/A'}</TableCell>
                       <TableCell>
                           <Badge variant={entry.status === 'Payment Done' ? 'default' : 'destructive'}>
                               {entry.status || 'N/A'}
