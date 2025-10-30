@@ -1,5 +1,4 @@
 
-
 # LCMS: The Ultimate LC Management & Indentor Business Operations Platform
 
 **Transform your trade finance and indentor business operations with LCMS, a comprehensive, high-speed, and secure platform designed for the modern enterprise.**
@@ -51,6 +50,7 @@ Harness the power of a unified system that brings clarity and efficiency to ever
 *   **Shipment Management**: Never lose sight of your goods with real-time tracking and status updates.
     *   **Upcoming Shipments**: Proactively monitor all active L/Cs with approaching shipment deadlines.
     *   **Shipment & Payment Status**: Get dedicated views for L/Cs that are "Shipment Done," "Payment Pending," or "Payment Done" to stay on top of your logistics pipeline.
+*   **Deferred Payment Tracker**: A dedicated module to monitor all deferred payment L/Cs, track maturity dates, and manage payment statuses to ensure timely settlements.
 
 *   **Demo M/C Management**: A complete suite for managing your valuable demonstration machines.
     *   **Machine & Factory Database**: Add and manage your demo machines and the factories they are assigned to.
