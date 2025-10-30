@@ -22,6 +22,7 @@ import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Loader2, Save, Users, Building, DollarSign, CalendarDays, Ship, FileText, Info, ExternalLink, Link as LinkIcon, Plane } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const paymentTrackingSchema = z.object({
   lcId: z.string().min(1, "Documentary Credit Number is required."),
@@ -33,7 +34,7 @@ const paymentTrackingSchema = z.object({
   shipmentMode: z.enum(shipmentModeOptions, { required_error: "Shipment Mode is required." }),
   maturityDate: z.date({ required_error: "Maturity Date is required." }),
   goodsDescription: z.string().optional(),
-  documentUrls: z.string().optional(),
+  status: z.enum(["Payment Pending", "Payment Done"]),
 });
 
 type PaymentTrackingFormValues = z.infer<typeof paymentTrackingSchema>;
@@ -59,7 +60,7 @@ export function PaymentTrackingEntryForm() {
       shipmentMode: "Sea",
       maturityDate: new Date(),
       goodsDescription: '',
-      documentUrls: '',
+      status: "Payment Pending",
     }
   });
 
@@ -154,16 +155,15 @@ export function PaymentTrackingEntryForm() {
     setIsSubmitting(true);
     try {
       const lcDocRef = doc(firestore, "lc_entries", data.lcId);
-      const updateData = {
-        shipmentValue: data.shipmentValue, // This seems to be a new field, assuming it's for tracking this shipment's value
+      const updateData: Partial<LCEntryDocument> = {
+        // shipmentValue: data.shipmentValue, // This field doesn't exist on LCEntryDocument
         isFirstShipment: data.isFirstShipment,
         isSecondShipment: data.isSecondShipment,
         isThirdShipment: data.isThirdShipment,
-        etd: format(data.shipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"), // Assuming shipment date is ETD
+        etd: format(data.shipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
         shipmentMode: data.shipmentMode,
         paymentMaturityDate: format(data.maturityDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-        // You might want to update status here too, e.g., to "Shipment Done"
-        // status: [...(selectedLcDetails?.status || []), "Shipment Done"],
+        status: data.status === "Payment Done" ? ["Payment Done", "Shipment Done"] : ["Payment Pending"],
         updatedAt: serverTimestamp(),
       };
       await updateDoc(lcDocRef, updateData);
@@ -220,26 +220,53 @@ export function PaymentTrackingEntryForm() {
              <FormField control={control} name="maturityDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Maturity Date*</FormLabel><DatePickerField field={field} /></FormItem>)}/>
              <FormItem><FormLabel>Remaining Days</FormLabel><Input value={remainingDays !== null ? `${remainingDays} days` : 'N/A'} readOnly disabled className="bg-muted/50 cursor-not-allowed"/></FormItem>
         </div>
-        <FormField control={control} name="shipmentMode" render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>Shipment Mode*</FormLabel>
-                 <FormControl>
-                  <RadioGroup onValueChange={field.onChange} value={field.value} className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                    {shipmentModeOptions.map((option) => (
-                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                        <FormControl><RadioGroupItem value={option} /></FormControl>
-                        <FormLabel className="font-normal text-sm">
-                            {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
-                            {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
-                            {option}
-                        </FormLabel>
-                      </FormItem>
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-        )}/>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <FormField control={control} name="shipmentMode" render={({ field }) => (
+                <FormItem className="space-y-3">
+                    <FormLabel>Shipment Mode*</FormLabel>
+                    <FormControl>
+                    <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                    >
+                        {shipmentModeOptions.map((option) => (
+                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value={option} /></FormControl>
+                            <FormLabel className="font-normal text-sm">
+                                {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
+                                {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
+                                {option}
+                            </FormLabel>
+                        </FormItem>
+                        ))}
+                    </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}/>
+            <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Status*</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        <SelectItem value="Payment Pending">Payment Pending</SelectItem>
+                        <SelectItem value="Payment Done">Payment Done</SelectItem>
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
         <Separator/>
         <FormField control={control} name="goodsDescription" render={({ field }) => (<FormItem><FormLabel>Goods Description</FormLabel><FormControl><Textarea placeholder="Description of goods in this shipment..." {...field} /></FormControl><FormMessage /></FormItem>)}/>
         {selectedLcDetails && (
@@ -263,5 +290,3 @@ export function PaymentTrackingEntryForm() {
     </Form>
   );
 }
-
-    
