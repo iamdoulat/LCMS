@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
-import { Loader2, Save, Users, Building, DollarSign, CalendarDays, Ship, FileText, Info } from 'lucide-react';
+import { Loader2, Save, Users, Building, DollarSign, CalendarDays, Ship, FileText, Info, ExternalLink, Link as LinkIcon, Plane } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 
@@ -119,6 +119,37 @@ export function PaymentTrackingEntryForm() {
     }
   }, [watchedMaturityDate]);
 
+  const handleViewUrl = (url: string | undefined | null) => {
+    if (url && url.trim() !== "") {
+      try {
+        new URL(url);
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        Swal.fire("Invalid URL", "The provided URL is not valid.", "error");
+      }
+    } else {
+      Swal.fire("No URL", "No URL provided for this document.", "info");
+    }
+  };
+
+  const renderDocumentLink = (label: string, url: string | undefined) => {
+    return (
+      <div className="flex items-center justify-between p-2 border rounded-md bg-background">
+        <span className="text-sm font-medium text-muted-foreground">{label}</span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => handleViewUrl(url)}
+          disabled={!url}
+        >
+          <ExternalLink className="mr-2 h-4 w-4" /> View
+        </Button>
+      </div>
+    );
+  };
+
+
   async function onSubmit(data: PaymentTrackingFormValues) {
     setIsSubmitting(true);
     try {
@@ -197,7 +228,11 @@ export function PaymentTrackingEntryForm() {
                     {shipmentModeOptions.map((option) => (
                       <FormItem key={option} className="flex items-center space-x-2 space-y-0">
                         <FormControl><RadioGroupItem value={option} /></FormControl>
-                        <FormLabel className="font-normal">{option}</FormLabel>
+                        <FormLabel className="font-normal text-sm">
+                            {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
+                            {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
+                            {option}
+                        </FormLabel>
                       </FormItem>
                     ))}
                   </RadioGroup>
@@ -207,7 +242,18 @@ export function PaymentTrackingEntryForm() {
         )}/>
         <Separator/>
         <FormField control={control} name="goodsDescription" render={({ field }) => (<FormItem><FormLabel>Goods Description</FormLabel><FormControl><Textarea placeholder="Description of goods in this shipment..." {...field} /></FormControl><FormMessage /></FormItem>)}/>
-        <FormField control={control} name="documentUrls" render={({ field }) => (<FormItem><FormLabel>Document URLs</FormLabel><FormControl><Textarea placeholder="Enter relevant document URLs, one per line..." {...field} /></FormControl><FormMessage /></FormItem>)}/>
+        {selectedLcDetails && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Linked Documents</h3>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {renderDocumentLink("Purchase Order", selectedLcDetails.purchaseOrderUrl)}
+              {renderDocumentLink("Final PI", selectedLcDetails.finalPIUrl)}
+              {renderDocumentLink("Final L/C", selectedLcDetails.finalLcUrl)}
+              {renderDocumentLink("Shipping Docs", selectedLcDetails.shippingDocumentsUrl)}
+              {renderDocumentLink("Packing List", selectedLcDetails.packingListUrl)}
+            </div>
+          </div>
+        )}
         <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : <><Save className="mr-2 h-4 w-4"/>Save Entry</>}
@@ -217,3 +263,5 @@ export function PaymentTrackingEntryForm() {
     </Form>
   );
 }
+
+    
