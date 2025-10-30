@@ -126,7 +126,7 @@ export default function DeferredPaymentTrackerPage() {
   return (
     <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
-        <CardHeader className="max-w-6xl mx-auto w-full">
+        <CardHeader className="max-w-5xl mx-auto w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -145,7 +145,7 @@ export default function DeferredPaymentTrackerPage() {
             </Link>
           </div>
         </CardHeader>
-        <CardContent className="max-w-6xl mx-auto w-full">
+        <CardContent className="max-w-5xl mx-auto w-full">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -180,7 +180,6 @@ export default function DeferredPaymentTrackerPage() {
                     <TableHead>Maturity Date</TableHead>
                     <TableHead>Remaining</TableHead>
                     <TableHead>Status*</TableHead>
-                    <TableHead>Shipment Mode</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -207,7 +206,6 @@ export default function DeferredPaymentTrackerPage() {
                               {entry.status || 'N/A'}
                           </Badge>
                       </TableCell>
-                      <TableCell>{entry.shipmentMode || 'N/A'}</TableCell>
                       <TableCell className="text-right">
                           <DropdownMenu>
                               <DropdownMenuTrigger asChild>
