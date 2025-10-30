@@ -1,10 +1,11 @@
+
 "use client";
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, ShipmentMode, shipmentModeOptions } from '@/types';
+import type { LCEntryDocument, ShipmentMode, shipmentModeOptions as ShipmentModeOptionsType } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, doc, updateDoc, serverTimestamp, query, getDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
@@ -22,6 +23,7 @@ import { Loader2, Save, Users, Building, DollarSign, CalendarDays, Ship, FileTex
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { shipmentModeOptions } from '@/types';
 
 const paymentTrackingSchema = z.object({
   lcId: z.string().min(1, "Documentary Credit Number is required."),
