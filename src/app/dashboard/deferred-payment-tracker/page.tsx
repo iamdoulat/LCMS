@@ -145,7 +145,7 @@ export default function DeferredPaymentTrackerPage() {
             </Link>
           </div>
         </CardHeader>
-        <CardContent className="max-w-5xl mx-auto w-full">
+        <CardContent className="max-w-6xl mx-auto w-full">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -168,6 +168,7 @@ export default function DeferredPaymentTrackerPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>#</TableHead>
                     <TableHead>LC No.</TableHead>
                     <TableHead>Applicant</TableHead>
                     <TableHead>Beneficiary</TableHead>
@@ -184,8 +185,9 @@ export default function DeferredPaymentTrackerPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {deferredPayments.map((entry) => (
+                  {deferredPayments.map((entry, index) => (
                     <TableRow key={entry.id}>
+                      <TableCell>{index + 1}</TableCell>
                       <TableCell className="font-medium">{entry.documentaryCreditNumber || 'N/A'}</TableCell>
                       <TableCell>{entry.applicantName || 'N/A'}</TableCell>
                       <TableCell>{entry.beneficiaryName || 'N/A'}</TableCell>
