@@ -9,7 +9,7 @@ import { LCEntryDocument, ShipmentMode, shipmentModeOptions } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, doc, updateDoc, serverTimestamp, query, getDoc, addDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
-import { format, isValid, parseISO, differenceInDays } from 'date-fns';
+import { format, isValid, parseISO, differenceInDays, addDays } from 'date-fns';
 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -67,6 +67,7 @@ export function PaymentTrackingEntryForm() {
   const { control, watch, setValue, handleSubmit, reset } = form;
   const watchedLcId = watch('lcId');
   const watchedMaturityDate = watch('maturityDate');
+  const watchedShipmentDate = watch('shipmentDate');
 
   React.useEffect(() => {
     const fetchLcs = async () => {
@@ -105,6 +106,17 @@ export function PaymentTrackingEntryForm() {
     };
     fetchLcDetails();
   }, [watchedLcId, setValue]);
+
+  React.useEffect(() => {
+    if (watchedShipmentDate && selectedLcDetails?.termsOfPay?.startsWith('Deferred')) {
+        const deferredDaysMatch = selectedLcDetails.termsOfPay.match(/\d+/);
+        if (deferredDaysMatch) {
+            const days = parseInt(deferredDaysMatch[0], 10);
+            const newMaturityDate = addDays(new Date(watchedShipmentDate), days);
+            setValue('maturityDate', newMaturityDate, { shouldValidate: true });
+        }
+    }
+  }, [watchedShipmentDate, selectedLcDetails, setValue]);
 
   React.useEffect(() => {
     if (watchedMaturityDate) {
@@ -256,7 +268,7 @@ export function PaymentTrackingEntryForm() {
                     <FormMessage />
                 </FormItem>
             )}/>
-            <FormField
+             <FormField
                 control={form.control}
                 name="status"
                 render={({ field }) => (
