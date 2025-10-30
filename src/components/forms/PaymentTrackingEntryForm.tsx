@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { LCEntryDocument, ShipmentMode, shipmentModeOptions } from '@/types';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, doc, updateDoc, serverTimestamp, query, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, serverTimestamp, query, getDoc, addDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { format, isValid, parseISO, differenceInDays } from 'date-fns';
 
@@ -150,28 +150,39 @@ export function PaymentTrackingEntryForm() {
     );
   };
 
-
   async function onSubmit(data: PaymentTrackingFormValues) {
     setIsSubmitting(true);
+    if (!selectedLcDetails) {
+        Swal.fire("Error", "No L/C selected. Please select an L/C to track.", "error");
+        setIsSubmitting(false);
+        return;
+    }
+
     try {
-      const lcDocRef = doc(firestore, "lc_entries", data.lcId);
-      const updateData: Partial<LCEntryDocument> = {
-        // shipmentValue: data.shipmentValue, // This field doesn't exist on LCEntryDocument
-        isFirstShipment: data.isFirstShipment,
-        isSecondShipment: data.isSecondShipment,
-        isThirdShipment: data.isThirdShipment,
-        etd: format(data.shipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-        shipmentMode: data.shipmentMode,
-        paymentMaturityDate: format(data.maturityDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-        status: data.status === "Payment Done" ? ["Payment Done", "Shipment Done"] : ["Payment Pending"],
+      const dataToSave = {
+        ...data,
+        applicantId: selectedLcDetails.applicantId,
+        applicantName: selectedLcDetails.applicantName,
+        beneficiaryId: selectedLcDetails.beneficiaryId,
+        beneficiaryName: selectedLcDetails.beneficiaryName,
+        documentaryCreditNumber: selectedLcDetails.documentaryCreditNumber,
+        lcValue: selectedLcDetails.amount,
+        lcCurrency: selectedLcDetails.currency,
+        termsOfPay: selectedLcDetails.termsOfPay,
+        shipmentDate: format(data.shipmentDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+        maturityDate: format(data.maturityDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+        remainingDays: remainingDays,
+        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-      await updateDoc(lcDocRef, updateData);
-      Swal.fire("Success", "Payment tracking information updated successfully!", "success");
+      
+      await addDoc(collection(firestore, "deferred_payment_tracker"), dataToSave);
+      
+      Swal.fire("Success", "Payment tracking entry created successfully!", "success");
       reset();
       setSelectedLcDetails(null);
     } catch (error: any) {
-      Swal.fire("Error", `Failed to update tracking information: ${error.message}`, "error");
+      Swal.fire("Error", `Failed to create tracking entry: ${error.message}`, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -272,7 +283,7 @@ export function PaymentTrackingEntryForm() {
         {selectedLcDetails && (
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Linked Documents</h3>
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {renderDocumentLink("Purchase Order", selectedLcDetails.purchaseOrderUrl)}
               {renderDocumentLink("Final PI", selectedLcDetails.finalPIUrl)}
               {renderDocumentLink("Final L/C", selectedLcDetails.finalLcUrl)}
