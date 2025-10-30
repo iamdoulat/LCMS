@@ -125,8 +125,8 @@ export default function DeferredPaymentTrackerPage() {
 
   return (
     <div className="container mx-auto py-8 px-5">
-      <Card className="shadow-xl max-w-7xl mx-auto">
-        <CardHeader>
+      <Card className="shadow-xl max-w-full lg:max-w-6xl mx-auto">
+        <CardHeader className="max-w-4xl mx-auto w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
