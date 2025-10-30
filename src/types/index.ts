@@ -289,7 +289,7 @@ export interface LCEntryDocument {
   commercialInvoiceDate?: string; // ISO string
   totalMachineQty: number;
   numberOfAmendments?: number;
-  status?: LCStatus[];
+  status?: LCStatus[] | LCStatus;
   itemDescriptions?: string;
   partialShipments?: string;
   portOfLoading?: string;
@@ -359,6 +359,11 @@ export interface LCEntryDocument {
   firstShipmentNote?: string;
   secondShipmentNote?: string;
   thirdShipmentNote?: string;
+  shipmentValue?: number; // Added this property
+  shipmentDate?: string; // Added this property
+  maturityDate?: string; // Added this property
+  goodsDescription?: string; // Added this property
+  remainingDays?: number; // Added this property
   createdAt: any; // Firestore ServerTimestamp
   updatedAt: any; // Firestore ServerTimestamp
 }
