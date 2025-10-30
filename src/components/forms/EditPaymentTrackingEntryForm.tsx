@@ -65,7 +65,7 @@ export function EditPaymentTrackingEntryForm({ initialData }: EditPaymentTrackin
       shipmentMode: initialData.shipmentMode,
       maturityDate: parseISO(initialData.maturityDate as string),
       goodsDescription: initialData.goodsDescription,
-      status: initialData.status,
+      status: (initialData.status === "Payment Pending" || initialData.status === "Payment Done") ? initialData.status : "Payment Pending",
     },
   });
 
@@ -126,7 +126,7 @@ export function EditPaymentTrackingEntryForm({ initialData }: EditPaymentTrackin
       const today = new Date();
       today.setHours(0, 0, 0, 0); 
       const maturity = new Date(watchedMaturityDate);
-      maturity.setHours(0, 0, 0, 0);
+      maturity.setHours(0, 0, 0, 0); // Normalize maturity date
       if (isValid(maturity)) {
         setRemainingDays(differenceInDays(maturity, today));
       }
