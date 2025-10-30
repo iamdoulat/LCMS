@@ -148,6 +148,7 @@ const lcManagementNavItems: NavItem[] = [
     { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment Done', icon: PackageCheck, iconColorClass: 'bg-icon-shipment-done' },
     { href: '/dashboard/shipments/lc-payment-pending', label: 'Payment Pending', icon: DollarSign, iconColorClass: 'bg-icon-payment-pending' },
     { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign, iconColorClass: 'bg-icon-payment-done' },
+    { href: '/dashboard/deferred-payment-tracker', label: 'Deferred Payment Tracker', icon: CalendarClock, iconColorClass: 'bg-icon-payment-pending' },
 ];
 
 const partiesNavItems: NavItem[] = [
