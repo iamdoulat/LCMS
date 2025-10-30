@@ -6,6 +6,8 @@ import { AppProviders } from '@/components/layout/AppProviders';
 import './globals.css'; 
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import React, { Suspense } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'LC Management System - Letter of Credit Management',
@@ -36,7 +38,9 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased">
         <AppProviders>
-          {children}
+          <Suspense fallback={<div className="flex min-h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
+            {children}
+          </Suspense>
           <Analytics />
           <SpeedInsights />
         </AppProviders>

@@ -5,8 +5,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 import { AppFooter } from '@/components/layout/AppFooter';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
-import React, { Suspense } from 'react';
-import { Loader2 } from 'lucide-react';
+import React from 'react';
 import { AppSidebarNav } from '@/components/layout/AppSidebarNav';
 
 
@@ -26,9 +25,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             <div className="flex flex-col min-h-screen">
               <AppHeader />
               <main className="w-full flex-1">
-                <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
-                  {children}
-                </Suspense>
+                {children}
               </main>
               <AppFooter />
             </div>
