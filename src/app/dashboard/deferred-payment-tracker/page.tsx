@@ -1,8 +1,9 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, PlusCircle } from 'lucide-react';
 import type { LCEntryDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, orderBy as firestoreOrderBy } from 'firebase/firestore';
@@ -74,13 +75,23 @@ export default function DeferredPaymentTrackerPage() {
     <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <CalendarClock className="h-7 w-7 text-primary" />
-            Deferred Payment Tracker
-          </CardTitle>
-          <CardDescription>
-            A list of all L/Cs with deferred payment terms that are currently pending payment, sorted by maturity date.
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <CalendarClock className="h-7 w-7 text-primary" />
+                Deferred Payment Tracker
+              </CardTitle>
+              <CardDescription>
+                A list of all L/Cs with deferred payment terms that are currently pending payment, sorted by maturity date.
+              </CardDescription>
+            </div>
+            <Link href="/dashboard/shipments/payment-tracking-entry" passHref>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Payment Tracking Entry
+              </Button>
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
