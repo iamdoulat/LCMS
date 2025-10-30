@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { LCEntryDocument, ShipmentMode, shipmentModeOptions } from '@/types';
 import { firestore } from '@/lib/firebase/config';
-import { collection, getDocs, doc, updateDoc, serverTimestamp, query } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, serverTimestamp, query, getDoc } from 'firebase/firestore';
 import Swal from 'sweetalert2';
 import { format, isValid, parseISO, differenceInDays } from 'date-fns';
 
