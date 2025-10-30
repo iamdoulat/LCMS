@@ -21,6 +21,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Loader2, Save, Users, Building, DollarSign, CalendarDays, Ship, FileText, Info } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
 
 const paymentTrackingSchema = z.object({
   lcId: z.string().min(1, "Documentary Credit Number is required."),
