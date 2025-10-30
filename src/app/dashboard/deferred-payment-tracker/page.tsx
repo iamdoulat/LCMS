@@ -272,6 +272,7 @@ export default function DeferredPaymentTrackerPage() {
                     <TableHead>Maturity Date</TableHead>
                     <TableHead>Remaining</TableHead>
                     <TableHead>Status*</TableHead>
+                    <TableHead>Shipment Mode</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -297,6 +298,11 @@ export default function DeferredPaymentTrackerPage() {
                           <Badge variant={entry.status === 'Payment Done' ? 'default' : 'destructive'}>
                               {entry.status || 'N/A'}
                           </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {entry.shipmentMode && (
+                          <Badge variant="outline">{entry.shipmentMode}</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                           <DropdownMenu>
