@@ -82,7 +82,7 @@ export default function DeferredPaymentTrackerPage() {
   const [filterLcNo, setFilterLcNo] = useState('');
   const [filterApplicantId, setFilterApplicantId] = useState('');
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('Payment Pending');
   const [filterDeferredPeriod, setFilterDeferredPeriod] = useState('');
   
   const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
