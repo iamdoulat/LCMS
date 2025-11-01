@@ -8,7 +8,7 @@ import type { LCEntryDocument, Currency, CustomerDocument, SupplierDocument } fr
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy as firestoreOrderBy, doc, deleteDoc } from 'firebase/firestore';
 import Link from 'next/link';
-import { format, parseISO, isValid, differenceInDays } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays, startOfDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
@@ -191,7 +191,7 @@ export default function DeferredPaymentTrackerPage() {
   return (
     <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
-        <CardHeader className="max-w-6xl mx-auto w-full">
+        <CardHeader className="max-w-5xl mx-auto w-full">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -272,12 +272,16 @@ export default function DeferredPaymentTrackerPage() {
                     <TableHead>Maturity Date</TableHead>
                     <TableHead>Remaining</TableHead>
                     <TableHead>Status*</TableHead>
-                    <TableHead>Shipment Mode</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPayments.map((entry, index) => (
+                  {filteredPayments.map((entry, index) => {
+                    const today = startOfDay(new Date());
+                    const maturity = parseISO(entry.maturityDate);
+                    const remainingDays = isValid(maturity) ? differenceInDays(maturity, today) : null;
+                    
+                    return (
                     <TableRow key={entry.id}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell className="font-medium">{entry.documentaryCreditNumber || 'N/A'}</TableCell>
@@ -293,16 +297,13 @@ export default function DeferredPaymentTrackerPage() {
                       </TableCell>
                       <TableCell>{formatDisplayDate(entry.shipmentDate)}</TableCell>
                       <TableCell>{formatDisplayDate(entry.maturityDate)}</TableCell>
-                      <TableCell className="font-semibold text-destructive">{entry.remainingDays ? `${entry.remainingDays} days` : 'N/A'}</TableCell>
+                      <TableCell className={cn("font-semibold", remainingDays !== null && remainingDays < 15 ? "text-destructive" : "text-foreground")}>
+                        {remainingDays !== null ? `${remainingDays} days` : 'N/A'}
+                      </TableCell>
                        <TableCell>
                           <Badge variant={entry.status === 'Payment Done' ? 'default' : 'destructive'}>
                               {entry.status || 'N/A'}
                           </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {entry.shipmentMode && (
-                          <Badge variant="outline">{entry.shipmentMode}</Badge>
-                        )}
                       </TableCell>
                       <TableCell className="text-right">
                           <DropdownMenu>
@@ -326,7 +327,8 @@ export default function DeferredPaymentTrackerPage() {
                           </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -336,5 +338,4 @@ export default function DeferredPaymentTrackerPage() {
     </div>
   );
 }
-
     
