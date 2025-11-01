@@ -191,7 +191,7 @@ export default function DeferredPaymentTrackerPage() {
   return (
     <div className="container mx-auto py-8 px-5">
       <Card className="shadow-xl">
-        <CardHeader className="max-w-5xl mx-auto w-full">
+        <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -210,7 +210,7 @@ export default function DeferredPaymentTrackerPage() {
             </Link>
           </div>
         </CardHeader>
-        <CardContent className="max-w-5xl mx-auto w-full">
+        <CardContent>
           <Card className="mb-6 shadow-md p-4">
               <CardHeader className="p-2 pb-4"><CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle></CardHeader>
               <CardContent className="p-2 space-y-4">
@@ -338,4 +338,6 @@ export default function DeferredPaymentTrackerPage() {
     </div>
   );
 }
+    
+
     
