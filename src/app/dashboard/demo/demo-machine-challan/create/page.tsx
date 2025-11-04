@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 
 export default function CreateNewDemoMachineChallanPage() {
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
        <div className="mb-6">
             <Link href="/dashboard/demo/demo-machine-challan" passHref>
                 <Button variant="outline">
