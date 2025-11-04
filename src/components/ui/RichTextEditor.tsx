@@ -1,12 +1,14 @@
-
 "use client";
 
 import * as React from 'react';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
 
-// Dynamically import ReactQuill to avoid SSR issues
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+// Dynamically import the client-side editor component
+const RichTextEditorClient = dynamic(() => import('./RichTextEditorClient'), {
+  ssr: false,
+  loading: () => <div className="bg-muted rounded-md border h-[239px] animate-pulse" />, // Placeholder while loading
+});
 
 interface RichTextEditorProps {
   value: string;
@@ -14,35 +16,14 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
-const modules = {
-  toolbar: [
-    [{ 'header': [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-    [{'list': 'ordered'}, {'list': 'bullet'}, {'indent': '-1'}, {'indent': '+1'}],
-    ['link', 'image'],
-    ['clean']
-  ],
-};
-
-const formats = [
-  'header',
-  'bold', 'italic', 'underline', 'strike', 'blockquote',
-  'list', 'bullet', 'indent',
-  'link', 'image'
-];
-
 export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+  // This component acts as a server-safe wrapper.
+  // It dynamically imports the actual editor, which is marked as a client component.
   return (
-    <div className="bg-background rounded-md border border-input">
-       <ReactQuill 
-        theme="snow"
-        value={value}
-        onChange={onChange}
-        modules={modules}
-        formats={formats}
-        placeholder={placeholder}
-        className="[&_.ql-editor]:min-h-[200px]"
-      />
-    </div>
+    <RichTextEditorClient
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+    />
   );
 }
