@@ -11,7 +11,7 @@ import { ArrowLeft } from 'lucide-react';
 
 export default function AddDemoMachineFactoryPage() {
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
         <div className="mb-6">
             <Link href="/dashboard/demo/demo-machine-factories-list" passHref>
                 <Button variant="outline">
