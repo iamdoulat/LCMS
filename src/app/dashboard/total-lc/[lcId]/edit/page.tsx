@@ -123,7 +123,7 @@ export default function EditLCPage() {
 
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
        <div className="mb-6 flex justify-between items-center">
         <Link href="/dashboard/total-lc" passHref>
           <Button variant="outline">
