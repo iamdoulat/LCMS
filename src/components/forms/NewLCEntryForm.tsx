@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -61,12 +62,6 @@ const defaultFormValues: NewLCFormValues = {
   finalLcUrl: '',
   shippingDocumentsUrl: '',
   packingListUrl: '',
-  isFirstShipment: true,
-  isSecondShipment: false,
-  isThirdShipment: false,
-  firstShipmentNote: '',
-  secondShipmentNote: '',
-  thirdShipmentNote: '',
   trackingCourier: "",
   trackingNumber: "",
   etd: undefined,
@@ -113,6 +108,12 @@ const defaultFormValues: NewLCFormValues = {
   billOfExchangeQty: 0,
   certificateOfOrigin: [],
   shippingMarks: '',
+  isFirstShipment: true,
+  isSecondShipment: false,
+  isThirdShipment: false,
+  firstShipmentNote: '',
+  secondShipmentNote: '',
+  thirdShipmentNote: '',
 };
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
@@ -466,6 +467,8 @@ export function NewLCEntryForm() {
       url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
     } else if (courier === "FedEx") {
       url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
+    } else if (courier === "UPS") {
+      url = `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(number).trim())}`;
     }
 
     if (url) {
@@ -1521,7 +1524,7 @@ export function NewLCEntryForm() {
           )}
         />
         <FormField
-          control={control}
+          control={form.control}
           name="shippingMarks"
           render={({ field }) => (
             <FormItem>

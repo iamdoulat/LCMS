@@ -20,7 +20,7 @@ export type ShipmentMode = typeof shipmentModeOptions[number];
 export const currencyOptions = ["USD", "EURO"] as const;
 export type Currency = typeof currencyOptions[number];
 
-export const trackingCourierOptions = ["DHL", "FedEx"] as const;
+export const trackingCourierOptions = ["DHL", "FedEx", "UPS"] as const;
 export type TrackingCourier = typeof trackingCourierOptions[number] | "";
 
 export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Payment Pending", "Payment Done", "Shipment Done"] as const;
