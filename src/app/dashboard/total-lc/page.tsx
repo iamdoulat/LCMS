@@ -201,6 +201,8 @@ export default function TotalLCPage() {
         url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
     } else if (courier === "FedEx") {
         url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
+    } else if (courier === "UPS") {
+      url = `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(number).trim())}`;
     }
 
     if (url) {
@@ -213,12 +215,12 @@ export default function TotalLCPage() {
   const handleTrackVessel = (lc: LCEntryDocument) => {
     const imoNumber = lc.vesselImoNumber;
     if (!imoNumber || String(imoNumber).trim() === "") {
-        Swal.fire({
-            title: "IMO Number Missing",
-            text: "Please enter a Vessel IMO number to track.",
-            icon: "info",
-        });
-        return;
+       Swal.fire({
+        title: "IMO Number Missing",
+        text: "Please enter a Vessel IMO number to track.",
+        icon: "info",
+      });
+      return;
     }
     const url = `https://www.vesselfinder.com/vessels/details/${encodeURIComponent(String(imoNumber).trim())}`;
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -490,9 +492,9 @@ export default function TotalLCPage() {
                         value={filterApplicantId}
                         onValueChange={setFilterApplicantId}
                         placeholder="Search Applicant..."
-                        selectPlaceholder={isLoadingApplicants ? "Loading..." : "All Applicants"}
+                        selectPlaceholder={isLoading ? "Loading..." : "All Applicants"}
                         emptyStateMessage="No applicant found."
-                        disabled={isLoadingApplicants}
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-1">
@@ -502,9 +504,9 @@ export default function TotalLCPage() {
                         value={filterBeneficiaryId}
                         onValueChange={setFilterBeneficiaryId}
                         placeholder="Search Beneficiary..."
-                        selectPlaceholder={isLoadingBeneficiaries ? "Loading..." : "All Beneficiaries"}
+                        selectPlaceholder={isLoading ? "Loading..." : "All Beneficiaries"}
                         emptyStateMessage="No beneficiary found."
-                        disabled={isLoadingBeneficiaries}
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-1">
@@ -805,6 +807,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
