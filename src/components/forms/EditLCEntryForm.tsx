@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -66,12 +67,6 @@ const defaultFormValues: LCEditFormValues = {
   finalLcUrl: '',
   shippingDocumentsUrl: '',
   packingListUrl: '',
-  isFirstShipment: true,
-  isSecondShipment: false,
-  isThirdShipment: false,
-  firstShipmentNote: '',
-  secondShipmentNote: '',
-  thirdShipmentNote: '',
   trackingCourier: "",
   trackingNumber: "",
   etd: undefined,
@@ -118,6 +113,12 @@ const defaultFormValues: LCEditFormValues = {
   billOfExchangeQty: 0,
   certificateOfOrigin: [],
   shippingMarks: '',
+  isFirstShipment: true,
+  isSecondShipment: false,
+  isThirdShipment: false,
+  firstShipmentNote: '',
+  secondShipmentNote: '',
+  thirdShipmentNote: '',
 };
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
@@ -294,11 +295,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const isDeferredPayment = watchedTermsOfPay && watchedTermsOfPay.startsWith("Deferred");
 
   const shipmentModeValue = getValues("shipmentMode");
-  let viaLabel = "Vessel/Flight Name";
+  let viaLabel = "Vessel/Flight/Courier Name";
   if (shipmentModeValue === "Sea") {
     viaLabel = "Vessel Name";
   } else if (shipmentModeValue === "Air") {
     viaLabel = "Flight Name";
+  } else if (shipmentModeValue === "By Courier") {
+    viaLabel = "Courier Name";
   }
 
   React.useEffect(() => {
@@ -1176,6 +1179,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                           <FormLabel className="font-normal text-sm">
                               {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
                               {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
+                              {option === 'By Courier' && <FileText className="mr-1 h-4 w-4 inline-block" />}
                               {option}
                           </FormLabel>
                         </FormItem>
@@ -1194,7 +1198,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                 <FormLabel>{viaLabel}</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder={getValues("shipmentMode") ? `Enter ${getValues("shipmentMode") === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
+                    placeholder={getValues("shipmentMode") ? `Enter ${viaLabel}` : "Enter name"}
                     {...field}
                     disabled={!getValues("shipmentMode")}
                     value={field.value ?? ''}

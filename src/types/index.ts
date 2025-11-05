@@ -14,7 +14,7 @@ export const termsOfPayOptions = [
 ] as const;
 export type TermsOfPay = typeof termsOfPayOptions[number];
 
-export const shipmentModeOptions = ["Sea", "Air"] as const;
+export const shipmentModeOptions = ["Sea", "Air", "By Courier"] as const;
 export type ShipmentMode = typeof shipmentModeOptions[number];
 
 export const currencyOptions = ["USD", "EURO"] as const;
