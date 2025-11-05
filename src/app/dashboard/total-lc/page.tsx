@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet, PlusCircle, MoreHorizontal, ShieldAlert, Landmark, CalendarClock, Ship, PackageCheck, FileText as FileTextIcon, Plane, Minus, Plus, Save } from 'lucide-react';
+import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, BarChart3, Printer, FileSpreadsheet, PlusCircle, MoreHorizontal, ShieldAlert, Landmark, CalendarClock, Ship, PackageCheck, FileText as FileTextIcon, Plane, Minus, Plus, Save, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -153,16 +153,8 @@ const TableSkeleton = () => (
 export default function TotalLCPage() {
   const router = useRouter();
   const { user, userRole, loading: authLoading } = useAuth();
-  const [etdEtaPopoverOpen, setEtdEtaPopoverOpen] = React.useState<Record<string, boolean>>({});
-  const [maturityPopoverOpen, setMaturityPopoverOpen] = React.useState<Record<string, boolean>>({});
-  const [trackingPopoverOpen, setTrackingPopoverOpen] = React.useState<Record<string, boolean>>({});
-
   
-  const isReadOnly = useMemo(() => {
-    if (!userRole) return true;
-    const hasWritePermissions = userRole.some(role => ["Super Admin", "Admin", "Commercial"].includes(role));
-    return !hasWritePermissions;
-  }, [userRole]);
+  const [isReadOnly, setIsReadOnly] = React.useState(true);
 
   const [allLcEntries, setAllLcEntries] = useState<LCEntryDocument[]>([]);
   const [displayedLcEntries, setDisplayedLcEntries] = useState<LCEntryDocument[]>([]);
@@ -174,7 +166,7 @@ export default function TotalLCPage() {
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
   const [filterStatus, setFilterStatus] = useState<LCStatus | ''>('Shipment Pending');
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
-  const [filterTermsOfPay, setFilterTermsOfPay] = useState('');
+  const [filterTermsOfPay, setFilterTermsOfPay] = useState<string>(ALL_TERMS_VALUE);
 
 
   const [applicantOptions, setApplicantOptions] = useState<DropdownOption[]>([]);
@@ -188,48 +180,38 @@ export default function TotalLCPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const filterForm = useForm();
   
-  const handleUpdateShipmentTracking = async (lcId: string, courier: LCEntryDocument['trackingCourier'], trackingNumber: LCEntryDocument['trackingNumber'], shipmentMode: LCEntryDocument['shipmentMode']) => {
-    const lcDocRef = doc(firestore, 'lc_entries', lcId);
-    try {
-      await updateDoc(lcDocRef, {
-        shipmentMode: shipmentMode || deleteField(),
-        trackingCourier: courier || deleteField(),
-        trackingNumber: trackingNumber || deleteField(),
-        updatedAt: serverTimestamp(),
-      });
-      Swal.fire({
-        title: 'Tracking Updated',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      setAllLcEntries(prev =>
-        prev.map(lc =>
-          lc.id === lcId
-            ? { ...lc, shipmentMode, trackingCourier: courier, trackingNumber: trackingNumber }
-            : lc
-        )
-      );
-      setTrackingPopoverOpen(prev => ({...prev, [lcId]: false}));
-    } catch (error: any) {
-      Swal.fire('Update Failed', `Could not update tracking information: ${error.message}`, 'error');
-    }
-  };
+  const handleTrackDocument = (lc: LCEntryDocument) => {
+    const courier = lc.trackingCourier;
+    const number = lc.trackingNumber;
 
-  const handleTrackVessel = (lc: LCEntryDocument) => {
-    const imoNumber = lc.vesselImoNumber;
-    if (!imoNumber || String(imoNumber).trim() === "") {
-       Swal.fire({
-        title: "IMO Number Missing",
-        text: "Please enter a Vessel IMO number to track.",
+    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
+      Swal.fire({
+        title: "Information Missing",
+        text: "Courier or tracking number is not set for this L/C.",
         icon: "info",
       });
       return;
     }
-    const url = `https://www.vesselfinder.com/vessels/details/${encodeURIComponent(String(imoNumber).trim())}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
 
+    let url = "";
+    if (courier === "DHL") {
+      url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
+    } else if (courier === "FedEx") {
+      url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
+    } else if (courier === "UPS") {
+      url = `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(number).trim())}`;
+    }
+
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      Swal.fire({
+        title: "Courier Not Supported",
+        text: "Tracking for the selected courier is not implemented.",
+        icon: "warning",
+      });
+    }
+  };
 
   useEffect(() => {
     const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(role));
@@ -240,6 +222,8 @@ export default function TotalLCPage() {
       setIsLoadingBeneficiaries(false);
       return;
     }
+    
+    setIsReadOnly(userRole?.includes('Viewer') ?? true);
 
     if (!authLoading && user) {
         const fetchInitialData = async () => {
@@ -292,7 +276,7 @@ export default function TotalLCPage() {
       const yearNum = parseInt(filterYear);
       filtered = filtered.filter(lc => lc.year === yearNum);
     }
-    if (filterTermsOfPay) {
+    if (filterTermsOfPay && filterTermsOfPay !== ALL_TERMS_VALUE) {
       filtered = filtered.filter(lc => lc.termsOfPay === filterTermsOfPay);
     }
 
@@ -369,7 +353,7 @@ export default function TotalLCPage() {
     setFilterLcNumber(''); setFilterApplicantId(''); setFilterBeneficiaryId('');
     setFilterStatus('');
     setFilterYear(new Date().getFullYear().toString());
-    setFilterTermsOfPay('');
+    setFilterTermsOfPay(ALL_TERMS_VALUE);
     setSortBy('lcIssueDate'); setSortOrder('desc');
     setCurrentPage(1);
   };
@@ -650,9 +634,9 @@ export default function TotalLCPage() {
                                       <Ship className="mr-1.5 h-3.5 w-3.5" /> {getShipmentTermLabel(lc.shipmentTerms)}
                                     </Button>
                                   )}
-                                  <Popover open={etdEtaPopoverOpen[lc.id]} onOpenChange={(open) => setEtdEtaPopoverOpen(prev => ({...prev, [lc.id]: open}))}>
+                                  <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" className={cn("h-7", etdEtaPopoverOpen[lc.id] && "bg-green-500 hover:bg-green-600 text-white")}>
+                                        <Button variant="outline" size="sm" className={"h-7"}>
                                             <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
                                             ETD/ETA
                                         </Button>
@@ -665,7 +649,7 @@ export default function TotalLCPage() {
                                     </PopoverContent>
                                   </Popover>
                                   {isDeferredPayment && (
-                                      <Popover open={maturityPopoverOpen[lc.id]} onOpenChange={(open) => setMaturityPopoverOpen(prev => ({...prev, [lc.id]: open}))}>
+                                      <Popover>
                                         <PopoverTrigger asChild>
                                             <Button variant="outline" size="sm" className="h-7 cursor-default">
                                                 <Landmark className="mr-1.5 h-3.5 w-3.5" /> Maturity
@@ -676,64 +660,10 @@ export default function TotalLCPage() {
                                         </PopoverContent>
                                       </Popover>
                                   )}
-                                  <Popover open={trackingPopoverOpen[lc.id]} onOpenChange={(open) => setTrackingPopoverOpen(prev => ({...prev, [lc.id]: open}))}>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" size="sm" title="Track Original Document" className="h-7">
-                                            <Search className="mr-1.5 h-3.5 w-3.5" />
-                                            {lc.trackingCourier || "Track Docs"}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80 p-4">
-                                        <form onSubmit={(e) => {
-                                            e.preventDefault();
-                                            const formData = new FormData(e.currentTarget);
-                                            const courier = formData.get('courier') as LCEntryDocument['trackingCourier'];
-                                            const trackingNumber = formData.get('trackingNumber') as LCEntryDocument['trackingNumber'];
-                                            const shipmentMode = formData.get('shipmentMode') as LCEntryDocument['shipmentMode'];
-                                            handleUpdateShipmentTracking(lc.id, courier, trackingNumber, shipmentMode);
-                                        }}>
-                                            <div className="space-y-4">
-                                                <div className="space-y-2">
-                                                    <h4 className="font-medium leading-none">Shipment Tracking</h4>
-                                                    <p className="text-sm text-muted-foreground">Update shipment and tracking info.</p>
-                                                </div>
-                                                <div className="grid gap-4">
-                                                    <div className="grid grid-cols-3 items-center gap-4">
-                                                        <Label htmlFor={`shipmentMode-${lc.id}`}>Mode</Label>
-                                                        <Select name="shipmentMode" defaultValue={lc.shipmentMode || ""}>
-                                                            <SelectTrigger id={`shipmentMode-${lc.id}`} className="col-span-2 h-8">
-                                                                <SelectValue placeholder="Select Mode" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="">None</SelectItem>
-                                                                {shipmentModeOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <div className="grid grid-cols-3 items-center gap-4">
-                                                        <Label htmlFor={`courier-${lc.id}`}>Courier</Label>
-                                                        <Select name="courier" defaultValue={lc.trackingCourier || ""}>
-                                                            <SelectTrigger id={`courier-${lc.id}`} className="col-span-2 h-8">
-                                                                <SelectValue placeholder="Select Courier" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="">None</SelectItem>
-                                                                {trackingCourierOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <div className="grid grid-cols-3 items-center gap-4">
-                                                        <Label htmlFor={`trackingNumber-${lc.id}`}>Number</Label>
-                                                        <Input id={`trackingNumber-${lc.id}`} name="trackingNumber" defaultValue={lc.trackingNumber || ''} className="col-span-2 h-8" />
-                                                    </div>
-                                                </div>
-                                                <div className="flex justify-end gap-2">
-                                                    <Button type="submit" size="sm">Save</Button>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    </PopoverContent>
-                                </Popover>
+                                  <Button variant="outline" size="sm" title="Track Original Document" className="h-7" onClick={() => handleTrackDocument(lc)}>
+                                    <Search className="mr-1.5 h-3.5 w-3.5" />
+                                    {lc.trackingCourier || "Track Docs"}
+                                  </Button>
                                   {(lc.vesselImoNumber || lc.flightNumber) && (
                                       <Button variant="outline" size="sm" onClick={() => lc.shipmentMode === 'Air' && lc.flightNumber ? router.push(`https://www.flightradar24.com/${lc.flightNumber}`) : handleTrackVessel(lc)} title={lc.shipmentMode === 'Air' ? 'Track Flight' : 'Track Vessel'} className="h-7">
                                           {lc.shipmentMode === 'Air' ? <Plane className="mr-1.5 h-3.5 w-3.5" /> : <Ship className="mr-1.5 h-3.5 w-3.5" />}
@@ -849,6 +779,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
