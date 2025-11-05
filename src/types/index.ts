@@ -307,7 +307,7 @@ export interface LCEntryDocument {
   finalLcUrl?: string;
   shippingDocumentsUrl?: string;
   packingListUrl?: string;
-  trackingCourier?: TrackingCourier | "";
+  trackingCourier?: TrackingCourier;
   trackingNumber?: string;
   etd?: string; // ISO string
   eta?: string; // ISO string

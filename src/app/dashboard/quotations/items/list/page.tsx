@@ -271,15 +271,14 @@ export default function QuoteItemsListPage() {
                   <TableHead className="px-2 sm:px-4">Supplier Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Unit</TableHead>
                   <TableHead className="px-2 sm:px-4">Sales Price</TableHead>
-                  <TableHead className="px-2 sm:px-4">Purchase Price</TableHead>
                   <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={8} className="h-24 text-center px-2 sm:px-4"><div className="flex justify-center items-center"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...</div></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="h-24 text-center px-2 sm:px-4"><div className="flex justify-center items-center"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...</div></TableCell></TableRow>
                 ) : fetchError ? (
-                  <TableRow><TableCell colSpan={8} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((item) => (
                     <TableRow key={item.id}>
@@ -289,7 +288,6 @@ export default function QuoteItemsListPage() {
                       <TableCell className="px-2 sm:px-4">{item.supplierName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.unit || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{formatCurrency(item.salesPrice)}</TableCell>
-                      <TableCell className="px-2 sm:px-4">{formatCurrency(item.purchasePrice)}</TableCell>
                       <TableCell className="text-right px-2 sm:px-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -318,7 +316,7 @@ export default function QuoteItemsListPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={8} className="h-64 text-center px-2 sm:px-4"><div className="flex flex-col items-center justify-center"><Info className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-xl font-semibold text-muted-foreground">No Quote Items Found</p><p className="text-sm text-muted-foreground mt-1">{allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Quote Item\" to get started."}</p></div></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="h-64 text-center px-2 sm:px-4"><div className="flex flex-col items-center justify-center"><Info className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-xl font-semibold text-muted-foreground">No Quote Items Found</p><p className="text-sm text-muted-foreground mt-1">{allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Quote Item\" to get started."}</p></div></TableCell></TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
@@ -349,9 +347,7 @@ export default function QuoteItemsListPage() {
                     {page}
                   </Button>
                 ) : (
-                  <span key={`ellipsis-item-${index}`} className="px-2 py-1 text-sm">
-                    {page}
-                  </span>
+                  <span key={`ellipsis-item-${index}`} className="px-2 py-1 text-sm">{page}</span>
                 )
               )}
               <Button
@@ -370,3 +366,4 @@ export default function QuoteItemsListPage() {
     </div>
   );
 }
+

@@ -334,7 +334,7 @@ export default function InvoicesListPage() {
                 </div>
                 <div>
                   <Label htmlFor="statusFilterInvoice" className="text-sm font-medium">Status</Label>
-                  <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as InvoiceStatus)}>
+                  <Select value={filterStatus || ALL_STATUSES_VALUE} onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as InvoiceStatus)}>
                     <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
