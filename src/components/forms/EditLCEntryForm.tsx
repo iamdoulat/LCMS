@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -261,6 +260,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             finalLcUrl: initialData.finalLcUrl ?? defaultFormValues.finalLcUrl,
             shippingDocumentsUrl: initialData.shippingDocumentsUrl ?? defaultFormValues.shippingDocumentsUrl,
             packingListUrl: initialData.packingListUrl ?? defaultFormValues.packingListUrl,
+            trackingCourier: initialData.trackingCourier ?? defaultFormValues.trackingCourier,
+            trackingNumber: initialData.trackingNumber ?? defaultFormValues.trackingNumber,
+            etd: initialData.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : defaultFormValues.etd,
+            eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : defaultFormValues.eta,
+            shipmentMode: initialData.shipmentMode ?? defaultFormValues.shipmentMode,
+            vesselOrFlightName: initialData.vesselOrFlightName ?? defaultFormValues.vesselOrFlightName,
+            vesselImoNumber: initialData.vesselImoNumber ?? defaultFormValues.vesselImoNumber,
+            flightNumber: initialData.flightNumber ?? defaultFormValues.flightNumber,
             isFirstShipment: initialData.isFirstShipment ?? defaultFormValues.isFirstShipment,
             isSecondShipment: initialData.isSecondShipment ?? defaultFormValues.isSecondShipment,
             isThirdShipment: initialData.isThirdShipment ?? defaultFormValues.isThirdShipment,
@@ -405,6 +412,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   async function onSubmit(finalData: LCEditFormValues) {
     setIsSubmitting(true);
 
+    const lcIssueDateObj = finalData.lcIssueDate ? new Date(finalData.lcIssueDate) : new Date();
+    const extractedYear = lcIssueDateObj.getFullYear();
+
     const selectedApplicant = applicantOptions.find(opt => opt.value === finalData.applicantId);
     const selectedBeneficiary = beneficiaryOptions.find(opt => opt.value === finalData.beneficiaryId);
 
@@ -500,6 +510,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       firstShipmentNote: finalData.firstShipmentNote,
       secondShipmentNote: finalData.secondShipmentNote,
       thirdShipmentNote: finalData.thirdShipmentNote,
+      year: extractedYear,
       updatedAt: serverTimestamp(),
     };
 
@@ -1781,3 +1792,4 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     </Form>
   );
 }
+
