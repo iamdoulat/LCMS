@@ -91,7 +91,7 @@ export default function LeaveManagementPage() {
   const [filterStatus, setFilterStatus] = React.useState<LeaveStatus | ''>('');
 
 
-  const canApprove = userRole?.includes('Super Admin') || userRole?.includes('Admin');
+  const canApprove = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
   const canEdit = userRole?.some(role => ['Super Admin', 'Admin'].includes(role));
 
   React.useEffect(() => {

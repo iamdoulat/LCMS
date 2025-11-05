@@ -183,7 +183,7 @@ export default function DeferredPaymentTrackerPage() {
     setFilterLcNo('');
     setFilterApplicantId('');
     setFilterBeneficiaryId('');
-    setFilterStatus('');
+    setFilterStatus('Payment Pending');
     setFilterDeferredPeriod('');
   };
 
@@ -338,6 +338,3 @@ export default function DeferredPaymentTrackerPage() {
     </div>
   );
 }
-    
-
-    

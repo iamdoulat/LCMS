@@ -464,10 +464,10 @@ export default function DailyAttendancePage() {
     );
 
     const [searchTerm, setSearchTerm] = React.useState('');
-    const [selectedBranch, setSelectedBranch] = React.useState('');
-    const [selectedUnit, setSelectedUnit] = React.useState('');
-    const [selectedDept, setSelectedDept] = React.useState('');
-    const [filterFlag, setFilterFlag] = React.useState('');
+    const [selectedBranch, setSelectedBranch] = React.useState(ALL_BRANCHES_VALUE);
+    const [selectedUnit, setSelectedUnit] = React.useState(ALL_UNITS_VALUE);
+    const [selectedDept, setSelectedDept] = React.useState(ALL_DEPTS_VALUE);
+    const [filterFlag, setFilterFlag] = React.useState(ALL_FLAGS_VALUE);
 
     
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
@@ -645,7 +645,7 @@ export default function DailyAttendancePage() {
     const filteredEmployees = React.useMemo(() => {
         if (!employees) return [];
         return employees.filter(emp => {
-            const flagMatch = !filterFlag || !dateRange?.from || !dateRange.to || (
+            const flagMatch = !filterFlag || filterFlag === ALL_FLAGS_VALUE || !dateRange?.from || !dateRange.to || (
                 eachDayOfInterval({ start: dateRange.from, end: dateRange.to }).some(day => {
                     const formattedDateKey = format(day, 'yyyy-MM-dd');
                     const attRecord = attendanceByEmployee.get(emp.id)?.find(rec => rec.date.startsWith(formattedDateKey));
@@ -658,9 +658,9 @@ export default function DailyAttendancePage() {
 
             return (
                 (emp.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || emp.employeeCode.includes(searchTerm)) &&
-                (!selectedBranch || emp.branch === selectedBranch) &&
-                (!selectedUnit || emp.unit === selectedUnit) &&
-                (!selectedDept || emp.department === selectedDept) &&
+                (selectedBranch === ALL_BRANCHES_VALUE || emp.branch === selectedBranch) &&
+                (selectedUnit === ALL_UNITS_VALUE || emp.unit === selectedUnit) &&
+                (selectedDept === ALL_DEPTS_VALUE || emp.department === selectedDept) &&
                 flagMatch
             );
         });
@@ -752,7 +752,7 @@ export default function DailyAttendancePage() {
                                 </div>
                                 <div className="space-y-1">
                                     <Label htmlFor="flagFilter">Flag</Label>
-                                    <Select value={filterFlag} onValueChange={(v) => setFilterFlag(v === ALL_FLAGS_VALUE ? '' : v)}>
+                                    <Select value={filterFlag} onValueChange={(v) => setFilterFlag(v)}>
                                         <SelectTrigger id="flagFilter" className="h-10"><SelectValue placeholder="All Flags" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value={ALL_FLAGS_VALUE}>All Flags</SelectItem>
@@ -804,7 +804,7 @@ export default function DailyAttendancePage() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-4">
                                 <div className="space-y-1">
                                     <Label>Branch</Label>
-                                    <Select value={selectedBranch} onValueChange={(value) => setSelectedBranch(value === ALL_BRANCHES_VALUE ? '' : value)}>
+                                    <Select value={selectedBranch} onValueChange={setSelectedBranch}>
                                         <SelectTrigger className="h-10"><SelectValue placeholder="Select Branch"/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value={ALL_BRANCHES_VALUE}>All Branches</SelectItem>
@@ -814,7 +814,7 @@ export default function DailyAttendancePage() {
                                 </div>
                                 <div className="space-y-1">
                                     <Label>Unit</Label>
-                                    <Select value={selectedUnit} onValueChange={(value) => setSelectedUnit(value === ALL_UNITS_VALUE ? '' : value)}>
+                                    <Select value={selectedUnit} onValueChange={setSelectedUnit}>
                                         <SelectTrigger className="h-10"><SelectValue placeholder="Select Unit"/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value={ALL_UNITS_VALUE}>All Units</SelectItem>
@@ -824,7 +824,7 @@ export default function DailyAttendancePage() {
                                 </div>
                                 <div className="space-y-1">
                                     <Label>Department</Label>
-                                    <Select value={selectedDept} onValueChange={(value) => setSelectedDept(value === ALL_DEPTS_VALUE ? '' : value)}>
+                                    <Select value={selectedDept} onValueChange={setSelectedDept}>
                                         <SelectTrigger className="h-10"><SelectValue placeholder="Select Department"/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value={ALL_DEPTS_VALUE}>All Departments</SelectItem>
@@ -865,5 +865,3 @@ export default function DailyAttendancePage() {
         </div>
     );
 }
-
-    

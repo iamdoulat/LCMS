@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -65,6 +66,7 @@ const EmployeeListSkeleton = () => (
 );
 
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
+const ALL_DESIGNATIONS_VALUE = "__ALL_DESIGNATIONS__";
 
 export default function EmployeesListPage() {
   const router = useRouter();
@@ -187,8 +189,8 @@ export default function EmployeesListPage() {
                   <Label htmlFor="designationFilter">Designation</Label>
                   <Combobox
                     options={designationOptions}
-                    value={filterDesignation}
-                    onValueChange={setFilterDesignation}
+                    value={filterDesignation || ALL_DESIGNATIONS_VALUE}
+                    onValueChange={(value) => setFilterDesignation(value === ALL_DESIGNATIONS_VALUE ? '' : value)}
                     placeholder="Filter by Designation..."
                     selectPlaceholder={isLoadingDesignations ? "Loading..." : "All Designations"}
                     emptyStateMessage="No designation found."
@@ -299,8 +301,3 @@ export default function EmployeesListPage() {
     </div>
   );
 }
-
-    
-
-    
-
