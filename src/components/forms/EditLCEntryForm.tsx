@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -551,6 +552,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
     } else if (courier === "FedEx") {
       url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
+    } else if (courier === "UPS") {
+      url = `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(number).trim())}`;
     }
 
     if (url) {
@@ -1606,7 +1609,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           )}
         />
         <FormField
-          control={control}
+          control={form.control}
           name="shippingMarks"
           render={({ field }) => (
             <FormItem>
