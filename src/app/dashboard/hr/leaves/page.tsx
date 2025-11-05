@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -72,6 +73,8 @@ const LeaveListSkeleton = () => (
     </>
 );
 
+const ALL_LEAVE_TYPES_VALUE = "__ALL_LEAVE_TYPES__";
+const ALL_STATUSES_LEAVE_VALUE = "__ALL_STATUSES_LEAVE__";
 
 export default function LeaveManagementPage() {
   const { userRole } = useAuth();
@@ -242,20 +245,20 @@ export default function LeaveManagementPage() {
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor="leaveTypeFilter">Leave Type</Label>
-                                <Select value={filterLeaveType} onValueChange={(value) => setFilterLeaveType(value === 'All' ? '' : value as LeaveType)}>
+                                <Select value={filterLeaveType || ALL_LEAVE_TYPES_VALUE} onValueChange={(value) => setFilterLeaveType(value === ALL_LEAVE_TYPES_VALUE ? '' : value as LeaveType)}>
                                     <SelectTrigger id="leaveTypeFilter"><SelectValue placeholder="All Types" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="All">All Types</SelectItem>
+                                        <SelectItem value={ALL_LEAVE_TYPES_VALUE}>All Types</SelectItem>
                                         {leaveTypeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                              <div className="space-y-1">
                                 <Label htmlFor="statusFilterLeave">Status</Label>
-                                <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value === 'All' ? '' : value as LeaveStatus)}>
+                                <Select value={filterStatus || ALL_STATUSES_LEAVE_VALUE} onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_LEAVE_VALUE ? '' : value as LeaveStatus)}>
                                     <SelectTrigger id="statusFilterLeave"><SelectValue placeholder="All Statuses" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="All">All Statuses</SelectItem>
+                                        <SelectItem value={ALL_STATUSES_LEAVE_VALUE}>All Statuses</SelectItem>
                                         {leaveStatusOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                                     </SelectContent>
                                 </Select>

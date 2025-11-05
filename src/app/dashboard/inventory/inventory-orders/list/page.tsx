@@ -317,7 +317,7 @@ export default function OrdersListPage() {
                 </div>
                 <div>
                   <Label htmlFor="statusFilterOrder" className="text-sm font-medium">Status</Label>
-                  <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as OrderStatus)}>
+                  <Select value={filterStatus || ALL_STATUSES_VALUE} onValueChange={(value) => setFilterStatus(value === ALL_STATUSES_VALUE ? '' : value as OrderStatus)}>
                     <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
