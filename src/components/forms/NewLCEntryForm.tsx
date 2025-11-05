@@ -209,11 +209,13 @@ export function NewLCEntryForm() {
 
 
   const shipmentModeValue = getValues("shipmentMode");
-  let viaLabel = "Vessel/Flight Name";
+  let viaLabel = "Vessel/Flight/Courier Name";
   if (shipmentModeValue === "Sea") {
     viaLabel = "Vessel Name";
   } else if (shipmentModeValue === "Air") {
     viaLabel = "Flight Name";
+  } else if (shipmentModeValue === "By Courier") {
+    viaLabel = "Courier Name";
   }
 
   const amountLabel = currencyOptions.includes(watchedCurrency as Currency) ? `${watchedCurrency} Amount*` : "Amount*";
@@ -1091,6 +1093,7 @@ export function NewLCEntryForm() {
                           <FormLabel className="font-normal text-sm">
                               {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
                               {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
+                              {option === 'By Courier' && <FileText className="mr-1 h-4 w-4 inline-block" />}
                               {option}
                           </FormLabel>
                         </FormItem>
@@ -1109,7 +1112,7 @@ export function NewLCEntryForm() {
                 <FormLabel>{viaLabel}</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder={getValues("shipmentMode") ? `Enter ${getValues("shipmentMode") === "Sea" ? "Vessel" : "Flight"} name` : "Enter name"}
+                    placeholder={getValues("shipmentMode") ? `Enter ${viaLabel}` : "Enter name"}
                     {...field}
                     disabled={!getValues("shipmentMode")}
                     value={field.value ?? ''}
