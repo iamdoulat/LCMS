@@ -13,11 +13,11 @@ import { ListChecks, FileEdit, Trash2, Loader2, Search, Filter, XCircle, ArrowDo
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile, TermsOfPay, PartialShipmentAllowed } from '@/types';
-import { lcStatusOptions, currencyOptions, trackingCourierOptions, termsOfPayOptions, shipmentTermsOptions } from '@/types';
+import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile, TermsOfPay, PartialShipmentAllowed, ShipmentMode } from '@/types';
+import { lcStatusOptions, currencyOptions, trackingCourierOptions, termsOfPayOptions, shipmentTermsOptions, shipmentModeOptions } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual, getYear } from 'date-fns';
-import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where, updateDoc, serverTimestamp, deleteField } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
@@ -189,35 +189,11 @@ export default function TotalLCPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const filterForm = useForm();
   
-  const handleTrackDocument = (lc: LCEntryDocument) => {
-    const courier = lc.trackingCourier;
-    const number = lc.trackingNumber;
-
-    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
-        Swal.fire({ title: "Information Missing", text: "Courier or tracking number is not available for this entry.", icon: "info" });
-        return;
-    }
-
-    let url = "";
-    if (courier === "DHL") {
-        url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
-    } else if (courier === "FedEx") {
-        url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
-    } else if (courier === "UPS") {
-      url = `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(number).trim())}`;
-    }
-
-    if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-    } else {
-        Swal.fire({ title: "Courier Not Supported", text: "Tracking for the selected courier is not implemented.", icon: "warning" });
-    }
-  };
-  
-  const handleUpdateShipmentTracking = async (lcId: string, courier: LCEntryDocument['trackingCourier'], trackingNumber: LCEntryDocument['trackingNumber']) => {
+  const handleUpdateShipmentTracking = async (lcId: string, courier: LCEntryDocument['trackingCourier'], trackingNumber: LCEntryDocument['trackingNumber'], shipmentMode: LCEntryDocument['shipmentMode']) => {
     const lcDocRef = doc(firestore, 'lc_entries', lcId);
     try {
       await updateDoc(lcDocRef, {
+        shipmentMode: shipmentMode || deleteField(),
         trackingCourier: courier || deleteField(),
         trackingNumber: trackingNumber || deleteField(),
         updatedAt: serverTimestamp(),
@@ -228,11 +204,10 @@ export default function TotalLCPage() {
         timer: 1500,
         showConfirmButton: false,
       });
-      // Optimistically update the local state
       setAllLcEntries(prev =>
         prev.map(lc =>
           lc.id === lcId
-            ? { ...lc, trackingCourier: courier, trackingNumber: trackingNumber }
+            ? { ...lc, shipmentMode, trackingCourier: courier, trackingNumber: trackingNumber }
             : lc
         )
       );
@@ -715,14 +690,27 @@ export default function TotalLCPage() {
                                             const formData = new FormData(e.currentTarget);
                                             const courier = formData.get('courier') as LCEntryDocument['trackingCourier'];
                                             const trackingNumber = formData.get('trackingNumber') as LCEntryDocument['trackingNumber'];
-                                            handleUpdateShipmentTracking(lc.id, courier, trackingNumber);
+                                            const shipmentMode = formData.get('shipmentMode') as LCEntryDocument['shipmentMode'];
+                                            handleUpdateShipmentTracking(lc.id, courier, trackingNumber, shipmentMode);
                                         }}>
                                             <div className="space-y-4">
                                                 <div className="space-y-2">
                                                     <h4 className="font-medium leading-none">Shipment Tracking</h4>
-                                                    <p className="text-sm text-muted-foreground">Update courier and tracking number.</p>
+                                                    <p className="text-sm text-muted-foreground">Update shipment and tracking info.</p>
                                                 </div>
-                                                <div className="grid gap-2">
+                                                <div className="grid gap-4">
+                                                    <div className="grid grid-cols-3 items-center gap-4">
+                                                        <Label htmlFor={`shipmentMode-${lc.id}`}>Mode</Label>
+                                                        <Select name="shipmentMode" defaultValue={lc.shipmentMode || ""}>
+                                                            <SelectTrigger id={`shipmentMode-${lc.id}`} className="col-span-2 h-8">
+                                                                <SelectValue placeholder="Select Mode" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="">None</SelectItem>
+                                                                {shipmentModeOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
                                                     <div className="grid grid-cols-3 items-center gap-4">
                                                         <Label htmlFor={`courier-${lc.id}`}>Courier</Label>
                                                         <Select name="courier" defaultValue={lc.trackingCourier || ""}>
@@ -741,7 +729,6 @@ export default function TotalLCPage() {
                                                     </div>
                                                 </div>
                                                 <div className="flex justify-end gap-2">
-                                                    <Button type="button" size="sm" variant="outline" onClick={() => handleTrackDocument(lc)}>Track</Button>
                                                     <Button type="submit" size="sm">Save</Button>
                                                 </div>
                                             </div>
@@ -863,6 +850,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
