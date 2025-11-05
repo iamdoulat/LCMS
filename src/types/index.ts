@@ -21,7 +21,7 @@ export const currencyOptions = ["USD", "EURO"] as const;
 export type Currency = typeof currencyOptions[number];
 
 export const trackingCourierOptions = ["DHL", "FedEx", "UPS"] as const;
-export type TrackingCourier = typeof trackingCourierOptions[number] | "";
+export type TrackingCourier = (typeof trackingCourierOptions)[number] | "";
 
 export const lcStatusOptions = ["Draft", "Transmitted", "Shipment Pending", "Payment Pending", "Payment Done", "Shipment Done"] as const;
 export type LCStatus = typeof lcStatusOptions[number];
@@ -95,7 +95,7 @@ export interface LCEntry {
   finalLcUrl?: string;
   shippingDocumentsUrl?: string;
   packingListUrl?: string;
-  trackingCourier?: TrackingCourier | "";
+  trackingCourier?: TrackingCourier;
   trackingNumber?: string;
   etd?: Date | null | undefined;
   eta?: Date | null | undefined;
@@ -187,7 +187,7 @@ export const lcEntrySchema = z.object({
   finalLcUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
   shippingDocumentsUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
   packingListUrl: z.preprocess((val) => (String(val).trim() === "" ? undefined : String(val).trim()), z.string().url({ message: "Invalid URL format" }).optional()),
-  trackingCourier: z.enum(trackingCourierOptions).or(z.literal("")).optional(),
+  trackingCourier: z.enum([...trackingCourierOptions, ""]).optional(),
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
