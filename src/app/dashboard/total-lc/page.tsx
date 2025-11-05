@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -14,7 +13,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import type { LCEntryDocument, LCStatus, CustomerDocument, SupplierDocument, Currency, CompanyProfile, TermsOfPay, PartialShipmentAllowed, ShipmentMode } from '@/types';
-import { lcStatusOptions, currencyOptions, trackingCourierOptions, termsOfPayOptions, shipmentTermsOptions, shipmentModeOptions } from '@/types';
+import { lcStatusOptions, currencyOptions, trackingCourierOptions, termsOfPayOptions, shipmentTermsOptions, shipmentModeOptions, type TrackingCourier } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO, isValid, startOfDay, isAfter, isEqual, getYear } from 'date-fns';
 import { collection, getDocs, deleteDoc, doc, query, orderBy as firestoreOrderBy, where, updateDoc, serverTimestamp, deleteField } from 'firebase/firestore';
@@ -180,36 +179,24 @@ export default function TotalLCPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const filterForm = useForm();
   
-  const handleTrackDocument = (lc: LCEntryDocument) => {
-    const courier = lc.trackingCourier;
-    const number = lc.trackingNumber;
-
-    if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
-      Swal.fire({
-        title: "Information Missing",
-        text: "Courier or tracking number is not set for this L/C.",
-        icon: "info",
-      });
-      return;
-    }
-
-    let url = "";
-    if (courier === "DHL") {
-      url = `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(number).trim())}&submit=1`;
-    } else if (courier === "FedEx") {
-      url = `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(number).trim())}`;
-    } else if (courier === "UPS") {
-      url = `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(number).trim())}`;
-    }
-
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } else {
-      Swal.fire({
-        title: "Courier Not Supported",
-        text: "Tracking for the selected courier is not implemented.",
-        icon: "warning",
-      });
+  const handleUpdateShipmentTracking = async (lcId: string, trackingNumber: string, courier: TrackingCourier, shipmentMode: ShipmentMode) => {
+    try {
+        const lcDocRef = doc(firestore, "lc_entries", lcId);
+        await updateDoc(lcDocRef, {
+            trackingNumber: trackingNumber || deleteField(),
+            trackingCourier: courier || deleteField(),
+            shipmentMode: shipmentMode || deleteField(),
+            updatedAt: serverTimestamp(),
+        });
+        Swal.fire({
+            title: "Success",
+            text: "Shipment tracking details have been updated.",
+            icon: "success",
+            timer: 1500,
+            showConfirmButton: false,
+        });
+    } catch (error: any) {
+        Swal.fire("Error", `Failed to update tracking details: ${error.message}`, "error");
     }
   };
 
@@ -660,14 +647,18 @@ export default function TotalLCPage() {
                                         </PopoverContent>
                                       </Popover>
                                   )}
-                                  <Button variant="outline" size="sm" title="Track Original Document" className="h-7" onClick={() => handleTrackDocument(lc)}>
-                                    <Search className="mr-1.5 h-3.5 w-3.5" />
-                                    {lc.trackingCourier || "Track Docs"}
+                                  <Button variant="outline" size="sm" title="Track Original Document" className="h-7" asChild>
+                                    <a href={lc.trackingCourier === "DHL" ? `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(lc.trackingNumber || '').trim())}&submit=1` : lc.trackingCourier === "FedEx" ? `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(lc.trackingNumber || '').trim())}` : lc.trackingCourier === "UPS" ? `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(lc.trackingNumber || '').trim())}` : '#'} target="_blank" rel="noopener noreferrer" >
+                                        <Search className="mr-1.5 h-3.5 w-3.5" />
+                                        {lc.trackingCourier || "Track Docs"}
+                                    </a>
                                   </Button>
                                   {(lc.vesselImoNumber || lc.flightNumber) && (
-                                      <Button variant="outline" size="sm" onClick={() => lc.shipmentMode === 'Air' && lc.flightNumber ? router.push(`https://www.flightradar24.com/${lc.flightNumber}`) : handleTrackVessel(lc)} title={lc.shipmentMode === 'Air' ? 'Track Flight' : 'Track Vessel'} className="h-7">
+                                      <Button variant="outline" size="sm" asChild className="h-7">
+                                        <a href={lc.shipmentMode === 'Air' && lc.flightNumber ? `https://www.flightradar24.com/${lc.flightNumber}` : `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}`} target="_blank" rel="noopener noreferrer" title={lc.shipmentMode === 'Air' ? 'Track Flight' : 'Track Vessel'}>
                                           {lc.shipmentMode === 'Air' ? <Plane className="mr-1.5 h-3.5 w-3.5" /> : <Ship className="mr-1.5 h-3.5 w-3.5" />}
                                           {lc.shipmentMode === 'Air' ? 'Air' : 'Vessel'}
+                                        </a>
                                       </Button>
                                   )}
                                   <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.finalLcUrl)} disabled={!lc.finalLcUrl} title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'} className="h-7">
@@ -779,6 +770,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
