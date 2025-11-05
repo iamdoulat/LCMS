@@ -146,7 +146,7 @@ const TableSkeleton = () => (
         </React.Fragment>
       ))}
     </>
-  );
+);
 
 
 export default function TotalLCPage() {
@@ -647,20 +647,18 @@ export default function TotalLCPage() {
                                         </PopoverContent>
                                       </Popover>
                                   )}
-                                  <Button variant="outline" size="sm" title="Track Original Document" className="h-7" asChild>
+                                  <Button variant="outline" size="sm" asChild className="h-7" title="Track Original Document" disabled={!lc.trackingCourier || !lc.trackingNumber}>
                                     <a href={lc.trackingCourier === "DHL" ? `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(lc.trackingNumber || '').trim())}&submit=1` : lc.trackingCourier === "FedEx" ? `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(lc.trackingNumber || '').trim())}` : lc.trackingCourier === "UPS" ? `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(lc.trackingNumber || '').trim())}` : '#'} target="_blank" rel="noopener noreferrer" >
                                         <Search className="mr-1.5 h-3.5 w-3.5" />
                                         {lc.trackingCourier || "Track Docs"}
                                     </a>
                                   </Button>
-                                  {(lc.vesselImoNumber || lc.flightNumber) && (
-                                      <Button variant="outline" size="sm" asChild className="h-7">
-                                        <a href={lc.shipmentMode === 'Air' && lc.flightNumber ? `https://www.flightradar24.com/${lc.flightNumber}` : `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}`} target="_blank" rel="noopener noreferrer" title={lc.shipmentMode === 'Air' ? 'Track Flight' : 'Track Vessel'}>
-                                          {lc.shipmentMode === 'Air' ? <Plane className="mr-1.5 h-3.5 w-3.5" /> : <Ship className="mr-1.5 h-3.5 w-3.5" />}
-                                          {lc.shipmentMode === 'Air' ? 'Air' : 'Vessel'}
-                                        </a>
-                                      </Button>
-                                  )}
+                                  <Button variant="outline" size="sm" asChild className="h-7" disabled={!(lc.vesselImoNumber || lc.flightNumber)}>
+                                    <a href={lc.shipmentMode === 'Air' && lc.flightNumber ? `https://www.flightradar24.com/${lc.flightNumber}` : `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}`} target="_blank" rel="noopener noreferrer" title={lc.shipmentMode === 'Air' ? 'Track Flight' : 'Track Vessel'}>
+                                      {lc.shipmentMode === 'Air' ? <Plane className="mr-1.5 h-3.5 w-3.5" /> : <Ship className="mr-1.5 h-3.5 w-3.5" />}
+                                      {lc.shipmentMode === 'Air' ? 'Air' : 'Vessel'}
+                                    </a>
+                                  </Button>
                                   <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.finalLcUrl)} disabled={!lc.finalLcUrl} title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'} className="h-7">
                                     {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
                                   </Button>
@@ -791,3 +789,6 @@ export default function TotalLCPage() {
 
 
 
+
+
+    
