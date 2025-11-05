@@ -480,7 +480,7 @@ export default function TotalLCPage() {
                 </CardHeader>
                 <CardContent className="p-2 space-y-4">
                  <Form {...filterForm}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
                     <div className="space-y-1">
                       <Label htmlFor="lcNumberFilter">T/T OR L/C Number</Label>
                       <Input
@@ -811,7 +811,7 @@ export default function TotalLCPage() {
                     typeof page === 'number' ? (
                       <Button
                         key={page}
-                        variant={currentPage=== page ? 'default' : 'outline'}
+                        variant={currentPage === page ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => handlePageChange(page)}
                         className="w-9 h-9 p-0"
@@ -850,6 +850,7 @@ export default function TotalLCPage() {
     
 
     
+
 
 
 
