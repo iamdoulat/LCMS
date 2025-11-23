@@ -42,7 +42,6 @@ export function AppHeader() {
 
   const displayName = user?.displayName || user?.email || 'User';
   const displayEmail = user?.email || 'No email available';
-  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
   
   const handleSearchSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -61,15 +60,6 @@ export function AppHeader() {
         <SidebarTrigger className="md:hidden" />
         {user && ( // Only show this link if a user is logged in
            <Link href="/dashboard" className="flex items-center gap-2">
-              <Image
-                src={companyLogoUrlFromSettings}
-                alt="Company Logo"
-                width={32}
-                height={32}
-                className="rounded-sm object-contain"
-                priority
-                data-ai-hint="company logo"
-              />
               <span
                 className={cn(
                   "font-bold text-base truncate",
