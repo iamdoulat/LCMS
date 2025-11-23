@@ -43,9 +43,7 @@ export function AppHeader() {
   const displayName = user?.displayName || user?.email || 'User';
   const displayEmail = user?.email || 'No email available';
   const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
-  const displayCompanyName = companyName || "Smart Solution";
-
-
+  
   const handleSearchSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
     if (searchQuery.trim()) {
@@ -78,7 +76,8 @@ export function AppHeader() {
                   "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
                 )}
               >
-                {displayCompanyName}
+                <span className="hidden md:inline">Indenting & LC Management System</span>
+                <span className="inline md:hidden">LCMS</span>
               </span>
           </Link>
         )}
