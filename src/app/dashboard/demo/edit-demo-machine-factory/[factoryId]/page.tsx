@@ -70,7 +70,7 @@ export default function EditDemoMachineFactoryPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8 px-5">
         <Card className="max-w-3xl mx-auto shadow-xl border-destructive">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive">
@@ -94,7 +94,7 @@ export default function EditDemoMachineFactoryPage() {
   
   if (!factoryData) {
      return (
-      <div className="container mx-auto py-8 text-center">
+      <div className="container mx-auto py-8 text-center px-5">
         <p className="text-muted-foreground">Factory data could not be loaded.</p>
          <Button variant="outline" asChild className="mt-4">
             <Link href="/dashboard/demo/demo-machine-factories-list">
@@ -107,7 +107,7 @@ export default function EditDemoMachineFactoryPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <div className="mb-6">
         <Link href="/dashboard/demo/demo-machine-factories-list" passHref>
           <Button variant="outline">
