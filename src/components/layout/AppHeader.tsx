@@ -62,7 +62,7 @@ export function AppHeader() {
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden" />
         {user && ( // Only show this link if a user is logged in
-           <Link href="/dashboard" className="flex items-center gap-2 md:hidden">
+           <Link href="/dashboard" className="flex items-center gap-2">
               <Image
                 src={companyLogoUrlFromSettings}
                 alt="Company Logo"
