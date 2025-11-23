@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from 'next/link';
@@ -253,25 +254,27 @@ export function AppSidebarNavContent() {
     <>
       <SidebarHeader className="border-b sticky top-0 bg-sidebar z-50">
         <div className="flex items-center justify-between p-2 gap-2">
-          <Link href="/dashboard" className="flex items-center gap-2 min-w-0 flex-1">
-            <Image
-              src={companyLogoUrlFromSettings}
-              alt="Company Logo"
-              width={32}
-              height={32}
-              className="rounded-sm object-contain flex-shrink-0"
-              priority
-              data-ai-hint="company logo"
-            />
-            <span
-              className={cn(
-                "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
-                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-              )}
-            >
-              {displayCompanyNameFromSettings}
-            </span>
-          </Link>
+          {user && ( // Only show the link and logo if a user is logged in
+            <Link href="/dashboard" className="flex items-center gap-2 min-w-0 flex-1">
+              <Image
+                src={companyLogoUrlFromSettings}
+                alt="Company Logo"
+                width={32}
+                height={32}
+                className="rounded-sm object-contain flex-shrink-0"
+                priority
+                data-ai-hint="company logo"
+              />
+              <span
+                className={cn(
+                  "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
+                  "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                )}
+              >
+                {displayCompanyNameFromSettings}
+              </span>
+            </Link>
+          )}
           {!sidebar.isMobile && (
             <Button
               variant="ghost"

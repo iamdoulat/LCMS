@@ -21,9 +21,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Input } from '@/components/ui/input';
 import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton'; 
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 export function AppHeader() {
-  const { user, logout, loading } = useAuth();
+  const { user, logout, loading, companyName, companyLogoUrl } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchPopoverOpen, setIsSearchPopoverOpen] = useState(false);
@@ -41,6 +42,9 @@ export function AppHeader() {
 
   const displayName = user?.displayName || user?.email || 'User';
   const displayEmail = user?.email || 'No email available';
+  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const displayCompanyName = companyName || "Smart Solution";
+
 
   const handleSearchSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
@@ -57,16 +61,27 @@ export function AppHeader() {
     <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-card shadow-sm px-2 md:px-4">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden" />
-        <Link
-          href="/dashboard"
-          className={cn(
-            "text-lg md:text-xl whitespace-nowrap",
-            "font-bold bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-          )}
-        >
-            <span className="md:hidden">Indenting & LCMS</span>
-            <span className="hidden md:inline">Indenting & LC Management System</span>
-        </Link>
+        {user && ( // Only show this link if a user is logged in
+           <Link href="/dashboard" className="flex items-center gap-2 md:hidden">
+              <Image
+                src={companyLogoUrlFromSettings}
+                alt="Company Logo"
+                width={32}
+                height={32}
+                className="rounded-sm object-contain"
+                priority
+                data-ai-hint="company logo"
+              />
+              <span
+                className={cn(
+                  "font-bold text-base truncate",
+                  "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                )}
+              >
+                {displayCompanyName}
+              </span>
+          </Link>
+        )}
       </div>
 
       <div className="ml-auto flex items-center gap-2">
