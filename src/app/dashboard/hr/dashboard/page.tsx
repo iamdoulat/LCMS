@@ -32,6 +32,7 @@ import { DateRange } from 'react-day-picker';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
+import DOMPurify from 'dompurify';
 
 
 const AttendanceSummaryChart = dynamic(() => import('@/components/dashboard/AttendanceSummaryChart'), {
@@ -619,7 +620,7 @@ export default function HrmDashboardPage() {
                                             {notices.map(notice => (
                                                 <div key={notice.id} className="p-3 border rounded-lg bg-background shadow-sm">
                                                     <h4 className="font-semibold text-sm mb-1">{notice.title}</h4>
-                                                    <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: notice.content ? notice.content.substring(0, 100) + '...' : '' }} />
+                                                    <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground" dangerouslySetInnerHTML={{ __html: notice.content ? DOMPurify.sanitize(notice.content.substring(0, 100) + '...') : '' }} />
                                                     <div className="text-xs text-muted-foreground mt-2">
                                                         {notice.updatedAt ? format(new Date((notice.updatedAt as any).seconds * 1000), 'PPP') : 'N/A'}
                                                     </div>

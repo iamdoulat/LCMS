@@ -24,11 +24,9 @@ const formatFactoryDate = (dateInput?: string | Timestamp | Date): string => {
     date = dateInput.toDate();
   } else if (typeof dateInput === 'string') {
     try {
-      const parsed = parseISO(dateInput);
-      if (isValid(parsed)) {
-        date = parsed;
-      } else {
-        // Try a more lenient parse if ISO fails (e.g. if it's already formatted)
+      date = parseISO(dateInput);
+      if (!isValid(date)) {
+        // Try a more lenient parse if ISO fails
         const directDate = new Date(dateInput);
         if (isValid(directDate)) {
           date = directDate;
