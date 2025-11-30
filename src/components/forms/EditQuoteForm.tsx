@@ -71,11 +71,11 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(QuoteSchema.extend({
         status: z.enum(quoteStatusOptions).optional(),
-    })), 
+    })),
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
-  
+
   const { fields, append, remove } = useFieldArray({
     control,
     name: "lineItems",
@@ -154,26 +154,25 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     };
     fetchOptionsAndSetData();
   }, [initialData, reset]);
-  
+
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedFreightCharges = watch("freightCharges");
-  
+
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
     let currentTotalTax = 0;
     let currentTotalDiscount = 0;
-
     if (Array.isArray(watchedLineItems)) {
-      watchedLineItems.forEach((item) => {
+      watchedLineItems.forEach((item, index) => {
         const qty = parseFloat(String(item.qty || '0')) || 0;
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
 
-        const itemTotalBeforeDiscount = qty * unitPrice;
-
+        let itemTotalBeforeDiscount = 0;
         if (qty > 0 && unitPrice >= 0) {
+          itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
@@ -181,6 +180,12 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
+        }
+
+        const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
+        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
+        if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
+          setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
         }
       });
     }
@@ -193,29 +198,14 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedFreightCharges]);
-
-  React.useEffect(() => {
-    watchedLineItems.forEach((item, index) => {
-        const qty = parseFloat(String(item.qty || '0')) || 0;
-        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
-        const itemTotalBeforeDiscount = isNaN(qty) || isNaN(unitPrice) ? 0 : qty * unitPrice;
-        
-        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
-        if (String(itemTotalBeforeDiscount.toFixed(2)) !== currentFormLineTotal) {
-          setValue(`lineItems.${index}.total`, itemTotalBeforeDiscount.toFixed(2));
-        }
-    })
-  }, [watchedLineItems, getValues, setValue]);
-
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedFreightCharges]);
 
   React.useEffect(() => {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
-        // Only set billing address. Let initialData handle shipping address.
         setValue("billingAddress", selectedCustomer.address || "");
-        if(!getValues("shippingAddress")) { // Only set shipping if it's empty
+        if (!getValues("shippingAddress")) {
           setValue("shippingAddress", selectedCustomer.address || "");
         }
       }
@@ -240,7 +230,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       setValue(`lineItems.${index}.imageUrl`, '', { shouldValidate: true });
     }
   };
-  
+
   const handleViewPdf = () => {
     window.open(`/dashboard/quotations/preview/${quoteId}`, '_blank');
   };
@@ -396,7 +386,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         total,
         imageUrl: item.imageUrl || undefined,
       };
-      
+
       Object.keys(lineItemData).forEach(key => {
           if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
               delete lineItemData[key];
@@ -404,7 +394,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       });
       return lineItemData;
     });
-    
+
     const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
     const finalTotalDiscount = data.showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
     const finalTotalTax = data.showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
@@ -565,13 +555,20 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
                 <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
-                <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
-                </DropdownMenuContent></DropdownMenu>
+            <div className="flex items-center gap-2">
+                <Link href="/dashboard/quotations/items/add" target="_blank">
+                    <Button variant="outline" size="sm" type="button">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
+                    </Button>
+                </Link>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
+                    </DropdownMenuContent></DropdownMenu>
+            </div>
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
@@ -587,7 +584,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -596,9 +593,10 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         </div>
         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
+
         <Separator />
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           <FormField
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
               control={form.control}
               name="shipmentMode"
               render={({ field }) => (
@@ -618,7 +616,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   </FormItem>
               )}
             />
-            <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
@@ -659,6 +657,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   discountPercentage: item.discountPercentage?.toString() || '0',
                   taxPercentage: item.taxPercentage?.toString() || '0',
                   total: item.total.toFixed(2),
+                  imageUrl: item.imageUrl || '',
                 })),
                 status: initialData.status,
                 showItemCodeColumn: initialData.showItemCodeColumn,
