@@ -521,6 +521,43 @@ export function NewLCEntryForm() {
     }
   };
 
+  const handleStatusToggle = (toggledStatus: LCStatus) => {
+    const currentStatusSet = new Set(getValues('status') || []);
+
+    // Handle Draft exclusivity
+    if (toggledStatus === 'Draft') {
+      setValue('status', ['Draft']);
+      return;
+    } else {
+      currentStatusSet.delete('Draft');
+    }
+
+    // Handle mutually exclusive pairs
+    const pairs: [LCStatus, LCStatus][] = [
+        ['Shipment Pending', 'Shipment Done'],
+        ['Payment Pending', 'Payment Done'],
+    ];
+
+    pairs.forEach(([pending, done]) => {
+        if (toggledStatus === pending) currentStatusSet.delete(done);
+        if (toggledStatus === done) currentStatusSet.delete(pending);
+    });
+
+    // Add or remove the toggled status
+    if (currentStatusSet.has(toggledStatus)) {
+        currentStatusSet.delete(toggledStatus);
+    } else {
+        currentStatusSet.add(toggledStatus);
+    }
+
+    // Ensure 'Draft' is added if no other status is selected
+    if (currentStatusSet.size === 0) {
+        currentStatusSet.add('Draft');
+    }
+
+    setValue('status', Array.from(currentStatusSet), { shouldValidate: true });
+  };
+
 
   if (isLoadingApplicants || isLoadingBeneficiaries) {
     return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <span className="ml-2">Loading form options...</span></div>;
@@ -771,12 +808,7 @@ export function NewLCEntryForm() {
                             <FormControl>
                               <Switch
                                 checked={field.value?.includes(item)}
-                                onCheckedChange={(checked) => {
-                                  const currentValue = field.value || [];
-                                  return checked
-                                    ? field.onChange([...currentValue, item])
-                                    : field.onChange(currentValue.filter((value) => value !== item));
-                                }}
+                                onCheckedChange={() => handleStatusToggle(item)}
                               />
                             </FormControl>
                           </FormItem>
@@ -1356,7 +1388,7 @@ export function NewLCEntryForm() {
           Consignee Bank Details
         </h3>
         <FormField
-          control={control}
+          control={form.control}
           name="consigneeBankNameAddress"
           render={({ field }) => (
             <FormItem>

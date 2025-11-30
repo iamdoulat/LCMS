@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -328,6 +329,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     "firstPartialGrossWeight", "secondPartialGrossWeight", "thirdPartialGrossWeight",
     "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm"
   ] as const;
+
   const watchedPartialValues = watch(partialFieldsToWatch);
 
  React.useEffect(() => {
@@ -447,7 +449,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       trackingNumber: (finalData.trackingCourier === "" || !finalData.trackingCourier) ? undefined : finalData.trackingNumber || undefined,
       etd: finalData.etd ? format(new Date(finalData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       eta: finalData.eta ? format(new Date(finalData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-      certificateOfOrigin: finalData.certificateOfOrigin,
+      shipmentMode: finalData.shipmentMode,
+      shipmentTerms: finalData.shipmentTerms,
+      certificateOfOrigin: finalData.certificateOfOrigin && finalData.certificateOfOrigin.length > 0 ? finalData.certificateOfOrigin : undefined,
       shippingMarks: finalData.shippingMarks,
       purchaseOrderUrl: finalData.purchaseOrderUrl,
       finalPIUrl: finalData.finalPIUrl,
@@ -616,6 +620,43 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     } else {
       Swal.fire("No URL", "No URL provided to view.", "info");
     }
+  };
+
+  const handleStatusToggle = (toggledStatus: LCStatus) => {
+    const currentStatusSet = new Set(getValues('status') || []);
+
+    // Handle Draft exclusivity
+    if (toggledStatus === 'Draft') {
+      setValue('status', ['Draft']);
+      return;
+    } else {
+      currentStatusSet.delete('Draft');
+    }
+
+    // Handle mutually exclusive pairs
+    const pairs: [LCStatus, LCStatus][] = [
+        ['Shipment Pending', 'Shipment Done'],
+        ['Payment Pending', 'Payment Done'],
+    ];
+
+    pairs.forEach(([pending, done]) => {
+        if (toggledStatus === pending) currentStatusSet.delete(done);
+        if (toggledStatus === done) currentStatusSet.delete(pending);
+    });
+
+    // Add or remove the toggled status
+    if (currentStatusSet.has(toggledStatus)) {
+        currentStatusSet.delete(toggledStatus);
+    } else {
+        currentStatusSet.add(toggledStatus);
+    }
+
+    // Ensure 'Draft' is added if no other status is selected
+    if (currentStatusSet.size === 0) {
+        currentStatusSet.add('Draft');
+    }
+
+    setValue('status', Array.from(currentStatusSet), { shouldValidate: true });
   };
 
 
@@ -868,12 +909,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                             <FormControl>
                               <Switch
                                 checked={field.value?.includes(item)}
-                                onCheckedChange={(checked) => {
-                                  const currentValue = field.value || [];
-                                  return checked
-                                    ? field.onChange([...currentValue, item])
-                                    : field.onChange(currentValue.filter((value) => value !== item));
-                                }}
+                                onCheckedChange={() => handleStatusToggle(item)}
                               />
                             </FormControl>
                           </FormItem>
@@ -1292,7 +1328,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
                     <FormControl>
                        <RadioGroup
                           onValueChange={field.onChange}
-                          value={field.value}
+                          value={field.value ?? ""}
                           className="flex flex-wrap items-center gap-x-6 gap-y-2"
                         >
                           {trackingCourierOptions.map((courier) => (
@@ -1453,7 +1489,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           Consignee Bank Details
         </h3>
         <FormField
-          control={control}
+          control={form.control}
           name="consigneeBankNameAddress"
           render={({ field }) => (
             <FormItem>
@@ -1779,12 +1815,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Changes...
+              Saving Entry...
             </>
           ) : (
             <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
+              <FileText className="mr-2 h-4 w-4" />
+              Submit T/T OR L/C Entry
             </>
           )}
         </Button>
