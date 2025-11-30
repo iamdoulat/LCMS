@@ -242,7 +242,7 @@ export default function PrintQuotePage() {
 
   const qrCodeValue = `QUOTATION\nQuote Number: ${quoteData.id}\nDate: ${formatDisplayDate(quoteData.quoteDate)}\nSales Person: ${quoteData.salesperson || 'N/A'}\nGrand Total: ${formatCurrency(quoteData.totalAmount)} (USD)`;
   
-  const grandTotalLabel = "TOTAL (USD):";
+  const grandTotalLabel = `TOTAL (USD):`;
 
   return (
     <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -331,8 +331,10 @@ export default function PrintQuotePage() {
                 {quoteData.lineItems.map((item, index) => (
                     <tr key={`${item.itemId}-${index}`} className="border-b border-gray-200">
                     <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
-                    <td className="p-2 border border-gray-300 align-top">
-                        {(item as any).imageUrl && <Image src={(item as any).imageUrl} alt={item.itemName || 'Item image'} width={150} height={150} className="object-cover" data-ai-hint="sewing machine"/>}
+                    <td className="p-2 border border-gray-300 align-middle text-center">
+                        {item.imageUrl && (
+                          <Image src={item.imageUrl} alt={item.itemName || 'Item image'} width={150} height={150} className="object-contain mx-auto" data-ai-hint="sewing machine"/>
+                        )}
                     </td>
                     <td className="p-2 border border-gray-300 align-top break-words">
                         <p className="font-medium text-gray-900">{item.itemName}</p>
