@@ -8,7 +8,7 @@ import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDoc
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import Link from 'next/link';
-import { format, parseISO, isValid, differenceInDays, addDays, startOfDay, isWithinInterval, subDays } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays, addDays, startOfDay, isWithinInterval, subDays, isFuture } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
@@ -28,6 +28,8 @@ interface ExpiringLC extends LCEntryDocument {
 const ITEMS_PER_PAGE = 10;
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_EXPIRE_APPLICANT__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_EXPIRE_BENEFICIARY__";
+const EXPIRY_FILTER_OPTIONS = ["Expired (Last 30 Days)", "Expired (Last 60 Days)", "Expired (Last 90 Days)", "Upcoming (15 Days)"] as const;
+type ExpiryFilterOption = typeof EXPIRY_FILTER_OPTIONS[number];
 
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
@@ -68,7 +70,8 @@ export default function LcExpireTrackerPage() {
   const [filterLcNumber, setFilterLcNumber] = useState('');
   const [filterApplicantId, setFilterApplicantId] = useState('');
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
-
+  const [expiryFilter, setExpiryFilter] = useState<ExpiryFilterOption>("Expired (Last 30 Days)");
+  
   const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
@@ -80,10 +83,7 @@ export default function LcExpireTrackerPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        const today = startOfDay(new Date());
-        const thirtyDaysAgo = subDays(today, 30);
         
-        // Fetch all LCs that have a "Shipment Pending" status. We will filter by date on the client.
         const arrayQuery = query(lcEntriesRef, where("status", "array-contains", "Shipment Pending"));
         const stringQuery = query(lcEntriesRef, where("status", "==", "Shipment Pending"));
 
@@ -96,31 +96,28 @@ export default function LcExpireTrackerPage() {
         
         const processSnapshot = (snapshot: typeof arraySnapshot) => {
             snapshot.docs.forEach((doc) => {
-                if (expiringLCsMap.has(doc.id)) return; // Avoid duplicates
+                if (expiringLCsMap.has(doc.id)) return;
 
                 const data = doc.data() as LCEntryDocument;
                 const expireDateObj = data.expireDate ? parseISO(data.expireDate as string) : new Date(0);
+                if (!isValid(expireDateObj)) return;
+                
+                const today = startOfDay(new Date());
                 const remainingDays = differenceInDays(expireDateObj, today);
-
-                // Client-side filtering
-                if (isValid(expireDateObj) && isWithinInterval(expireDateObj, { start: thirtyDaysAgo, end: today })) {
-                    expiringLCsMap.set(doc.id, {
-                        ...data,
-                        id: doc.id,
-                        expireDateObj,
-                        remainingDays,
-                    });
-                }
+                
+                expiringLCsMap.set(doc.id, {
+                    ...data,
+                    id: doc.id,
+                    expireDateObj,
+                    remainingDays,
+                });
             });
         };
         
         processSnapshot(arraySnapshot);
         processSnapshot(stringSnapshot);
 
-        const expiringLCs = Array.from(expiringLCsMap.values());
-        expiringLCs.sort((a, b) => b.expireDateObj.getTime() - a.expireDateObj.getTime());
-        
-        setAllExpiringLCs(expiringLCs);
+        setAllExpiringLCs(Array.from(expiringLCsMap.values()));
 
       } catch (error: any) {
         console.error("Error fetching expiring L/Cs: ", error);
@@ -161,18 +158,43 @@ export default function LcExpireTrackerPage() {
   }, []);
   
   useEffect(() => {
-    let filtered = [...allExpiringLCs];
+    const today = startOfDay(new Date());
+    let dateFilteredLcs = allExpiringLCs;
+
+    if(expiryFilter.startsWith("Expired")) {
+      const daysAgo = parseInt(expiryFilter.match(/\d+/)?.[0] || '30');
+      const cutoffDate = subDays(today, daysAgo);
+      dateFilteredLcs = allExpiringLCs.filter(lc => 
+        isWithinInterval(lc.expireDateObj, { start: cutoffDate, end: today }) && !isFuture(lc.expireDateObj)
+      );
+    } else if (expiryFilter === "Upcoming (15 Days)") {
+        const fifteenDaysFromNow = addDays(today, 15);
+        dateFilteredLcs = allExpiringLCs.filter(lc => 
+            isWithinInterval(lc.expireDateObj, { start: today, end: fifteenDaysFromNow })
+        );
+    }
+    
+    let filtered = [...dateFilteredLcs];
     if (filterLcNumber) filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
     if (filterApplicantId) filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
     if (filterBeneficiaryId) filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
+    
+    // Sort logic
+    if (expiryFilter.startsWith("Expired")) {
+        filtered.sort((a, b) => b.expireDateObj.getTime() - a.expireDateObj.getTime()); // Most recently expired first
+    } else {
+        filtered.sort((a, b) => a.expireDateObj.getTime() - b.expireDateObj.getTime()); // Closest expiry first
+    }
+
     setDisplayedLCs(filtered);
     setCurrentPage(1);
-  }, [allExpiringLCs, filterLcNumber, filterApplicantId, filterBeneficiaryId]);
+  }, [allExpiringLCs, filterLcNumber, filterApplicantId, filterBeneficiaryId, expiryFilter]);
 
   const clearFilters = () => {
     setFilterLcNumber('');
     setFilterApplicantId('');
     setFilterBeneficiaryId('');
+    setExpiryFilter("Expired (Last 30 Days)");
     setCurrentPage(1);
   };
   
@@ -192,14 +214,12 @@ export default function LcExpireTrackerPage() {
             L/C Expire Tracker
           </CardTitle>
           <CardDescription>
-            List of all L/Cs with "Shipment Pending" status that have expired in the last 30 days.
+            Track L/Cs with "Shipment Pending" status that are expiring soon or have recently expired.
           </CardDescription>
         </CardHeader>
         <CardContent>
            <Card className="mb-6 shadow-md p-4">
-            <CardHeader className="p-2 pb-4">
-              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
-            </CardHeader>
+            <CardHeader className="p-2 pb-4"><CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle></CardHeader>
             <CardContent className="p-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <div><Label htmlFor="lcNoFilter">L/C Number</Label><Input id="lcNoFilter" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} /></div>
@@ -209,12 +229,19 @@ export default function LcExpireTrackerPage() {
                 <div><Label htmlFor="beneficiaryFilter" className="flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
                   <Combobox options={beneficiaryOptions} value={filterBeneficiaryId || PLACEHOLDER_BENEFICIARY_VALUE} onValueChange={(v) => setFilterBeneficiaryId(v === PLACEHOLDER_BENEFICIARY_VALUE ? '' : v)} placeholder="Search Beneficiary..." selectPlaceholder="All Beneficiaries" disabled={isLoadingBeneficiaries}/>
                 </div>
+                <div>
+                  <Label htmlFor="expiryFilter">Expiry Filter</Label>
+                  <Select value={expiryFilter} onValueChange={(value) => setExpiryFilter(value as ExpiryFilterOption)}>
+                    <SelectTrigger id="expiryFilter"><SelectValue /></SelectTrigger>
+                    <SelectContent>{EXPIRY_FILTER_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
                 <div className="pt-6"><Button onClick={clearFilters} variant="outline" className="w-full"><XCircle className="mr-2 h-4 w-4" /> Clear Filters</Button></div>
               </div>
             </CardContent>
           </Card>
           {isLoading ? (
-             <div className="flex flex-col items-center justify-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p>Loading expired L/Cs...</p></div>
+            <div className="flex flex-col items-center justify-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p>Loading L/Cs...</p></div>
           ) : fetchError ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
               <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -224,8 +251,8 @@ export default function LcExpireTrackerPage() {
           ) : displayedLCs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-xl font-semibold text-muted-foreground">No Expired L/Cs Found</p>
-              <p className="text-sm text-muted-foreground text-center">{allExpiringLCs.length > 0 ? "No records match your current filters." : "No L/Cs expired in the last 30 days."}</p>
+              <p className="text-xl font-semibold text-muted-foreground">No Records Found</p>
+              <p className="text-sm text-muted-foreground text-center">{allExpiringLCs.length > 0 ? "No records match your current filters." : "No L/Cs found for the selected criteria."}</p>
             </div>
           ) : (
             <div className="rounded-md border overflow-x-auto">
@@ -235,7 +262,7 @@ export default function LcExpireTrackerPage() {
                     <TableHead>Applicant</TableHead>
                     <TableHead>Beneficiary</TableHead>
                     <TableHead>L/C Value</TableHead>
-                    <TableHead>Expired Date</TableHead>
+                    <TableHead>Expire Date</TableHead>
                     <TableHead>Remaining</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -249,12 +276,14 @@ export default function LcExpireTrackerPage() {
                       <TableCell>{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
                       <TableCell>{formatDisplayDate(lc.expireDateObj)}</TableCell>
                       <TableCell>
-                        <Badge variant={"destructive"}>
-                          {Math.abs(lc.remainingDays)} days ago
+                        <Badge variant={lc.remainingDays >= 0 ? "default" : "destructive"} className={cn(lc.remainingDays < 15 && lc.remainingDays >= 0 && "bg-yellow-500 text-black")}>
+                          {lc.remainingDays >= 0 ? `${lc.remainingDays} days` : `${Math.abs(lc.remainingDays)} days ago`}
                         </Badge>
                       </TableCell>
                        <TableCell>
-                        <Badge variant="destructive">Expired</Badge>
+                        <Badge variant={lc.remainingDays >= 0 ? "outline" : "destructive"}>
+                          {lc.remainingDays >= 0 ? "Upcoming" : "Expired"}
+                        </Badge>
                       </TableCell>
                        <TableCell className="text-right">
                           <Button asChild variant="outline" size="sm">
@@ -266,7 +295,7 @@ export default function LcExpireTrackerPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-                 <TableCaption>A list of L/Cs that expired in the last 30 days.</TableCaption>
+                 <TableCaption>A list of expiring or expired L/Cs.</TableCaption>
               </Table>
             </div>
           )}
@@ -282,3 +311,5 @@ export default function LcExpireTrackerPage() {
     </div>
   );
 }
+
+    
