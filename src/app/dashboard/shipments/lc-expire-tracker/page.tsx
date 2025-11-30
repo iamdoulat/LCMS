@@ -84,25 +84,41 @@ export default function LcExpireTrackerPage() {
         const thirtyDaysAgo = subDays(today, 30);
         
         // Fetch all LCs that have a "Shipment Pending" status. We will filter by date on the client.
-        const q = query(lcEntriesRef, where("status", "array-contains", "Shipment Pending"));
-        const querySnapshot = await getDocs(q);
+        const arrayQuery = query(lcEntriesRef, where("status", "array-contains", "Shipment Pending"));
+        const stringQuery = query(lcEntriesRef, where("status", "==", "Shipment Pending"));
 
-        const expiringLCs = querySnapshot.docs.map(doc => {
-            const data = doc.data() as LCEntryDocument;
-            const expireDateObj = parseISO(data.expireDate as string);
-            const remainingDays = differenceInDays(expireDateObj, today);
-            return {
-              ...data,
-              id: doc.id,
-              expireDateObj,
-              remainingDays,
-            } as ExpiringLC;
-        }).filter(lc => {
-            // Filter client-side for LCs expired in the last 30 days
-            return isValid(lc.expireDateObj) && isWithinInterval(lc.expireDateObj, { start: thirtyDaysAgo, end: today });
-        });
+        const [arraySnapshot, stringSnapshot] = await Promise.all([
+            getDocs(arrayQuery),
+            getDocs(stringQuery),
+        ]);
+        
+        const expiringLCsMap = new Map<string, ExpiringLC>();
+        
+        const processSnapshot = (snapshot: typeof arraySnapshot) => {
+            snapshot.docs.forEach((doc) => {
+                if (expiringLCsMap.has(doc.id)) return; // Avoid duplicates
 
-        expiringLCs.sort((a, b) => b.expireDateObj.getTime() - a.expireDateObj.getTime()); // Show most recently expired first
+                const data = doc.data() as LCEntryDocument;
+                const expireDateObj = data.expireDate ? parseISO(data.expireDate as string) : new Date(0);
+                const remainingDays = differenceInDays(expireDateObj, today);
+
+                // Client-side filtering
+                if (isValid(expireDateObj) && isWithinInterval(expireDateObj, { start: thirtyDaysAgo, end: today })) {
+                    expiringLCsMap.set(doc.id, {
+                        ...data,
+                        id: doc.id,
+                        expireDateObj,
+                        remainingDays,
+                    });
+                }
+            });
+        };
+        
+        processSnapshot(arraySnapshot);
+        processSnapshot(stringSnapshot);
+
+        const expiringLCs = Array.from(expiringLCsMap.values());
+        expiringLCs.sort((a, b) => b.expireDateObj.getTime() - a.expireDateObj.getTime());
         
         setAllExpiringLCs(expiringLCs);
 
@@ -266,4 +282,3 @@ export default function LcExpireTrackerPage() {
     </div>
   );
 }
-
