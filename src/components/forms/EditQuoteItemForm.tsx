@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -9,12 +10,13 @@ import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
 import type { QuoteItemFormValues, ItemDocument, SupplierDocument } from '@/types';
 import { quoteItemSchema } from '@/types';
+import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Package, Save, DollarSign, Tag, Building, ArrowLeft, Globe } from 'lucide-react';
+import { Loader2, Package, Save, DollarSign, Tag, Building, ArrowLeft, Globe, Link as LinkIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Link from 'next/link';
@@ -43,8 +45,12 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       description: '',
       unit: 'pcs',
       salesPrice: undefined,
+      imageUrl: '',
     },
   });
+  
+  const watchedImageUrl = form.watch("imageUrl");
+
 
   React.useEffect(() => {
     const fetchSuppliers = async () => {
@@ -77,6 +83,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
         description: initialData.description || '',
         unit: initialData.unit || 'pcs',
         salesPrice: initialData.salesPrice,
+        imageUrl: initialData.imageUrl || '',
       });
     }
   }, [initialData, form]);
@@ -86,8 +93,8 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
 
     const selectedSupplier = supplierOptions.find(opt => opt.value === data.supplierId);
 
-    const dataToUpdate: Partial<Omit<ItemDocument, 'id' | 'createdAt'>> & { updatedAt: any } = {
-      itemName: data.modelNumber, // Map modelNumber to itemName for saving
+    const dataToUpdate: any = {
+      itemName: data.modelNumber,
       itemCode: data.itemCode || undefined,
       brandName: data.brandName || undefined,
       countryOfOrigin: data.countryOfOrigin || undefined,
@@ -96,10 +103,10 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       description: data.description || undefined,
       unit: data.unit || undefined,
       salesPrice: data.salesPrice,
+      imageUrl: data.imageUrl || undefined,
       updatedAt: serverTimestamp(),
     };
 
-    // Remove any undefined keys to avoid errors with Firestore update
     Object.keys(dataToUpdate).forEach(key => {
       if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
         delete dataToUpdate[key as keyof typeof dataToUpdate];
@@ -224,6 +231,37 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
             </FormItem>
           )}
         />
+        
+        <FormField
+          control={form.control}
+          name="imageUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center"><LinkIcon className="h-4 w-4 mr-1 text-muted-foreground" />External Item Picture URL</FormLabel>
+              <FormControl>
+                <Input type="url" placeholder="https://example.com/image.jpg" {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        {watchedImageUrl && (
+            <div className="space-y-2">
+                <Label>Image Preview</Label>
+                <div className="mt-2 w-32 h-32 rounded-md border p-2 flex items-center justify-center">
+                    <Image 
+                        src={watchedImageUrl} 
+                        alt="Item Preview" 
+                        width={120} 
+                        height={120}
+                        className="object-contain rounded-sm"
+                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/120x120/e2e8f0/e2e8f0?text=Invalid'; }}
+                        data-ai-hint="item image"
+                    />
+                </div>
+            </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField

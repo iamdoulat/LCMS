@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Package, Save, DollarSign, Tag, Building, Globe } from 'lucide-react';
+import { Loader2, Package, Save, DollarSign, Tag, Building, Globe, Link as LinkIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 
@@ -37,6 +38,7 @@ export function AddQuoteItemForm() {
       description: '',
       unit: 'pcs',
       salesPrice: undefined,
+      imageUrl: '',
     },
   });
 
@@ -75,13 +77,14 @@ export function AddQuoteItemForm() {
       description: data.description || undefined,
       unit: data.unit || undefined,
       salesPrice: data.salesPrice,
+      imageUrl: data.imageUrl || undefined,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
     // Clean up undefined fields
     Object.keys(dataToSave).forEach(key => {
-      if (dataToSave[key as keyof typeof dataToSave] === undefined) {
+      if (dataToSave[key as keyof typeof dataToSave] === undefined || dataToSave[key as keyof typeof dataToSave] === '') {
         delete dataToSave[key as keyof typeof dataToSave];
       }
     });
@@ -96,7 +99,7 @@ export function AddQuoteItemForm() {
         showConfirmButton: true,
       });
       form.reset({
-        modelNumber: '', itemCode: '', brandName: '', countryOfOrigin: '', supplierId: '', description: '', unit: 'pcs', salesPrice: undefined,
+        modelNumber: '', itemCode: '', brandName: '', countryOfOrigin: '', supplierId: '', description: '', unit: 'pcs', salesPrice: undefined, imageUrl: '',
       });
     } catch (error) {
       console.error("Error adding quote item document: ", error);
@@ -236,6 +239,21 @@ export function AddQuoteItemForm() {
             )}
           />
         </div>
+        
+        <FormField
+          control={form.control}
+          name="imageUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center"><LinkIcon className="h-4 w-4 mr-1 text-muted-foreground" />External Item Picture URL</FormLabel>
+              <FormControl>
+                <Input type="url" placeholder="https://example.com/image.jpg" {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
 
         <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingSuppliers}>
           {isSubmitting ? (

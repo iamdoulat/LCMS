@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -765,6 +766,7 @@ export interface Item {
   location?: string;
   idealQuantity?: number;
   warningQuantity?: number;
+  imageUrl?: string; // For Quote Items
   createdAt?: any; // Firestore ServerTimestamp
   updatedAt?: any; // Firestore ServerTimestamp
 }
@@ -835,6 +837,7 @@ export const quoteItemSchema = z.object({
     (val) => (String(val).trim() === "" ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Sales Price must be a number." }).nonnegative("Sales Price cannot be negative.").optional()
   ),
+  imageUrl: z.string().url("Invalid URL").optional().or(z.literal('')),
 });
 
 export type QuoteItemFormValues = z.infer<typeof quoteItemSchema>;
