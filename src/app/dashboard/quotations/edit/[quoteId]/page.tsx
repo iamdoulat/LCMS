@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -12,7 +13,7 @@ import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import type { QuoteDocument } from '@/types';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
-import { parseISO, isValid, format } from 'date-fns';
+import { parseISO, isValid } from 'date-fns';
 
 export default function EditQuotePage() {
   const params = useParams();
@@ -40,18 +41,14 @@ export default function EditQuotePage() {
 
       if (quoteDocSnap.exists()) {
         const data = quoteDocSnap.data() as Omit<QuoteDocument, 'id'>;
-        // Convert Firestore Timestamps or string dates to Date objects for the form
-        const processedData = {
+        const processedData: QuoteDocument = {
           ...data,
           id: quoteDocSnap.id,
           quoteDate: data.quoteDate && isValid(parseISO(data.quoteDate)) ? data.quoteDate : new Date().toISOString(), // Fallback to now if invalid
-          lineItems: data.lineItems.map(item => ({
-            ...item,
-            // No date conversion needed for line items based on current schema
-          })),
+          lineItems: data.lineItems.map(item => ({ ...item, imageUrl: item.imageUrl || '' })),
           createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
           updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
-        } as QuoteDocument;
+        };
         setQuoteData(processedData);
       } else {
         setError("Quote not found.");
@@ -60,7 +57,6 @@ export default function EditQuotePage() {
         });
       }
     } catch (err: any) {
-      console.error("Error fetching quote data: ", err);
       setError(`Failed to fetch quote data: ${err.message}`);
       Swal.fire("Error", `Failed to fetch quote data: ${err.message}`, "error");
     } finally {
@@ -76,29 +72,18 @@ export default function EditQuotePage() {
     return (
       <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading quote details for ID: ${quoteId}...</p>
+        <p className="text-muted-foreground">Loading quote details for ID: {quoteId}...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8 px-5">
         <Card className="max-w-screen-2xl mx-auto shadow-xl border-destructive">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive">
-              <AlertTriangle className="h-7 w-7" />
-              Error Loading Quote
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-destructive-foreground">{error}</p>
-            <Button variant="outline" asChild className="mt-4">
-              <Link href="/dashboard/quotations/list">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Quotes List
-              </Link>
-            </Button>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive"><AlertTriangle className="h-7 w-7" />Error Loading Quote</CardTitle></CardHeader>
+          <CardContent><p className="text-destructive-foreground">{error}</p>
+            <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/quotations/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Quotes List</Link></Button>
           </CardContent>
         </Card>
       </div>
@@ -107,20 +92,15 @@ export default function EditQuotePage() {
 
   if (!quoteData) {
      return (
-      <div className="container mx-auto py-8 text-center">
+      <div className="container mx-auto py-8 text-center px-5">
         <p className="text-muted-foreground">Quote data could not be loaded.</p>
-         <Button variant="outline" asChild className="mt-4">
-            <Link href="/dashboard/quotations/list">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Quotes List
-            </Link>
-        </Button>
+         <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/quotations/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to Quotes List</Link></Button>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <div className="mb-6">
         <Link href="/dashboard/quotations/list" passHref>
           <Button variant="outline">
