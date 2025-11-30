@@ -28,7 +28,7 @@ interface ExpiringLC extends LCEntryDocument {
 const ITEMS_PER_PAGE = 10;
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_EXPIRE_APPLICANT__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_EXPIRE_BENEFICIARY__";
-const EXPIRY_FILTER_OPTIONS = ["Expired (Last 30 Days)", "Expired (Last 60 Days)", "Expired (Last 90 Days)", "Upcoming (15 Days)"] as const;
+const EXPIRY_FILTER_OPTIONS = ["Upcoming (15 Days)", "Expired (Last 30 Days)", "Expired (Last 60 Days)", "Expired (Last 90 Days)"] as const;
 type ExpiryFilterOption = typeof EXPIRY_FILTER_OPTIONS[number];
 
 
@@ -70,7 +70,7 @@ export default function LcExpireTrackerPage() {
   const [filterLcNumber, setFilterLcNumber] = useState('');
   const [filterApplicantId, setFilterApplicantId] = useState('');
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
-  const [expiryFilter, setExpiryFilter] = useState<ExpiryFilterOption>("Expired (Last 30 Days)");
+  const [expiryFilter, setExpiryFilter] = useState<ExpiryFilterOption>("Upcoming (15 Days)");
   
   const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
@@ -194,7 +194,7 @@ export default function LcExpireTrackerPage() {
     setFilterLcNumber('');
     setFilterApplicantId('');
     setFilterBeneficiaryId('');
-    setExpiryFilter("Expired (Last 30 Days)");
+    setExpiryFilter("Upcoming (15 Days)");
     setCurrentPage(1);
   };
   
@@ -311,5 +311,3 @@ export default function LcExpireTrackerPage() {
     </div>
   );
 }
-
-    
