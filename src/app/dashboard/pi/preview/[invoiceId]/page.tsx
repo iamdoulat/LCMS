@@ -67,7 +67,7 @@ export default function PrintInvoicePage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchSettings = useCallback(async () => {
+  const fetchSettings = React.useCallback(async () => {
     try {
       const financialSettingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
       const piSettingsDocRef = doc(firestore, PI_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
@@ -96,7 +96,7 @@ export default function PrintInvoicePage() {
     }
   }, []);
 
-  const fetchInvoiceData = useCallback(async () => {
+  const fetchInvoiceData = React.useCallback(async () => {
     if (!invoiceId) {
       setError("No Invoice ID provided.");
       return;
@@ -263,7 +263,7 @@ export default function PrintInvoicePage() {
             </div>
 
             <div className="text-right">
-                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">PROFORMA INVOICE</h2>
+                <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">PROFORMA INVOICE</h2>
                 <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
                     <span className="font-semibold">Invoice Number :</span>
                     <span>{invoiceData.id}</span>
@@ -283,7 +283,7 @@ export default function PrintInvoicePage() {
             
             <div className="grid grid-cols-2 gap-4 mb-2">
             <div className="border p-2 rounded-md text-xs">
-                <h3 className="font-semibold text-gray-700 mb-1 underline uppercase">Bill To:</h3>
+                <h3 className="font-semibold text-gray-700 mb-1 uppercase underline">Bill To:</h3>
                 <p className="text-gray-600 whitespace-pre-line">{invoiceData.billingAddress || customerData?.address || 'N/A'}</p>
                 {customerData?.binNo && (
                     <p className="text-gray-600">
@@ -309,19 +309,25 @@ export default function PrintInvoicePage() {
             <thead className="bg-gray-100 text-gray-700">
               <tr>
                 <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '4%'}}>#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '48%'}}>Item Description</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '15%'}}>Image</th>
+                <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '43%'}}>Item Description</th>
                 {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '10%'}}>Item Code</th>}
-                <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '6%'}}>Qty</th>
-                <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '12%'}}>Unit Price</th>
+                <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '5%'}}>Qty</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '10%'}}>Unit Price</th>
                 {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>}
                 {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>}
-                <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '12%'}}>Total</th>
+                <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '13%'}}>Total</th>
               </tr>
             </thead>
             <tbody >
               {invoiceData.lineItems.map((item, index) => (
                 <tr key={`${item.itemId}-${index}`} className="border-b border-gray-200">
                   <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
+                  <td className="p-2 border border-gray-300 align-middle text-center">
+                    {item.imageUrl && (
+                        <Image src={item.imageUrl} alt={item.itemName || 'Item image'} width={150} height={150} className="object-contain mx-auto" data-ai-hint="sewing machine"/>
+                    )}
+                  </td>
                   <td className="p-2 border border-gray-300 align-top break-words">
                     <p className="font-medium text-gray-900">{item.itemName}</p>
                     {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
@@ -413,7 +419,3 @@ export default function PrintInvoicePage() {
     </div>
   );
 }
-
-
-
-

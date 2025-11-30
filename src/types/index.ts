@@ -946,6 +946,7 @@ export const InvoiceLineItemSchema = z.object({
   discountPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Discount must be 0-100 or blank" }),
   taxPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Tax must be 0-100 or blank" }),
   total: z.string(),
+  imageUrl: z.string().url("Invalid URL").optional().or(z.literal('')),
 });
 export type InvoiceLineItemFormValues = z.infer<typeof InvoiceLineItemSchema>;
 
@@ -990,6 +991,7 @@ export interface InvoiceLineItemDocument {
   discountPercentage?: number;
   taxPercentage?: number;
   total: number;
+  imageUrl?: string;
 }
 
 export interface InvoiceDocument {
@@ -1818,6 +1820,3 @@ export interface VisitApplication {
 }
 export type VisitApplicationDocument = VisitApplication & { id: string };
 // --- END Visit Application Types ---
-
-    
-
