@@ -1,5 +1,4 @@
 
-
 import { z } from 'zod';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -30,7 +29,7 @@ export const partialShipmentAllowedOptions = ["Yes", "No"] as const;
 export type PartialShipmentAllowed = typeof partialShipmentAllowedOptions[number];
 
 export const certificateOfOriginCountries = [
-  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "THAILAND", "HONG KONG", "TURKEY", "GERMANY", "SOUTH KOREA", "CZECH REPUBLIC", "OTHERS",
+  "JAPAN", "CHINA", "TAIWAN", "SINGAPORE", "VIETNAM", "MALAYSIA", "ITALY", "USA", "THAILAND", "HONG KONG", "TURKEY", "GERMANY", "SOUTH KOREA", "CZECH REPUBLIC", "BRAZIL", "RUSSIA", "SWEDEN", "OTHERS",
 ] as const;
 export type CertificateOfOriginCountry = typeof certificateOfOriginCountries[number];
 
