@@ -8,7 +8,7 @@ import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDoc
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import Link from 'next/link';
-import { format, parseISO, isValid, differenceInDays, addDays, startOfDay, isWithinInterval, subDays, isFuture } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays, addDays, startOfDay, isWithinInterval, subDays, isFuture, compareAsc } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
@@ -159,9 +159,9 @@ export default function LcExpireTrackerPage() {
   
   useEffect(() => {
     const today = startOfDay(new Date());
-    let dateFilteredLcs = allExpiringLCs;
+    let dateFilteredLcs: ExpiringLC[] = [];
 
-    if(expiryFilter.startsWith("Expired")) {
+    if (expiryFilter.startsWith("Expired")) {
       const daysAgo = parseInt(expiryFilter.match(/\d+/)?.[0] || '30');
       const cutoffDate = subDays(today, daysAgo);
       dateFilteredLcs = allExpiringLCs.filter(lc => 
