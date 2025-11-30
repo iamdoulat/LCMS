@@ -15,6 +15,7 @@ import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -224,6 +225,7 @@ export default function LcExpireTrackerPage() {
                     <TableHead>L/C Value</TableHead>
                     <TableHead>Expire Date</TableHead>
                     <TableHead>Remaining</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
@@ -238,6 +240,11 @@ export default function LcExpireTrackerPage() {
                         <Badge variant={lc.remainingDays <= 7 ? "destructive" : "secondary"}>
                           {lc.remainingDays} days
                         </Badge>
+                      </TableCell>
+                       <TableCell>
+                          {lc.remainingDays < 0 && (
+                            <Badge variant="destructive">Expired</Badge>
+                          )}
                       </TableCell>
                        <TableCell className="text-right">
                           <Button asChild variant="outline" size="sm">
