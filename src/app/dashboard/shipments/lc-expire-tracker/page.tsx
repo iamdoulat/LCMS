@@ -28,7 +28,7 @@ interface ExpiringLC extends LCEntryDocument {
 const ITEMS_PER_PAGE = 10;
 const PLACEHOLDER_APPLICANT_VALUE = "__LC_EXPIRE_APPLICANT__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__LC_EXPIRE_BENEFICIARY__";
-const EXPIRY_FILTER_OPTIONS = ["Upcoming (15 Days)", "Expired (Last 30 Days)", "Expired (Last 60 Days)", "Expired (Last 90 Days)"] as const;
+const EXPIRY_FILTER_OPTIONS = ["Upcoming (15 Days)", "Upcoming (30 Days)", "Expired (Last 30 Days)", "Expired (Last 60 Days)", "Expired (Last 90 Days)"] as const;
 type ExpiryFilterOption = typeof EXPIRY_FILTER_OPTIONS[number];
 
 
@@ -167,10 +167,11 @@ export default function LcExpireTrackerPage() {
       dateFilteredLcs = allExpiringLCs.filter(lc => 
         isWithinInterval(lc.expireDateObj, { start: cutoffDate, end: today }) && !isFuture(lc.expireDateObj)
       );
-    } else if (expiryFilter === "Upcoming (15 Days)") {
-        const fifteenDaysFromNow = addDays(today, 15);
+    } else if (expiryFilter.startsWith("Upcoming")) {
+        const daysAhead = parseInt(expiryFilter.match(/\d+/)?.[0] || '15');
+        const futureCutoffDate = addDays(today, daysAhead);
         dateFilteredLcs = allExpiringLCs.filter(lc => 
-            isWithinInterval(lc.expireDateObj, { start: today, end: fifteenDaysFromNow })
+            isWithinInterval(lc.expireDateObj, { start: today, end: futureCutoffDate })
         );
     }
     
@@ -263,6 +264,7 @@ export default function LcExpireTrackerPage() {
                     <TableHead>Beneficiary</TableHead>
                     <TableHead>L/C Value</TableHead>
                     <TableHead>Expire Date</TableHead>
+                    <TableHead>Latest Shipment Date</TableHead>
                     <TableHead>Remaining</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -275,15 +277,16 @@ export default function LcExpireTrackerPage() {
                       <TableCell>{lc.beneficiaryName || 'N/A'}</TableCell>
                       <TableCell>{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
                       <TableCell>{formatDisplayDate(lc.expireDateObj)}</TableCell>
+                      <TableCell>{formatDisplayDate(lc.latestShipmentDate)}</TableCell>
                       <TableCell>
                         <Badge variant={lc.remainingDays >= 0 ? "default" : "destructive"} className={cn(lc.remainingDays < 15 && lc.remainingDays >= 0 && "bg-yellow-500 text-black")}>
                           {lc.remainingDays >= 0 ? `${lc.remainingDays} days` : `${Math.abs(lc.remainingDays)} days ago`}
                         </Badge>
                       </TableCell>
                        <TableCell>
-                        <Badge variant={lc.remainingDays >= 0 ? "outline" : "destructive"}>
-                          {lc.remainingDays >= 0 ? "Upcoming" : "Expired"}
-                        </Badge>
+                          <Badge variant={lc.remainingDays >= 0 ? "outline" : "destructive"}>
+                              {lc.remainingDays >= 0 ? "Upcoming" : "Expired"}
+                          </Badge>
                       </TableCell>
                        <TableCell className="text-right">
                           <Button asChild variant="outline" size="sm">
