@@ -8,7 +8,7 @@ import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDoc
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import Link from 'next/link';
-import { format, parseISO, isValid, differenceInDays, addDays, startOfDay, isWithinInterval } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays, addDays, startOfDay, isWithinInterval, subDays } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
@@ -52,7 +52,7 @@ const formatDisplayDate = (dateString?: string | Date) => {
   }
 };
 
-const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
+const formatCurrencyValue = (currency?: string, amount?: number) => {
   if (typeof amount !== 'number' || isNaN(amount)) return `${currency || ''} N/A`;
   return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
@@ -81,10 +81,10 @@ export default function LcExpireTrackerPage() {
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
         const today = startOfDay(new Date());
-        const thirtyDaysFromNow = addDays(today, 30);
+        const thirtyDaysAgo = subDays(today, 30);
         
-        // Fetch all LCs that expire in the future. We'll filter status client-side to avoid complex index.
-        const q = query(lcEntriesRef, where("expireDate", ">=", format(today, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx")));
+        // Fetch all LCs that have a "Shipment Pending" status. We will filter by date on the client.
+        const q = query(lcEntriesRef, where("status", "array-contains", "Shipment Pending"));
         const querySnapshot = await getDocs(q);
 
         const expiringLCs = querySnapshot.docs.map(doc => {
@@ -98,23 +98,19 @@ export default function LcExpireTrackerPage() {
               remainingDays,
             } as ExpiringLC;
         }).filter(lc => {
-            // Now, filter client-side for status and if it's within 30 days
-            const hasShipmentPending = Array.isArray(lc.status)
-                ? lc.status.includes("Shipment Pending")
-                : lc.status === "Shipment Pending";
-
-            return hasShipmentPending && isWithinInterval(lc.expireDateObj, { start: today, end: thirtyDaysFromNow });
+            // Filter client-side for LCs expired in the last 30 days
+            return isValid(lc.expireDateObj) && isWithinInterval(lc.expireDateObj, { start: thirtyDaysAgo, end: today });
         });
 
-        expiringLCs.sort((a, b) => a.expireDateObj.getTime() - b.expireDateObj.getTime());
+        expiringLCs.sort((a, b) => b.expireDateObj.getTime() - a.expireDateObj.getTime()); // Show most recently expired first
         
         setAllExpiringLCs(expiringLCs);
 
       } catch (error: any) {
-        console.error("Error fetching 'Payment Done' L/Cs: ", error);
+        console.error("Error fetching expiring L/Cs: ", error);
         let errorMessage = `Could not fetch L/C data. Ensure Firestore rules allow reads.`;
          if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `A Firestore index is required for this query. Please check browser console for a link to create it. The query needs an index on 'expireDate'.`;
+            errorMessage = `A Firestore index is required for this query. Please check browser console for a link to create it. The query needs an index on 'status' (array-contains).`;
         } else if (error.message) {
             errorMessage += ` Error: ${error.message}`;
         }
@@ -180,7 +176,7 @@ export default function LcExpireTrackerPage() {
             L/C Expire Tracker
           </CardTitle>
           <CardDescription>
-            List of all L/Cs with "Shipment Pending" status that will expire within the next 30 days.
+            List of all L/Cs with "Shipment Pending" status that have expired in the last 30 days.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -202,7 +198,7 @@ export default function LcExpireTrackerPage() {
             </CardContent>
           </Card>
           {isLoading ? (
-             <div className="flex flex-col items-center justify-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p>Loading expiring L/Cs...</p></div>
+             <div className="flex flex-col items-center justify-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p>Loading expired L/Cs...</p></div>
           ) : fetchError ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
               <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -212,8 +208,8 @@ export default function LcExpireTrackerPage() {
           ) : displayedLCs.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
               <Info className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-xl font-semibold text-muted-foreground">No L/Cs Expiring Soon</p>
-              <p className="text-sm text-muted-foreground text-center">{allExpiringLCs.length > 0 ? "No records match your current filters." : "No L/Cs are expiring within the next 30 days."}</p>
+              <p className="text-xl font-semibold text-muted-foreground">No Expired L/Cs Found</p>
+              <p className="text-sm text-muted-foreground text-center">{allExpiringLCs.length > 0 ? "No records match your current filters." : "No L/Cs expired in the last 30 days."}</p>
             </div>
           ) : (
             <div className="rounded-md border overflow-x-auto">
@@ -223,7 +219,7 @@ export default function LcExpireTrackerPage() {
                     <TableHead>Applicant</TableHead>
                     <TableHead>Beneficiary</TableHead>
                     <TableHead>L/C Value</TableHead>
-                    <TableHead>Expire Date</TableHead>
+                    <TableHead>Expired Date</TableHead>
                     <TableHead>Remaining</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -237,14 +233,12 @@ export default function LcExpireTrackerPage() {
                       <TableCell>{formatCurrencyValue(lc.currency, lc.amount)}</TableCell>
                       <TableCell>{formatDisplayDate(lc.expireDateObj)}</TableCell>
                       <TableCell>
-                        <Badge variant={lc.remainingDays <= 7 ? "destructive" : "secondary"}>
-                          {lc.remainingDays} days
+                        <Badge variant={"destructive"}>
+                          {Math.abs(lc.remainingDays)} days ago
                         </Badge>
                       </TableCell>
                        <TableCell>
-                          {lc.remainingDays < 0 && (
-                            <Badge variant="destructive">Expired</Badge>
-                          )}
+                        <Badge variant="destructive">Expired</Badge>
                       </TableCell>
                        <TableCell className="text-right">
                           <Button asChild variant="outline" size="sm">
@@ -256,7 +250,7 @@ export default function LcExpireTrackerPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-                 <TableCaption>A list of L/Cs expiring soon.</TableCaption>
+                 <TableCaption>A list of L/Cs that expired in the last 30 days.</TableCaption>
               </Table>
             </div>
           )}
@@ -272,3 +266,4 @@ export default function LcExpireTrackerPage() {
     </div>
   );
 }
+
