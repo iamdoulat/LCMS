@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -42,6 +43,7 @@ interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
   itemCode?: string;
+  imageUrl?: string;
 }
 
 interface CustomerOption extends ComboboxOption {
@@ -106,6 +108,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             description: data.description,
             salesPrice: data.salesPrice,
             itemCode: data.itemCode,
+            imageUrl: data.imageUrl,
           };
         });
         setItemOptions(fetchedItems);
@@ -128,6 +131,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               discountPercentage: item.discountPercentage?.toString() || '0',
               taxPercentage: item.taxPercentage?.toString() || '0',
               total: item.total?.toFixed(2) || '0.00',
+              imageUrl: item.imageUrl || '',
             })),
             taxType: initialData.taxType || 'Default',
             comments: initialData.comments || '',
@@ -211,11 +215,13 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, selectedItem.value, { shouldValidate: true });
+      setValue(`lineItems.${index}.imageUrl`, selectedItem.imageUrl || '', { shouldValidate: true });
     } else {
       setValue(`lineItems.${index}.itemCode`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
+      setValue(`lineItems.${index}.imageUrl`, '', { shouldValidate: true });
     }
   };
   
@@ -284,6 +290,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                         discountPercentage: parseFloat(String(item.discountPercentage || '0')),
                         taxPercentage: parseFloat(String(item.taxPercentage || '0')),
                         total: parseFloat(String(item.qty || '0')) * parseFloat(String(item.unitPrice || '0')),
+                        imageUrl: item.imageUrl || undefined,
                     };
                 }),
                 taxType: data.taxType,
@@ -371,6 +378,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         discountPercentage: parseFloat(String(item.discountPercentage || '0')),
         taxPercentage: parseFloat(String(item.taxPercentage || '0')),
         total,
+        imageUrl: item.imageUrl || undefined,
       };
       
       Object.keys(lineItemData).forEach(key => {
@@ -537,14 +545,23 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}><ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items</h3>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
-                <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
-                </DropdownMenuContent></DropdownMenu>
+            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
+                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
+            </h3>
+            <div className="flex items-center gap-2">
+                <Link href="/dashboard/quotations/items/add" target="_blank">
+                    <Button variant="outline" size="sm" type="button">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
+                    </Button>
+                </Link>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
+                    </DropdownMenuContent></DropdownMenu>
+            </div>
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
@@ -560,7 +577,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
