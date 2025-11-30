@@ -41,7 +41,7 @@ const MonthlyTransactionBarChart = dynamic(() => import('@/components/dashboard/
 });
 
 
-const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030"];
+const years = Array.from({ length: 16 }, (_, i) => (2015 + i).toString());
 
 interface DashboardStats {
   totalLCs: number;
@@ -1019,5 +1019,7 @@ export default function DashboardPage() {
 
 
 
+
+    
 
     
