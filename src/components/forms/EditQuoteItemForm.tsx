@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from 'react';
@@ -20,6 +19,7 @@ import { Loader2, Package, Save, DollarSign, Tag, Building, ArrowLeft, Globe, Li
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Link from 'next/link';
+import { Label } from '@/components/ui/label';
 
 const sectionHeadingClass = "font-semibold text-lg text-primary flex items-center gap-2 mb-4";
 const PLACEHOLDER_SUPPLIER_VALUE = "__EDIT_QUOTE_ITEM_SUPPLIER__";
@@ -203,7 +203,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
               </FormItem>
             )}
           />
-          <FormField
+           <FormField
             control={form.control}
             name="countryOfOrigin"
             render={({ field }) => (
