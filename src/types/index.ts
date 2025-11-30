@@ -859,7 +859,7 @@ export const QuoteLineItemSchema = z.object({
   discountPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Discount must be 0-100 or blank" }),
   taxPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Tax must be 0-100 or blank" }),
   total: z.string(), // Calculated, not for direct input
-  imageUrl: z.string().url().optional().or(z.literal('')),
+  imageUrl: z.string().url("Invalid URL").optional().or(z.literal('')),
 });
 export type QuoteLineItemFormValues = z.infer<typeof QuoteLineItemSchema>;
 
@@ -935,7 +935,7 @@ export interface QuoteDocument {
 
 // --- Invoice Types ---
 export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void", "Cancelled", "Refunded"] as const;
-export type InvoiceStatus = typeof invoiceStatusOptions[number];
+export type InvoiceStatus = (typeof invoiceStatusOptions)[number];
 
 export const InvoiceLineItemSchema = z.object({
   itemId: z.string().optional(),
@@ -1072,7 +1072,7 @@ export const OrderSchema = z.object({
 });
 export type OrderFormValues = z.infer<typeof OrderSchema>;
 
-export interface OrderLineItemDocument { // Same as Quote/Invoice LineItemDocument
+export interface OrderLineItemDocument {
   itemId: string;
   itemName: string;
   itemCode?: string;
@@ -1820,5 +1820,4 @@ export type VisitApplicationDocument = VisitApplication & { id: string };
 // --- END Visit Application Types ---
 
     
-
 

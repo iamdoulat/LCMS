@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -9,8 +10,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc, setDoc } from 'firebase/firestore';
-import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues, InvoiceDocument } from '@/types';
-import { QuoteLineItemSchema, QuoteSchema, quoteTaxTypes, quoteStatusOptions, shipmentTermsOptions } from '@/types';
+import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues, InvoiceDocument, ShipmentTerms } from '@/types';
+import { QuoteSchema, quoteTaxTypes, invoiceStatusOptions as saleStatusOptions, shipmentTermsOptions } from '@/types'; // Use correct status options
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -68,24 +69,24 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
   const [isLoadingDropdowns, setIsLoadingDropdowns] = React.useState(true);
 
-  const form = useForm<QuoteFormValues>({
+  const form = useForm<PageQuoteFormValues>({
     resolver: zodResolver(QuoteSchema.extend({
-        status: z.enum(quoteStatusOptions).optional(),
-    })),
+        status: z.enum(saleStatusOptions).optional(),
+    })), 
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "lineItems",
-  });
 
   const showItemCodeColumn = watch("showItemCodeColumn");
   const showDiscountColumn = watch("showDiscountColumn");
   const showTaxColumn = watch("showTaxColumn");
   const watchedStatus = watch("status");
   const watchedShipmentMode = watch("shipmentMode");
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "lineItems",
+  });
 
   React.useEffect(() => {
     const fetchOptionsAndSetData = async () => {
@@ -154,7 +155,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     };
     fetchOptionsAndSetData();
   }, [initialData, reset]);
-
+  
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedFreightCharges = watch("freightCharges");
@@ -176,12 +177,12 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-
+          
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-
+        
         const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -204,8 +205,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
+        // Only set billing address. Let initialData handle shipping address.
         setValue("billingAddress", selectedCustomer.address || "");
-        if (!getValues("shippingAddress")) {
+        if(!getValues("shippingAddress")) { // Only set shipping if it's empty
           setValue("shippingAddress", selectedCustomer.address || "");
         }
       }
@@ -230,7 +232,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       setValue(`lineItems.${index}.imageUrl`, '', { shouldValidate: true });
     }
   };
-
+  
   const handleViewPdf = () => {
     window.open(`/dashboard/quotations/preview/${quoteId}`, '_blank');
   };
@@ -515,7 +517,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                       </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                      {quoteStatusOptions.map(status => (
+                      {saleStatusOptions.map(status => (
                           <SelectItem key={status} value={status} disabled={status === 'Invoiced' && watchedStatus !== 'Invoiced'}>{status}</SelectItem>
                       ))}
                       </SelectContent>
@@ -592,11 +594,11 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           </Table>
         </div>
         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
-        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00', imageUrl: '' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
+          <FormField
               control={form.control}
               name="shipmentMode"
               render={({ field }) => (
@@ -616,8 +618,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   </FormItem>
               )}
             />
-            <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
         </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>

@@ -366,7 +366,7 @@ export default function PrintQuotePage() {
                     <div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Subtotal:</span><span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal)}</span></div>
                     {showDiscountColumn && (<div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Total Discount:</span><span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount)}</span></div>)}
                     {showTaxColumn && (<div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Total Tax ({quoteData.taxType}):</span><span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount)}</span></div>)}
-                    {(quoteData.freightCharges || 0) > 0 && (
+                     {(quoteData.freightCharges || 0) > 0 && (
                         <div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Freight Charges:</span><span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.freightCharges)}</span></div>
                     )}
                     <Separator className="my-2 border-gray-300" />

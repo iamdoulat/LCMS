@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,8 +12,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, ShipmentTerms } from '@/types'; // Updated types
-import { InvoiceSchema as SaleSchema, quoteTaxTypes, saleStatusOptions, shipmentTermsOptions } from '@/types'; // Updated schemas
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, ShipmentTerms, QuoteFormValues as PageQuoteFormValues } from '@/types'; // Updated types
+import { QuoteSchema, quoteTaxTypes, saleStatusOptions, shipmentTermsOptions } from '@/types'; // Updated schemas
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -55,7 +56,7 @@ interface CustomerOption extends ComboboxOption {
   address?: string;
 }
 
-type SaleFormValues = PageSaleFormValues;
+type SaleFormValues = PageQuoteFormValues;
 type SaleLineItemFormValues = PageSaleLineItemFormValues;
 
 
@@ -67,12 +68,12 @@ export function CreateQuoteForm() {
   const [generatedSaleId, setGeneratedSaleId] = React.useState<string | null>(null);
 
   const form = useForm<SaleFormValues>({
-    resolver: zodResolver(SaleSchema),
+    resolver: zodResolver(QuoteSchema),
     defaultValues: {
       customerId: '',
       billingAddress: '',
       shippingAddress: '',
-      invoiceDate: new Date(),
+      quoteDate: new Date(),
       salesperson: '',
       lineItems: [{
         itemId: '',
@@ -95,6 +96,7 @@ export function CreateQuoteForm() {
       packingCharge: undefined,
       handlingCharge: undefined,
       otherCharges: undefined,
+      shipmentMode: shipmentTermsOptions[0],
     },
   });
 
@@ -170,7 +172,7 @@ export function CreateQuoteForm() {
       try {
         const [customersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "items"))
+          getDocs(collection(firestore, "quote_items"))
         ]);
 
         setCustomerOptions(
@@ -189,14 +191,13 @@ export function CreateQuoteForm() {
               description: data.description,
               salesPrice: data.salesPrice,
               itemCode: data.itemCode,
-              manageStock: data.manageStock,
-              currentQuantity: data.currentQuantity,
+              imageUrl: data.imageUrl,
             };
           })
         );
 
       } catch (error) {
-        console.error("Error fetching dropdown options for Sale form: ", error);
+        console.error("Error fetching dropdown options for Quote form: ", error);
         Swal.fire("Error", "Could not load customer or item data. Please try again.", "error");
       } finally {
         setIsLoadingDropdowns(false);
@@ -230,11 +231,13 @@ export function CreateQuoteForm() {
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, selectedItem.value, { shouldValidate: true });
+      setValue(`lineItems.${index}.imageUrl`, selectedItem.imageUrl || '', { shouldValidate: true });
     } else {
       setValue(`lineItems.${index}.itemCode`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
+      setValue(`lineItems.${index}.imageUrl`, '', { shouldValidate: true });
     }
   };
 
@@ -242,38 +245,10 @@ export function CreateQuoteForm() {
     setIsSubmitting(true);
     
     try {
-        const counterRef = doc(firestore, "counters", "saleNumberGenerator");
+        const counterRef = doc(firestore, "counters", "quoteNumberGenerator");
 
         const newSaleId = await runTransaction(firestore, async (transaction) => {
-            // ----- READ PHASE -----
             const counterDoc = await transaction.get(counterRef);
-
-            const itemsToUpdate: { itemRef: any, newQty: number, label: string }[] = [];
-            for (const lineItem of data.lineItems) {
-                if (!lineItem.itemId) continue;
-                const itemOption = itemOptions.find(opt => opt.value === lineItem.itemId);
-                if (itemOption?.manageStock) {
-                    const itemRef = doc(firestore, "items", lineItem.itemId);
-                    const itemSnap = await transaction.get(itemRef);
-
-                    if (!itemSnap.exists()) {
-                        throw new Error(`Item "${itemOption.label}" not found. Sale cannot be completed.`);
-                    }
-                    const itemData = itemSnap.data() as ItemDoc;
-                    const currentItemQty = itemData.currentQuantity || 0;
-                    const requestedQty = parseFloat(String(lineItem.qty || '0'));
-                    if (currentItemQty < requestedQty) {
-                        throw new Error(`Insufficient stock for item "${itemData.itemName}". Only ${currentItemQty} available.`);
-                    }
-                    itemsToUpdate.push({
-                        itemRef: itemRef,
-                        newQty: currentItemQty - requestedQty,
-                        label: itemData.itemName || "Unknown Item",
-                    });
-                }
-            }
-
-            // ----- WRITE PHASE -----
             const currentYear = new Date().getFullYear();
             let currentCount = 0;
             if (counterDoc.exists()) {
@@ -281,7 +256,7 @@ export function CreateQuoteForm() {
                 currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
             }
             const newCount = currentCount + 1;
-            const formattedSaleId = `IMI${currentYear}-${String(newCount).padStart(2, '0')}`;
+            const formattedSaleId = `QT${currentYear}-${String(newCount).padStart(3, '0')}`;
             
             const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
             
@@ -303,6 +278,7 @@ export function CreateQuoteForm() {
                     itemCode: itemDetails?.itemCode,
                     description: item.description || '',
                     qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: itemTotalBeforeDiscount,
+                    imageUrl: item.imageUrl || undefined,
                 };
                  Object.keys(lineItemData).forEach(key => {
                     if (lineItemData[key] === undefined || lineItemData[key] === null || (typeof lineItemData[key] === 'string' && lineItemData[key].trim() === '')) {
@@ -315,9 +291,8 @@ export function CreateQuoteForm() {
             const dataToSave: Record<string, any> = {
                 customerId: data.customerId, customerName: selectedCustomer?.label || 'N/A',
                 billingAddress: data.billingAddress, shippingAddress: data.shippingAddress,
-                invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-                dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-                paymentTerms: data.paymentTerms, salesperson: data.salesperson,
+                quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+                salesperson: data.salesperson,
                 subject: data.subject,
                 lineItems: processedLineItems, taxType: data.taxType,
                 comments: data.comments, privateComments: data.privateComments,
@@ -326,22 +301,19 @@ export function CreateQuoteForm() {
                 totalTaxAmount: totalTaxAmount,
                 totalAmount: grandTotal,
                 status: data.status || "Draft",
-                amountPaid: 0,
                 createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 showItemCodeColumn: data.showItemCodeColumn,
                 showDiscountColumn: data.showDiscountColumn,
                 showTaxColumn: data.showTaxColumn,
-                convertedFromQuoteId: data.convertedFromQuoteId,
-                packingCharge: data.packingCharge,
-                handlingCharge: data.handlingCharge,
-                otherCharges: data.otherCharges,
+                shipmentMode: data.shipmentMode,
+                freightCharges: data.freightCharges,
             };
 
             const cleanedDataToSave = Object.fromEntries(
                 Object.entries(dataToSave).filter(([, value]) => value !== undefined && value !== '')
-            ) as Partial<Omit<SaleDocument, 'id'>>;
+            ) as Partial<Omit<QuoteDocument, 'id'>>;
             
-            const newSaleRef = doc(firestore, "sales_invoice", formattedSaleId);
+            const newSaleRef = doc(firestore, "quotes", formattedSaleId);
             transaction.set(newSaleRef, cleanedDataToSave);
 
             const newCounters = {
@@ -352,28 +324,21 @@ export function CreateQuoteForm() {
             };
             transaction.set(counterRef, newCounters, { merge: true });
 
-            itemsToUpdate.forEach(itemUpdate => {
-                transaction.update(itemUpdate.itemRef, {
-                    currentQuantity: itemUpdate.newQty,
-                    updatedAt: serverTimestamp(),
-                });
-            });
-
             return formattedSaleId;
         });
 
       setGeneratedSaleId(newSaleId);
       Swal.fire({
-        title: "Sale Recorded!",
-        text: `Sale successfully recorded with ID: ${newSaleId}. Item stock levels updated.`,
+        title: "Quote Created!",
+        text: `Quote successfully created with ID: ${newSaleId}.`,
         icon: "success",
       });
       form.reset(); 
     } catch (error: any) {
-      console.error("Error recording sale: ", error);
+      console.error("Error creating quote: ", error);
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to record sale: ${error.message}`,
+        text: `Failed to create quote: ${error.message}`,
         icon: "error",
       });
     } finally {
@@ -394,7 +359,7 @@ export function CreateQuoteForm() {
     <Form {...form}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         
-        <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer &amp; Delivery</h3>
+        <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
@@ -436,36 +401,35 @@ export function CreateQuoteForm() {
           <div><FormField control={control} name="billingAddress" render={({ field }) => (<FormItem><FormLabel>Bill To*</FormLabel><FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         
-        <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
+        <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
-             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={generatedSaleId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
-            <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Sale Date*</FormLabel><DatePickerField field={field} placeholder="Select sale date" /><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
+             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel><Input value={generatedSaleId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
+            <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name="paymentTerms" render={({ field }) => (<FormItem><FormLabel>Payment Terms</FormLabel><FormControl><Input placeholder="e.g., Net 30, Due on receipt" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-             <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Status*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {saleStatusOptions.map(status => (
-                            <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
         </div>
+        <Separator className="my-6" />
+        <FormField
+          control={control}
+          name="subject"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Quote Subject</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="e.g., BRAND NEW CAPITAL MACHINERY WITH STANDARD ACCESSORIES FOR 100% EXPORT ORIENTED READYMADE GARMENTS INDUSTRY."
+                  className="text-sm font-normal"
+                  {...field}
+                  value={field.value ?? ''}
+                  rows={2}
+                />
+              </FormControl>
+              <FormDescription>
+                This text will appear below the address section on the quote.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
@@ -502,14 +466,12 @@ export function CreateQuoteForm() {
           </Table>
         </div>
         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
-        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0.00', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00', imageUrl: '' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField control={control} name="shipmentMode" render={({ field }) => (<FormItem><FormLabel>Shipment Mode</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select shipment mode" /></SelectTrigger></FormControl><SelectContent>{shipmentTermsOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+            <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -522,13 +484,13 @@ export function CreateQuoteForm() {
             )}/>
             <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
         </div>
-
+        
         <div className="flex justify-end space-y-2 mt-6">
             <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Additional Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedPackingCharge||0) + Number(watchedHandlingCharge||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {Number(watchedFreightCharges||0).toFixed(2)}</span></div>
                 <Separator />
                 <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
@@ -543,7 +505,7 @@ export function CreateQuoteForm() {
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
-              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Recording Sale...</> ) : ( <><Save className="mr-2 h-4 w-4" />Record Sale</> )}
+              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating Quote...</> ) : ( <><Save className="mr-2 h-4 w-4" />Create Quote</> )}
             </Button>
         </div>
       </form>
@@ -551,23 +513,5 @@ export function CreateQuoteForm() {
   );
 }
 
-export default function CreateNewProformaInvoicePage() {
-  return (
-    <div className="container mx-auto py-8">
-      <Card className="max-w-screen-2xl mx-auto shadow-xl">
-        <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <FilePlus2 className="h-7 w-7 text-primary" />
-            Create New Proforma Invoice
-          </CardTitle>
-          <CardDescription>
-            Fill in the details below to generate a new Proforma Invoice.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CreateSaleInvoiceForm />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+
+
