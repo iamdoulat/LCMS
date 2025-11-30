@@ -182,7 +182,7 @@ export default function AccountDetailsPage() {
           const currentMonthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
           
           let present = 0, delayed = 0, absent = 0, leaveDaysInMonth = 0;
-          const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
+          const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: today }); // Only count up to today
           
           allLeaves.forEach(l => {
               if (l.status === 'Approved') {
@@ -197,20 +197,25 @@ export default function AccountDetailsPage() {
           });
 
           daysInMonth.forEach(day => {
-              if (isFuture(day) && !isToday(day)) return;
+              if (isFuture(day)) return;
 
               const dayStr = format(day, 'yyyy-MM-dd');
               const attendanceRecord = currentMonthlyAttendance.find(a => a.date.startsWith(dayStr));
+              
+              if (attendanceRecord) {
+                  if (attendanceRecord.flag === 'P') present++;
+                  if (attendanceRecord.flag === 'D') delayed++;
+                  return; // Don't count as absent if there is any record
+              }
+              
+              // If no attendance record, check for other valid reasons for not being present
               const dayOfWeek = getDay(day);
               const isWeekend = dayOfWeek === 5; // Assuming Friday is the weekend
               const isOnLeave = allLeaves.some(l => l.status === 'Approved' && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
               const isOnVisit = allVisits.some(v => v.status === 'Approved' && isWithinInterval(day, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }));
               const isHoliday = allHolidays.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
               
-              if (attendanceRecord) {
-                  if (attendanceRecord.flag === 'P') present++;
-                  if (attendanceRecord.flag === 'D') delayed++;
-              } else if (!isWeekend && !isOnLeave && !isOnVisit && !isHoliday) {
+              if (!isWeekend && !isOnLeave && !isOnVisit && !isHoliday) {
                   absent++;
               }
           });
@@ -1255,3 +1260,6 @@ export default function AccountDetailsPage() {
 
 
 
+
+
+    
