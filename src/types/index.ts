@@ -881,13 +881,15 @@ export const QuoteSchema = z.object({
   totalDiscountAmount: z.number().optional(),
   totalTaxAmount: z.number().optional(),
   totalAmount: z.number().optional(),
-  // Column visibility
   showItemCodeColumn: z.boolean().optional().default(true),
   showDiscountColumn: z.boolean().optional().default(true),
   showTaxColumn: z.boolean().optional().default(true),
   convertedToInvoiceId: z.string().optional(),
   shipmentMode: z.enum(shipmentTermsOptions).optional(),
   freightCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  packingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  handlingCharge: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
+  otherCharges: z.preprocess(toNumberOrUndefined, z.number().nonnegative().optional()),
 });
 export type QuoteFormValues = z.infer<typeof QuoteSchema>;
 
@@ -930,6 +932,9 @@ export interface QuoteDocument {
   convertedToInvoiceId?: string;
   shipmentMode?: ShipmentTerms;
   freightCharges?: number;
+  packingCharge?: number;
+  handlingCharge?: number;
+  otherCharges?: number;
 }
 // --- END Quote Types ---
 
