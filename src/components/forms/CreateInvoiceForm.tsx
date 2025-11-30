@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from 'react';
@@ -44,6 +45,7 @@ interface ItemOption extends ComboboxOption {
   itemCode?: string;
   manageStock?: boolean;
   currentQuantity?: number;
+  imageUrl?: string;
 }
 
 interface CustomerOption extends ComboboxOption {
@@ -77,7 +79,8 @@ export function CreateSaleInvoiceForm() {
         unitPrice: '0',
         discountPercentage: '0',
         taxPercentage: '0',
-        total: '0.00'
+        total: '0.00',
+        imageUrl: '',
       }],
       status: "Draft",
       taxType: 'Default',
@@ -89,7 +92,6 @@ export function CreateSaleInvoiceForm() {
       packingCharge: undefined,
       handlingCharge: undefined,
       otherCharges: undefined,
-      shipmentMode: shipmentTermsOptions[0],
     },
   });
 
@@ -186,6 +188,7 @@ export function CreateSaleInvoiceForm() {
               itemCode: data.itemCode,
               manageStock: data.manageStock,
               currentQuantity: data.currentQuantity,
+              imageUrl: data.imageUrl,
             };
           })
         );
@@ -225,11 +228,13 @@ export function CreateSaleInvoiceForm() {
       setValue(`lineItems.${index}.description`, autoDescription, { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, selectedItem.salesPrice !== undefined ? selectedItem.salesPrice.toString() : '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, selectedItem.value, { shouldValidate: true });
+      setValue(`lineItems.${index}.imageUrl`, selectedItem.imageUrl || '', { shouldValidate: true });
     } else {
       setValue(`lineItems.${index}.itemCode`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.description`, '', { shouldValidate: true });
       setValue(`lineItems.${index}.unitPrice`, '0', { shouldValidate: true });
       setValue(`lineItems.${index}.itemId`, '', { shouldValidate: true });
+      setValue(`lineItems.${index}.imageUrl`, '', { shouldValidate: true });
     }
   };
 
@@ -298,6 +303,7 @@ export function CreateSaleInvoiceForm() {
                     itemCode: itemDetails?.itemCode,
                     description: item.description || '',
                     qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: itemTotalBeforeDiscount,
+                    imageUrl: item.imageUrl || undefined,
                 };
                  Object.keys(lineItemData).forEach(key => {
                     if (lineItemData[key] === undefined || lineItemData[key] === null || (typeof lineItemData[key] === 'string' && lineItemData[key].trim() === '')) {
@@ -311,26 +317,18 @@ export function CreateSaleInvoiceForm() {
                 customerId: data.customerId, customerName: selectedCustomer?.label || 'N/A',
                 billingAddress: data.billingAddress, shippingAddress: data.shippingAddress,
                 invoiceDate: format(data.invoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-                dueDate: data.dueDate ? format(data.dueDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
-                paymentTerms: data.paymentTerms, salesperson: data.salesperson,
-                subject: data.subject,
+                salesperson: data.salesperson,
                 lineItems: processedLineItems, taxType: data.taxType,
                 comments: data.comments, privateComments: data.privateComments,
-                subtotal: subtotal,
-                totalDiscountAmount: totalDiscountAmount,
-                totalTaxAmount: totalTaxAmount,
-                totalAmount: grandTotal,
-                status: data.status || "Draft",
-                amountPaid: 0,
+                subtotal: subtotal, totalDiscountAmount: totalDiscountAmount, totalTaxAmount: totalTaxAmount,
+                totalAmount: grandTotal, status: data.status || "Draft",
+                packingCharge: data.packingCharge,
+                handlingCharge: data.handlingCharge,
+                otherCharges: data.otherCharges,
                 createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 showItemCodeColumn: data.showItemCodeColumn,
                 showDiscountColumn: data.showDiscountColumn,
                 showTaxColumn: data.showTaxColumn,
-                convertedFromQuoteId: data.convertedFromQuoteId,
-                shipmentMode: data.shipmentMode,
-                packingCharge: data.packingCharge,
-                handlingCharge: data.handlingCharge,
-                otherCharges: data.otherCharges,
             };
 
             const cleanedDataToSave = Object.fromEntries(
@@ -388,7 +386,7 @@ export function CreateSaleInvoiceForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -433,7 +431,7 @@ export function CreateSaleInvoiceForm() {
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Invoice Details</h3>
-         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
+         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
              <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Number</FormLabel><Input value={generatedSaleId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="invoiceDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Invoice Date*</FormLabel><DatePickerField field={field} placeholder="Select invoice date" /><FormMessage /></FormItem>)}/>
             <FormField control={control} name="dueDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel><DatePickerField field={field} placeholder="Select due date" /><FormMessage /></FormItem>)}/>
@@ -498,13 +496,14 @@ export function CreateSaleInvoiceForm() {
           </Table>
         </div>
         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
-        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00', imageUrl: '' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Other Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="otherCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -545,3 +544,6 @@ export function CreateSaleInvoiceForm() {
     </Form>
   );
 }
+
+
+
