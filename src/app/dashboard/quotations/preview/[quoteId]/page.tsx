@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -186,9 +185,19 @@ export default function PrintQuotePage() {
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
       const ratio = imgHeight / imgWidth;
-      const height = pdfWidth * ratio;
+      let height = pdfWidth * ratio;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, height);
+      let position = 0;
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, height);
+      let heightLeft = height - pdfHeight;
+      
+      while (heightLeft > 0) {
+        position = heightLeft - height;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, height);
+        heightLeft -= pdfHeight;
+      }
+      
       pdf.save(`Quotation_${quoteId}.pdf`);
 
     } catch (error) {
@@ -334,7 +343,7 @@ export default function PrintQuotePage() {
                     <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
                     <td className="p-2 border border-gray-300 align-middle text-center">
                         {item.imageUrl && (
-                          <Image src={item.imageUrl} alt={item.itemName || 'Item image'} width={150} height={150} className="object-contain mx-auto" data-ai-hint="sewing machine"/>
+                            <Image src={item.imageUrl} alt={item.itemName || 'Item image'} width={150} height={150} className="object-contain mx-auto" data-ai-hint="sewing machine"/>
                         )}
                     </td>
                     <td className="p-2 border border-gray-300 align-top break-words">
@@ -366,7 +375,7 @@ export default function PrintQuotePage() {
                     <div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Subtotal:</span><span className="text-gray-800 text-right">{formatCurrency(quoteData.subtotal)}</span></div>
                     {showDiscountColumn && (<div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Total Discount:</span><span className="text-gray-800 text-right">(-) {formatCurrency(quoteData.totalDiscountAmount)}</span></div>)}
                     {showTaxColumn && (<div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Total Tax ({quoteData.taxType}):</span><span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.totalTaxAmount)}</span></div>)}
-                     {(quoteData.freightCharges || 0) > 0 && (
+                    {(quoteData.freightCharges || 0) > 0 && (
                         <div className="flex justify-between"><span className="text-gray-600 font-medium text-right">Freight Charges:</span><span className="text-gray-800 text-right">(+) {formatCurrency(quoteData.freightCharges)}</span></div>
                     )}
                     <Separator className="my-2 border-gray-300" />
@@ -419,3 +428,5 @@ export default function PrintQuotePage() {
     </div>
   );
 }
+
+    
