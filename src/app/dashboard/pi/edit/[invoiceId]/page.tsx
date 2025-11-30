@@ -80,7 +80,7 @@ export default function EditInvoicePage() {
 
   if (error) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="container mx-auto py-8 px-5">
         <Card className="max-w-screen-2xl mx-auto shadow-xl border-destructive">
           <CardHeader><CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive"><AlertTriangle className="h-7 w-7" />Error Loading Invoice</CardTitle></CardHeader>
           <CardContent><p className="text-destructive-foreground">{error}</p>
@@ -93,7 +93,7 @@ export default function EditInvoicePage() {
 
   if (!invoiceData) {
      return (
-      <div className="container mx-auto py-8 text-center">
+      <div className="container mx-auto py-8 text-center px-5">
         <p className="text-muted-foreground">Invoice data could not be loaded.</p>
          <Button variant="outline" asChild className="mt-4"><Link href="/dashboard/pi/list"><ArrowLeft className="mr-2 h-4 w-4" />Back to PI List</Link></Button>
       </div>
@@ -101,7 +101,7 @@ export default function EditInvoicePage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-5">
       <div className="mb-6"><Link href="/dashboard/pi/list" passHref><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to PI List</Button></Link></div>
       <Card className="max-w-screen-2xl mx-auto shadow-xl">
         <CardHeader>
