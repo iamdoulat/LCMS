@@ -900,6 +900,7 @@ export interface QuoteLineItemDocument {
   discountPercentage?: number;
   taxPercentage?: number;
   total: number;
+  imageUrl?: string;
 }
 
 export interface QuoteDocument {
@@ -936,7 +937,7 @@ export const invoiceStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdu
 export type InvoiceStatus = typeof invoiceStatusOptions[number];
 
 export const InvoiceLineItemSchema = z.object({
-  itemId: z.string().min(1, "Item selection is required."),
+  itemId: z.string().optional(),
   itemCode: z.string().optional(),
   description: z.string().optional(),
   qty: z.string().min(1, "Qty is required.").refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, { message: "Qty must be > 0" }),
@@ -979,7 +980,7 @@ export const InvoiceSchema = z.object({
 export type InvoiceFormValues = z.infer<typeof InvoiceSchema>;
 
 export interface InvoiceLineItemDocument {
-  itemId: string;
+  itemId?: string;
   itemName: string;
   itemCode?: string;
   description?: string;
@@ -1818,3 +1819,4 @@ export type VisitApplicationDocument = VisitApplication & { id: string };
 // --- END Visit Application Types ---
 
     
+
