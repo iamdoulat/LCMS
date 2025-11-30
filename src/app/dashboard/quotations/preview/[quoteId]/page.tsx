@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -318,9 +317,10 @@ export default function PrintQuotePage() {
                 <thead className="bg-gray-100 text-gray-700">
                 <tr>
                     <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '4%'}}>#</th>
-                    <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '46%'}}>Item Description</th>
+                    <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '20%'}}>Image</th>
+                    <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '28%'}}>Item Description</th>
                     {showItemCodeColumn && <th className="p-2 border border-gray-300 text-left font-semibold" style={{width: '10%'}}>Item Code</th>}
-                    <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '8%'}}>Qty</th>
+                    <th className="p-2 border border-gray-300 text-center font-semibold" style={{width: '6%'}}>Qty</th>
                     <th className="p-2 border border-gray-300 text-right font-semibold whitespace-nowrap" style={{width: '12%'}}>Unit Price</th>
                     {showDiscountColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Discount</th>}
                     {showTaxColumn && <th className="p-2 border border-gray-300 text-right font-semibold" style={{width: '8%'}}>Tax</th>}
@@ -331,6 +331,9 @@ export default function PrintQuotePage() {
                 {quoteData.lineItems.map((item, index) => (
                     <tr key={`${item.itemId}-${index}`} className="border-b border-gray-200">
                     <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
+                    <td className="p-2 border border-gray-300 align-top">
+                        {(item as any).imageUrl && <Image src={(item as any).imageUrl} alt={item.itemName || 'Item image'} width={150} height={150} className="object-cover" />}
+                    </td>
                     <td className="p-2 border border-gray-300 align-top break-words">
                         <p className="font-medium text-gray-900">{item.itemName}</p>
                         {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}

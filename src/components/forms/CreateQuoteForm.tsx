@@ -42,6 +42,7 @@ interface ItemOption extends ComboboxOption {
   description?: string;
   salesPrice?: number;
   itemCode?: string;
+  imageUrl?: string;
 }
 
 interface CustomerOption extends ComboboxOption {
@@ -167,6 +168,7 @@ export function CreateQuoteForm() {
               description: data.description,
               salesPrice: data.salesPrice,
               itemCode: data.itemCode,
+              imageUrl: data.imageUrl,
             };
           })
         );
@@ -244,6 +246,7 @@ export function CreateQuoteForm() {
                 discountPercentage: parseFloat(String(item.discountPercentage || '0')),
                 taxPercentage: parseFloat(String(item.taxPercentage || '0')),
                 total,
+                imageUrl: itemDetails?.imageUrl,
             };
             Object.keys(lineItemData).forEach(key => {
                 if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
@@ -945,26 +948,5 @@ export function CreateQuoteForm() {
         </div>
       </form>
     </Form>
-  );
-}
-
-export default function CreateNewQuotePage() {
-  return (
-    <div className="container mx-auto py-8">
-      <Card className="max-w-screen-2xl mx-auto shadow-xl">
-        <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <FilePlus2 className="h-7 w-7 text-primary" />
-            Create New Quote
-          </CardTitle>
-          <CardDescription>
-            Fill in the details below to generate a new sales quotation.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CreateQuoteForm />
-        </CardContent>
-      </Card>
-    </div>
   );
 }
