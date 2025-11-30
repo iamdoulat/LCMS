@@ -859,6 +859,7 @@ export const QuoteLineItemSchema = z.object({
   discountPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Discount must be 0-100 or blank" }),
   taxPercentage: z.string().optional().refine(val => val === '' || val === undefined || (!isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100), { message: "Tax must be 0-100 or blank" }),
   total: z.string(), // Calculated, not for direct input
+  imageUrl: z.string().url().optional().or(z.literal('')),
 });
 export type QuoteLineItemFormValues = z.infer<typeof QuoteLineItemSchema>;
 
@@ -1819,4 +1820,5 @@ export type VisitApplicationDocument = VisitApplication & { id: string };
 // --- END Visit Application Types ---
 
     
+
 
