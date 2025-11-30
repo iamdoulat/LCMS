@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from 'next/link';
@@ -146,6 +145,7 @@ const lcManagementNavItems: NavItem[] = [
     { href: '/dashboard/total-lc', label: 'Total T/T OR L/C List', icon: ListChecks, iconColorClass: 'bg-icon-lc' },
     { href: '/dashboard/reports', label: 'Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
     { href: '/dashboard/shipments/upcoming-lc-shipment-dates', label: 'Upcoming Shipments', icon: CalendarClock, iconColorClass: 'bg-icon-upcoming' },
+    { href: '/dashboard/shipments/lc-expire-tracker', label: 'L/C Expire Tracker', icon: CalendarClock, iconColorClass: 'bg-icon-payment-pending' },
     { href: '/dashboard/shipments/shipment-on-the-way', label: 'Shipment Done', icon: PackageCheck, iconColorClass: 'bg-icon-shipment-done' },
     { href: '/dashboard/shipments/lc-payment-pending', label: 'Payment Pending', icon: DollarSign, iconColorClass: 'bg-icon-payment-pending' },
     { href: '/dashboard/shipments/lc-payment-done', label: 'L/C Payment Done', icon: DollarSign, iconColorClass: 'bg-icon-payment-done' },
