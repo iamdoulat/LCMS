@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -8,7 +9,7 @@ import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDoc
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import Link from 'next/link';
-import { format, parseISO, isValid, differenceInDays, addDays, startOfDay } from 'date-fns';
+import { format, parseISO, isValid, differenceInDays, addDays, startOfDay, isWithinInterval } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
@@ -16,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ExpiringLC extends LCEntryDocument {
   expireDateObj: Date;
@@ -79,54 +81,48 @@ export default function LcExpireTrackerPage() {
         const lcEntriesRef = collection(firestore, "lc_entries");
         const today = startOfDay(new Date());
         const thirtyDaysFromNow = addDays(today, 30);
-
-        const statusToQuery: LCStatus = "Shipment Pending";
-
-        const arrayQuery = query(lcEntriesRef, where("status", "array-contains", statusToQuery));
-        const stringQuery = query(lcEntriesRef, where("status", "==", statusToQuery));
         
-        const [arraySnapshot, stringSnapshot] = await Promise.all([
-          getDocs(arrayQuery),
-          getDocs(stringQuery),
-        ]);
+        // Fetch all LCs that expire in the future. We'll filter status client-side to avoid complex index.
+        const q = query(lcEntriesRef, where("expireDate", ">=", format(today, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx")));
+        const querySnapshot = await getDocs(q);
 
-        const expiringLCsMap = new Map<string, ExpiringLC>();
-        
-        const processSnapshot = (snapshot: typeof arraySnapshot) => {
-          snapshot.docs.forEach(doc => {
-            if(expiringLCsMap.has(doc.id)) return;
-
+        const expiringLCs = querySnapshot.docs.map(doc => {
             const data = doc.data() as LCEntryDocument;
-            if (data.expireDate) {
-              const expireDateObj = parseISO(data.expireDate);
-              if (isValid(expireDateObj) && isWithinInterval(expireDateObj, { start: today, end: thirtyDaysFromNow })) {
-                const remainingDays = differenceInDays(expireDateObj, today);
-                expiringLCsMap.set(doc.id, {
-                  ...data,
-                  id: doc.id,
-                  expireDateObj,
-                  remainingDays,
-                });
-              }
-            }
-          });
-        };
+            const expireDateObj = parseISO(data.expireDate as string);
+            const remainingDays = differenceInDays(expireDateObj, today);
+            return {
+              ...data,
+              id: doc.id,
+              expireDateObj,
+              remainingDays,
+            } as ExpiringLC;
+        }).filter(lc => {
+            // Now, filter client-side for status and if it's within 30 days
+            const hasShipmentPending = Array.isArray(lc.status)
+                ? lc.status.includes("Shipment Pending")
+                : lc.status === "Shipment Pending";
 
-        processSnapshot(arraySnapshot);
-        processSnapshot(stringSnapshot);
+            return hasShipmentPending && isWithinInterval(lc.expireDateObj, { start: today, end: thirtyDaysFromNow });
+        });
 
-        const expiringLCs = Array.from(expiringLCsMap.values());
         expiringLCs.sort((a, b) => a.expireDateObj.getTime() - b.expireDateObj.getTime());
         
         setAllExpiringLCs(expiringLCs);
 
       } catch (error: any) {
+        console.error("Error fetching 'Payment Done' L/Cs: ", error);
         let errorMessage = `Could not fetch L/C data. Ensure Firestore rules allow reads.`;
-        if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `A Firestore index is required for this query. Please check browser console for a link to create it.`;
+         if (error.message?.toLowerCase().includes("index")) {
+            errorMessage = `A Firestore index is required for this query. Please check browser console for a link to create it. The query needs an index on 'expireDate'.`;
+        } else if (error.message) {
+            errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
-        Swal.fire("Fetch Error", errorMessage, "error");
+        Swal.fire({
+          title: "Fetch Error",
+          html: errorMessage.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>'),
+          icon: "error",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -207,9 +203,17 @@ export default function LcExpireTrackerPage() {
           {isLoading ? (
              <div className="flex flex-col items-center justify-center h-64"><Loader2 className="h-12 w-12 animate-spin text-primary mb-4" /><p>Loading expiring L/Cs...</p></div>
           ) : fetchError ? (
-            <div className="text-center p-8 text-destructive">{fetchError}</div>
+            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
+              <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+              <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Data</p>
+              <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}></p>
+            </div>
           ) : displayedLCs.length === 0 ? (
-            <div className="text-center p-8 text-muted-foreground"><Info className="mx-auto mb-2 h-10 w-10" /><p>No L/Cs are expiring within the next 30 days.</p></div>
+            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-muted-foreground/30 rounded-lg bg-muted/20 p-6">
+              <Info className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-xl font-semibold text-muted-foreground">No L/Cs Expiring Soon</p>
+              <p className="text-sm text-muted-foreground text-center">{allExpiringLCs.length > 0 ? "No records match your current filters." : "No L/Cs are expiring within the next 30 days."}</p>
+            </div>
           ) : (
             <div className="rounded-md border overflow-x-auto">
               <Table>
@@ -261,3 +265,6 @@ export default function LcExpireTrackerPage() {
     </div>
   );
 }
+
+
+    
