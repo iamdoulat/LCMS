@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -60,7 +59,7 @@ type SaleFormValues = PageSaleFormValues;
 type SaleLineItemFormValues = PageSaleLineItemFormValues;
 
 
-export function CreateSaleInvoiceForm() {
+export function CreateQuoteForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
@@ -83,7 +82,8 @@ export function CreateSaleInvoiceForm() {
         unitPrice: '0',
         discountPercentage: '0',
         taxPercentage: '0',
-        total: '0.00'
+        total: '0.00',
+        imageUrl: '',
       }],
       status: "Draft",
       taxType: 'Default',
@@ -394,7 +394,7 @@ export function CreateSaleInvoiceForm() {
     <Form {...form}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         
-        <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
+        <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer &amp; Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
@@ -502,9 +502,10 @@ export function CreateSaleInvoiceForm() {
           </Table>
         </div>
         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
-        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0.00', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField control={control} name="packingCharge" render={({ field }) => (<FormItem><FormLabel>Packing Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={control} name="handlingCharge" render={({ field }) => (<FormItem><FormLabel>Handling Charge</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -550,3 +551,23 @@ export function CreateSaleInvoiceForm() {
   );
 }
 
+export default function CreateNewProformaInvoicePage() {
+  return (
+    <div className="container mx-auto py-8">
+      <Card className="max-w-screen-2xl mx-auto shadow-xl">
+        <CardHeader>
+          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <FilePlus2 className="h-7 w-7 text-primary" />
+            Create New Proforma Invoice
+          </CardTitle>
+          <CardDescription>
+            Fill in the details below to generate a new Proforma Invoice.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CreateSaleInvoiceForm />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

@@ -196,6 +196,20 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   }, [watchedLineItems, showDiscountColumn, showTaxColumn, watchedFreightCharges]);
 
   React.useEffect(() => {
+    watchedLineItems.forEach((item, index) => {
+        const qty = parseFloat(String(item.qty || '0')) || 0;
+        const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
+        const itemTotalBeforeDiscount = isNaN(qty) || isNaN(unitPrice) ? 0 : qty * unitPrice;
+        
+        const currentFormLineTotal = getValues(`lineItems.${index}.total`);
+        if (String(itemTotalBeforeDiscount.toFixed(2)) !== currentFormLineTotal) {
+          setValue(`lineItems.${index}.total`, itemTotalBeforeDiscount.toFixed(2));
+        }
+    })
+  }, [watchedLineItems, getValues, setValue]);
+
+
+  React.useEffect(() => {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
@@ -450,7 +464,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8"> 
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -497,7 +512,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel><Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-             <FormField
+            <FormField
               control={form.control}
               name="status"
               render={({ field }) => (
@@ -550,20 +565,13 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
                 <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
-            <div className="flex items-center gap-2">
-                <Link href="/dashboard/quotations/items/add" target="_blank">
-                    <Button variant="outline" size="sm" type="button">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
-                    </Button>
-                </Link>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
-                    </DropdownMenuContent></DropdownMenu>
-            </div>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
+                <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
+                </DropdownMenuContent></DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
@@ -580,7 +588,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
                   {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
-                  <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
+                  <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
             </TableBody>
@@ -588,9 +596,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         </div>
         {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
-
         <Separator />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            <FormField
               control={form.control}
               name="shipmentMode"
@@ -611,12 +618,12 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   </FormItem>
               )}
             />
-            <FormField control={form.control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+            <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold underline">Terms and Conditions:</FormLabel>
+                <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
                 <FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
