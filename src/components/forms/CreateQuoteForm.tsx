@@ -11,8 +11,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteDocument, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, ShipmentTerms, QuoteFormValues as PageQuoteFormValues, QuoteLineItemDocument } from '@/types'; // Updated types
-import { QuoteSchema, quoteTaxTypes, invoiceStatusOptions as saleStatusOptions, shipmentTermsOptions } from '@/types'; // Updated schemas
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteDocument, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, ShipmentTerms, QuoteFormValues as PageQuoteFormValues, QuoteLineItemDocument } from '@/types';
+import { QuoteSchema, quoteTaxTypes, invoiceStatusOptions as saleStatusOptions, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -245,14 +245,14 @@ export function CreateQuoteForm() {
     }
   };
 
-  const saveOrderLogic = async (data: SaleFormValues): Promise<string | null> => {
+  const saveQuoteLogic = async (data: SaleFormValues): Promise<string | null> => {
     setIsSubmitting(true);
     const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
     const currentYear = new Date().getFullYear();
     const counterRef = doc(firestore, "counters", "quoteNumberGenerator");
 
     try {
-      const newOrderId = await runTransaction(firestore, async (transaction) => {
+      const newQuoteId = await runTransaction(firestore, async (transaction) => {
         const counterDoc = await transaction.get(counterRef);
         let currentCount = 0;
         if (counterDoc.exists()) {
@@ -260,44 +260,25 @@ export function CreateQuoteForm() {
           currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
         }
         const newCount = currentCount + 1;
-        const formattedSaleId = `QT${currentYear}-${String(newCount).padStart(3, '0')}`;
-        
-        const processedLineItems: QuoteLineItemDocument[] = data.lineItems.map(item => {
-          const qty = parseFloat(String(item.qty || '0'));
-          const unitPriceStr = String(item.unitPrice || '0');
-          const finalUnitPrice = parseFloat(unitPriceStr);
-          const discountPercentageStr = String(item.discountPercentage || '0');
-          const finalDiscountPercentage = parseFloat(discountPercentageStr);
-          const taxPercentageStr = String(item.taxPercentage || '0');
-          const finalTaxPercentage = parseFloat(taxPercentageStr);
+        const formattedQuoteId = `QT${currentYear}-${String(newCount).padStart(3, '0')}`;
 
-          const itemTotalBeforeDiscount = qty * finalUnitPrice;
-          
-          const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-
-          const lineItemData: Record<string, any> = {
-              itemId: item.itemId,
-              itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
-              itemCode: itemDetailsFromOptions?.itemCode,
-              description: item.description || '',
-              qty: qty,
-              unitPrice: finalUnitPrice,
-              discountPercentage: finalDiscountPercentage,
-              taxPercentage: finalTaxPercentage,
-              total: itemTotalBeforeDiscount,
-              imageUrl: item.imageUrl || '',
+        const processedLineItems = data.lineItems.map(item => {
+          const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
+          return {
+            itemId: item.itemId,
+            itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+            itemCode: itemDetails?.itemCode || undefined,
+            description: item.description || '',
+            qty: parseFloat(String(item.qty || '0')),
+            unitPrice: parseFloat(String(item.unitPrice || '0')),
+            discountPercentage: parseFloat(String(item.discountPercentage || '0')),
+            taxPercentage: parseFloat(String(item.taxPercentage || '0')),
+            total: (parseFloat(String(item.qty || '0')) * parseFloat(String(item.unitPrice || '0'))),
+            imageUrl: item.imageUrl || undefined,
           };
-          // Clean up undefined/empty fields within the line item
-          Object.keys(lineItemData).forEach(key => {
-              const value = lineItemData[key];
-              if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
-                  delete lineItemData[key];
-              }
-          });
-          return lineItemData as QuoteLineItemDocument;
         });
         
-        const orderDataToSave: Partial<Omit<QuoteDocument, 'id'>> & { createdAt: any, updatedAt: any } = {
+        const quoteDataToSave: Partial<Omit<QuoteDocument, 'id'>> & { createdAt: any, updatedAt: any } = {
           customerId: data.customerId,
           customerName: selectedCustomer?.label || 'N/A',
           billingAddress: data.billingAddress,
@@ -305,7 +286,7 @@ export function CreateQuoteForm() {
           quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
           salesperson: data.salesperson,
           subject: data.subject,
-          lineItems: processedLineItems,
+          lineItems: processedLineItems as QuoteLineItemDocument[],
           taxType: data.taxType,
           comments: data.comments,
           privateComments: data.privateComments,
@@ -313,42 +294,36 @@ export function CreateQuoteForm() {
           totalDiscountAmount: totalDiscountAmount,
           totalTaxAmount: totalTaxAmount,
           totalAmount: grandTotal,
-          status: data.status || "Draft",
-          packingCharge: data.packingCharge,
-          handlingCharge: data.handlingCharge,
-          otherCharges: data.otherCharges,
-          freightCharges: data.freightCharges,
-          shipmentMode: data.shipmentMode,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
+          status: "Draft",
           showItemCodeColumn: data.showItemCodeColumn,
           showDiscountColumn: data.showDiscountColumn,
           showTaxColumn: data.showTaxColumn,
+          shipmentMode: data.shipmentMode,
+          freightCharges: data.freightCharges,
+          packingCharge: data.packingCharge,
+          handlingCharge: data.handlingCharge,
+          otherCharges: data.otherCharges,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         };
 
         const cleanedDataToSave = Object.fromEntries(
-            Object.entries(orderDataToSave).filter(([, value]) => value !== undefined && value !== '')
-        ) as Partial<Omit<QuoteDocument, 'id'>>;
-        
-        const newSaleRef = doc(firestore, "quotes", formattedSaleId);
-        transaction.set(newSaleRef, cleanedDataToSave);
+            Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined && value !== '')
+        );
 
-        const newCounters = {
-          yearlyCounts: {
-            ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}),
-            [currentYear]: newCount,
-          }
-        };
-        transaction.set(counterRef, newCounters, { merge: true });
-        
-        return formattedSaleId;
+        const newQuoteRef = doc(firestore, "quotes", formattedQuoteId);
+        transaction.set(newQuoteRef, cleanedDataToSave);
+
+        transaction.set(counterRef, { yearlyCounts: { ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}), [currentYear]: newCount } }, { merge: true });
+
+        return formattedQuoteId;
       });
-      return newOrderId;
-    } catch (error) {
-      console.error("Error in saveOrderLogic for quote: ", error);
+      return newQuoteId;
+    } catch (error: any) {
+      console.error("Error in saveQuoteLogic: ", error);
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to save quote: ${(error as Error).message}`,
+        text: `Failed to save quote: ${error.message}`,
         icon: "error",
       });
       return null;
@@ -358,7 +333,7 @@ export function CreateQuoteForm() {
   };
 
   const handleRegularSave = async (data: SaleFormValues) => {
-    const newId = await saveOrderLogic(data);
+    const newId = await saveQuoteLogic(data);
     if (newId) {
       setGeneratedSaleId(newId);
       Swal.fire("Quote Saved!", `Quote successfully saved with ID: ${newId}.`, "success");
@@ -366,7 +341,7 @@ export function CreateQuoteForm() {
   };
 
   const handleSaveAndPreview = async (data: SaleFormValues) => {
-    const newId = await saveOrderLogic(data);
+    const newId = await saveQuoteLogic(data);
     if (newId) {
       setGeneratedSaleId(newId);
       Swal.fire({
@@ -380,7 +355,7 @@ export function CreateQuoteForm() {
       });
     }
   };
-  
+
   const handlePreviewLastSaved = () => {
     if (generatedSaleId) {
       router.push(`/dashboard/quotations/preview/${generatedSaleId}`);
@@ -388,7 +363,7 @@ export function CreateQuoteForm() {
       Swal.fire("No Quote Saved", "Please save a quote first to preview it.", "info");
     }
   };
-
+  
   const grandTotalLabel = `TOTAL (USD):`;
   const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
   const actionButtonsDisabled = !generatedSaleId || isSubmitting;
@@ -402,7 +377,7 @@ export function CreateQuoteForm() {
       </div>
     );
   }
-  
+
   return (
     <Form {...form}>
       <form className="space-y-8">
@@ -524,8 +499,8 @@ export function CreateQuoteForm() {
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00', imageUrl: '' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+           <FormField
               control={form.control}
               name="shipmentMode"
               render={({ field }) => (
@@ -545,9 +520,8 @@ export function CreateQuoteForm() {
                   </FormItem>
               )}
             />
-          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
@@ -592,3 +566,5 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+```
+
