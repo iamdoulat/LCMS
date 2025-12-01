@@ -263,30 +263,38 @@ export function CreateQuoteForm() {
         const formattedSaleId = `QT${currentYear}-${String(newCount).padStart(3, '0')}`;
         
         const processedLineItems: QuoteLineItemDocument[] = data.lineItems.map(item => {
-            const qty = parseFloat(String(item.qty || '0'));
-            const unitPriceStr = String(item.unitPrice || '0');
-            const finalUnitPrice = parseFloat(unitPriceStr);
-            const discountPercentageStr = String(item.discountPercentage || '0');
-            const finalDiscountPercentage = parseFloat(discountPercentageStr);
-            const taxPercentageStr = String(item.taxPercentage || '0');
-            const finalTaxPercentage = parseFloat(taxPercentageStr);
+          const qty = parseFloat(String(item.qty || '0'));
+          const unitPriceStr = String(item.unitPrice || '0');
+          const finalUnitPrice = parseFloat(unitPriceStr);
+          const discountPercentageStr = String(item.discountPercentage || '0');
+          const finalDiscountPercentage = parseFloat(discountPercentageStr);
+          const taxPercentageStr = String(item.taxPercentage || '0');
+          const finalTaxPercentage = parseFloat(taxPercentageStr);
 
-            const itemTotalBeforeDiscount = qty * finalUnitPrice;
-            
-            const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
+          const itemTotalBeforeDiscount = qty * finalUnitPrice;
+          
+          const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
 
-            return {
-                itemId: item.itemId,
-                itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
-                itemCode: itemDetailsFromOptions?.itemCode,
-                description: item.description || '',
-                qty: qty,
-                unitPrice: finalUnitPrice,
-                discountPercentage: finalDiscountPercentage,
-                taxPercentage: finalTaxPercentage,
-                total: itemTotalBeforeDiscount,
-                imageUrl: item.imageUrl || '',
-            };
+          const lineItemData: Record<string, any> = {
+              itemId: item.itemId,
+              itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
+              itemCode: itemDetailsFromOptions?.itemCode,
+              description: item.description || '',
+              qty: qty,
+              unitPrice: finalUnitPrice,
+              discountPercentage: finalDiscountPercentage,
+              taxPercentage: finalTaxPercentage,
+              total: itemTotalBeforeDiscount,
+              imageUrl: item.imageUrl || '',
+          };
+          // Clean up undefined/empty fields within the line item
+          Object.keys(lineItemData).forEach(key => {
+              const value = lineItemData[key];
+              if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
+                  delete lineItemData[key];
+              }
+          });
+          return lineItemData as QuoteLineItemDocument;
         });
         
         const orderDataToSave: Partial<Omit<QuoteDocument, 'id'>> & { createdAt: any, updatedAt: any } = {
@@ -349,7 +357,7 @@ export function CreateQuoteForm() {
     }
   };
 
-  const onSubmit = async (data: SaleFormValues) => {
+  const handleRegularSave = async (data: SaleFormValues) => {
     const newId = await saveOrderLogic(data);
     if (newId) {
       setGeneratedSaleId(newId);
@@ -394,7 +402,7 @@ export function CreateQuoteForm() {
       </div>
     );
   }
-
+  
   return (
     <Form {...form}>
       <form className="space-y-8">
@@ -446,28 +454,6 @@ export function CreateQuoteForm() {
              <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel><Input value={generatedSaleId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {saleStatusOptions.map(status => (
-                            <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
         </div>
         <Separator className="my-6" />
         <FormField
@@ -498,13 +484,20 @@ export function CreateQuoteForm() {
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
                 <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
-                <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
-                </DropdownMenuContent></DropdownMenu>
+            <div className="flex items-center gap-2">
+                <Link href="/dashboard/quotations/items/add" target="_blank">
+                    <Button variant="outline" size="sm" type="button">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
+                    </Button>
+                </Link>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
+                    </DropdownMenuContent></DropdownMenu>
+            </div>
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
@@ -531,7 +524,7 @@ export function CreateQuoteForm() {
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00', imageUrl: '' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
               control={form.control}
               name="shipmentMode"
@@ -552,7 +545,7 @@ export function CreateQuoteForm() {
                   </FormItem>
               )}
             />
-          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -585,7 +578,7 @@ export function CreateQuoteForm() {
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
-            <Button type="button" onClick={handleSubmit(onSubmit)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
+            <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
               {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Quote...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Quote</> )}
             </Button>
             <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
@@ -599,4 +592,3 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
-```
