@@ -328,7 +328,7 @@ export default function PrintInvoicePage() {
                   </td>
                   <td className="p-2 border border-gray-300 align-top break-words">
                     <p className="font-medium text-gray-900">{item.itemName}</p>
-                    {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
+                    {item.description && item.description !== item.itemName && <div className="text-xs text-gray-500 mt-0.5 whitespace-pre-line" dangerouslySetInnerHTML={{ __html: item.description.replace(/\n/g, '<br />') }} />}
                   </td>
                   {showItemCodeColumn && <td className="p-2 border border-gray-300 align-top">{item.itemCode || 'N/A'}</td>}
                   <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
@@ -400,7 +400,7 @@ export default function PrintInvoicePage() {
         </section>
       </div>
 
-       <div className="print-only-utility-buttons mt-8 text-center noprint flex justify-center items-center gap-2">
+      <div className="print-only-utility-buttons mt-8 text-center noprint flex justify-center items-center gap-2">
         <Button onClick={handleShare} variant="outline">
           <Share2 className="mr-2 h-4 w-4" /> Share
         </Button>
@@ -417,5 +417,3 @@ export default function PrintInvoicePage() {
     </div>
   );
 }
-
-    

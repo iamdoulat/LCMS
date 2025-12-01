@@ -342,10 +342,8 @@ export default function PrintQuotePage() {
                     <tr key={`${item.itemId}-${index}`} className="border-b border-gray-200">
                     <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
                     <td className="p-2 border border-gray-300 align-middle text-center">
-                        {item.imageUrl ? (
+                        {item.imageUrl && (
                             <Image src={item.imageUrl} alt={item.itemName || 'Item image'} width={150} height={150} className="object-contain mx-auto" data-ai-hint="sewing machine"/>
-                        ) : (
-                            <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">No Image</div>
                         )}
                     </td>
                     <td className="p-2 border border-gray-300 align-top break-words">
