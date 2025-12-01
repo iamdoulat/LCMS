@@ -10,7 +10,20 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteDocument, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, ShipmentTerms, QuoteFormValues as PageQuoteFormValues, QuoteLineItemDocument } from '@/types';
+import type { 
+  CustomerDocument, 
+  ItemDocument as ItemDoc, 
+  QuoteTaxType, 
+  QuoteDocument, 
+  SaleDocument, 
+  SaleFormValues as PageSaleFormValues, 
+  SaleLineItemFormValues as PageSaleLineItemFormValues, 
+  SaleStatus, 
+  ShipmentTerms, 
+  QuoteFormValues as PageQuoteFormValues, 
+  QuoteLineItemFormValues as PageQuoteLineItemFormValues,
+  QuoteLineItemDocument 
+} from '@/types';
 import { QuoteSchema, quoteTaxTypes, invoiceStatusOptions as saleStatusOptions, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -277,7 +290,7 @@ export function CreateQuoteForm() {
           };
         });
         
-        const quoteDataToSave: Partial<Omit<QuoteDocument, 'id'>> & { createdAt: any, updatedAt: any } = {
+        const quoteDataToSave: Partial<Omit<QuoteDocument, 'id'>> & { createdAt: ReturnType<typeof serverTimestamp>, updatedAt: ReturnType<typeof serverTimestamp> } = {
           customerId: data.customerId,
           customerName: selectedCustomer?.label || 'N/A',
           billingAddress: data.billingAddress,
