@@ -12,7 +12,7 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, ShipmentTerms, QuoteFormValues as PageQuoteFormValues } from '@/types'; // Updated types
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteDocument, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, ShipmentTerms, QuoteFormValues as PageQuoteFormValues } from '@/types'; // Updated types
 import { QuoteSchema, quoteTaxTypes, saleStatusOptions, shipmentTermsOptions } from '@/types'; // Updated schemas
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,7 +57,7 @@ interface CustomerOption extends ComboboxOption {
 }
 
 type SaleFormValues = PageQuoteFormValues;
-type SaleLineItemFormValues = PageSaleLineItemFormValues;
+type SaleLineItemFormValues = PageQuoteLineItemFormValues;
 
 
 export function CreateQuoteForm() {
@@ -97,6 +97,7 @@ export function CreateQuoteForm() {
       handlingCharge: undefined,
       otherCharges: undefined,
       shipmentMode: shipmentTermsOptions[0],
+      freightCharges: undefined,
     },
   });
 
@@ -117,6 +118,8 @@ export function CreateQuoteForm() {
   const watchedPackingCharge = watch("packingCharge");
   const watchedHandlingCharge = watch("handlingCharge");
   const watchedOtherCharges = watch("otherCharges");
+  const watchedFreightCharges = watch("freightCharges");
+  const watchedShipmentMode = watch("shipmentMode");
 
   const { subtotal, totalDiscountAmount, totalTaxAmount, grandTotal } = React.useMemo(() => {
     let currentSubtotal = 0;
@@ -154,7 +157,8 @@ export function CreateQuoteForm() {
     const packing = Number(watchedPackingCharge || 0);
     const handling = Number(watchedHandlingCharge || 0);
     const other = Number(watchedOtherCharges || 0);
-    const additionalCharges = packing + handling + other;
+    const freight = Number(watchedFreightCharges || 0);
+    const additionalCharges = packing + handling + other + freight;
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
     
@@ -164,7 +168,7 @@ export function CreateQuoteForm() {
       totalTaxAmount: currentTotalTax,
       grandTotal: currentGrandTotal,
     };
-  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges]);
+  }, [watchedLineItems, showDiscountColumn, showTaxColumn, getValues, setValue, watchedPackingCharge, watchedHandlingCharge, watchedOtherCharges, watchedFreightCharges]);
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -307,6 +311,9 @@ export function CreateQuoteForm() {
                 showTaxColumn: data.showTaxColumn,
                 shipmentMode: data.shipmentMode,
                 freightCharges: data.freightCharges,
+                packingCharge: data.packingCharge,
+                handlingCharge: data.handlingCharge,
+                otherCharges: data.otherCharges,
             };
 
             const cleanedDataToSave = Object.fromEntries(
@@ -359,7 +366,7 @@ export function CreateQuoteForm() {
     <Form {...form}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         
-        <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery Information</h3>
+        <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <FormField
@@ -385,11 +392,11 @@ export function CreateQuoteForm() {
           <div>
             <FormField
               control={control}
-              name="shippingAddress"
+              name="billingAddress"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Delivery Address*</FormLabel>
-                  <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl>
+                  <FormLabel>Bill To*</FormLabel>
+                  <FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -398,7 +405,7 @@ export function CreateQuoteForm() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
-          <div><FormField control={control} name="billingAddress" render={({ field }) => (<FormItem><FormLabel>Bill To*</FormLabel><FormControl><Textarea placeholder="Billing address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
@@ -406,6 +413,28 @@ export function CreateQuoteForm() {
              <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel><Input value={generatedSaleId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
             <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
             <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
+            <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Status*</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {saleStatusOptions.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
         </div>
         <Separator className="my-6" />
         <FormField
@@ -470,14 +499,33 @@ export function CreateQuoteForm() {
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="shipmentMode" render={({ field }) => (<FormItem><FormLabel>Shipment Mode</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select shipment mode" /></SelectTrigger></FormControl><SelectContent>{shipmentTermsOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+          <FormField
+              control={form.control}
+              name="shipmentMode"
+              render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Shipment Mode</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? shipmentTermsOptions[0]}>
+                          <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select shipment mode" />
+                              </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              {shipmentTermsOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                      <FormMessage />
+                  </FormItem>
+              )}
+            />
+          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold underline">TERMS AND CONDITIONS:</FormLabel>
+                <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
                 <FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
@@ -514,4 +562,35 @@ export function CreateQuoteForm() {
 }
 
 
+```
+    <content><![CDATA[
 
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { FilePlus2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { CreateSaleInvoiceForm } from '@/components/forms/CreateSaleInvoiceForm';
+import * as React from 'react';
+
+
+export default function CreateNewInvoicePage() {
+  return (
+    <div className="container mx-auto py-8">
+      <Card className="max-w-screen-2xl mx-auto shadow-xl">
+        <CardHeader>
+          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <FilePlus2 className="h-7 w-7 text-primary" />
+            Create New Proforma Invoice
+          </CardTitle>
+          <CardDescription>
+            Fill in the details below to generate a new Proforma Invoice.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CreateSaleInvoiceForm />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
