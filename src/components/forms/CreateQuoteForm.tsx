@@ -60,6 +60,7 @@ type SaleLineItemFormValues = PageQuoteLineItemFormValues;
 
 
 export function CreateQuoteForm() {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
@@ -222,6 +223,7 @@ export function CreateQuoteForm() {
     }
   }, [watchedCustomerId, customerOptions, setValue]);
 
+
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
@@ -258,7 +260,7 @@ export function CreateQuoteForm() {
           currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
         }
         const newCount = currentCount + 1;
-        const formattedOrderId = `QT${currentYear}-${String(newCount).padStart(3, '0')}`;
+        const formattedSaleId = `QT${currentYear}-${String(newCount).padStart(3, '0')}`;
         
         const processedLineItems: QuoteLineItemDocument[] = data.lineItems.map(item => {
             const qty = parseFloat(String(item.qty || '0'));
@@ -283,11 +285,11 @@ export function CreateQuoteForm() {
                 discountPercentage: finalDiscountPercentage,
                 taxPercentage: finalTaxPercentage,
                 total: itemTotalBeforeDiscount,
-                imageUrl: item.imageUrl,
+                imageUrl: item.imageUrl || '',
             };
         });
         
-        const orderDataToSave = {
+        const orderDataToSave: Partial<Omit<QuoteDocument, 'id'>> & { createdAt: any, updatedAt: any } = {
           customerId: data.customerId,
           customerName: selectedCustomer?.label || 'N/A',
           billingAddress: data.billingAddress,
@@ -320,8 +322,8 @@ export function CreateQuoteForm() {
             Object.entries(orderDataToSave).filter(([, value]) => value !== undefined && value !== '')
         ) as Partial<Omit<QuoteDocument, 'id'>>;
         
-        const newOrderRef = doc(firestore, "quotes", formattedOrderId);
-        transaction.set(newOrderRef, cleanedDataToSave);
+        const newSaleRef = doc(firestore, "quotes", formattedSaleId);
+        transaction.set(newSaleRef, cleanedDataToSave);
 
         const newCounters = {
           yearlyCounts: {
@@ -331,7 +333,7 @@ export function CreateQuoteForm() {
         };
         transaction.set(counterRef, newCounters, { merge: true });
         
-        return formattedOrderId;
+        return formattedSaleId;
       });
       return newOrderId;
     } catch (error) {
@@ -496,20 +498,13 @@ export function CreateQuoteForm() {
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
                 <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
-            <div className="flex items-center gap-2">
-                <Link href="/dashboard/quotations/items/add" target="_blank">
-                    <Button variant="outline" size="sm" type="button">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
-                    </Button>
-                </Link>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
-                    </DropdownMenuContent></DropdownMenu>
-            </div>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
+                <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
+                </DropdownMenuContent></DropdownMenu>
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
@@ -557,7 +552,7 @@ export function CreateQuoteForm() {
                   </FormItem>
               )}
             />
-          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -590,10 +585,10 @@ export function CreateQuoteForm() {
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
-            <Button type="button" onClick={form.handleSubmit(onSubmit)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
+            <Button type="button" onClick={handleSubmit(onSubmit)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
               {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Quote...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Quote</> )}
             </Button>
-            <Button type="button" variant="outline" onClick={form.handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
+            <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
                 <Printer className="mr-2 h-4 w-4" />Save and Preview
             </Button>
             <Button type="button" variant="outline" onClick={handlePreviewLastSaved} disabled={actionButtonsDisabled}>
@@ -604,3 +599,4 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
+```
