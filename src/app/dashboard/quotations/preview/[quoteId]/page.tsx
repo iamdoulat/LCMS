@@ -5,7 +5,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { QuoteDocument, CustomerDocument, ShipmentTerms, CompanyProfile } from '@/types';
+import type { QuoteDocument, CustomerDocument, CompanyProfile } from '@/types';
 import { Loader2, Printer, AlertTriangle, Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -66,7 +66,7 @@ export default function PrintQuotePage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchSettings = useCallback(async () => {
+  const fetchSettings = React.useCallback(async () => {
     try {
       const financialSettingsDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
       const piSettingsDocRef = doc(firestore, PI_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
@@ -95,7 +95,7 @@ export default function PrintQuotePage() {
     }
   }, []);
 
-  const fetchQuoteData = useCallback(async () => {
+  const fetchQuoteData = React.useCallback(async () => {
     if (!quoteId) {
       setError("No Quote ID provided.");
       return;
@@ -342,13 +342,15 @@ export default function PrintQuotePage() {
                     <tr key={`${item.itemId}-${index}`} className="border-b border-gray-200">
                     <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
                     <td className="p-2 border border-gray-300 align-middle text-center">
-                        {item.imageUrl && (
+                        {item.imageUrl ? (
                             <Image src={item.imageUrl} alt={item.itemName || 'Item image'} width={150} height={150} className="object-contain mx-auto" data-ai-hint="sewing machine"/>
+                        ) : (
+                            <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">No Image</div>
                         )}
                     </td>
                     <td className="p-2 border border-gray-300 align-top break-words">
                         <p className="font-medium text-gray-900">{item.itemName}</p>
-                        {item.description && item.description !== item.itemName && <p className="text-xs text-gray-500 mt-0.5 whitespace-pre-line">{item.description}</p>}
+                        {item.description && item.description !== item.itemName && <div className="text-xs text-gray-500 mt-0.5 whitespace-pre-line" dangerouslySetInnerHTML={{ __html: item.description.replace(/\n/g, '<br />') }} />}
                     </td>
                     {showItemCodeColumn && <td className="p-2 border border-gray-300 align-top">{item.itemCode || 'N/A'}</td>}
                     <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
