@@ -266,7 +266,7 @@ export function CreateQuoteForm() {
           const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
           return {
             itemId: item.itemId,
-            itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+            itemName: itemDetails?.label.split(' (')[0] || 'N/A', 
             itemCode: itemDetails?.itemCode || undefined,
             description: item.description || '',
             qty: parseFloat(String(item.qty || '0')),
@@ -309,7 +309,7 @@ export function CreateQuoteForm() {
 
         const cleanedDataToSave = Object.fromEntries(
             Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined && value !== '')
-        );
+        ) as typeof quoteDataToSave;
 
         const newQuoteRef = doc(firestore, "quotes", formattedQuoteId);
         transaction.set(newQuoteRef, cleanedDataToSave);
@@ -319,11 +319,11 @@ export function CreateQuoteForm() {
         return formattedQuoteId;
       });
       return newQuoteId;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error in saveQuoteLogic: ", error);
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to save quote: ${error.message}`,
+        text: `Failed to save quote: ${(error as Error).message}`,
         icon: "error",
       });
       return null;
@@ -489,7 +489,7 @@ export function CreateQuoteForm() {
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
                   {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
-                  <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
+                  <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
             </TableBody>
@@ -499,8 +499,8 @@ export function CreateQuoteForm() {
         <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00', imageUrl: '' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
 
         <Separator />
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-           <FormField
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
               control={form.control}
               name="shipmentMode"
               render={({ field }) => (
@@ -522,6 +522,7 @@ export function CreateQuoteForm() {
             />
           <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField control={control} name="comments" render={({ field }) => (
               <FormItem>
@@ -566,5 +567,3 @@ export function CreateQuoteForm() {
     </Form>
   );
 }
-```
-
