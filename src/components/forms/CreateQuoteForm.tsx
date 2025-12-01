@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,8 +11,8 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteDocument, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, ShipmentTerms, QuoteFormValues as PageQuoteFormValues } from '@/types'; // Updated types
-import { QuoteSchema, quoteTaxTypes, saleStatusOptions, shipmentTermsOptions } from '@/types'; // Updated schemas
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteDocument, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus, ShipmentTerms, QuoteFormValues as PageQuoteFormValues, QuoteLineItemDocument } from '@/types'; // Updated types
+import { QuoteSchema, quoteTaxTypes, invoiceStatusOptions as saleStatusOptions, shipmentTermsOptions } from '@/types'; // Updated schemas
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -36,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from 'next/link';
-
+import Image from 'next/image';
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -223,7 +222,6 @@ export function CreateQuoteForm() {
     }
   }, [watchedCustomerId, customerOptions, setValue]);
 
-
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
@@ -245,113 +243,146 @@ export function CreateQuoteForm() {
     }
   };
 
-  async function onSubmit(data: SaleFormValues) {
+  const saveOrderLogic = async (data: SaleFormValues): Promise<string | null> => {
     setIsSubmitting(true);
-    
+    const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+    const currentYear = new Date().getFullYear();
+    const counterRef = doc(firestore, "counters", "quoteNumberGenerator");
+
     try {
-        const counterRef = doc(firestore, "counters", "quoteNumberGenerator");
+      const newOrderId = await runTransaction(firestore, async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        let currentCount = 0;
+        if (counterDoc.exists()) {
+          const counterData = counterDoc.data();
+          currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
+        }
+        const newCount = currentCount + 1;
+        const formattedOrderId = `QT${currentYear}-${String(newCount).padStart(3, '0')}`;
+        
+        const processedLineItems: QuoteLineItemDocument[] = data.lineItems.map(item => {
+            const qty = parseFloat(String(item.qty || '0'));
+            const unitPriceStr = String(item.unitPrice || '0');
+            const finalUnitPrice = parseFloat(unitPriceStr);
+            const discountPercentageStr = String(item.discountPercentage || '0');
+            const finalDiscountPercentage = parseFloat(discountPercentageStr);
+            const taxPercentageStr = String(item.taxPercentage || '0');
+            const finalTaxPercentage = parseFloat(taxPercentageStr);
 
-        const newSaleId = await runTransaction(firestore, async (transaction) => {
-            const counterDoc = await transaction.get(counterRef);
-            const currentYear = new Date().getFullYear();
-            let currentCount = 0;
-            if (counterDoc.exists()) {
-                const counterData = counterDoc.data();
-                currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
-            }
-            const newCount = currentCount + 1;
-            const formattedSaleId = `QT${currentYear}-${String(newCount).padStart(3, '0')}`;
+            const itemTotalBeforeDiscount = qty * finalUnitPrice;
             
-            const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
-            
-            const processedLineItems = data.lineItems.map(item => {
-                const qty = parseFloat(String(item.qty || '0'));
-                const unitPriceStr = String(item.unitPrice || '0');
-                const finalUnitPrice = parseFloat(unitPriceStr);
-                const discountPercentageStr = String(item.discountPercentage || '0');
-                const finalDiscountPercentage = parseFloat(discountPercentageStr);
-                const taxPercentageStr = String(item.taxPercentage || '0');
-                const finalTaxPercentage = parseFloat(taxPercentageStr);
+            const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
 
-                const itemTotalBeforeDiscount = qty * finalUnitPrice;
-                
-                const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
-                const lineItemData: any = {
-                    itemId: item.itemId,
-                    itemName: itemDetails?.label.split(' (')[0] || 'N/A',
-                    itemCode: itemDetails?.itemCode,
-                    description: item.description || '',
-                    qty, unitPrice: finalUnitPrice, discountPercentage: finalDiscountPercentage, taxPercentage: finalTaxPercentage, total: itemTotalBeforeDiscount,
-                    imageUrl: item.imageUrl || undefined,
-                };
-                 Object.keys(lineItemData).forEach(key => {
-                    if (lineItemData[key] === undefined || lineItemData[key] === null || (typeof lineItemData[key] === 'string' && lineItemData[key].trim() === '')) {
-                        delete lineItemData[key];
-                    }
-                });
-                return lineItemData;
-            });
-            
-            const dataToSave: Record<string, any> = {
-                customerId: data.customerId, customerName: selectedCustomer?.label || 'N/A',
-                billingAddress: data.billingAddress, shippingAddress: data.shippingAddress,
-                quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-                salesperson: data.salesperson,
-                subject: data.subject,
-                lineItems: processedLineItems, taxType: data.taxType,
-                comments: data.comments, privateComments: data.privateComments,
-                subtotal: subtotal,
-                totalDiscountAmount: totalDiscountAmount,
-                totalTaxAmount: totalTaxAmount,
-                totalAmount: grandTotal,
-                status: data.status || "Draft",
-                createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-                showItemCodeColumn: data.showItemCodeColumn,
-                showDiscountColumn: data.showDiscountColumn,
-                showTaxColumn: data.showTaxColumn,
-                shipmentMode: data.shipmentMode,
-                freightCharges: data.freightCharges,
-                packingCharge: data.packingCharge,
-                handlingCharge: data.handlingCharge,
-                otherCharges: data.otherCharges,
+            return {
+                itemId: item.itemId,
+                itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
+                itemCode: itemDetailsFromOptions?.itemCode,
+                description: item.description || '',
+                qty: qty,
+                unitPrice: finalUnitPrice,
+                discountPercentage: finalDiscountPercentage,
+                taxPercentage: finalTaxPercentage,
+                total: itemTotalBeforeDiscount,
+                imageUrl: item.imageUrl,
             };
-
-            const cleanedDataToSave = Object.fromEntries(
-                Object.entries(dataToSave).filter(([, value]) => value !== undefined && value !== '')
-            ) as Partial<Omit<QuoteDocument, 'id'>>;
-            
-            const newSaleRef = doc(firestore, "quotes", formattedSaleId);
-            transaction.set(newSaleRef, cleanedDataToSave);
-
-            const newCounters = {
-                yearlyCounts: {
-                    ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}),
-                    [currentYear]: newCount,
-                }
-            };
-            transaction.set(counterRef, newCounters, { merge: true });
-
-            return formattedSaleId;
         });
+        
+        const orderDataToSave = {
+          customerId: data.customerId,
+          customerName: selectedCustomer?.label || 'N/A',
+          billingAddress: data.billingAddress,
+          shippingAddress: data.shippingAddress,
+          quoteDate: format(data.quoteDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          salesperson: data.salesperson,
+          subject: data.subject,
+          lineItems: processedLineItems,
+          taxType: data.taxType,
+          comments: data.comments,
+          privateComments: data.privateComments,
+          subtotal: subtotal,
+          totalDiscountAmount: totalDiscountAmount,
+          totalTaxAmount: totalTaxAmount,
+          totalAmount: grandTotal,
+          status: data.status || "Draft",
+          packingCharge: data.packingCharge,
+          handlingCharge: data.handlingCharge,
+          otherCharges: data.otherCharges,
+          freightCharges: data.freightCharges,
+          shipmentMode: data.shipmentMode,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          showItemCodeColumn: data.showItemCodeColumn,
+          showDiscountColumn: data.showDiscountColumn,
+          showTaxColumn: data.showTaxColumn,
+        };
 
-      setGeneratedSaleId(newSaleId);
-      Swal.fire({
-        title: "Quote Created!",
-        text: `Quote successfully created with ID: ${newSaleId}.`,
-        icon: "success",
+        const cleanedDataToSave = Object.fromEntries(
+            Object.entries(orderDataToSave).filter(([, value]) => value !== undefined && value !== '')
+        ) as Partial<Omit<QuoteDocument, 'id'>>;
+        
+        const newOrderRef = doc(firestore, "quotes", formattedOrderId);
+        transaction.set(newOrderRef, cleanedDataToSave);
+
+        const newCounters = {
+          yearlyCounts: {
+            ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}),
+            [currentYear]: newCount,
+          }
+        };
+        transaction.set(counterRef, newCounters, { merge: true });
+        
+        return formattedOrderId;
       });
-      form.reset(); 
-    } catch (error: any) {
-      console.error("Error creating quote: ", error);
+      return newOrderId;
+    } catch (error) {
+      console.error("Error in saveOrderLogic for quote: ", error);
       Swal.fire({
         title: "Save Failed",
-        text: `Failed to create quote: ${error.message}`,
+        text: `Failed to save quote: ${(error as Error).message}`,
         icon: "error",
       });
+      return null;
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
+
+  const onSubmit = async (data: SaleFormValues) => {
+    const newId = await saveOrderLogic(data);
+    if (newId) {
+      setGeneratedSaleId(newId);
+      Swal.fire("Quote Saved!", `Quote successfully saved with ID: ${newId}.`, "success");
+    }
+  };
+
+  const handleSaveAndPreview = async (data: SaleFormValues) => {
+    const newId = await saveOrderLogic(data);
+    if (newId) {
+      setGeneratedSaleId(newId);
+      Swal.fire({
+        title: "Quote Saved!",
+        text: `Quote successfully saved with ID: ${newId}. Navigating to preview...`,
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      }).then(() => {
+        router.push(`/dashboard/quotations/preview/${newId}`);
+      });
+    }
+  };
+  
+  const handlePreviewLastSaved = () => {
+    if (generatedSaleId) {
+      router.push(`/dashboard/quotations/preview/${generatedSaleId}`);
+    } else {
+      Swal.fire("No Quote Saved", "Please save a quote first to preview it.", "info");
+    }
+  };
+
+  const grandTotalLabel = `TOTAL (USD):`;
+  const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
+  const actionButtonsDisabled = !generatedSaleId || isSubmitting;
+
 
   if (isLoadingDropdowns) {
     return (
@@ -364,7 +395,7 @@ export function CreateQuoteForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form className="space-y-8">
         
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -418,7 +449,7 @@ export function CreateQuoteForm() {
                 name="status"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Status*</FormLabel>
+                    <FormLabel>Status</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? 'Draft'}>
                         <FormControl>
                         <SelectTrigger>
@@ -465,13 +496,20 @@ export function CreateQuoteForm() {
             <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
                 <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
             </h3>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
-                <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
-                </DropdownMenuContent></DropdownMenu>
+            <div className="flex items-center gap-2">
+                <Link href="/dashboard/quotations/items/add" target="_blank">
+                    <Button variant="outline" size="sm" type="button">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
+                    </Button>
+                </Link>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
+                    </DropdownMenuContent></DropdownMenu>
+            </div>
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
@@ -487,7 +525,7 @@ export function CreateQuoteForm() {
                   <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
                   <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
                   {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>
                   <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -538,9 +576,9 @@ export function CreateQuoteForm() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
                 {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
                 {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {Number(watchedFreightCharges||0).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {Number(watchedFreightCharges || 0).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between text-lg font-bold"><span className="text-primary">Grand Total:</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
             </div>
         </div>
         <Separator />
@@ -552,45 +590,17 @@ export function CreateQuoteForm() {
             }}>
                 <X className="mr-2 h-4 w-4" />Cancel
             </Button>
-            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
-              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating Quote...</> ) : ( <><Save className="mr-2 h-4 w-4" />Create Quote</> )}
+            <Button type="button" onClick={form.handleSubmit(onSubmit)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
+              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Quote...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Quote</> )}
+            </Button>
+            <Button type="button" variant="outline" onClick={form.handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
+                <Printer className="mr-2 h-4 w-4" />Save and Preview
+            </Button>
+            <Button type="button" variant="outline" onClick={handlePreviewLastSaved} disabled={actionButtonsDisabled}>
+                <Printer className="mr-2 h-4 w-4" />Preview Last Saved
             </Button>
         </div>
       </form>
     </Form>
-  );
-}
-
-
-```
-    <content><![CDATA[
-
-"use client";
-
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FilePlus2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { CreateSaleInvoiceForm } from '@/components/forms/CreateSaleInvoiceForm';
-import * as React from 'react';
-
-
-export default function CreateNewInvoicePage() {
-  return (
-    <div className="container mx-auto py-8">
-      <Card className="max-w-screen-2xl mx-auto shadow-xl">
-        <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <FilePlus2 className="h-7 w-7 text-primary" />
-            Create New Proforma Invoice
-          </CardTitle>
-          <CardDescription>
-            Fill in the details below to generate a new Proforma Invoice.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CreateSaleInvoiceForm />
-        </CardContent>
-      </Card>
-    </div>
   );
 }
