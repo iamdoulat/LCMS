@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import * as React from 'react';
@@ -11,7 +9,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, updateDoc, setDoc } from 'firebase/firestore';
 import type { QuoteDocument, QuoteFormValues as PageQuoteFormValues, CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, QuoteLineItemFormValues as PageQuoteLineItemFormValues, InvoiceDocument, ShipmentTerms } from '@/types';
-import { QuoteSchema, quoteTaxTypes, invoiceStatusOptions as saleStatusOptions, shipmentTermsOptions } from '@/types'; // Use correct status options
+import { QuoteSchema, quoteTaxTypes, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -36,6 +34,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from 'next/link';
 
+// Define quote-specific status options that include "Invoiced"
+const quoteStatusOptions = ["Draft", "Sent", "Paid", "Partial", "Overdue", "Void", "Cancelled", "Refunded", "Invoiced"] as const;
+type QuoteStatus = typeof quoteStatusOptions[number];
 
 const sectionHeadingClass = "font-bold text-xl lg:text-2xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
 
@@ -71,7 +72,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
 
   const form = useForm<PageQuoteFormValues>({
     resolver: zodResolver(QuoteSchema.extend({
-        status: z.enum(saleStatusOptions).optional(),
+        status: z.enum(quoteStatusOptions).optional(),
     })), 
   });
 
@@ -205,9 +206,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     if (watchedCustomerId) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
-        // Only set billing address. Let initialData handle shipping address.
         setValue("billingAddress", selectedCustomer.address || "");
-        if(!getValues("shippingAddress")) { // Only set shipping if it's empty
+        if(!getValues("shippingAddress")) {
           setValue("shippingAddress", selectedCustomer.address || "");
         }
       }
@@ -276,7 +276,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             
             const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
 
-            const invoiceDataToSave: Omit<InvoiceDocument, 'id'> & { createdAt: any, updatedAt: any } = {
+            const invoiceDataToSave: Omit<InvoiceDocument, 'id'> & { createdAt: ReturnType<typeof serverTimestamp>, updatedAt: ReturnType<typeof serverTimestamp> } = {
                 customerId: data.customerId,
                 customerName: selectedCustomer?.label || 'N/A',
                 billingAddress: data.billingAddress,
@@ -338,7 +338,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             return formattedInvoiceId;
         });
 
-        setValue("status", "Invoiced");
+        setValue("status", "Invoiced" as any);
 
         Swal.fire({
             title: 'Conversion Successful!',
@@ -376,7 +376,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       const unitPrice = parseFloat(String(item.unitPrice || '0'));
       const total = qty * unitPrice;
 
-      const lineItemData: any = {
+      const lineItemData: Record<string, any> = {
         itemId: item.itemId,
         itemName: itemDetails?.label.split(' (')[0] || 'N/A',
         itemCode: itemDetails?.itemCode || undefined,
@@ -447,7 +447,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   }
 
   const grandTotalLabel = `TOTAL (USD):`;
-  const actionButtonsDisabled = !quoteId || isSubmitting || watchedStatus === 'Invoiced';
+  const isInvoiced = watchedStatus === 'Invoiced';
+  const actionButtonsDisabled = !quoteId || isSubmitting || isInvoiced;
 
 
   if (isLoadingDropdowns) {
@@ -495,38 +496,100 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
-          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div>
+            <FormField 
+              control={control} 
+              name="salesperson" 
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Salesperson*</FormLabel>
+                  <FormControl><Input placeholder="Salesperson name" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <div>
+            <FormField 
+              control={control} 
+              name="shippingAddress" 
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Delivery Address*</FormLabel>
+                  <FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
         
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
-            <FormItem><FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel><Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" /></FormItem>
-            <FormField control={control} name="quoteDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Quote Date*</FormLabel><DatePickerField field={field} placeholder="Select quote date" /><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name="taxType" render={({ field }) => (<FormItem><FormLabel>Tax</FormLabel><Select onValueChange={field.onChange} value={field.value ?? 'Default'}><FormControl><SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger></FormControl><SelectContent>{quoteTaxTypes.map((type) => (<SelectItem key={type} value={type}>{type}</SelectItem>))}</SelectContent></Select><FormMessage /></FormItem>)}/>
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value ?? 'Draft'} disabled={watchedStatus === 'Invoiced'}>
-                      <FormControl>
-                      <SelectTrigger>
-                          <SelectValue placeholder="Select a status" />
-                      </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                      {saleStatusOptions.map(status => (
-                          <SelectItem key={status} value={status} disabled={status === 'Invoiced' && watchedStatus !== 'Invoiced'}>{status}</SelectItem>
-                      ))}
-                      </SelectContent>
-                  </Select>
-                  {watchedStatus === 'Invoiced' && <FormDescription className="text-xs">Status is locked after conversion.</FormDescription>}
-                  <FormMessage />
-                  </FormItem>
-              )}
-            />
+          <FormItem>
+            <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel>
+            <Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
+          </FormItem>
+          <FormField 
+            control={control} 
+            name="quoteDate" 
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Quote Date*</FormLabel>
+                <DatePickerField field={field} placeholder="Select quote date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField 
+            control={form.control} 
+            name="taxType" 
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tax</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value ?? 'Default'}>
+                  <FormControl>
+                    <SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {quoteTaxTypes.map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value ?? 'Draft'} disabled={isInvoiced}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {quoteStatusOptions.map(status => (
+                      <SelectItem 
+                        key={status} 
+                        value={status} 
+                        disabled={status === 'Invoiced' && !isInvoiced}
+                      >
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isInvoiced && <FormDescription className="text-xs">Status is locked after conversion.</FormDescription>}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <Separator className="my-6" />
         <FormField
@@ -554,127 +617,284 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         <Separator className="my-6" />
 
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
-                <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
-            </h3>
-            <div className="flex items-center gap-2">
-                <Link href="/dashboard/quotations/items/add" target="_blank">
-                    <Button variant="outline" size="sm" type="button">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
-                    </Button>
-                </Link>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
-                    </DropdownMenuContent></DropdownMenu>
-            </div>
+          <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
+            <ShoppingBag className="mr-2 h-5 w-5 text-primary" /> Line Items
+          </h3>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/quotations/items/add" target="_blank">
+              <Button variant="outline" size="sm" type="button">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
+              </Button>
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         <div className="rounded-md border overflow-x-auto">
-          <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
-          {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
-          {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
-          <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[120px]">Qty*</TableHead>
+                <TableHead className="min-w-[200px]">Item*</TableHead>
+                {showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}
+                <TableHead className="min-w-[250px]">Description</TableHead>
+                <TableHead className="w-[120px]">Unit Price*</TableHead>
+                {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
+                {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
+                <TableHead className="w-[130px] text-right">Total Price</TableHead>
+                <TableHead className="w-[50px] text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
-                  <TableCell><FormField control={control} name={`lineItems.${index}.qty`} render={({ field: itemField }) => (<Input type="text" placeholder="1" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage></TableCell>
-                  <TableCell><FormField control={control} name={`lineItems.${index}.itemId`} render={({ field: itemField }) => (<Combobox options={itemOptions} value={itemField.value || PLACEHOLDER_ITEM_VALUE_PREFIX + index} onValueChange={(itemId) => { itemField.onChange(itemId === (PLACEHOLDER_ITEM_VALUE_PREFIX + index) ? '' : itemId); handleItemSelect(itemId, index);}} placeholder="Search Item..." selectPlaceholder="Select Item" emptyStateMessage="No item found." className="h-9"/>)}/><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage></TableCell>
-                  {showItemCodeColumn && (<TableCell><FormField control={control} name={`lineItems.${index}.itemCode`} render={({ field: itemField }) => (<Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />)}/></TableCell>)}
-                  <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
-                  <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
-                  {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
-                  <TableCell className="text-right"><FormField control={control} name={`lineItems.${index}.total`} render={({ field: itemField }) => (<Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>)} /></TableCell>
-                  <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
-                </TableRow>))}
+                  <TableCell>
+                    <FormField 
+                      control={control} 
+                      name={`lineItems.${index}.qty`} 
+                      render={({ field: itemField }) => (
+                        <Input type="text" placeholder="1" {...itemField} className="h-9"/>
+                      )} 
+                    />
+                    <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage>
+                  </TableCell>
+                  <TableCell>
+                    <FormField 
+                      control={control} 
+                      name={`lineItems.${index}.itemId`} 
+                      render={({ field: itemField }) => (
+                        <Combobox 
+                          options={itemOptions} 
+                          value={itemField.value || PLACEHOLDER_ITEM_VALUE_PREFIX + index} 
+                          onValueChange={(itemId) => { 
+                            itemField.onChange(itemId === (PLACEHOLDER_ITEM_VALUE_PREFIX + index) ? '' : itemId); 
+                            handleItemSelect(itemId, index);
+                          }} 
+                          placeholder="Search Item..." 
+                          selectPlaceholder="Select Item" 
+                          emptyStateMessage="No item found." 
+                          className="h-9"
+                        />
+                      )}
+                    />
+                    <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage>
+                  </TableCell>
+                  {showItemCodeColumn && (
+                    <TableCell>
+                      <FormField 
+                        control={control} 
+                        name={`lineItems.${index}.itemCode`} 
+                        render={({ field: itemField }) => (
+                          <Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />
+                        )}
+                      />
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <FormField 
+                      control={control} 
+                      name={`lineItems.${index}.description`} 
+                      render={({ field: itemField }) => (
+                        <Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>
+                      )} 
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <FormField 
+                      control={control} 
+                      name={`lineItems.${index}.unitPrice`} 
+                      render={({ field: itemField }) => (
+                        <Input type="text" placeholder="0.00" {...itemField} className="h-9"/>
+                      )} 
+                    />
+                    <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage>
+                  </TableCell>
+                  {showDiscountColumn && (
+                    <TableCell>
+                      <FormField 
+                        control={control} 
+                        name={`lineItems.${index}.discountPercentage`} 
+                        render={({ field: itemField }) => (
+                          <Input type="text" placeholder="0" {...itemField} className="h-9"/>
+                        )} 
+                      />
+                      <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage>
+                    </TableCell>
+                  )}
+                  {showTaxColumn && (
+                    <TableCell>
+                      <FormField 
+                        control={control} 
+                        name={`lineItems.${index}.taxPercentage`} 
+                        render={({ field: itemField }) => (
+                          <Input type="text" placeholder="0" {...itemField} className="h-9"/>
+                        )} 
+                      />
+                      <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage>
+                    </TableCell>
+                  )}
+                  <TableCell className="text-right">
+                    <FormField 
+                      control={control} 
+                      name={`lineItems.${index}.total`} 
+                      render={({ field: itemField }) => (
+                        <Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>
+                      )} 
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
-        {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (<p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>)}
-        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00', imageUrl: '' })} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
+        {form.formState.errors.lineItems && !form.formState.errors.lineItems.message && typeof form.formState.errors.lineItems === 'object' && form.formState.errors.lineItems.root && (
+          <p className="text-sm font-medium text-destructive">{form.formState.errors.lineItems.root?.message || "Please ensure all line items are valid."}</p>
+        )}
+        <Button type="button" variant="outline" onClick={() => append({ itemId: '', itemCode: '', description: '', qty: '1', unitPrice: '0', discountPercentage: '0', taxPercentage: '0', total: '0.00', imageUrl: '' })} className="mt-2">
+          <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+        </Button>
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
-              control={form.control}
-              name="shipmentMode"
-              render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Shipment Mode</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? shipmentTermsOptions[0]}>
-                          <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select shipment mode" />
-                              </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              {shipmentTermsOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                  </FormItem>
-              )}
-            />
-          <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl><FormMessage /></FormItem>)} />
+            control={form.control}
+            name="shipmentMode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Shipment Mode</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value ?? shipmentTermsOptions[0]}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select shipment mode" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {shipmentTermsOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField 
+            control={control} 
+            name="freightCharges" 
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Freight Charges:</FormLabel>
+                <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} 
+          />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (
+          <FormField 
+            control={control} 
+            name="comments" 
+            render={({ field }) => (
               <FormItem>
                 <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
                 <FormControl><Textarea placeholder="Public comments" {...field} rows={3} /></FormControl>
                 <FormMessage />
               </FormItem>
-            )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+            )}
+          />
+          <FormField 
+            control={control} 
+            name="privateComments" 
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Private Comments (Internal)</FormLabel>
+                <FormControl><Textarea placeholder="Internal notes" {...field} rows={3} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         
         <div className="flex justify-end space-y-2 mt-6">
-            <div className="w-full max-w-sm space-y-2">
-                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                {showDiscountColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>)}
-                {showTaxColumn && (<div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>)}
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {Number(watchedFreightCharges || 0).toFixed(2)}</span></div>
-                <Separator />
-                <div className="flex justify-between text-lg font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+          <div className="w-full max-w-sm space-y-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Subtotal:</span>
+              <span className="font-medium text-foreground">{subtotal.toFixed(2)}</span>
             </div>
+            {showDiscountColumn && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Discount:</span>
+                <span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span>
+              </div>
+            )}
+            {showTaxColumn && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Tax:</span>
+                <span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Freight Charges:</span>
+              <span className="font-medium text-foreground">(+) {Number(watchedFreightCharges || 0).toFixed(2)}</span>
+            </div>
+            <Separator />
+            <div className="flex justify-between text-lg font-bold">
+              <span className="text-primary">{grandTotalLabel}</span>
+              <span className="text-primary">{grandTotal.toFixed(2)}</span>
+            </div>
+          </div>
         </div>
         <Separator />
         
         <div className="flex flex-wrap gap-2 justify-end">
-             <Button type="button" variant="outline" onClick={handleViewPdf}>
-                <Printer className="mr-2 h-4 w-4" />
-                View PDF
-            </Button>
-            <Button type="button" variant="outline" onClick={() => reset(initialData ? {
-                ...initialData,
-                quoteDate: initialData.quoteDate ? parseISO(initialData.quoteDate) : new Date(),
-                lineItems: initialData.lineItems.map(item => ({
-                  ...item,
-                  itemCode: item.itemCode || '',
-                  qty: item.qty.toString(),
-                  unitPrice: item.unitPrice.toString(),
-                  discountPercentage: item.discountPercentage?.toString() || '0',
-                  taxPercentage: item.taxPercentage?.toString() || '0',
-                  total: item.total.toFixed(2),
-                  imageUrl: item.imageUrl || '',
-                })),
-                status: initialData.status,
-                showItemCodeColumn: initialData.showItemCodeColumn,
-                showDiscountColumn: initialData.showDiscountColumn,
-                showTaxColumn: initialData.showTaxColumn,
-              } : {} )}>
-                <X className="mr-2 h-4 w-4" />Reset
-            </Button>
-             <Button type="button" onClick={handleConvertToInvoice} className="bg-green-600 hover:bg-green-700" disabled={actionButtonsDisabled}>
-              <Edit className="mr-2 h-4 w-4" />Convert to Invoice
-            </Button>
-            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
-              {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</>) : (<><Save className="mr-2 h-4 w-4" />Save Changes</>)}
-            </Button>
+          <Button type="button" variant="outline" onClick={handleViewPdf}>
+            <Printer className="mr-2 h-4 w-4" />
+            View PDF
+          </Button>
+          <Button type="button" variant="outline" onClick={() => reset(initialData ? {
+            ...initialData,
+            quoteDate: initialData.quoteDate ? parseISO(initialData.quoteDate) : new Date(),
+            lineItems: initialData.lineItems.map(item => ({
+              ...item,
+              itemCode: item.itemCode || '',
+              qty: item.qty.toString(),
+              unitPrice: item.unitPrice.toString(),
+              discountPercentage: item.discountPercentage?.toString() || '0',
+              taxPercentage: item.taxPercentage?.toString() || '0',
+              total: item.total.toFixed(2),
+              imageUrl: item.imageUrl || '',
+            })),
+            status: initialData.status,
+            showItemCodeColumn: initialData.showItemCodeColumn,
+            showDiscountColumn: initialData.showDiscountColumn,
+            showTaxColumn: initialData.showTaxColumn,
+          } : {} )}>
+            <X className="mr-2 h-4 w-4" />Reset
+          </Button>
+          <Button type="button" onClick={handleConvertToInvoice} className="bg-green-600 hover:bg-green-700" disabled={actionButtonsDisabled}>
+            <Edit className="mr-2 h-4 w-4" />Convert to Invoice
+          </Button>
+          <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting || isLoadingDropdowns}>
+            {isSubmitting ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</>
+            ) : (
+              <><Save className="mr-2 h-4 w-4" />Save Changes</>
+            )}
+          </Button>
         </div>
       </form>
     </Form>
