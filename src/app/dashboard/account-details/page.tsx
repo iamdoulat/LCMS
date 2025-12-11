@@ -921,7 +921,7 @@ export default function AccountDetailsPage() {
           <CardHeader>
             <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <BarChart3 className="h-6 w-6 text-primary" />
-              This Month's Summary
+              This Month&apos;s Summary
             </CardTitle>
           </CardHeader>
           <CardContent>
