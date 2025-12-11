@@ -4,7 +4,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Image as ImageIcon, Link2, Upload, Crop as CropIcon, Building, Briefcase, Info, Banknote, GraduationCap, DollarSign, Clock, Check, MapPin, CalendarDays, UserCheck, RefreshCw, XCircle, BarChart3, TrendingUp, TrendingDown, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle, Calendar as CalendarIcon, Camera } from 'lucide-react';
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { auth, firestore, storage } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
 import { Separator } from '@/components/ui/separator';
@@ -28,6 +29,8 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag } from '@/types';
+import type { CheckInOutType } from '@/types/checkInOut';
+import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
 import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, endOfDay, isFuture, isToday, startOfYear, endOfYear, max, min } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
@@ -111,6 +114,17 @@ export default function AccountDetailsPage() {
   const [singleDayAttendance, setSingleDayAttendance] = React.useState<AttendanceDocument | null>(null);
   const [isAttendanceLoading, setIsAttendanceLoading] = React.useState(true);
   const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings"), where("isEnabled", "==", true)), undefined, ['notices_hrm_dashboard']);
+
+  // Multiple Check In/Out state
+  const [checkInOutType, setCheckInOutType] = React.useState<CheckInOutType>('Check In');
+  const [companyName, setCompanyName] = React.useState('');
+  const [checkInOutRemarks, setCheckInOutRemarks] = React.useState('');
+  const [capturedImage, setCapturedImage] = React.useState<File | null>(null);
+  const [imagePreview, setImagePreview] = React.useState<string>('');
+  const [currentLocation, setCurrentLocation] = React.useState<{ latitude: number; longitude: number; address?: string } | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = React.useState(false);
+  const [isSubmittingCheckInOut, setIsSubmittingCheckInOut] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
 
   // Step 1: Fetch employee data based on user's email
@@ -939,6 +953,247 @@ export default function AccountDetailsPage() {
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <MapPin className="h-6 w-6 text-primary" />
+              Multiple Check In/Out
+            </CardTitle>
+            <CardDescription>
+              Record your check-in or check-out with location and photo verification.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Type Selector */}
+              <div className="space-y-2">
+                <Label htmlFor="checkInOutType">Type *</Label>
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    variant={checkInOutType === 'Check In' ? 'default' : 'outline'}
+                    onClick={() => setCheckInOutType('Check In')}
+                    className="flex-1"
+                  >
+                    <Check className="mr-2 h-4 w-4" />
+                    Check In
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={checkInOutType === 'Check Out' ? 'default' : 'outline'}
+                    onClick={() => setCheckInOutType('Check Out')}
+                    className="flex-1"
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Check Out
+                  </Button>
+                </div>
+              </div>
+
+              {/* Company Name */}
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name *</Label>
+                <Input
+                  id="companyName"
+                  placeholder="Enter company name"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                />
+              </div>
+
+              {/* Camera Capture */}
+              <div className="space-y-2">
+                <Label>Photo *</Label>
+                <div className="flex gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setCapturedImage(file);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setImagePreview(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1"
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    {capturedImage ? 'Change Photo' : 'Capture Photo'}
+                  </Button>
+                  {capturedImage && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => {
+                        setCapturedImage(null);
+                        setImagePreview('');
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {imagePreview && (
+                  <div className="mt-2 border rounded-lg p-2">
+                    <img src={imagePreview} alt="Preview" className="w-full max-h-48 object-contain rounded" />
+                  </div>
+                )}
+              </div>
+
+              {/* Location */}
+              <div className="space-y-2">
+                <Label>Location *</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={async () => {
+                      setIsLoadingLocation(true);
+                      try {
+                        const location = await getCurrentLocation();
+                        setCurrentLocation(location);
+                        Swal.fire('Location Captured', `Location: ${location.address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}`, 'success');
+                      } catch (error: any) {
+                        Swal.fire('Location Error', error.message || 'Could not get location', 'error');
+                      } finally {
+                        setIsLoadingLocation(false);
+                      }
+                    }}
+                    disabled={isLoadingLocation}
+                    className="flex-1"
+                  >
+                    {isLoadingLocation ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Location...</>
+                    ) : (
+                      <><MapPin className="mr-2 h-4 w-4" />{currentLocation ? 'Refresh Location' : 'Get Location'}</>
+                    )}
+                  </Button>
+                  {currentLocation && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      onClick={() => {
+                        window.open(`https://www.google.com/maps?q=${currentLocation.latitude},${currentLocation.longitude}`, '_blank');
+                      }}
+                      title="View on Map"
+                    >
+                      <MapPin className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {currentLocation && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {currentLocation.address || `${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}`}
+                  </p>
+                )}
+              </div>
+
+              {/* Remarks */}
+              <div className="space-y-2">
+                <Label htmlFor="checkInOutRemarks">Remarks (Optional)</Label>
+                <Input
+                  id="checkInOutRemarks"
+                  placeholder="Add any additional notes"
+                  value={checkInOutRemarks}
+                  onChange={(e) => setCheckInOutRemarks(e.target.value)}
+                />
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="button"
+                className="w-full"
+                onClick={async () => {
+                  // Validation
+                  if (!companyName.trim()) {
+                    Swal.fire('Validation Error', 'Please enter company name', 'error');
+                    return;
+                  }
+                  if (!capturedImage) {
+                    Swal.fire('Validation Error', 'Please capture a photo', 'error');
+                    return;
+                  }
+                  if (!currentLocation) {
+                    Swal.fire('Validation Error', 'Please capture your location', 'error');
+                    return;
+                  }
+                  if (!employeeData) {
+                    Swal.fire('Error', 'Employee data not found', 'error');
+                    return;
+                  }
+
+                  setIsSubmittingCheckInOut(true);
+                  try {
+                    // Upload image
+                    const imageURL = await uploadCheckInOutImage(capturedImage, employeeData.id, checkInOutType);
+
+                    // Create record
+                    await createCheckInOutRecord(
+                      employeeData.id,
+                      employeeData.fullName,
+                      companyName,
+                      checkInOutType,
+                      currentLocation,
+                      imageURL,
+                      checkInOutRemarks
+                    );
+
+                    Swal.fire({
+                      title: 'Success!',
+                      text: `${checkInOutType} recorded successfully`,
+                      icon: 'success',
+                      timer: 2000,
+                      showConfirmButton: false,
+                    });
+
+                    // Reset form
+                    setCompanyName('');
+                    setCheckInOutRemarks('');
+                    setCapturedImage(null);
+                    setImagePreview('');
+                    setCurrentLocation(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  } catch (error: any) {
+                    console.error('Error submitting check-in/out:', error);
+                    Swal.fire('Submission Failed', error.message || 'Failed to record check-in/out', 'error');
+                  } finally {
+                    setIsSubmittingCheckInOut(false);
+                  }
+                }}
+                disabled={isSubmittingCheckInOut}
+              >
+                {isSubmittingCheckInOut ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
+                ) : (
+                  <><Check className="mr-2 h-4 w-4" />Submit {checkInOutType}</>
+                )}
+              </Button>
+
+              {/* View Records Link */}
+              <div className="text-center">
+                <Link href="/dashboard/hr/multiple-check-in-out?myRecords=true" className="text-sm text-primary hover:underline">
+                  View My Check-In/Out History →
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
+          <CardHeader>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
               <FileDigit className="h-6 w-6 text-primary" />
               Monthly Payslip Summary
             </CardTitle>
@@ -1163,6 +1418,8 @@ export default function AccountDetailsPage() {
               </TableBody></Table>
           </CardContent>
         </Card>
+
+
 
         <div className="mt-8">
           <LeaveCalendar birthdays={birthdaysToday} />

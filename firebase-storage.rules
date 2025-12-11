@@ -1,0 +1,57 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules for Multiple Check In/Out Feature
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is the owner of the resource
+    function isOwner(employeeId) {
+      return request.auth.uid == employeeId;
+    }
+    
+    // Helper function to validate image file
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024 // 5MB max
+          && request.resource.contentType.matches('image/.*');
+    }
+    
+    // Rules for check-in/out images
+    match /check_inout_images/{employeeId}/{imageFile} {
+      // Allow authenticated users to upload their own check-in/out images
+      allow create: if isAuthenticated() 
+                    && isOwner(employeeId)
+                    && isValidImage();
+      
+      // Allow authenticated users to read their own images
+      // Allow admins/HR to read all images
+      allow read: if isAuthenticated() 
+                  && (isOwner(employeeId) || hasAdminRole());
+      
+      // Prevent updates and deletes for data integrity
+      allow update, delete: if false;
+    }
+    
+    // Helper function to check admin/HR roles
+    function hasAdminRole() {
+      // Check if user has admin or HR role in Firestore
+      // This requires a custom claim or Firestore lookup
+      return request.auth.token.role in ['Super Admin', 'Admin', 'HR'];
+    }
+    
+    // Profile images (existing rule - keep as is)
+    match /profileImages/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
