@@ -30,12 +30,12 @@ interface DayWithLeaves {
 }
 
 const getInitials = (name?: string) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+  if (!name) return 'U';
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 };
 
 interface LeaveCalendarProps {
-    birthdays?: EmployeeDocument[];
+  birthdays?: EmployeeDocument[];
 }
 
 export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
@@ -43,7 +43,7 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
   const [filterBranch, setFilterBranch] = React.useState(ALL_BRANCHES);
   const [filterDept, setFilterDept] = React.useState(ALL_DEPTS);
   const [filterLeaveType, setFilterLeaveType] = React.useState<LeaveType | '' | typeof ALL_LEAVE_TYPES>(ALL_LEAVE_TYPES);
-  
+
   const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_for_leave_calendar']);
   const { data: leaves, isLoading: isLoadingLeaves } = useFirestoreQuery<LeaveApplicationDocument[]>(collection(firestore, 'leave_applications'), undefined, ['leaves_for_leave_calendar']);
   const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(collection(firestore, 'branches'), undefined, ['branches_for_leave_calendar']);
@@ -54,11 +54,11 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
 
   const monthData = React.useMemo(() => {
     if (isLoading) return [];
-    
+
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
     const days = eachDayOfInterval({ start, end });
-    
+
     const filteredEmployees = employees?.filter(emp => {
       const branchMatch = filterBranch === ALL_BRANCHES || emp.branch === filterBranch;
       const deptMatch = filterDept === ALL_DEPTS || emp.department === filterDept;
@@ -68,35 +68,35 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
     const filteredEmployeeIds = new Set(filteredEmployees.map(e => e.id));
 
     return days.map(day => {
-        const dayLeaves = leaves?.filter(leave => {
-            const fromDate = parseISO(leave.fromDate);
-            const toDate = parseISO(leave.toDate);
-            const leaveTypeMatch = filterLeaveType === ALL_LEAVE_TYPES || leave.leaveType === filterLeaveType;
-            return filteredEmployeeIds.has(leave.employeeId) && isWithinInterval(day, { start: fromDate, end: toDate }) && leaveTypeMatch;
-        }).map(leave => ({
-            ...leave,
-            employee: employees?.find(e => e.id === leave.employeeId)
-        }));
+      const dayLeaves = leaves?.filter(leave => {
+        const fromDate = parseISO(leave.fromDate);
+        const toDate = parseISO(leave.toDate);
+        const leaveTypeMatch = filterLeaveType === ALL_LEAVE_TYPES || leave.leaveType === filterLeaveType;
+        return filteredEmployeeIds.has(leave.employeeId) && isWithinInterval(day, { start: fromDate, end: toDate }) && leaveTypeMatch;
+      }).map(leave => ({
+        ...leave,
+        employee: employees?.find(e => e.id === leave.employeeId)
+      }));
 
-        const dayBirthdays = birthdays.filter(emp => {
-            if (!emp.dateOfBirth) return false;
-            try {
-                const dob = parseISO(emp.dateOfBirth);
-                return format(dob, 'MM-dd') === format(day, 'MM-dd');
-            } catch { return false; }
-        });
+      const dayBirthdays = birthdays.filter(emp => {
+        if (!emp.dateOfBirth) return false;
+        try {
+          const dob = parseISO(emp.dateOfBirth);
+          return format(dob, 'MM-dd') === format(day, 'MM-dd');
+        } catch { return false; }
+      });
 
-        const isHoliday = holidays?.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
-        const isWeekend = day.getDay() === 5; // Friday
-        
-        return {
-            date: day,
-            isToday: isToday(day),
-            isHoliday: !!isHoliday,
-            isWeekend: isWeekend,
-            leaves: dayLeaves || [],
-            birthdays: dayBirthdays || [],
-        };
+      const isHoliday = holidays?.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+      const isWeekend = day.getDay() === 5; // Friday
+
+      return {
+        date: day,
+        isToday: isToday(day),
+        isHoliday: !!isHoliday,
+        isWeekend: isWeekend,
+        leaves: dayLeaves || [],
+        birthdays: dayBirthdays || [],
+      };
     });
   }, [currentMonth, employees, leaves, holidays, filterBranch, filterDept, filterLeaveType, isLoading, birthdays]);
 
@@ -107,35 +107,35 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
     <Card className="shadow-xl">
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <CardTitle>Leave Calendar</CardTitle>
-            <div className="flex gap-2 w-full sm:w-auto">
-                <Select value={filterLeaveType} onValueChange={(val) => setFilterLeaveType(val as any)}>
-                    <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Leave Type" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value={ALL_LEAVE_TYPES}>All Leave Types</SelectItem>
-                        {leaveTypeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-                 <Select value={filterBranch} onValueChange={setFilterBranch}>
-                    <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Branch" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value={ALL_BRANCHES}>All Branches</SelectItem>
-                        {branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-                 <Select value={filterDept} onValueChange={setFilterDept}>
-                    <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Department" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value={ALL_DEPTS}>All Departments</SelectItem>
-                        {departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            </div>
+          <CardTitle>Leave Calendar</CardTitle>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Select value={filterLeaveType} onValueChange={(val) => setFilterLeaveType(val as any)}>
+              <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Leave Type" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_LEAVE_TYPES}>All Leave Types</SelectItem>
+                {leaveTypeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterBranch} onValueChange={setFilterBranch}>
+              <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Branch" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_BRANCHES}>All Branches</SelectItem>
+                {branches?.map(b => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterDept} onValueChange={setFilterDept}>
+              <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Department" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_DEPTS}>All Departments</SelectItem>
+                {departments?.map(d => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div className="flex items-center justify-center gap-4 mt-4">
-            <Button variant="outline" size="icon" onClick={goToPreviousMonth}><ChevronLeft className="h-4 w-4" /></Button>
-            <div className="text-xl font-semibold">{format(currentMonth, 'MMMM yyyy')}</div>
-            <Button variant="outline" size="icon" onClick={goToNextMonth}><ChevronRight className="h-4 w-4" /></Button>
+          <Button variant="outline" size="icon" onClick={goToPreviousMonth}><ChevronLeft className="h-4 w-4" /></Button>
+          <div className="text-xl font-semibold">{format(currentMonth, 'MMMM yyyy')}</div>
+          <Button variant="outline" size="icon" onClick={goToNextMonth}><ChevronRight className="h-4 w-4" /></Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -148,51 +148,51 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
               <time dateTime={format(dayInfo.date, 'yyyy-MM-dd')} className="text-xs font-semibold">{format(dayInfo.date, 'd')}</time>
               <div className="flex-grow mt-1 space-y-1">
                 {dayInfo.birthdays.map(emp => (
-                     <TooltipProvider key={emp.id}>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1.5 cursor-pointer bg-pink-100 dark:bg-pink-900/50 p-1 rounded">
-                                    <Cake className="h-4 w-4 text-pink-500 flex-shrink-0"/>
-                                    <span className="hidden sm:inline text-xs truncate font-medium text-pink-700 dark:text-pink-300">{emp.fullName}</span>
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p className="font-semibold">{emp.fullName}'s Birthday!</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                  <TooltipProvider key={emp.id}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5 cursor-pointer bg-pink-100 dark:bg-pink-900/50 p-1 rounded">
+                          <Cake className="h-4 w-4 text-pink-500 flex-shrink-0" />
+                          <span className="hidden sm:inline text-xs truncate font-medium text-pink-700 dark:text-pink-300">{emp.fullName}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-semibold">{emp.fullName}'s Birthday!</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ))}
                 {dayInfo.leaves.map(leave => (
-                   <TooltipProvider key={leave.id}>
+                  <TooltipProvider key={leave.id}>
                     <Tooltip>
-                        <TooltipTrigger asChild>
-                         <div className="flex items-center gap-1.5 cursor-pointer">
-                            <Avatar className="h-5 w-5">
-                                <AvatarImage src={leave.employee?.photoURL} alt={leave.employee?.fullName} />
-                                <AvatarFallback className="text-[10px]">{getInitials(leave.employee?.fullName)}</AvatarFallback>
-                            </Avatar>
-                            <span className="hidden sm:inline text-xs truncate text-muted-foreground">{leave.employee?.fullName}</span>
-                         </div>
-                        </TooltipTrigger>
-                         <TooltipContent>
-                           <p className="font-semibold">{leave.employee?.fullName}</p>
-                           <p>Type: {leave.leaveType}</p>
-                           <p>Reason: {leave.reason}</p>
-                           <p>Status: <span className={leave.status === 'Approved' ? 'text-green-500' : 'text-yellow-500'}>{leave.status}</span></p>
-                        </TooltipContent>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5 cursor-pointer">
+                          <Avatar className="h-8 w-8 flex-shrink-0">
+                            <AvatarImage src={leave.employee?.photoURL} alt={leave.employee?.fullName} />
+                            <AvatarFallback className="text-xs font-semibold">{getInitials(leave.employee?.fullName)}</AvatarFallback>
+                          </Avatar>
+                          <span className="hidden sm:inline text-xs truncate text-muted-foreground">{leave.employee?.fullName}</span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-semibold">{leave.employee?.fullName}</p>
+                        <p>Type: {leave.leaveType}</p>
+                        <p>Reason: {leave.reason}</p>
+                        <p>Status: <span className={leave.status === 'Approved' ? 'text-green-500' : 'text-yellow-500'}>{leave.status}</span></p>
+                      </TooltipContent>
                     </Tooltip>
-                   </TooltipProvider>
+                  </TooltipProvider>
                 ))}
               </div>
             </div>
           ))}
         </div>
-         <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-4">
-            <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-green-500 mr-2"></span>Approved</div>
-            <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-yellow-500 mr-2"></span>Pending</div>
-            <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-blue-500 mr-2"></span>Today</div>
-            <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-gray-400 mr-2"></span>Holiday</div>
-            <div className="flex items-center"><Cake className="h-4 w-4 text-pink-500 mr-1"/>Birthday</div>
+        <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-4">
+          <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-green-500 mr-2"></span>Approved</div>
+          <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-yellow-500 mr-2"></span>Pending</div>
+          <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-blue-500 mr-2"></span>Today</div>
+          <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-gray-400 mr-2"></span>Holiday</div>
+          <div className="flex items-center"><Cake className="h-4 w-4 text-pink-500 mr-1" />Birthday</div>
         </div>
       </CardContent>
     </Card>
