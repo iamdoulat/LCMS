@@ -104,7 +104,7 @@ export default function MultipleCheckInOutPage() {
     };
 
     return (
-        <div className="container mx-auto p-6 space-y-6">
+        <div className="w-full p-6 space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="text-2xl font-bold flex items-center gap-2">

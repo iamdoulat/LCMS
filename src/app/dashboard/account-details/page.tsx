@@ -126,6 +126,24 @@ export default function AccountDetailsPage() {
   const [isSubmittingCheckInOut, setIsSubmittingCheckInOut] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Automatically capture location on component mount
+  React.useEffect(() => {
+    const captureLocation = async () => {
+      if (!currentLocation && !isLoadingLocation) {
+        setIsLoadingLocation(true);
+        try {
+          const location = await getCurrentLocation();
+          setCurrentLocation(location);
+        } catch (error: any) {
+          console.error('Error capturing location:', error);
+          // Show error but don't block the form - user can retry manually
+        } finally {
+          setIsLoadingLocation(false);
+        }
+      }
+    };
+    captureLocation();
+  }, []); // Empty dependency array - run only once on mount
 
   // Step 1: Fetch employee data based on user's email
   useEffect(() => {
@@ -1053,50 +1071,80 @@ export default function AccountDetailsPage() {
 
               {/* Location */}
               <div className="space-y-2">
-                <Label>Location *</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={async () => {
-                      setIsLoadingLocation(true);
-                      try {
-                        const location = await getCurrentLocation();
-                        setCurrentLocation(location);
-                        Swal.fire('Location Captured', `Location: ${location.address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}`, 'success');
-                      } catch (error: any) {
-                        Swal.fire('Location Error', error.message || 'Could not get location', 'error');
-                      } finally {
-                        setIsLoadingLocation(false);
-                      }
-                    }}
-                    disabled={isLoadingLocation}
-                    className="flex-1"
-                  >
-                    {isLoadingLocation ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Getting Location...</>
-                    ) : (
-                      <><MapPin className="mr-2 h-4 w-4" />{currentLocation ? 'Refresh Location' : 'Get Location'}</>
-                    )}
-                  </Button>
-                  {currentLocation && (
+                <Label>Location * (Auto-captured)</Label>
+                {isLoadingLocation ? (
+                  <div className="flex items-center gap-2 p-3 border rounded-md bg-muted">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm text-muted-foreground">Capturing your location...</span>
+                  </div>
+                ) : currentLocation ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-3 border rounded-md bg-green-50 dark:bg-green-950">
+                      <MapPin className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <span className="text-sm text-green-700 dark:text-green-300 flex-1">
+                        {currentLocation.address || `${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}`}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          window.open(`https://www.google.com/maps?q=${currentLocation.latitude},${currentLocation.longitude}`, '_blank');
+                        }}
+                        title="View on Map"
+                      >
+                        <MapPin className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <Button
                       type="button"
-                      variant="secondary"
-                      size="icon"
-                      onClick={() => {
-                        window.open(`https://www.google.com/maps?q=${currentLocation.latitude},${currentLocation.longitude}`, '_blank');
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        setIsLoadingLocation(true);
+                        try {
+                          const location = await getCurrentLocation();
+                          setCurrentLocation(location);
+                          Swal.fire('Location Updated', `New location: ${location.address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}`, 'success');
+                        } catch (error: any) {
+                          Swal.fire('Location Error', error.message || 'Could not get location', 'error');
+                        } finally {
+                          setIsLoadingLocation(false);
+                        }
                       }}
-                      title="View on Map"
+                      className="w-full"
                     >
-                      <MapPin className="h-4 w-4" />
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Refresh Location
                     </Button>
-                  )}
-                </div>
-                {currentLocation && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {currentLocation.address || `${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}`}
-                  </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-3 border rounded-md bg-yellow-50 dark:bg-yellow-950">
+                      <XCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                      <span className="text-sm text-yellow-700 dark:text-yellow-300">Location not captured</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        setIsLoadingLocation(true);
+                        try {
+                          const location = await getCurrentLocation();
+                          setCurrentLocation(location);
+                          Swal.fire('Location Captured', `Location: ${location.address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}`, 'success');
+                        } catch (error: any) {
+                          Swal.fire('Location Error', error.message || 'Could not get location', 'error');
+                        } finally {
+                          setIsLoadingLocation(false);
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      <MapPin className="mr-2 h-4 w-4" />
+                      Capture Location
+                    </Button>
+                  </div>
                 )}
               </div>
 

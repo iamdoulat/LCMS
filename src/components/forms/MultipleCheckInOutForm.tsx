@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CameraCapture } from '@/components/ui/CameraCapture';
 import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
 import type { CheckInOutType, MultipleCheckInOutLocation } from '@/types/checkInOut';
-import { toast } from 'sonner';
+import Swal from 'sweetalert2';
 
 interface MultipleCheckInOutFormProps {
     employeeId: string;
@@ -55,10 +55,10 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
         try {
             const loc = await getCurrentLocation();
             setLocation(loc);
-            toast.success('Location captured successfully');
+            Swal.fire('Success', 'Location captured successfully', 'success');
         } catch (error) {
             console.error('Location error:', error);
-            toast.error('Could not capture location. Please enable location services.');
+            Swal.fire('Error', 'Could not capture location. Please enable location services.', 'error');
         } finally {
             setIsLoadingLocation(false);
         }
@@ -68,17 +68,17 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
         setCapturedImage(file);
         setImagePreview(URL.createObjectURL(file));
         setShowCamera(false);
-        toast.success('Photo captured successfully');
+        Swal.fire('Success', 'Photo captured successfully', 'success');
     };
 
     const onSubmit = async (data: FormData) => {
         if (!capturedImage) {
-            toast.error('Please capture a photo');
+            Swal.fire('Error', 'Please capture a photo', 'error');
             return;
         }
 
         if (!location) {
-            toast.error('Location not available. Please try again.');
+            Swal.fire('Error', 'Location not available. Please try again.', 'error');
             return;
         }
 
@@ -99,11 +99,11 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
                 data.remarks
             );
 
-            toast.success(`${data.type} recorded successfully!`);
+            Swal.fire('Success', `${data.type} recorded successfully!`, 'success');
             onSuccess?.();
         } catch (error) {
             console.error('Submission error:', error);
-            toast.error('Failed to submit. Please try again.');
+            Swal.fire('Error', 'Failed to submit. Please try again.', 'error');
         } finally {
             setIsSubmitting(false);
         }
