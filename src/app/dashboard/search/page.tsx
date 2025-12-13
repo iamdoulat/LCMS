@@ -19,7 +19,7 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialQuery = searchParams.get('q') || '';
-  
+
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [displayedQuery, setDisplayedQuery] = useState(initialQuery);
 
@@ -140,7 +140,7 @@ function SearchPageContent() {
     if (trimmedSearchTerm) {
       router.push(`/dashboard/search?q=${encodeURIComponent(trimmedSearchTerm)}`);
     } else {
-      router.push('/dashboard/search'); 
+      router.push('/dashboard/search');
     }
   };
 
@@ -225,94 +225,96 @@ function SearchPageContent() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
-            <SearchIcon className="h-7 w-7 text-primary" />
-            Global Search
-          </CardTitle>
-          <CardDescription>
-            Enter a search term. L/C Number uses exact match. Applicant and Beneficiary names use "starts with" (case-sensitive) matching.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSearchSubmit} className="flex w-full max-w-2xl mx-auto items-center space-x-2 mb-8">
-            <Input
-              type="search"
-              placeholder="Enter L/C No, Applicant, Beneficiary..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" variant="default">
-              <SearchIcon className="mr-2 h-4 w-4" /> Search
-            </Button>
-          </form>
+    <div className="mx-[15px]">
+      <div className="container mx-auto py-8">
+        <Card className="shadow-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl font-bold text-primary">
+              <SearchIcon className="h-7 w-7 text-primary" />
+              Global Search
+            </CardTitle>
+            <CardDescription>
+              Enter a search term. L/C Number uses exact match. Applicant and Beneficiary names use "starts with" (case-sensitive) matching.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSearchSubmit} className="flex w-full max-w-2xl mx-auto items-center space-x-2 mb-8">
+              <Input
+                type="search"
+                placeholder="Enter L/C No, Applicant, Beneficiary..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+              <Button type="submit" variant="default">
+                <SearchIcon className="mr-2 h-4 w-4" /> Search
+              </Button>
+            </form>
 
-          {displayedQuery && (
-            <div className="mb-6 text-center">
-              <p className="text-lg">Showing results for: <span className="font-semibold text-primary">{displayedQuery}</span></p>
-            </div>
-          )}
+            {displayedQuery && (
+              <div className="mb-6 text-center">
+                <p className="text-lg">Showing results for: <span className="font-semibold text-primary">{displayedQuery}</span></p>
+              </div>
+            )}
 
-          {!displayedQuery && !isLoadingLcSearch && !isLoadingApplicantSearch && !isLoadingBeneficiarySearch && (
-            <div className="text-center text-muted-foreground py-10">
+            {!displayedQuery && !isLoadingLcSearch && !isLoadingApplicantSearch && !isLoadingBeneficiarySearch && (
+              <div className="text-center text-muted-foreground py-10">
                 <SearchIcon className="mx-auto h-12 w-12 mb-4" />
                 <p className="text-lg">Enter a term above to search the system.</p>
-            </div>
-          )}
+              </div>
+            )}
 
-          {displayedQuery && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/>L/C Entries Matching "{displayedQuery}"</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {renderLCResults()}
-                </CardContent>
-              </Card>
+            {displayedQuery && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl flex items-center gap-2"><FileText className="h-5 w-5 text-primary" />L/C Entries Matching "{displayedQuery}"</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderLCResults()}
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2"><Users className="h-5 w-5 text-primary"/>Applicants Starting With "{displayedQuery}"</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {renderApplicantResults()}
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl flex items-center gap-2"><Users className="h-5 w-5 text-primary" />Applicants Starting With "{displayedQuery}"</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderApplicantResults()}
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>Beneficiaries Starting With "{displayedQuery}"</CardTitle>
-                </CardHeader>
-                <CardContent>
-                   {renderBeneficiaryResults()}
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Beneficiaries Starting With "{displayedQuery}"</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderBeneficiaryResults()}
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2"><Layers className="h-5 w-5 text-primary"/>Proforma Invoices Matching "{displayedQuery}"</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">Proforma Invoice search is not yet implemented for this query type.</p>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl flex items-center gap-2"><Layers className="h-5 w-5 text-primary" />Proforma Invoices Matching "{displayedQuery}"</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground text-sm">Proforma Invoice search is not yet implemented for this query type.</p>
+                  </CardContent>
+                </Card>
 
-               <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary"/>Entries by Year Matching "{displayedQuery}"</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">Year-based search for this query term is not yet implemented.</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xl flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary" />Entries by Year Matching "{displayedQuery}"</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground text-sm">Year-based search for this query term is not yet implemented.</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
