@@ -1,0 +1,680 @@
+@import 'sweetalert2/dist/sweetalert2.min.css';
+@import 'react-quill/dist/quill.snow.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light Theme (Default) */
+    --background: 0 0% 95%;
+    /* Light Grey #f2f2f2 */
+    --foreground: 240 10% 3.9%;
+    /* Dark Grey for text */
+
+    --card: 0 0% 100%;
+    /* White cards */
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 207 68% 53%;
+    /* Blue #3498db */
+    --primary-foreground: 0 0% 100%;
+    /* White */
+
+    --secondary: 240 4.8% 95.9%;
+    /* Lighter grey for secondary elements */
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    /* Lighter muted text */
+
+    --accent: 145 63% 49%;
+    /* Green #2ecc71 */
+    --accent-foreground: 0 0% 100%;
+    /* White text for contrast on green */
+
+    --destructive: 0 84.2% 60.2%;
+    /* Standard red */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    /* Light border */
+    --input: 240 5.9% 90%;
+    /* Light input background */
+    --ring: 207 68% 53%;
+    /* Blue for focus rings */
+
+    --chart-1: 207 68% 53%;
+    /* Blue */
+    --chart-2: 145 63% 49%;
+    /* Green */
+    --chart-3: 35 92% 60%;
+    /* Orange */
+    --chart-4: 262 75% 55%;
+    /* Purple */
+    --chart-5: 50 95% 55%;
+    /* Yellow */
+
+    --radius: 0.5rem;
+
+    /* Sidebar specific variables - Light Theme */
+    --sidebar-background: 0 0% 98%;
+    /* Very light, slightly off-white */
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-primary: 207 68% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 93%;
+    /* Slightly darker accent for hover */
+    --sidebar-accent-foreground: 240 10% 3.9%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 207 68% 53%;
+  }
+
+  .dark {
+    /* Dark Theme */
+    --background: 220 40% 10%;
+    /* Dark Navy Blue */
+    --foreground: 0 0% 98%;
+    /* Almost White */
+
+    --card: 220 40% 14%;
+    /* Slightly Lighter Dark Navy */
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 40% 12%;
+    /* Darker Popover Background */
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 210 100% 60%;
+    /* Vibrant Blue */
+    --primary-foreground: 0 0% 100%;
+    /* White */
+
+    --secondary: 220 30% 25%;
+    /* Medium Dark Blue/Grey */
+    --secondary-foreground: 0 0% 90%;
+    /* Light Grey */
+
+    --muted: 220 25% 20%;
+    /* Darker Muted Blue/Grey */
+    --muted-foreground: 220 15% 55%;
+    /* Medium Grey for Muted Text */
+
+    --accent: 190 90% 55%;
+    /* Bright Cyan/Teal */
+    --accent-foreground: 220 40% 8%;
+    /* Dark text for contrast on Accent */
+
+    --destructive: 0 75% 60%;
+    /* Vivid Red */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 30% 25%;
+    /* Medium Dark Blue/Grey Border */
+    --input: 220 30% 22%;
+    /* Darker Input Background */
+    --ring: 210 100% 65%;
+    /* Brighter Blue for Focus Rings */
+
+    --chart-1: 210 90% 55%;
+    --chart-2: 150 80% 50%;
+    --chart-3: 45 95% 55%;
+    --chart-4: 280 85% 65%;
+    --chart-5: 60 90% 50%;
+
+    /* Sidebar specific variables for dark mode */
+    --sidebar-background: 220 40% 9%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 210 100% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 30% 20%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 30% 25%;
+    --sidebar-ring: 210 100% 65%;
+  }
+}
+
+@layer components {
+  .bg-icon-dashboard {
+    @apply bg-purple-200 text-gray-800 dark:bg-purple-800 dark:text-gray-100;
+  }
+
+  .bg-icon-lc {
+    @apply bg-orange-200 text-gray-800 dark:bg-orange-800 dark:text-gray-100;
+  }
+
+  .bg-icon-add {
+    @apply bg-green-200 text-gray-800 dark:bg-green-800 dark:text-gray-100;
+  }
+
+  .bg-icon-list {
+    @apply bg-blue-200 text-gray-800 dark:bg-blue-800 dark:text-gray-100;
+  }
+
+  .bg-icon-sale {
+    @apply bg-yellow-200 text-gray-800 dark:bg-yellow-800 dark:text-gray-100;
+  }
+
+  .bg-icon-return {
+    @apply bg-orange-200 text-gray-800 dark:bg-orange-800 dark:text-gray-100;
+  }
+
+  .bg-icon-payment {
+    @apply bg-teal-200 text-gray-800 dark:bg-teal-800 dark:text-gray-100;
+  }
+
+  .bg-icon-settings {
+    @apply bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-100;
+  }
+
+  .bg-icon-reports {
+    @apply bg-indigo-200 text-gray-800 dark:bg-indigo-800 dark:text-gray-100;
+  }
+
+  .bg-icon-sheets {
+    @apply bg-green-200 text-gray-800 dark:bg-green-700 dark:text-gray-100;
+  }
+
+  .bg-icon-drive {
+    @apply bg-yellow-200 text-gray-800 dark:bg-yellow-700 dark:text-gray-100;
+  }
+
+  .bg-icon-beneficiary {
+    @apply bg-cyan-200 text-gray-800 dark:bg-cyan-800 dark:text-gray-100;
+  }
+
+  .bg-icon-applicant {
+    @apply bg-pink-200 text-gray-800 dark:bg-pink-800 dark:text-gray-100;
+  }
+
+  .bg-icon-upcoming {
+    @apply bg-blue-200 text-gray-800 dark:bg-blue-800 dark:text-gray-100;
+  }
+
+  .bg-icon-shipment-done {
+    @apply bg-green-200 text-gray-800 dark:bg-green-800 dark:text-gray-100;
+  }
+
+  .bg-icon-payment-pending {
+    @apply bg-red-200 text-gray-800 dark:bg-red-800 dark:text-gray-100;
+  }
+
+  .bg-icon-payment-done {
+    @apply bg-teal-200 text-gray-800 dark:bg-teal-800 dark:text-gray-100;
+  }
+
+  .bg-icon-search {
+    @apply bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-100;
+  }
+
+  .bg-icon-program {
+    @apply bg-indigo-200 text-gray-800 dark:bg-indigo-800 dark:text-gray-100;
+  }
+
+  .bg-icon-overdue {
+    @apply bg-red-200 text-gray-800 dark:bg-red-800 dark:text-gray-100;
+  }
+
+  .bg-icon-archive {
+    @apply bg-orange-200 text-gray-800 dark:bg-orange-800 dark:text-gray-100;
+  }
+
+  .bg-icon-warranty {
+    @apply bg-green-200 text-gray-800 dark:bg-green-800 dark:text-gray-100;
+  }
+
+  .bg-icon-no-warranty {
+    @apply bg-red-200 text-gray-800 dark:bg-red-800 dark:text-gray-100;
+  }
+
+  .bg-icon-notifications {
+    @apply bg-blue-200 text-gray-800 dark:bg-blue-800 dark:text-gray-100;
+  }
+
+  .bg-icon-company {
+    @apply bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-100;
+  }
+
+  .bg-icon-users {
+    @apply bg-green-200 text-gray-800 dark:bg-green-800 dark:text-gray-100;
+  }
+
+  .bg-icon-logs {
+    @apply bg-indigo-200 text-gray-800 dark:bg-indigo-800 dark:text-gray-100;
+  }
+
+  .bg-icon-financial {
+    @apply bg-green-200 text-gray-800 dark:bg-green-800 dark:text-gray-100;
+  }
+}
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  .print-preview-wrapper {
+    @apply bg-gray-200 dark:bg-gray-800 p-0 m-0 min-h-screen;
+  }
+}
+
+/* React Day Picker v8 Custom Styles */
+.rdp {
+  --rdp-cell-size: 2.25rem;
+  --rdp-accent-color: hsl(var(--primary));
+  --rdp-background-color: hsl(var(--accent));
+  --rdp-accent-color-dark: hsl(var(--primary));
+  --rdp-background-color-dark: hsl(var(--accent));
+  --rdp-outline: 2px solid hsl(var(--ring));
+  --rdp-outline-selected: 2px solid hsl(var(--primary));
+  margin: 0;
+}
+
+.rdp-months {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rdp-month {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rdp-caption {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 0.25rem;
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.rdp-caption_label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+}
+
+.rdp-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.rdp-nav_button {
+  position: absolute;
+  top: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+
+.rdp-nav_button:hover {
+  opacity: 1;
+  background-color: hsl(var(--accent));
+}
+
+.rdp-nav_button_previous {
+  left: 0.25rem;
+}
+
+.rdp-nav_button_next {
+  right: 0.25rem;
+}
+
+.rdp-nav_button:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.rdp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+.rdp-head {
+  color: hsl(var(--muted-foreground));
+}
+
+.rdp-head_row {
+  display: flex;
+}
+
+.rdp-head_cell {
+  width: 2.25rem;
+  font-size: 0.8rem;
+  font-weight: normal;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+}
+
+.rdp-tbody {
+  display: flex;
+  flex-direction: column;
+}
+
+.rdp-row {
+  display: flex;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.rdp-cell {
+  width: 2.25rem;
+  height: 2.25rem;
+  text-align: center;
+  font-size: 0.875rem;
+  padding: 0;
+  position: relative;
+}
+
+.rdp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  font-weight: normal;
+  background-color: transparent;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  transition: all 0.2s;
+  color: hsl(var(--foreground));
+}
+
+.rdp-button:hover:not(.rdp-day_disabled):not(.rdp-day_selected) {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.rdp-day_today {
+  background-color: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  font-weight: 500;
+}
+
+.rdp-day_selected {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  font-weight: 500;
+}
+
+.rdp-day_selected:hover {
+  background-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+.rdp-day_outside {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.5;
+}
+
+.rdp-day_disabled {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rdp-day_disabled:hover {
+  background-color: transparent;
+}
+
+.rdp-day_hidden {
+  visibility: hidden;
+}
+
+/* Dropdown styles for month/year selection */
+.rdp-caption_dropdowns {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.rdp-dropdown_year,
+.rdp-dropdown_month {
+  appearance: none;
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--input));
+  border-radius: calc(var(--radius) - 2px);
+  padding: 0.375rem 2rem 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  color: hsl(var(--foreground));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+  transition: all 0.2s;
+}
+
+.dark .rdp-dropdown_year,
+.dark .rdp-dropdown_month {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23cccccc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+.rdp-dropdown_year:hover,
+.rdp-dropdown_month:hover {
+  background-color: hsl(var(--accent));
+}
+
+.rdp-dropdown_year:focus,
+.rdp-dropdown_month:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.rdp-dropdown_icon {
+  display: none;
+}
+
+.rdp-vhidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Ensure caption label is hidden when using dropdowns */
+.rdp-caption_dropdowns+.rdp-caption_label {
+  display: none;
+}
+
+/* Print-specific styles */
+@media print {
+
+  body,
+  html {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .noprint {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-invoice-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .print-preview-wrapper {
+    padding: 0 !important;
+    background-color: #ffffff !important;
+  }
+
+  .print-header {
+    display: table-header-group !important;
+  }
+
+  .print-footer {
+    display: table-footer-group !important;
+  }
+
+  .bg-blue-500\/10 {
+    background-color: #f0f9ff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  a {
+    color: #000000 !important;
+    text-decoration: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  .a5-page {
+    @page {
+      size: A5;
+      margin: 10mm;
+    }
+  }
+
+  .text-foreground,
+  .text-muted-foreground,
+  .text-primary,
+  h1,
+  h2,
+  h3,
+  p,
+  span,
+  div,
+  td,
+  th {
+    color: #000000 !important;
+  }
+
+  .bg-gradient-to-r {
+    background-image: none !important;
+    color: inherit !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+  }
+}
+
+.print-only {
+  display: none;
+}
+
+/* StarBorder Component Styles */
+.star-border-container {
+  display: inline-block;
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.border-gradient-bottom {
+  position: absolute;
+  width: 300%;
+  height: 50%;
+  opacity: 0.7;
+  bottom: -12px;
+  right: -250%;
+  border-radius: 50%;
+  animation: star-movement-bottom linear infinite alternate;
+  z-index: 0;
+}
+
+.border-gradient-top {
+  position: absolute;
+  opacity: 0.7;
+  width: 300%;
+  height: 50%;
+  top: -12px;
+  left: -250%;
+  border-radius: 50%;
+  animation: star-movement-top linear infinite alternate;
+  z-index: 0;
+}
+
+.inner-content {
+  position: relative;
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--radius) - 2px);
+  /* Inner radius */
+  border: 1px solid black;
+}
+
+@keyframes star-movement-bottom {
+  0% {
+    transform: translate(0%, 0%);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-100%, 0%);
+    opacity: 0;
+  }
+}
+
+@keyframes star-movement-top {
+  0% {
+    transform: translate(0%, 0%);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(100%, 0%);
+    opacity: 0;
+  }
+}
+
+/* Notice Board Slide-In Animation */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
