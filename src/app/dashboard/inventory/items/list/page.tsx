@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Filter, XCircle, MapPin, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Filter, XCircle, MapPin, MoreHorizontal, ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -265,6 +265,7 @@ export default function ItemsListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[80px] px-2 sm:px-4">Image</TableHead>
                   <TableHead className="w-[200px] px-2 sm:px-4">Item Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Item Code</TableHead>
                   <TableHead className="px-2 sm:px-4">Brand Name</TableHead>
@@ -285,6 +286,17 @@ export default function ItemsListPage() {
                 ) : currentItems.length > 0 ? (
                   currentItems.map((item) => (
                     <TableRow key={item.id}>
+                      <TableCell className="px-2 sm:px-4">
+                        {(item.photoURL || item.imageUrl) ? (
+                          <div className="h-10 w-10 relative overflow-hidden rounded-md border text-center">
+                            <img src={item.photoURL || item.imageUrl} alt={item.itemName} className="h-full w-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center text-muted-foreground">
+                            <ImageIcon className="h-5 w-5" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium px-2 sm:px-4">{item.itemName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.itemCode || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.brandName || 'N/A'}</TableCell>

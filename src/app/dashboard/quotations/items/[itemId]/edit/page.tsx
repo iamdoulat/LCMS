@@ -92,21 +92,21 @@ export default function EditQuoteItemPage() {
   }
 
   if (!itemData) {
-     return (
+    return (
       <div className="container mx-auto py-8 text-center px-5">
         <p className="text-muted-foreground">Quote Item data could not be loaded.</p>
-         <Button variant="outline" asChild className="mt-4">
-            <Link href="/dashboard/quotations/items">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Quote Items List
-            </Link>
+        <Button variant="outline" asChild className="mt-4">
+          <Link href="/dashboard/quotations/items">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Quote Items List
+          </Link>
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="container mx-auto py-8 px-6">
       <div className="mb-6">
         <Link href="/dashboard/quotations/items" passHref>
           <Button variant="outline">

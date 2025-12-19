@@ -5,8 +5,9 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { firestore } from '@/lib/firebase/config';
+import { firestore, storage } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { QuoteItemFormValues, ItemDocument, SupplierDocument } from '@/types';
 import { quoteItemSchema } from '@/types';
 import Image from 'next/image';
@@ -20,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Link from 'next/link';
 import { Label } from '@/components/ui/label';
+import { ImageUploadWithCrop } from '@/components/ui/ImageUploadWithCrop';
 
 const sectionHeadingClass = "font-semibold text-lg text-primary flex items-center gap-2 mb-4";
 const PLACEHOLDER_SUPPLIER_VALUE = "__EDIT_QUOTE_ITEM_SUPPLIER__";
@@ -33,6 +35,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [supplierOptions, setSupplierOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = React.useState(true);
+  const [imageFile, setImageFile] = React.useState<Blob | null>(null);
 
   const form = useForm<QuoteItemFormValues>({
     resolver: zodResolver(quoteItemSchema),
@@ -48,7 +51,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       imageUrl: '',
     },
   });
-  
+
   const watchedImageUrl = form.watch("imageUrl");
 
 
@@ -93,7 +96,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
 
     const selectedSupplier = supplierOptions.find(opt => opt.value === data.supplierId);
 
-    const dataToUpdate: any = {
+    const dataToSave: any = {
       itemName: data.modelNumber,
       itemCode: data.itemCode || undefined,
       brandName: data.brandName || undefined,
@@ -103,19 +106,38 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       description: data.description || undefined,
       unit: data.unit || undefined,
       salesPrice: data.salesPrice,
-      imageUrl: data.imageUrl || undefined,
+      imageUrl: data.imageUrl || undefined, // Start with text input value
       updatedAt: serverTimestamp(),
     };
 
-    Object.keys(dataToUpdate).forEach(key => {
-      if (dataToUpdate[key as keyof typeof dataToUpdate] === undefined) {
-        delete dataToUpdate[key as keyof typeof dataToUpdate];
+    Object.keys(dataToSave).forEach(key => {
+      if (dataToSave[key as keyof typeof dataToSave] === undefined) {
+        delete dataToSave[key as keyof typeof dataToSave];
       }
     });
 
     try {
-      const itemDocRef = doc(firestore, "quote_items", itemId);
-      await updateDoc(itemDocRef, dataToUpdate);
+      const docRef = doc(firestore, "quote_items", itemId);
+
+      // Upload new image if exists
+      if (imageFile) {
+        try {
+          const imageRef = ref(storage, `quote_items/${itemId}/product_image.jpg`);
+          await uploadBytes(imageRef, imageFile);
+          const downloadURL = await getDownloadURL(imageRef);
+          dataToSave.imageUrl = downloadURL; // Override text input if file uploaded
+        } catch (uploadError) {
+          console.error("Error uploading image:", uploadError);
+          Swal.fire({
+            title: "Image Upload Failed",
+            text: "Item will be saved, but image upload failed.",
+            icon: "warning"
+          });
+        }
+      }
+
+      await updateDoc(docRef, dataToSave);
+
       Swal.fire({
         title: "Quote Item Updated!",
         text: `Quote Item "${data.modelNumber}" has been successfully updated.`,
@@ -123,6 +145,11 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
         timer: 2500,
         showConfirmButton: true,
       });
+      form.reset(data); // Re-initialize with saved data
+      setImageFile(null); // Reset file input
+      // Ideally we should update the initialData or refresh the page/context, 
+      // but form reset with same data is tricky if we changed imageUrl.
+      // Since we don't return new data from updateDoc, we might need to assume success.
     } catch (error) {
       console.error("Error updating quote item document: ", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -203,7 +230,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
               </FormItem>
             )}
           />
-           <FormField
+          <FormField
             control={form.control}
             name="countryOfOrigin"
             render={({ field }) => (
@@ -231,36 +258,51 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="imageUrl"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center"><LinkIcon className="h-4 w-4 mr-1 text-muted-foreground" />External Item Picture URL</FormLabel>
-              <FormControl>
-                <Input type="url" placeholder="https://example.com/image.jpg" {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormMessage />
+              <FormLabel className="flex items-center"><LinkIcon className="h-4 w-4 mr-1 text-muted-foreground" />Product Image</FormLabel>
+              <div className="space-y-4">
+                <ImageUploadWithCrop
+                  onImageCropped={(blob) => setImageFile(blob)}
+                  aspectRatio={1}
+                  initialImageUrl={field.value}
+                />
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or using URL</span>
+                  </div>
+                </div>
+                <FormControl>
+                  <Input type="url" placeholder="https://example.com/image.jpg" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </div>
             </FormItem>
           )}
         />
-        
+
         {watchedImageUrl && (
-            <div className="space-y-2">
-                <Label>Image Preview</Label>
-                <div className="mt-2 w-32 h-32 rounded-md border p-2 flex items-center justify-center">
-                    <Image 
-                        src={watchedImageUrl} 
-                        alt="Item Preview" 
-                        width={120} 
-                        height={120}
-                        className="object-contain rounded-sm"
-                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/120x120/e2e8f0/e2e8f0?text=Invalid'; }}
-                        data-ai-hint="item image"
-                    />
-                </div>
+          <div className="space-y-2">
+            <Label>Image Preview</Label>
+            <div className="mt-2 w-32 h-32 rounded-md border p-2 flex items-center justify-center">
+              <Image
+                src={watchedImageUrl}
+                alt="Item Preview"
+                width={120}
+                height={120}
+                className="object-contain rounded-sm"
+                onError={(e) => { e.currentTarget.src = 'https://placehold.co/120x120/e2e8f0/e2e8f0?text=Invalid'; }}
+                data-ai-hint="item image"
+              />
             </div>
+          </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -178,7 +178,7 @@ export default function PettyCashDashboardPage() {
         const fetchSalesAndItemStats = async () => {
             try {
                 const unpaidStatuses: SaleStatus[] = ["Draft", "Sent", "Partial", "Overdue"];
-                const salesQuery = query(collection(firestore, "sales_invoice"));
+                const salesQuery = query(collection(firestore, "invoices"));
                 const itemsQuery = query(collection(firestore, "items"));
 
                 const [salesSnapshot, itemsSnapshot] = await Promise.all([

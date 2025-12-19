@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Tag, Filter, XCircle, Search, MapPin, Building, MoreHorizontal, Globe } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
@@ -62,11 +63,11 @@ export default function QuoteItemsListPage() {
         console.error("Error fetching quote items: ", error);
         let errorMessage = `Could not fetch quote items from Firestore. Please check console for details and ensure Firestore rules allow reads.`;
         if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required for 'quote_items' collection ordered by 'createdAt'. Please check the browser console for a link to create it.`;
+          errorMessage = `Could not fetch data: A Firestore index might be required for 'quote_items' collection ordered by 'createdAt'. Please check the browser console for a link to create it.`;
         } else if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
-           errorMessage = `Could not fetch data: Missing or insufficient permissions for 'quote_items'. Please check Firestore security rules.`;
+          errorMessage = `Could not fetch data: Missing or insufficient permissions for 'quote_items'. Please check Firestore security rules.`;
         } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+          errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
         Swal.fire("Fetch Error", errorMessage, "error");
@@ -265,6 +266,7 @@ export default function QuoteItemsListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[80px] px-2 sm:px-4">Image</TableHead>
                   <TableHead className="w-[200px] px-2 sm:px-4">Model Number</TableHead>
                   <TableHead className="px-2 sm:px-4">Brand Name</TableHead>
                   <TableHead className="px-2 sm:px-4">Country</TableHead>
@@ -276,12 +278,28 @@ export default function QuoteItemsListPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={7} className="h-24 text-center px-2 sm:px-4"><div className="flex justify-center items-center"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...</div></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-24 text-center px-2 sm:px-4"><div className="flex justify-center items-center"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading items...</div></TableCell></TableRow>
                 ) : fetchError ? (
-                  <TableRow><TableCell colSpan={7} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((item) => (
                     <TableRow key={item.id}>
+                      <TableCell className="px-2 sm:px-4">
+                        {item.imageUrl ? (
+                          <div className="relative w-10 h-10 overflow-hidden rounded-md border">
+                            <Image
+                              src={item.imageUrl}
+                              alt={item.itemName || 'Item'}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 bg-muted/50 rounded-md flex items-center justify-center border">
+                            <PackageIcon className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium px-2 sm:px-4">{item.itemName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.brandName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.countryOfOrigin || 'N/A'}</TableCell>
@@ -316,7 +334,7 @@ export default function QuoteItemsListPage() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={7} className="h-64 text-center px-2 sm:px-4"><div className="flex flex-col items-center justify-center"><Info className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-xl font-semibold text-muted-foreground">No Quote Items Found</p><p className="text-sm text-muted-foreground mt-1">{allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Quote Item\" to get started."}</p></div></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="h-64 text-center px-2 sm:px-4"><div className="flex flex-col items-center justify-center"><Info className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-xl font-semibold text-muted-foreground">No Quote Items Found</p><p className="text-sm text-muted-foreground mt-1">{allItems.length > 0 ? "No items match your current filters." : "Click \"Add New Quote Item\" to get started."}</p></div></TableCell></TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
@@ -324,7 +342,7 @@ export default function QuoteItemsListPage() {
               </TableCaption>
             </Table>
           </div>
-           {totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4">
               <Button
                 variant="outline"

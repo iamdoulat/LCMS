@@ -75,12 +75,12 @@ export default function InstallationReportsViewPage() {
 
       try {
         const reportsCollectionRef = collection(firestore, "installation_reports");
-        const reportsQuery = query(reportsCollectionRef, orderBy(documentId(), "desc"));
+        const reportsQuery = query(reportsCollectionRef); // Fetch unordered, sort client-side to avoid index issues
         const reportsSnapshot = await getDocs(reportsQuery);
         const fetchedReports = reportsSnapshot.docs.map(docSnap => {
           const data = docSnap.data();
           const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt && isValid(parseISO(data.createdAt)) ? parseISO(data.createdAt) : new Date(0));
-          
+
           return {
             id: docSnap.id,
             ...data,
@@ -92,11 +92,19 @@ export default function InstallationReportsViewPage() {
             etaDate: data.etaDate && data.etaDate.toDate ? data.etaDate.toDate().toISOString() : data.etaDate,
             packingListUrl: data.packingListUrl || undefined, // Ensure packingListUrl is explicitly handled
             installationDetails: data.installationDetails?.map((item: any) => ({
-                ...item,
-                installDate: item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate,
+              ...item,
+              installDate: item.installDate && item.installDate.toDate ? item.installDate.toDate().toISOString() : item.installDate,
             })) || [],
           } as InstallationReportDocument;
         });
+
+        // Sort by createdAt descending (client-side)
+        fetchedReports.sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
+          return dateB - dateA;
+        });
+
         setAllReports(fetchedReports);
 
         const customersSnapshot = await getDocs(collection(firestore, "customers"));
@@ -114,9 +122,9 @@ export default function InstallationReportsViewPage() {
       } catch (error: any) {
         let errorMessage = `Could not fetch data. Please check Firestore rules. Error: ${error.message}`;
         if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
-           errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules for the 'installation_reports' collection.`;
+          errorMessage = `Could not fetch data: Missing or insufficient permissions. Please check Firestore security rules for the 'installation_reports' collection.`;
         } else if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required. Please check your browser console for a link to create it automatically.`;
+          errorMessage = `Could not fetch data: A Firestore index might be required. Please check your browser console for a link to create it automatically.`;
         }
         setFetchError(errorMessage);
         Swal.fire("Fetch Error", errorMessage, "error");
@@ -131,7 +139,7 @@ export default function InstallationReportsViewPage() {
     let filtered = [...allReports];
 
     if (filterCommercialInvoiceNumber) {
-      filtered = filtered.filter(report => 
+      filtered = filtered.filter(report =>
         report.commercialInvoiceNumber?.toLowerCase().includes(filterCommercialInvoiceNumber.toLowerCase())
       );
     }
@@ -142,7 +150,7 @@ export default function InstallationReportsViewPage() {
       filtered = filtered.filter(report => report.beneficiaryId === filterBeneficiaryId);
     }
     if (filterLcNumber) {
-      filtered = filtered.filter(report => 
+      filtered = filtered.filter(report =>
         report.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase())
       );
     }
@@ -155,7 +163,7 @@ export default function InstallationReportsViewPage() {
             return isValid(ciDate) && getYear(ciDate) === yearNum;
           } catch { return false; }
         }
-        return false; 
+        return false;
       });
     }
 
@@ -186,7 +194,7 @@ export default function InstallationReportsViewPage() {
       }
     });
   };
-  
+
   const handleViewUrl = (url: string | undefined | null) => {
     if (url && url.trim() !== "") {
       try {
@@ -238,11 +246,11 @@ export default function InstallationReportsViewPage() {
                 Installation Reports list
               </CardTitle>
               <CardDescription>
-                Browse, filter, and manage existing installation reports. 
+                Browse, filter, and manage existing installation reports.
                 Showing {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedReports.length)} of {displayedReports.length} entries.
               </CardDescription>
             </div>
-             <Link href="/dashboard/warranty-management/new-installation-report" passHref>
+            <Link href="/dashboard/warranty-management/new-installation-report" passHref>
               <Button disabled={isReadOnly}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Installation Report
               </Button>
@@ -265,7 +273,7 @@ export default function InstallationReportsViewPage() {
                   <Input id="lcNoFilter" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="applicantFilterInstall" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</Label>
+                  <Label htmlFor="applicantFilterInstall" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground" />Applicant</Label>
                   <Combobox
                     options={applicantOptions}
                     value={filterApplicantId || ALL_APPLICANTS_VALUE}
@@ -277,7 +285,7 @@ export default function InstallationReportsViewPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="beneficiaryFilterInstall" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
+                  <Label htmlFor="beneficiaryFilterInstall" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground" />Beneficiary</Label>
                   <Combobox
                     options={beneficiaryOptions}
                     value={filterBeneficiaryId || ALL_BENEFICIARIES_VALUE}
@@ -289,7 +297,7 @@ export default function InstallationReportsViewPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="yearFilterInstall" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year (C.I. Date)</Label>
+                  <Label htmlFor="yearFilterInstall" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground" />Year (C.I. Date)</Label>
                   <Select value={filterYear} onValueChange={(value) => setFilterYear(value)}>
                     <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
                     <SelectContent>
@@ -316,7 +324,7 @@ export default function InstallationReportsViewPage() {
               <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
               <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Reports</p>
               <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap"
-                 dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}>
+                dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}>
               </p>
             </div>
           ) : currentItems.length === 0 ? (
@@ -372,42 +380,42 @@ export default function InstallationReportsViewPage() {
                       </TooltipProvider>
                     </div>
 
-                     <div className="mb-2 text-sm pr-20">
-                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                            <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline text-base">
-                            C.I.: {formatReportValue(report.commercialInvoiceNumber)}
-                            </Link>
-                            {(report.commercialInvoiceNumber && report.commercialInvoiceDate) && (
-                            <span className="text-xs text-muted-foreground">
-                                (Date: {formatDisplayDate(report.commercialInvoiceDate)})
-                            </span>
-                            )}
-                             <span className="font-medium text-foreground text-base">
-                                L/C: {formatReportValue(report.documentaryCreditNumber)}
-                            </span>
-                        </div>
+                    <div className="mb-2 text-sm pr-20">
+                      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                        <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} className="font-semibold text-primary hover:underline text-base">
+                          C.I.: {formatReportValue(report.commercialInvoiceNumber)}
+                        </Link>
+                        {(report.commercialInvoiceNumber && report.commercialInvoiceDate) && (
+                          <span className="text-xs text-muted-foreground">
+                            (Date: {formatDisplayDate(report.commercialInvoiceDate)})
+                          </span>
+                        )}
+                        <span className="font-medium text-foreground text-base">
+                          L/C: {formatReportValue(report.documentaryCreditNumber)}
+                        </span>
+                      </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 mb-1 text-sm">
                       <div><span className="text-muted-foreground">Applicant: </span><span className="font-medium text-foreground truncate" title={report.applicantName}>{formatReportValue(report.applicantName)}</span></div>
                       <div><span className="text-muted-foreground">Beneficiary: </span><span className="font-medium text-foreground truncate" title={report.beneficiaryName}>{formatReportValue(report.beneficiaryName)}</span></div>
                     </div>
 
-                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-1">
-                        <div><span className="text-muted-foreground">Total L/C Machine Qty: </span><span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span></div>
-                        <div><span className="text-muted-foreground">Machine Installed: </span><span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span></div>
-                        <div><span className="text-muted-foreground">Machine Pending: </span><span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>{formatReportValue(report.pendingQty)}</span></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 text-sm mb-1">
+                      <div><span className="text-muted-foreground">Total L/C Machine Qty: </span><span className="font-medium text-foreground">{formatReportValue(report.totalMachineQtyFromLC)}</span></div>
+                      <div><span className="text-muted-foreground">Machine Installed: </span><span className="font-medium text-foreground">{formatReportValue(report.totalInstalledQty)}</span></div>
+                      <div><span className="text-muted-foreground">Machine Pending: </span><span className={cn("font-bold", Number(report.pendingQty) > 0 ? "text-destructive" : "text-green-600")}>{formatReportValue(report.pendingQty)}</span></div>
                     </div>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 text-sm mt-1 mb-2">
-                        <p><strong className="text-muted-foreground">Warranty Expired:</strong> <span className="font-medium text-destructive">{reportExpiredCount} sets</span></p>
-                        <p><strong className="text-muted-foreground">Warranty Remaining:</strong> <span className="font-medium text-green-600">{reportRemainingCount} sets</span></p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 text-sm mt-1 mb-2">
+                      <p><strong className="text-muted-foreground">Warranty Expired:</strong> <span className="font-medium text-destructive">{reportExpiredCount} sets</span></p>
+                      <p><strong className="text-muted-foreground">Warranty Remaining:</strong> <span className="font-medium text-green-600">{reportRemainingCount} sets</span></p>
                     </div>
 
                     <div className="mt-auto pt-2 text-xs text-muted-foreground border-t border-dashed flex justify-between items-center">
                       {report.createdAt && (<span>Created: {isValid(parseISO(report.createdAt as string)) ? format(parseISO(report.createdAt as string), 'PPP p') : 'N/A'}</span>)}
-                        <Button variant="default" size="sm" className="h-7 px-2 py-1 text-xs" onClick={() => handleViewUrl(report.packingListUrl)} disabled={!report.packingListUrl}>
-                          <FileText className="mr-1.5 h-3 w-3" /> Packing List
-                        </Button>
+                      <Button variant="default" size="sm" className="h-7 px-2 py-1 text-xs" onClick={() => handleViewUrl(report.packingListUrl)} disabled={!report.packingListUrl}>
+                        <FileText className="mr-1.5 h-3 w-3" /> Packing List
+                      </Button>
                     </div>
                   </li>
                 );
@@ -430,8 +438,8 @@ export default function InstallationReportsViewPage() {
     </div>
   );
 }
-    
-    
-    
 
-    
+
+
+
+

@@ -291,20 +291,22 @@ export default function PrintQuotePage() {
         <div className="print-header">
           <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
-              {displayCompanyLogo && (
-                <Image
-                  src={displayCompanyLogo}
-                  alt={`${displayCompanyName} Logo`}
-                  width={413}
-                  height={28}
-                  className="object-contain mb-2"
-                  priority
-                  data-ai-hint="company logo"
-                />
-              )}
-              {!hideCompanyName && (
-                <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
-              )}
+              <div className="flex items-center gap-3 mb-2">
+                {displayCompanyLogo && (
+                  <Image
+                    src={displayCompanyLogo}
+                    alt={`${displayCompanyName} Logo`}
+                    width={50}
+                    height={50}
+                    className="object-contain"
+                    priority
+                    data-ai-hint="company logo"
+                  />
+                )}
+                {!hideCompanyName && (
+                  <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+                )}
+              </div>
               <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
               {displayCompanyEmail && <p className="text-xs text-gray-600">Email: {displayCompanyEmail}</p>}
               {displayCompanyPhone && <p className="text-xs text-gray-600">Phone: {displayCompanyPhone}</p>}

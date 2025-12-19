@@ -58,6 +58,8 @@ export default function EditItemPage() {
     fetchItemData();
   }, [fetchItemData]);
 
+
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-5 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">

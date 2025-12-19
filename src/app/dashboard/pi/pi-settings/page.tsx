@@ -77,8 +77,8 @@ export default function PISettingsPage() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           form.reset({
-              ...data,
-              hidePiHeaderLogo: data.hidePiHeaderLogo ?? false,
+            ...data,
+            hidePiHeaderLogo: data.hidePiHeaderLogo ?? false,
           });
           if (data.piLogoUrl) {
             setPiLogoPreviewUrl(data.piLogoUrl);
@@ -112,7 +112,7 @@ export default function PISettingsPage() {
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
-    const aspect = 413 / 28;
+    const aspect = 1; // 1:1 aspect ratio for 32x32px
     const crop = centerCrop(
       makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height),
       width, height
@@ -120,7 +120,7 @@ export default function PISettingsPage() {
     setCrop(crop);
   }
 
-   const handleCropAndSet = async () => {
+  const handleCropAndSet = async () => {
     if (!completedCrop || !imgRef.current || !selectedFile) {
       Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
       return;
@@ -205,119 +205,120 @@ export default function PISettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-           <Form {...form}>
+          <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Enter a name" {...field} value={field.value ?? ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-                     <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Address</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="236A Serangoon Road, #02-236A, Singapore 218084&#x0a;Registration No. 201610840K" {...field} value={field.value ?? ""} rows={1} className="h-10" disabled={isReadOnly} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input type="tel" placeholder="Enter a phone number" {...field} value={field.value ?? ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="Enter an email" {...field} value={field.value ?? ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-                </div>
-                 
-                 <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
-                    <DialogContent className="max-w-xl">
-                        <DialogHeader><DialogTitle>Crop PI Logo (413x28px)</DialogTitle></DialogHeader>
-                        {imgSrc && (
-                            <ReactCrop
-                                crop={crop}
-                                onChange={(_, percentCrop) => setCrop(percentCrop)}
-                                onComplete={(c) => setCompletedCrop(c)}
-                                aspect={413 / 28}
-                                minWidth={100}
-                            >
-                                <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
-                            </ReactCrop>
-                        )}
-                        <DialogFooter>
-                            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                            <Button onClick={handleCropAndSet} disabled={!completedCrop?.width}>
-                                <CropIcon className="mr-2 h-4 w-4" />Set Cropped Image
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Enter a name" {...field} value={field.value ?? ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="236A Serangoon Road, #02-236A, Singapore 218084&#x0a;Registration No. 201610840K" {...field} value={field.value ?? ""} rows={1} className="h-10" disabled={isReadOnly} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input type="tel" placeholder="Enter a phone number" {...field} value={field.value ?? ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="Enter an email" {...field} value={field.value ?? ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)} />
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-                    <div className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="hidePiHeaderLogo"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-                                <FormControl>
-                                    <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    id="hidePiHeaderLogo"
-                                    disabled={isReadOnly}
-                                    />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <FormLabel htmlFor="hidePiHeaderLogo" className="hover:cursor-pointer">
-                                    Hide PI Header Logo
-                                    </FormLabel>
-                                    <FormDescription>
-                                    If checked, the logo will not be printed on the PI header.
-                                    </FormDescription>
-                                </div>
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="piLogoUrl"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>External PI Header Logo URL</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                        type="url"
-                                        placeholder="https://example.com/logo.png"
-                                        {...field}
-                                        value={field.value || ""}
-                                        disabled={isReadOnly}
-                                        />
-                                    </FormControl>
-                                    <FormDescription>Use this URL if no file is uploaded.</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                     <FormItem>
-                        <Label>PI Header Logo</Label>
-                        <div className="flex items-center gap-4">
-                            <div className="w-48 h-auto aspect-[413/28] rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                                {piLogoPreviewUrl ? (
-                                    <Image
-                                        src={piLogoPreviewUrl}
-                                        alt="PI logo preview"
-                                        width={413}
-                                        height={28}
-                                        className="object-contain"
-                                        data-ai-hint="company logo"
-                                    />
-                                ) : (
-                                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                                )}
-                            </div>
-                            <Input id="pi-logo-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" disabled={isReadOnly} />
+              <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
+                <DialogContent className="max-w-xl">
+                  <DialogHeader><DialogTitle>Crop PI Logo (64x64px)</DialogTitle></DialogHeader>
+                  {imgSrc && (
+                    <ReactCrop
+                      crop={crop}
+                      onChange={(_, percentCrop) => setCrop(percentCrop)}
+
+                      onComplete={(c) => setCompletedCrop(c)}
+                      aspect={1}
+                      minWidth={64}
+                    >
+                      <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }} />
+                    </ReactCrop>
+                  )}
+                  <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                    <Button onClick={handleCropAndSet} disabled={!completedCrop?.width}>
+                      <CropIcon className="mr-2 h-4 w-4" />Set Cropped Image
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="hidePiHeaderLogo"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            id="hidePiHeaderLogo"
+                            disabled={isReadOnly}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel htmlFor="hidePiHeaderLogo" className="hover:cursor-pointer">
+                            Hide PI Header Logo
+                          </FormLabel>
+                          <FormDescription>
+                            If checked, the logo will not be printed on the PI header.
+                          </FormDescription>
                         </div>
-                        <FormDescription>Upload a 413x28 pixels logo for the PI header.</FormDescription>
-                     </FormItem>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="piLogoUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>External PI Header Logo URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="url"
+                            placeholder="https://example.com/logo.png"
+                            {...field}
+                            value={field.value || ""}
+                            disabled={isReadOnly}
+                          />
+                        </FormControl>
+                        <FormDescription>Use this URL if no file is uploaded.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
+                <FormItem>
+                  <Label>PI Header Logo</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-32 h-32 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                      {piLogoPreviewUrl ? (
+                        <Image
+                          src={piLogoPreviewUrl}
+                          alt="PI logo preview"
+                          width={64}
+                          height={64}
+                          className="object-contain"
+                          data-ai-hint="company logo"
+                        />
+                      ) : (
+                        <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                      )}
+                    </div>
+                    <Input id="pi-logo-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" disabled={isReadOnly} />
+                  </div>
+                  <FormDescription>Upload a 64x64 pixels logo for the PI header.</FormDescription>
+                </FormItem>
+              </div>
 
 
               <Button type="submit" disabled={isSubmitting || isReadOnly}>
@@ -335,6 +336,6 @@ export default function PISettingsPage() {
           </Form>
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

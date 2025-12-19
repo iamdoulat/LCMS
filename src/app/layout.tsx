@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { AppProviders } from '@/components/layout/AppProviders';
-import './globals.css'; 
+import './globals.css';
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import React, { Suspense } from 'react';
@@ -22,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/icons/favicon.ico" sizes="any" />
         <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32" />
         <link rel="icon" href="/icons/favicon-16x16.png" type="image/png" sizes="16x16" />
         <meta name="application-name" content="LC Vision" />

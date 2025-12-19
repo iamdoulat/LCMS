@@ -75,9 +75,11 @@ export default function ClaimReportListPage() {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const reportsQuery = query(collection(firestore, "claim_reports"), firestoreOrderBy("claimDate", "desc"));
+        const reportsQuery = query(collection(firestore, "claim_reports"));
         const querySnapshot = await getDocs(reportsQuery);
-        setAllReports(querySnapshot.docs.map(d => ({ ...d.data(), id: d.id } as ClaimReportDocument)));
+        const fetchedReports = querySnapshot.docs.map(d => ({ ...d.data(), id: d.id } as ClaimReportDocument));
+        fetchedReports.sort((a, b) => (new Date(b.claimDate).getTime() - new Date(a.claimDate).getTime()));
+        setAllReports(fetchedReports);
       } catch (error: any) {
         const msg = `Could not fetch claim reports. Error: ${error.message}`;
         setFetchError(msg);
@@ -103,18 +105,18 @@ export default function ClaimReportListPage() {
     fetchReports();
     fetchSuppliers();
   }, []);
-  
+
   useEffect(() => {
     let filtered = [...allReports];
-    if(filterClaimNumber) filtered = filtered.filter(c => c.claimNumber.toLowerCase().includes(filterClaimNumber.toLowerCase()));
-    if(filterSupplierId) filtered = filtered.filter(c => c.supplierId === filterSupplierId);
-    if(filterStatus) filtered = filtered.filter(c => c.status === filterStatus);
+    if (filterClaimNumber) filtered = filtered.filter(c => c.claimNumber.toLowerCase().includes(filterClaimNumber.toLowerCase()));
+    if (filterSupplierId) filtered = filtered.filter(c => c.supplierId === filterSupplierId);
+    if (filterStatus) filtered = filtered.filter(c => c.status === filterStatus);
     setDisplayedReports(filtered);
     setCurrentPage(1);
   }, [allReports, filterClaimNumber, filterSupplierId, filterStatus]);
 
   const handleEdit = (id: string) => router.push(`/dashboard/warranty-management/claim-report/edit/${id}`);
-  
+
   const handleDelete = async (id: string, claimNumber: string) => {
     Swal.fire({
       title: 'Are you sure?',
@@ -154,18 +156,18 @@ export default function ClaimReportListPage() {
       setCurrentPage(page);
     }
   };
-  
-   const getPageNumbers = () => {
+
+  const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
+    const maxPagesToShow = 5;
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
 
-    if (totalPages <= maxPagesToShow + 2) { 
+    if (totalPages <= maxPagesToShow + 2) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      pageNumbers.push(1); 
+      pageNumbers.push(1);
       let startPage = Math.max(2, currentPage - halfPagesToShow);
       let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
       if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
@@ -173,11 +175,11 @@ export default function ClaimReportListPage() {
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalPages - 1) pageNumbers.push("...");
-      pageNumbers.push(totalPages); 
+      pageNumbers.push(totalPages);
     }
     return pageNumbers;
   };
-  
+
   const getStatusBadgeVariant = (status: ClaimStatus) => {
     switch (status) {
       case 'Pending': return 'destructive';
@@ -211,10 +213,10 @@ export default function ClaimReportListPage() {
             <CardContent className="p-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <div><Label htmlFor="claimNoFilter">Claim No.</Label><Input id="claimNoFilter" placeholder="Search by Claim No..." value={filterClaimNumber} onChange={(e) => setFilterClaimNumber(e.target.value)} /></div>
-                <div><Label htmlFor="supplierFilter" className="flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Supplier</Label>
-                  <Combobox options={supplierOptions} value={filterSupplierId || ALL_SUPPLIERS_VALUE} onValueChange={(v) => setFilterSupplierId(v === ALL_SUPPLIERS_VALUE ? '' : v)} placeholder="Search Supplier..." selectPlaceholder="All Suppliers" disabled={isLoadingSuppliers}/>
+                <div><Label htmlFor="supplierFilter" className="flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground" />Supplier</Label>
+                  <Combobox options={supplierOptions} value={filterSupplierId || ALL_SUPPLIERS_VALUE} onValueChange={(v) => setFilterSupplierId(v === ALL_SUPPLIERS_VALUE ? '' : v)} placeholder="Search Supplier..." selectPlaceholder="All Suppliers" disabled={isLoadingSuppliers} />
                 </div>
-                 <div><Label htmlFor="statusFilter" className="text-sm font-medium">Status</Label>
+                <div><Label htmlFor="statusFilter" className="text-sm font-medium">Status</Label>
                   <Select value={filterStatus || ALL_STATUSES_VALUE} onValueChange={(v) => setFilterStatus(v === ALL_STATUSES_VALUE ? '' : v as ClaimStatus)}>
                     <SelectTrigger><SelectValue placeholder="All Statuses" /></SelectTrigger>
                     <SelectContent><SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>{claimStatusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
@@ -258,35 +260,35 @@ export default function ClaimReportListPage() {
                       <TableCell className="font-semibold">{report.pendingQty}</TableCell>
                       <TableCell>
                         <Button variant="destructive" size="sm" className="font-bold cursor-default">
-                            {report.emailResentCount}
+                          {report.emailResentCount}
                         </Button>
                       </TableCell>
                       <TableCell>
                         <Button
-                            variant="default"
-                            size="icon"
-                            disabled={!report.emailsViewUrl}
-                            onClick={() => handleViewUrl(report.emailsViewUrl)}
-                            title="View Email Thread"
-                            className="bg-green-500 hover:bg-green-600 text-white h-8 w-8"
+                          variant="default"
+                          size="icon"
+                          disabled={!report.emailsViewUrl}
+                          onClick={() => handleViewUrl(report.emailsViewUrl)}
+                          title="View Email Thread"
+                          className="bg-green-500 hover:bg-green-600 text-white h-8 w-8"
                         >
-                            <LinkIcon className="h-4 w-4" />
+                          <LinkIcon className="h-4 w-4" />
                         </Button>
                       </TableCell>
                       <TableCell>
                         <Button
-                            variant="default"
-                            size="icon"
-                            disabled={!report.claimReportUrl}
-                            onClick={() => handleViewUrl(report.claimReportUrl)}
-                            title="View Claim Report"
-                            className="bg-green-500 hover:bg-green-600 text-white h-8 w-8"
+                          variant="default"
+                          size="icon"
+                          disabled={!report.claimReportUrl}
+                          onClick={() => handleViewUrl(report.claimReportUrl)}
+                          title="View Claim Report"
+                          className="bg-green-500 hover:bg-green-600 text-white h-8 w-8"
                         >
-                            <LinkIcon className="h-4 w-4" />
+                          <LinkIcon className="h-4 w-4" />
                         </Button>
                       </TableCell>
                       <TableCell className="text-right">
-                         <DropdownMenu>
+                        <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="default" className="h-8 w-8 p-0 bg-green-500 hover:bg-green-600 text-white" disabled={!report.id}><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel><DropdownMenuSeparator />
@@ -308,35 +310,35 @@ export default function ClaimReportListPage() {
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4 mt-4">
-                <Button
-                    variant="outline"
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" /> Previous
+              </Button>
+              {getPageNumbers().map((page, index) =>
+                typeof page === 'number' ? (
+                  <Button
+                    key={`claim-report-page-${page}`}
+                    variant={currentPage === page ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                >
-                    <ChevronLeft className="h-4 w-4" /> Previous
-                </Button>
-                {getPageNumbers().map((page, index) =>
-                    typeof page === 'number' ? (
-                    <Button
-                        key={`claim-report-page-${page}`}
-                        variant={currentPage === page ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => handlePageChange(page)}
-                        className="w-9 h-9 p-0"
-                    >
-                        {page}
-                    </Button>
-                    ) : (<span key={`ellipsis-claim-report-${index}`} className="px-2 py-1 text-sm">{page}</span>)
-                )}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                >
-                    Next <ChevronRight className="h-4 w-4" />
-                </Button>
+                    onClick={() => handlePageChange(page)}
+                    className="w-9 h-9 p-0"
+                  >
+                    {page}
+                  </Button>
+                ) : (<span key={`ellipsis-claim-report-${index}`} className="px-2 py-1 text-sm">{page}</span>)
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           )}
         </CardContent>

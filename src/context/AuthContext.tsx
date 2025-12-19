@@ -5,7 +5,7 @@
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged, signOut as firebaseSignOut, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile as firebaseUpdateProfile, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import type { PropsWithChildren} from 'react';
+import type { PropsWithChildren } from 'react';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { auth, firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp, query, where, getDocs, collection, updateDoc } from 'firebase/firestore';
@@ -18,8 +18,8 @@ const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
 const COMPANY_NAME_STORAGE_KEY = 'appCompanyName';
 const COMPANY_LOGO_URL_STORAGE_KEY = 'appCompanyLogoUrl';
 const INVOICE_LOGO_URL_STORAGE_KEY = 'appInvoiceLogoUrl';
-const DEFAULT_COMPANY_NAME = 'Smart Solution';
-const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+const DEFAULT_COMPANY_NAME = 'Nextsew';
+const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/nextsew-15d97.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
 // Helper function to parse emails from environment variables
 const getEmailsFromEnv = (envVar?: string): string[] => {
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const newName = profileData.companyName || DEFAULT_COMPANY_NAME;
         const newLogoUrl = profileData.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
         const newInvoiceLogoUrl = profileData.invoiceLogoUrl || newLogoUrl;
-        
+
         setCompanyName(newName);
         setCompanyLogoUrl(newLogoUrl);
         setInvoiceLogoUrl(newInvoiceLogoUrl);
@@ -178,17 +178,17 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     } catch (error: any) {
       console.error("AuthContext: Error logging in: ", error);
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-          Swal.fire({
-              title: "Opps Login Failed.",
-              text: "User Name or Password Wrong. Please contact with Admin",
-              icon: "error"
-          });
+        Swal.fire({
+          title: "Opps Login Failed.",
+          text: "User Name or Password Wrong. Please contact with Admin",
+          icon: "error"
+        });
       } else {
-          Swal.fire({
-              title: "Login Failed",
-              text: error.message || "An unknown error occurred.",
-              icon: "error"
-          });
+        Swal.fire({
+          title: "Login Failed",
+          text: error.message || "An unknown error occurred.",
+          icon: "error"
+        });
       }
       throw error; // Re-throw to be caught by the login page if needed
     }
@@ -208,16 +208,16 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       Swal.fire("Logout Error", error.message || "Failed to log out.", "error");
     }
   }, [router]);
-  
+
   const register = useCallback(async (email: string, pass: string, displayName: string, roles?: UserRole[]) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       const user = userCredential.user;
-  
+
       await firebaseUpdateProfile(user, { displayName });
-  
+
       const userDocRef = doc(firestore, "users", user.uid);
-      
+
       let assignedRoles: UserRole[] = [];
       if (roles && roles.length > 0) {
         assignedRoles = roles;
@@ -233,19 +233,19 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         if (HR_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) assignedRoles.push("HR");
         if (assignedRoles.length === 0) assignedRoles.push("User");
       }
-  
+
       const newProfileData = {
-          uid: user.uid,
-          displayName: displayName,
-          email: user.email,
-          photoURL: user.photoURL || null,
-          role: [...new Set(assignedRoles)], // Ensure roles are unique
-          disabled: false,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
+        uid: user.uid,
+        displayName: displayName,
+        email: user.email,
+        photoURL: user.photoURL || null,
+        role: [...new Set(assignedRoles)], // Ensure roles are unique
+        disabled: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
       await setDoc(userDocRef, newProfileData);
-      
+
     } catch (error: any) {
       console.error("AuthContext: Error registering user: ", error);
       let errorMessage = "Failed to register. Please try again.";
@@ -256,49 +256,49 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       throw new Error(errorMessage);
     }
   }, []);
-  
+
   const signInWithGoogle = useCallback(async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
+
       const userDocRef = doc(firestore, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
-      
+
       if (!userDocSnap.exists()) {
-          const lowercasedUserEmail = user.email?.toLowerCase() || '';
-          const roles: UserRole[] = [];
-          if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Super Admin");
-          if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Admin");
-          if (COMMERCIAL_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Commercial");
-          if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Service");
-          if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("DemoManager");
-          if (ACCOUNTS_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Accounts");
-          if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Viewer");
-          if (HR_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("HR");
-          if (roles.length === 0) roles.push("User");
-          
-          const newProfileData = {
-              uid: user.uid,
-              displayName: user.displayName,
-              email: user.email,
-              photoURL: user.photoURL,
-              role: roles,
-              disabled: false,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-          };
-          await setDoc(userDocRef, newProfileData);
+        const lowercasedUserEmail = user.email?.toLowerCase() || '';
+        const roles: UserRole[] = [];
+        if (SUPER_ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Super Admin");
+        if (ADMIN_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Admin");
+        if (COMMERCIAL_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Commercial");
+        if (SERVICE_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Service");
+        if (DEMO_MANAGER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("DemoManager");
+        if (ACCOUNTS_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Accounts");
+        if (VIEWER_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("Viewer");
+        if (HR_EMAILS_FROM_ENV.includes(lowercasedUserEmail)) roles.push("HR");
+        if (roles.length === 0) roles.push("User");
+
+        const newProfileData = {
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          role: roles,
+          disabled: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await setDoc(userDocRef, newProfileData);
       } else {
         const userData = userDocSnap.data() as UserDocumentForAdmin;
-        if(userData.disabled) {
-            await firebaseSignOut(auth);
-            Swal.fire({
-              title: "Account Disabled",
-              text: "Your account has been disabled. Please contact an administrator.",
-              icon: "error",
-            });
-            throw new Error("Account disabled");
+        if (userData.disabled) {
+          await firebaseSignOut(auth);
+          Swal.fire({
+            title: "Account Disabled",
+            text: "Your account has been disabled. Please contact an administrator.",
+            icon: "error",
+          });
+          throw new Error("Account disabled");
         }
       }
       Swal.fire({
@@ -311,12 +311,12 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       router.push('/dashboard');
     } catch (error: any) {
       if (error.message !== "Account disabled") {
-          console.error("Error signing in with Google: ", error);
-          let errorMessage = "Failed to sign in with Google.";
-          if (error.code === 'auth/account-exists-with-different-credential') errorMessage = "An account with this email already exists.";
-          else if (error.code === 'auth/popup-closed-by-user') errorMessage = "Google Sign-In was cancelled.";
-          else errorMessage = error.message || errorMessage;
-          Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
+        console.error("Error signing in with Google: ", error);
+        let errorMessage = "Failed to sign in with Google.";
+        if (error.code === 'auth/account-exists-with-different-credential') errorMessage = "An account with this email already exists.";
+        else if (error.code === 'auth/popup-closed-by-user') errorMessage = "Google Sign-In was cancelled.";
+        else errorMessage = error.message || errorMessage;
+        Swal.fire({ title: "Google Sign-In Failed", text: errorMessage, icon: "error" });
       }
       throw error;
     }

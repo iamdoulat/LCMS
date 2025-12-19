@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { ItemFormValues, ItemDocument, SupplierDocument, PettyCashCategoryDocument, ItemSectionDocument, ItemVariationDocument } from '@/types';
+import type { ItemFormValues, ItemDocument, SupplierDocument, ItemCategoryDocument, ItemSectionDocument, ItemVariationDocument, PettyCashCategoryDocument } from '@/types';
 import { itemSchema, itemTypeOptions } from '@/types';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -51,9 +51,9 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
   const [externalUrl, setExternalUrl] = React.useState('');
 
-  const { data: categories, isLoading: isLoadingCategories } = useFirestoreQuery<PettyCashCategoryDocument[]>(query(collection(firestore, 'item_categories'), orderBy("createdAt", "desc")), undefined, ['item_categories']);
-  const { data: itemSections, isLoading: isLoadingItemSections } = useFirestoreQuery<ItemSectionDocument[]>(query(collection(firestore, 'item_sections'), orderBy("createdAt", "desc")), undefined, ['item_sections']);
-  const { data: itemVariations, isLoading: isLoadingItemVariations } = useFirestoreQuery<ItemVariationDocument[]>(query(collection(firestore, 'item_variations'), orderBy("createdAt", "desc")), undefined, ['item_variations']);
+  const { data: categories, isLoading: isLoadingCategories } = useFirestoreQuery<ItemCategoryDocument[]>(query(collection(firestore, 'item_categories')), undefined, ['item_categories']);
+  const { data: itemSections, isLoading: isLoadingItemSections } = useFirestoreQuery<ItemSectionDocument[]>(query(collection(firestore, 'item_sections')), undefined, ['item_sections']);
+  const { data: itemVariations, isLoading: isLoadingItemVariations } = useFirestoreQuery<ItemVariationDocument[]>(query(collection(firestore, 'item_variations')), undefined, ['item_variations']);
 
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
@@ -104,10 +104,10 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
       form.reset({
         itemName: initialData.itemName || '',
         modelNumber: initialData.modelNumber || '',
-        category: initialData.category || '',
-        itemSection: initialData.itemSection || '',
+        category: initialData.category?.trim() || '',
+        itemSection: initialData.itemSection?.trim() || '',
         itemType: initialData.itemType || 'Single',
-        itemVariation: initialData.itemVariation || '',
+        itemVariation: initialData.itemVariation?.trim() || '',
         itemCode: initialData.itemCode || '',
         brandName: initialData.brandName || '',
         supplierId: initialData.supplierId || '',
@@ -320,6 +320,10 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        {/* Ensure the current value is always an option */}
+                        {field.value && !itemSections?.some(s => s.name === field.value) && (
+                          <SelectItem key={`initial-section-${field.value}`} value={field.value}>{field.value} (Legacy)</SelectItem>
+                        )}
                         {itemSections?.map((section) => (
                           <SelectItem key={section.id} value={section.name}>{section.name}</SelectItem>
                         ))}
@@ -342,6 +346,10 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        {/* Ensure the current value is always an option */}
+                        {field.value && !categories?.some(c => c.name === field.value) && (
+                          <SelectItem key={`initial-category-${field.value}`} value={field.value}>{field.value} (Legacy)</SelectItem>
+                        )}
                         {categories?.map((category) => (
                           <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
                         ))}
