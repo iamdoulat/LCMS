@@ -35,7 +35,7 @@ export async function POST(request: Request) {
         if (type === 'new_request') {
             // Notify Admin/HR
             const adminsSnapshot = await admin.firestore().collection('users')
-                .where('role', 'in', ['admin', 'hr', 'super_admin'])
+                .where('role', 'array-contains-any', ['Admin', 'HR', 'Super Admin'])
                 .get();
 
             const adminEmails = adminsSnapshot.docs
