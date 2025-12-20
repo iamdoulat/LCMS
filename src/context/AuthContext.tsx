@@ -19,7 +19,7 @@ const COMPANY_NAME_STORAGE_KEY = 'appCompanyName';
 const COMPANY_LOGO_URL_STORAGE_KEY = 'appCompanyLogoUrl';
 const INVOICE_LOGO_URL_STORAGE_KEY = 'appInvoiceLogoUrl';
 const DEFAULT_COMPANY_NAME = 'Nextsew';
-const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/nextsew-15d97.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+const DEFAULT_COMPANY_LOGO_URL = "/icons/icon-192x192.png";
 
 // Helper function to parse emails from environment variables
 const getEmailsFromEnv = (envVar?: string): string[] => {

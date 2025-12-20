@@ -147,7 +147,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
             <Image
-              src={companyLogoUrl}
+              src={companyLogoUrl || "/icons/icon-192x192.png"}
               alt="LC Management System Logo"
               width={56}
               height={56}
@@ -156,7 +156,7 @@ export default function LoginPage() {
               data-ai-hint="logo company"
             />
           </div>
-          <CardTitle 
+          <CardTitle
             className={cn("font-bold text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}
           >
             LC Management System Login
@@ -185,15 +185,15 @@ export default function LoginPage() {
                 render={({ field }) => (
                   <FormItem>
                     <div className="flex items-center justify-between">
-                        <FormLabel>Password</FormLabel>
-                        <Button
-                            type="button"
-                            variant="link"
-                            className="p-0 h-auto text-xs text-primary hover:underline"
-                            onClick={handleForgotPassword}
-                        >
-                            Forgot Password?
-                        </Button>
+                      <FormLabel>Password</FormLabel>
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="p-0 h-auto text-xs text-primary hover:underline"
+                        onClick={handleForgotPassword}
+                      >
+                        Forgot Password?
+                      </Button>
                     </div>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
@@ -242,7 +242,7 @@ export default function LoginPage() {
               </>
             ) : (
               <>
-                 <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.5 512 0 398.8 0 256S110.5 0 244 0c69.8 0 129.8 28.2 174.2 73.4l-60.4 58.6C332.2 106.5 292.3 89 244 89c-60.2 0-109.1 46.3-122.2 106.4H90.7V224h14.4c12.5-56.2 63.5-99.9 120.5-99.9 31.9 0 60.4 12.2 82.4 32.5l64.7-62.1C391.1 37.3 327.9 0 256.6 0 120.1 0 12.5 93.4 1.6 214.9h.2c-11.7 41.9-11.7 87.4 0 129.3H1.6C12.5 418.6 120.1 512 256.6 512c132.3 0 236.6-100.9 236.6-233.5 0-14.7-.9-29.1-2.6-43.2H256.6v85.8h132.2c-6.7 49.4-41.6 86.9-87.3 86.9-53.4 0-96.8-46.1-96.8-102.1s43.4-102.1 96.8-102.1c25.2 0 46.6 9.8 63.3 25.6l60.4-58.6C433.6 50.7 377.1 8 307.6 8c-67.3 0-125.2 48.9-145.3 114.7L14.7 256l45.3 82.8c20.1 65.8 78.1 114.7 145.3 114.7 70.5 0 127-42.7 148.3-102.1H307.6V261.8H488z"></path></svg>
+                <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.5 512 0 398.8 0 256S110.5 0 244 0c69.8 0 129.8 28.2 174.2 73.4l-60.4 58.6C332.2 106.5 292.3 89 244 89c-60.2 0-109.1 46.3-122.2 106.4H90.7V224h14.4c12.5-56.2 63.5-99.9 120.5-99.9 31.9 0 60.4 12.2 82.4 32.5l64.7-62.1C391.1 37.3 327.9 0 256.6 0 120.1 0 12.5 93.4 1.6 214.9h.2c-11.7 41.9-11.7 87.4 0 129.3H1.6C12.5 418.6 120.1 512 256.6 512c132.3 0 236.6-100.9 236.6-233.5 0-14.7-.9-29.1-2.6-43.2H256.6v85.8h132.2c-6.7 49.4-41.6 86.9-87.3 86.9-53.4 0-96.8-46.1-96.8-102.1s43.4-102.1 96.8-102.1c25.2 0 46.6 9.8 63.3 25.6l60.4-58.6C433.6 50.7 377.1 8 307.6 8c-67.3 0-125.2 48.9-145.3 114.7L14.7 256l45.3 82.8c20.1 65.8 78.1 114.7 145.3 114.7 70.5 0 127-42.7 148.3-102.1H307.6V261.8H488z"></path></svg>
                 Sign in with Google
               </>
             )}
