@@ -157,6 +157,8 @@ export default function AccountDetailsPage() {
         // Auto-set the next action based on last record
         if (record.type === 'Check In') {
           setCheckInOutType('Check Out');
+          // Auto-fill company name for check-out from last check-in
+          setCompanyName(record.companyName || '');
         } else {
           setCheckInOutType('Check In');
         }
@@ -1369,10 +1371,15 @@ export default function AccountDetailsPage() {
                 <Label htmlFor="companyName">Company Name *</Label>
                 <Input
                   id="companyName"
-                  placeholder="Enter company name"
+                  placeholder={checkInOutType === 'Check Out' ? "Auto-filled from Check In" : "Enter company name"}
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
+                  readOnly={checkInOutType === 'Check Out'}
+                  className={checkInOutType === 'Check Out' ? 'bg-muted cursor-not-allowed' : ''}
                 />
+                {checkInOutType === 'Check Out' && companyName && (
+                  <p className="text-xs text-muted-foreground">Company name from your last check-in</p>
+                )}
               </div>
 
               {/* Camera Capture */}
@@ -1561,8 +1568,11 @@ export default function AccountDetailsPage() {
                       showConfirmButton: false,
                     });
 
-                    // Reset form
-                    setCompanyName('');
+                    // Reset form (preserve company name for next check-out if this was a check-in)
+                    const wasCheckIn = checkInOutType === 'Check In';
+                    if (!wasCheckIn) {
+                      setCompanyName('');
+                    }
                     setCheckInOutRemarks('');
                     setCapturedImage(null);
                     setImagePreview('');

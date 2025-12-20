@@ -1,7 +1,7 @@
 {
-  "name": "Smart Solution - LC Management System.",
-  "short_name": "LCMS",
-  "description": "LCMS Modern Letter of Credit Management Software",
+  "name": "Nextsew",
+  "short_name": "Nextsew",
+  "description": "Nextsew - Indenting & LC Management System",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f2f2f2",

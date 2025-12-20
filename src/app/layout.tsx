@@ -10,8 +10,8 @@ import React, { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'LC Management System - Letter of Credit Management',
-  description: 'Modern Letter of Credit Management Software',
+  title: 'Nextsew - Indenting & LC Management System',
+  description: 'Nextsew Indenting & LC Management System - Modern Business Solutions',
 };
 
 export default function RootLayout({
@@ -25,10 +25,10 @@ export default function RootLayout({
         <link rel="icon" href="/icons/favicon.ico" sizes="any" />
         <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32" />
         <link rel="icon" href="/icons/favicon-16x16.png" type="image/png" sizes="16x16" />
-        <meta name="application-name" content="LC Vision" />
+        <meta name="application-name" content="Nextsew" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="LC Vision" />
+        <meta name="apple-mobile-web-app-title" content="Nextsew" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#3498db" />

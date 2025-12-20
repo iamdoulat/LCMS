@@ -313,7 +313,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                 render={({ field }) => (
                   <FormItem className="col-span-1">
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Item Section*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={isLoadingItemSections ? "Loading..." : "Select item section"} />
@@ -339,7 +339,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                 render={({ field }) => (
                   <FormItem className="col-span-1">
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Category*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={isLoadingCategories ? "Loading..." : "Select category"} />
@@ -422,7 +422,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                   render={({ field }) => (
                     <FormItem className="col-span-1">
                       <FormLabel>Item Variation</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={isLoadingItemVariations ? "Loading..." : "Select variation"} />

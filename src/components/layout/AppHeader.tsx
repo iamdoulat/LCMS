@@ -19,7 +19,7 @@ import { User, LogOut, Settings, Loader2, Search } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
-import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton'; 
+import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
@@ -42,7 +42,7 @@ export function AppHeader() {
 
   const displayName = user?.displayName || user?.email || 'User';
   const displayEmail = user?.email || 'No email available';
-  
+
   const handleSearchSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
     if (searchQuery.trim()) {
@@ -59,16 +59,16 @@ export function AppHeader() {
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden" />
         {user && ( // Only show this link if a user is logged in
-           <Link href="/dashboard" className="flex items-center gap-2">
-              <span
-                className={cn(
-                  "font-bold text-base truncate",
-                  "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-                )}
-              >
-                <span className="hidden md:inline">Indenting & LC Management System</span>
-                <span className="inline md:hidden">LCMS</span>
-              </span>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <span
+              className={cn(
+                "font-bold text-base truncate",
+                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+              )}
+            >
+              <span className="hidden md:inline">Indenting & LC Management System</span>
+              <span className="inline md:hidden">{companyName || 'NextSew'}</span>
+            </span>
           </Link>
         )}
       </div>
@@ -98,7 +98,7 @@ export function AppHeader() {
           </PopoverContent>
         </Popover>
 
-        <ThemeToggleButton /> 
+        <ThemeToggleButton />
 
         {loading ? (
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -136,9 +136,9 @@ export function AppHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-           <Link href="/login" passHref>
-             <Button variant="outline">Login</Button>
-           </Link>
+          <Link href="/login" passHref>
+            <Button variant="outline">Login</Button>
+          </Link>
         )}
       </div>
     </header>
