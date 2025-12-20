@@ -33,16 +33,23 @@ interface SendEmailOptions {
     data?: Record<string, string>;
 }
 
+
 const getSmtpConfig = async () => {
     // Server-side: Must use Admin SDK for sensitive settings
     if (typeof window === 'undefined') {
         try {
+            // Import at top level ensures initialization happens
             const { admin } = await import('@/lib/firebase/admin');
 
+            // Wait a moment for initialization to complete
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             if (!admin.apps.length) {
-                // Try to force init if it's missing (though import should have done it)
-                console.error("getSmtpConfig: Admin SDK not initialized despite import.");
-                throw new Error("Firebase Admin SDK not initialized on server.");
+                console.error("getSmtpConfig: Admin SDK not initialized. Environment check:");
+                console.error("- FIREBASE_ADMIN_PROJECT_ID:", !!process.env.FIREBASE_ADMIN_PROJECT_ID);
+                console.error("- FIREBASE_ADMIN_CLIENT_EMAIL:", !!process.env.FIREBASE_ADMIN_CLIENT_EMAIL);
+                console.error("- FIREBASE_ADMIN_PRIVATE_KEY:", !!process.env.FIREBASE_ADMIN_PRIVATE_KEY);
+                throw new Error("Firebase Admin SDK not initialized. Check server logs for credential issues.");
             }
 
             const snapshot = await admin.firestore().collection('smtp_settings').where('isActive', '==', true).get();
@@ -54,8 +61,8 @@ const getSmtpConfig = async () => {
             }
 
         } catch (e: any) {
-            console.error("getSmtpConfig: Admin SDK Error:", e);
-            throw new Error(`Server-side configuration load failed: ${e.message}`);
+            console.error("getSmtpConfig: Error:", e);
+            throw new Error(`Email configuration error: ${e.message}`);
         }
     } else {
         // Client-side: This should generally not happen for sending system emails, 
@@ -65,11 +72,15 @@ const getSmtpConfig = async () => {
     }
 }
 
+
 const getEmailTemplate = async (slug: string) => {
     // Server-side: Must use Admin SDK
     if (typeof window === 'undefined') {
         try {
             const { admin } = await import('@/lib/firebase/admin');
+
+            // Wait for initialization
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             if (!admin.apps.length) {
                 console.error("getEmailTemplate: Admin SDK not initialized.");
@@ -84,7 +95,7 @@ const getEmailTemplate = async (slug: string) => {
             }
 
         } catch (e: any) {
-            console.error("getEmailTemplate: Admin SDK Error:", e);
+            console.error("getEmailTemplate: Error:", e);
             throw new Error(`Template load failed: ${e.message}`);
         }
     } else {
