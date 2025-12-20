@@ -11,19 +11,10 @@ import { SmtpConfiguration, EmailTemplate } from '@/types/email-settings';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
-// We need to dynamically import or require these to avoid build errors if not installed yet?
-// No, standard is to import.
-// Helper to safely import modules without triggering build-time errors if missing
-const safeImport = async (moduleName: string) => {
-    try {
-        // Using a variable prevents Webpack from trying to bundle 'nodemailer' or 'resend' statically
-        // This allows the app to build even if these optional dependencies are not installed
-        const imp = await import(/* webpackIgnore: true */ moduleName);
-        return imp;
-    } catch (error) {
-        return null;
-    }
-};
+// Import email libraries directly (no dynamic import needed)
+import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
+
 
 interface SendEmailOptions {
     to: string | string[];
@@ -154,13 +145,6 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
         if (config.serviceProvider === 'resend_api') {
             if (!config.resendApiKey) throw new Error('Resend API Key missing');
 
-            // Use the safe import helper
-            const resendModule = await safeImport('resend');
-            if (!resendModule) {
-                throw new Error('Resend module not found. Please run: npm install resend');
-            }
-
-            const { Resend } = resendModule.default || resendModule;
             const resend = new Resend(config.resendApiKey);
 
             const { data: res, error } = await resend.emails.send({
@@ -174,12 +158,7 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
             return { success: true, messageId: res?.id };
 
         } else {
-            // SMTP
-            const nodemailer = await safeImport('nodemailer');
-            if (!nodemailer) {
-                throw new Error('Nodemailer module not found. Please run: npm install nodemailer');
-            }
-
+            // SMTP with Nodemailer
             const transporter = nodemailer.createTransport({
                 host: config.host,
                 port: config.port,
