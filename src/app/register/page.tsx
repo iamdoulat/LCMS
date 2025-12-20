@@ -28,11 +28,10 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
-const logoUrl = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { user, loading: authLoading, register } = useAuth();
+  const { user, loading: authLoading, register, companyLogoUrl } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,9 +81,9 @@ export default function RegisterPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
             <Image
-              src={logoUrl}
+              src={companyLogoUrl || "/icons/icon-192x192.png"}
               alt="LC Management System Logo"
               width={56}
               height={56}
@@ -93,7 +92,7 @@ export default function RegisterPage() {
               data-ai-hint="logo company"
             />
           </div>
-          <CardTitle 
+          <CardTitle
             className={cn("font-bold text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}
           >
             Create an Account

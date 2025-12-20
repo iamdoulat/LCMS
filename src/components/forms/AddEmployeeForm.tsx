@@ -230,12 +230,18 @@ export function AddEmployeeForm() {
     setIsSubmitting(true);
 
     try {
-      const newEmployeeDocRef = doc(collection(firestore, 'employees'));
-      const employeeId = newEmployeeDocRef.id;
-      let photoDownloadURL = '';
+      let photoDownloadURL: string | null = null;
 
+      // Process image upload first (client-side)
       if (selectedFile) {
-        const photoRef = ref(storage, `employeeImages/${employeeId}/profile.jpg`);
+        // We need an ID for the image path. Since we don't have the UID yet (server generates it), 
+        // we can use a temporary ID or a timestamp-based ID for storage, 
+        // OR better, we can let the server handle image? No, client upload is standard for Firebase.
+        // Let's use a random ID for the storage path to avoid collisions before we have the UID.
+        // Or we can assume the server cleans it up? 
+        // Let's us a temporary random string for the path.
+        const tempId = Math.random().toString(36).substring(2, 15);
+        const photoRef = ref(storage, `employeeImages/${tempId}/profile.jpg`);
         await uploadBytes(photoRef, selectedFile);
         photoDownloadURL = await getDownloadURL(photoRef);
       } else if (externalUrl) {
@@ -244,12 +250,11 @@ export function AddEmployeeForm() {
 
       const fullName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ');
 
-      const dataToSave = {
-        id: employeeId,
-        uid: user.uid,
+      const apiPayload = {
         ...data,
-        fullName: fullName,
+        fullName,
         photoURL: photoDownloadURL,
+        // Convert dates to ISO strings for JSON transport
         dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
         joinedDate: data.joinedDate ? data.joinedDate.toISOString() : null,
         jobStatusEffectiveDate: data.jobStatusEffectiveDate ? data.jobStatusEffectiveDate.toISOString() : null,
@@ -266,30 +271,35 @@ export function AddEmployeeForm() {
           totalIncrement: increasedAmount,
           grossSalary: totalAmount,
         } : undefined,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       };
 
-      delete (dataToSave as any).firstName;
-      delete (dataToSave as any).middleName;
-      delete (dataToSave as any).lastName;
-      delete (dataToSave as any).sameAsPresentAddress;
+      // Call API
+      const response = await fetch('/api/employees/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiPayload),
+      });
 
-      const cleanedDataToSave: { [key: string]: any } = {};
-      for (const key in dataToSave) {
-        const value = (dataToSave as any)[key];
-        if (value !== undefined && value !== '' && value !== null) {
-          cleanedDataToSave[key] = value;
-        }
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create employee');
       }
 
-      await setDoc(newEmployeeDocRef, cleanedDataToSave);
+      let successMessage = `Employee ${fullName} has been successfully added.`;
+      if (result.emailStatus && result.emailStatus.includes('failed')) {
+        successMessage += ` (Note: Welcome email failed to send: ${result.emailStatus})`;
+      } else {
+        successMessage += ` Welcome email sent.`;
+      }
 
       Swal.fire({
         title: "Employee Added!",
-        text: `Employee ${fullName} has been successfully added.`,
+        text: successMessage,
         icon: "success",
-        timer: 3000,
+        timer: 4000,
         showConfirmButton: true,
       });
 
