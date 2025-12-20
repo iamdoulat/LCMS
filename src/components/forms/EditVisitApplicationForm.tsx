@@ -37,7 +37,7 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
     undefined,
     ['employees_for_visit_edit']
   );
-  
+
   const canApprove = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
 
   const form = useForm<VisitApplicationFormValues>({
@@ -71,13 +71,13 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
 
   async function onSubmit(data: VisitApplicationFormValues) {
     if (!user) {
-        Swal.fire("Authentication Error", "You must be logged in to update.", "error");
-        return;
+      Swal.fire("Authentication Error", "You must be logged in to update.", "error");
+      return;
     }
 
-    if(data.status !== 'Pending' && !canApprove) {
-        Swal.fire("Permission Denied", "You do not have permission to approve or reject this request.", "error");
-        return;
+    if (data.status !== 'Pending' && !canApprove) {
+      Swal.fire("Permission Denied", "You do not have permission to approve or reject this request.", "error");
+      return;
     }
 
     setIsSubmitting(true);
@@ -93,12 +93,31 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
       approverComment: data.approverComment || '',
       updatedAt: serverTimestamp(),
     };
-    
+
     delete (dataToUpdate as any).createdAt;
 
     try {
       const docRef = doc(firestore, "visit_applications", initialData.id);
       await updateDoc(docRef, dataToUpdate);
+
+      // Notify Employee on Decision
+      if (data.status === 'Approved' || data.status === 'Rejected') {
+        try {
+          fetch('/api/notify/visit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'decision',
+              requestId: initialData.id,
+              status: data.status,
+              rejectionReason: data.approverComment
+            })
+          });
+        } catch (err) {
+          console.error("Failed to trigger decision notification", err);
+        }
+      }
+
       Swal.fire({
         title: "Application Updated!",
         text: `Visit application for ${selectedEmployee?.label} has been updated.`,
@@ -117,72 +136,72 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-end">
-            <FormField
+          <FormField
             control={form.control}
             name="employeeId"
             render={({ field }) => (
-                <FormItem className="lg:col-span-1 xl:col-span-1">
+              <FormItem className="lg:col-span-1 xl:col-span-1">
                 <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
                 <Combobox
-                    options={employeeOptions}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder="Search Employee..."
-                    selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
-                    disabled={isLoadingEmployees}
+                  options={employeeOptions}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Search Employee..."
+                  selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
+                  disabled={isLoadingEmployees}
                 />
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Visit Status</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger className="h-10">
-                                <SelectValue placeholder="Select Status" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {visitStatusOptions.map(opt => (
-                                <SelectItem key={opt} value={opt} disabled={!canApprove && opt !== 'Pending'}>{opt}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="fromDate"
-                render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />From Date*</FormLabel>
-                    <DatePickerInput field={field} showTimeSelect/>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="toDate"
-                render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />End Date*</FormLabel>
-                    <DatePickerInput field={field} fromDate={form.getValues("fromDate")} showTimeSelect/>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormItem>
-                <FormLabel>Day Count</FormLabel>
-                <Input value={`${dayCount} Day(s)`} readOnly disabled className="bg-muted/50 h-10 cursor-not-allowed"/>
-            </FormItem>
+          />
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Visit Status</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select Status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {visitStatusOptions.map(opt => (
+                      <SelectItem key={opt} value={opt} disabled={!canApprove && opt !== 'Pending'}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="fromDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />From Date*</FormLabel>
+                <DatePickerInput field={field} showTimeSelect />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="toDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />End Date*</FormLabel>
+                <DatePickerInput field={field} fromDate={form.getValues("fromDate")} showTimeSelect />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormItem>
+            <FormLabel>Day Count</FormLabel>
+            <Input value={`${dayCount} Day(s)`} readOnly disabled className="bg-muted/50 h-10 cursor-not-allowed" />
+          </FormItem>
         </div>
         <FormField
           control={form.control}
@@ -197,31 +216,31 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
             </FormItem>
           )}
         />
-         {canApprove && (
-            <>
-                <Separator />
-                <h3 className="text-lg font-semibold">Approval Section</h3>
-                <FormField
-                control={form.control}
-                name="approverComment"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Approver Comment</FormLabel>
-                    <FormControl>
-                        <Textarea placeholder="Add a comment for approval or rejection..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </>
+        {canApprove && (
+          <>
+            <Separator />
+            <h3 className="text-lg font-semibold">Approval Section</h3>
+            <FormField
+              control={form.control}
+              name="approverComment"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Approver Comment</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Add a comment for approval or rejection..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
         )}
         <div className="flex justify-end pt-4">
           <Button type="submit" disabled={isSubmitting || isLoadingEmployees}>
             {isSubmitting ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving Changes...</>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Changes...</>
             ) : (
-              <><Save className="mr-2 h-4 w-4"/>Save Changes</>
+              <><Save className="mr-2 h-4 w-4" />Save Changes</>
             )}
           </Button>
         </div>

@@ -87,13 +87,32 @@ export function EditAdvanceSalaryForm({ initialData }: EditAdvanceSalaryFormProp
       updatedAt: serverTimestamp(),
       approverComment: data.approverComment || '',
     };
-    
-     // Remove fields that should not be updated
+
+    // Remove fields that should not be updated
     delete (dataToUpdate as any).createdAt;
 
     try {
       const docRef = doc(firestore, "advance_salary", initialData.id);
       await updateDoc(docRef, dataToUpdate);
+
+      // Notify Employee on Decision
+      if (data.status === 'Approved' || data.status === 'Rejected') {
+        try {
+          fetch('/api/notify/advance-salary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'decision',
+              requestId: initialData.id,
+              status: data.status,
+              rejectionReason: data.approverComment
+            })
+          });
+        } catch (err) {
+          console.error("Failed to trigger decision notification", err);
+        }
+      }
+
       Swal.fire({
         title: "Record Updated!",
         text: `Advance salary request for ${selectedEmployee?.label} has been updated.`,
@@ -112,129 +131,129 @@ export function EditAdvanceSalaryForm({ initialData }: EditAdvanceSalaryFormProp
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 items-end">
-            <FormField
+          <FormField
             control={form.control}
             name="employeeId"
             render={({ field }) => (
-                <FormItem className="lg:col-span-1 xl:col-span-1">
+              <FormItem className="lg:col-span-1 xl:col-span-1">
                 <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
                 <Combobox
-                    options={employeeOptions}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder="Search Employee..."
-                    selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
-                    disabled={isLoadingEmployees}
+                  options={employeeOptions}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Search Employee..."
+                  selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
+                  disabled={isLoadingEmployees}
                 />
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <FormField
+          />
+          <FormField
             control={form.control}
             name="applyDate"
             render={({ field }) => (
-                <FormItem className="flex flex-col">
+              <FormItem className="flex flex-col">
                 <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Apply Date*</FormLabel>
                 <DatePickerField field={field} />
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <FormField
+          />
+          <FormField
             control={form.control}
             name="paymentStartsFrom"
             render={({ field }) => (
-                <FormItem className="flex flex-col">
+              <FormItem className="flex flex-col">
                 <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />Payment Starts From*</FormLabel>
                 <DatePickerField field={field} />
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <FormField
-                control={form.control}
-                name="advanceAmount"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Advance Amount*</FormLabel>
-                    <FormControl><Input type="number" placeholder="Enter amount in BDT" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-             <FormField
-                control={form.control}
-                name="paymentDuration"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Payment Duration (Months)*</FormLabel>
-                    <FormControl><Input type="number" placeholder="e.g., 6" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 1)} /></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-        </div>
-        
-        <FormField
+          />
+          <FormField
             control={form.control}
-            name="reason"
+            name="advanceAmount"
             render={({ field }) => (
-                <FormItem>
-                <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Reason*</FormLabel>
-                <FormControl>
-                    <Textarea placeholder="Reason for advance salary request..." {...field} />
-                </FormControl>
+              <FormItem>
+                <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Advance Amount*</FormLabel>
+                <FormControl><Input type="number" placeholder="Enter amount in BDT" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
+          />
+          <FormField
+            control={form.control}
+            name="paymentDuration"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Payment Duration (Months)*</FormLabel>
+                <FormControl><Input type="number" placeholder="e.g., 6" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 1)} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="reason"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Reason*</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Reason for advance salary request..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
 
         <Separator />
         <h3 className="text-lg font-semibold">Approval Section</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
+          <FormField
             control={form.control}
             name="status"
             render={({ field }) => (
-                <FormItem>
+              <FormItem>
                 <FormLabel>Status*</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {advanceSalaryStatusOptions.map(opt => (
-                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                        ))}
-                    </SelectContent>
+                  <FormControl>
+                    <SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {advanceSalaryStatusOptions.map(opt => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <FormField
+          />
+          <FormField
             control={form.control}
             name="approverComment"
             render={({ field }) => (
-                <FormItem>
+              <FormItem>
                 <FormLabel>Approver Comment</FormLabel>
                 <FormControl>
-                    <Textarea placeholder="Add a comment for approval or rejection..." {...field} />
+                  <Textarea placeholder="Add a comment for approval or rejection..." {...field} />
                 </FormControl>
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
+          />
         </div>
 
         <div className="flex justify-end pt-4">
           <Button type="submit" disabled={isSubmitting || isLoadingEmployees}>
             {isSubmitting ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
             ) : (
-              <><Save className="mr-2 h-4 w-4"/>Save Changes</>
+              <><Save className="mr-2 h-4 w-4" />Save Changes</>
             )}
           </Button>
         </div>

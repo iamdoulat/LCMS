@@ -34,13 +34,13 @@ const leaveApplicationSchema = z.object({
   toDate: z.date({ required_error: "End date is required." }),
   reason: z.string().min(10, "Reason must be at least 10 characters long."),
 }).refine(data => {
-    if(data.fromDate && data.toDate) {
-        return data.toDate >= data.fromDate;
-    }
-    return true;
+  if (data.fromDate && data.toDate) {
+    return data.toDate >= data.fromDate;
+  }
+  return true;
 }, {
-    message: "End date cannot be before the start date.",
-    path: ["toDate"],
+  message: "End date cannot be before the start date.",
+  path: ["toDate"],
 });
 
 type LeaveApplicationFormValues = z.infer<typeof leaveApplicationSchema>;
@@ -58,7 +58,7 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
   const [employeeOptions, setEmployeeOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingEmployees, setIsLoadingEmployees] = React.useState(true);
   const [isUserRestricted, setIsUserRestricted] = React.useState(false);
-  
+
   const { data: employees } = useFirestoreQuery<EmployeeDocument[]>(
     query(collection(firestore, "employees"), orderBy("fullName")),
     undefined,
@@ -83,15 +83,15 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
       fromDate: new Date(),
       toDate: new Date(),
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   React.useEffect(() => {
     if (employees && user && userRole) {
       const canViewAll = userRole.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
-      
+
       if (canViewAll) {
-         setEmployeeOptions(employees.map(emp => ({
+        setEmployeeOptions(employees.map(emp => ({
           value: emp.id,
           label: `${emp.fullName} (${emp.employeeCode})`
         })));
@@ -99,12 +99,12 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
       } else {
         const loggedInEmployee = employees.find(emp => emp.id === user.uid || emp.email === user.email);
         if (loggedInEmployee) {
-           setEmployeeOptions([{
-              value: loggedInEmployee.id,
-              label: `${loggedInEmployee.fullName} (${loggedInEmployee.employeeCode})`
-           }]);
-           form.setValue('employeeId', loggedInEmployee.id, { shouldValidate: true });
-           setIsUserRestricted(true);
+          setEmployeeOptions([{
+            value: loggedInEmployee.id,
+            label: `${loggedInEmployee.fullName} (${loggedInEmployee.employeeCode})`
+          }]);
+          form.setValue('employeeId', loggedInEmployee.id, { shouldValidate: true });
+          setIsUserRestricted(true);
         } else {
           setEmployeeOptions([]);
           setIsUserRestricted(true);
@@ -117,39 +117,54 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
 
   const onSubmit = async (data: LeaveApplicationFormValues) => {
     if (!user) {
-        Swal.fire("Authentication Error", "You must be logged in to submit an application.", "error");
-        return;
+      Swal.fire("Authentication Error", "You must be logged in to submit an application.", "error");
+      return;
     }
     setIsSubmitting(true);
-    
+
     const selectedEmployee = employeeOptions.find(e => e.value === data.employeeId);
 
     const dataToSave = {
-        ...data,
-        employeeName: selectedEmployee?.label.split(' (')[0] || 'N/A', // Denormalize for easier display
-        fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-        toDate: format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-        status: 'Pending',
-        appliedBy: user.displayName || user.email,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+      ...data,
+      employeeName: selectedEmployee?.label.split(' (')[0] || 'N/A', // Denormalize for easier display
+      fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      toDate: format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      status: 'Pending',
+      appliedBy: user.displayName || user.email,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     };
 
     try {
-        await addDoc(collection(firestore, "leave_applications"), dataToSave);
-        Swal.fire({
-            title: "Application Submitted!",
-            text: "Your leave application has been submitted for approval.",
-            icon: "success",
-            timer: 2000,
-            showConfirmButton: false,
+      const docRef = await addDoc(collection(firestore, "leave_applications"), dataToSave);
+
+      // Notify Admin
+      try {
+        fetch('/api/notify/leave', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'new_request',
+            requestId: docRef.id
+          })
         });
-        form.reset();
-        onFormSubmit();
+      } catch (err) {
+        console.error("Failed to trigger admin notification", err);
+      }
+
+      Swal.fire({
+        title: "Application Submitted!",
+        text: "Your leave application has been submitted for approval.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+      form.reset();
+      onFormSubmit();
     } catch (error: any) {
-        Swal.fire("Submission Failed", `There was an error submitting your application: ${error.message}`, "error");
+      Swal.fire("Submission Failed", `There was an error submitting your application: ${error.message}`, "error");
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -158,74 +173,74 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
-            <FormField
+          <FormField
             control={form.control}
             name="employeeId"
             render={({ field }) => (
-            <FormItem className="lg:col-span-1">
+              <FormItem className="lg:col-span-1">
                 <FormLabel>Employee*</FormLabel>
                 {isUserRestricted ? (
-                    <Input value={employeeOptions[0]?.label || "Loading..."} readOnly disabled className="bg-muted/50" />
+                  <Input value={employeeOptions[0]?.label || "Loading..."} readOnly disabled className="bg-muted/50" />
                 ) : (
-                    <Combobox
+                  <Combobox
                     options={employeeOptions}
                     value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
                     onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
                     placeholder="Search Employee..."
                     selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee"}
                     disabled={isLoadingEmployees}
-                    />
+                  />
                 )}
                 <FormMessage />
-            </FormItem>
+              </FormItem>
             )} />
 
-            <FormField
+          <FormField
             control={form.control}
             name="leaveType"
             render={({ field }) => (
-                <FormItem className="lg:col-span-1">
+              <FormItem className="lg:col-span-1">
                 <FormLabel>Leave Type*</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
+                  <FormControl>
                     <SelectTrigger>
-                        <SelectValue placeholder="Select Leave Type" />
+                      <SelectValue placeholder="Select Leave Type" />
                     </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {leaveTypeOptions.map(option => (
-                           <SelectItem key={option} value={option}>{option}</SelectItem>
-                        ))}
-                    </SelectContent>
+                  </FormControl>
+                  <SelectContent>
+                    {leaveTypeOptions.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <FormField
+          />
+          <FormField
             control={form.control}
             name="fromDate"
             render={({ field }) => (
-                <FormItem className="lg:col-span-1">
+              <FormItem className="lg:col-span-1">
                 <FormLabel>From*</FormLabel>
                 <DatePickerInput field={field} />
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <FormField
+          />
+          <FormField
             control={form.control}
             name="toDate"
             render={({ field }) => (
-                <FormItem className="lg:col-span-1">
+              <FormItem className="lg:col-span-1">
                 <FormLabel>To*</FormLabel>
                 <DatePickerInput field={field} fromDate={form.getValues("fromDate")} />
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
+          />
         </div>
-        
+
         <FormField
           control={form.control}
           name="reason"
@@ -242,9 +257,9 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
         <div className="flex justify-end pt-4">
           <Button type="submit" disabled={isSubmitting || isLoadingEmployees}>
             {isSubmitting ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Submitting...</>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
             ) : (
-              <><Save className="mr-2 h-4 w-4"/>Submit Application</>
+              <><Save className="mr-2 h-4 w-4" />Submit Application</>
             )}
           </Button>
         </div>

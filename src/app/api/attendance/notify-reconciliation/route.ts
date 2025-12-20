@@ -6,14 +6,33 @@ import { sendEmail } from '@/lib/email/sender';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const {
-            employeeName,
-            attendanceDate,
-            reason, // mapped to remarks
-            reconciliationId
-        } = body;
+        const { reconciliationId } = body;
 
-        // 1. Fetch Users with Admin or HR roles
+        if (!reconciliationId) {
+            return NextResponse.json({ error: 'Reconciliation ID is required' }, { status: 400 });
+        }
+
+        // 1. Fetch Reconciliation Data
+        const recDoc = await admin.firestore().collection('attendance_reconciliation').doc(reconciliationId).get();
+        if (!recDoc.exists) {
+            return NextResponse.json({ error: 'Reconciliation not found' }, { status: 404 });
+        }
+        const recData = recDoc.data();
+
+        // 2. Fetch Employee Data for Department (and fallback designation/name)
+        let department = 'N/A';
+        try {
+            if (recData?.employeeId) {
+                const empDoc = await admin.firestore().collection('employees').doc(recData.employeeId).get();
+                if (empDoc.exists) {
+                    department = empDoc.data()?.department || 'N/A';
+                }
+            }
+        } catch (e) {
+            console.error("Error fetching employee details:", e);
+        }
+
+        // 3. Fetch Users with Admin or HR roles
         // Firestore doesn't support logical OR in array-contains directly for different values easily in one query without 'in'
         // But 'in' works on exact equality. 'array-contains-any' is what we want.
 
@@ -42,16 +61,25 @@ export async function POST(request: Request) {
         // Deduplicate emails
         const uniqueEmails = Array.from(new Set(targetEmails));
 
-        // 2. Prepare Data for Template
+        // 4. Prepare Data for Template
         const templateData = {
-            name: employeeName, // Template uses {{name}} for employee name? Or {{employee_name}}? 
-            // Based on user request/check, usually it's {{name}} of employee in the subject or body.
-            // Let's pass both to be safe if possible, or mapping.
-            // The command output showed '{{name}}'.
-            employee_name: employeeName,
-            date: attendanceDate,
-            reason: reason || 'No remarks provided',
-            link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/hr/attendance/reconciliation`, // Link to admin page
+            name: recData?.employeeName || 'Unknown Employee',
+            designation: recData?.designation || 'N/A',
+            department: department,
+            date: recData?.attendanceDate || 'N/A', // Attendance Reconciliation Date
+            apply_date: recData?.applyDate || new Date().toLocaleDateString(), // Apply Date
+
+            // In Time
+            in_time: recData?.originalInTime || 'N/A',
+            reconciliation_in_time: recData?.requestedInTime || 'N/A',
+            in_time_remarks: recData?.inTimeRemarks || 'N/A',
+
+            // Out Time
+            out_time: recData?.originalOutTime || 'N/A',
+            reconciliation_out_time: recData?.requestedOutTime || 'N/A',
+            out_time_remarks: recData?.outTimeRemarks || 'N/A',
+
+            link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/hr/attendance/reconciliation`,
             reconciliation_id: reconciliationId
         };
 

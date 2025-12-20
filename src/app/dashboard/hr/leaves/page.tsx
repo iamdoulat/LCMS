@@ -182,6 +182,23 @@ export default function LeaveManagementPage() {
                         updateData.approverComment = comment;
                     }
                     await updateDoc(leaveDocRef, updateData);
+
+                    // Notify Employee
+                    try {
+                        fetch('/api/notify/leave', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                type: 'decision',
+                                requestId: leaveId,
+                                status: newStatus,
+                                rejectionReason: newStatus === 'Rejected' ? comment : undefined
+                            })
+                        });
+                    } catch (err) {
+                        console.error("Failed to trigger decision notification", err);
+                    }
+
                     Swal.fire('Success!', `The leave application has been ${newStatus.toLowerCase()}.`, 'success');
                 } catch (error: any) {
                     Swal.fire('Error!', `Could not update the status: ${error.message}`, 'error');

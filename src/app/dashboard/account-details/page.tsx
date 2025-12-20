@@ -361,7 +361,19 @@ export default function AccountDetailsPage() {
         shift: employeeData.shift || 'General',
       };
 
-      await createReconciliationRequest(data, user.uid);
+      const newReconciliationId = await createReconciliationRequest(data, user.uid);
+
+      // Trigger Email Notification (Non-blocking)
+      fetch('/api/attendance/notify-reconciliation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeName: employeeData.fullName,
+          attendanceDate: dateKey,
+          reason: [reconciliationForm.inTimeRemarks, reconciliationForm.outTimeRemarks].filter(Boolean).join(' | '),
+          reconciliationId: newReconciliationId
+        })
+      }).catch(err => console.error("Failed to trigger notification email:", err));
 
       // Refresh list
       const docs = await getEmployeeReconciliations(employeeData.id);

@@ -64,9 +64,9 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
         const employeesQuery = query(collection(firestore, "employees"), orderBy("fullName"));
         const snapshot = await getDocs(employeesQuery);
         const allEmployees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmployeeDocument));
-        
+
         const canViewAll = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
-        
+
         if (canViewAll) {
           setEmployeeOptions(allEmployees.map(data => ({
             value: data.id,
@@ -76,12 +76,12 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
         } else if (user) {
           const loggedInEmployee = allEmployees.find(emp => emp.id === user.uid || emp.email === user.email);
           if (loggedInEmployee) {
-             setEmployeeOptions([{
-                value: loggedInEmployee.id,
-                label: `${loggedInEmployee.fullName} (${loggedInEmployee.employeeCode})`
-             }]);
-             form.setValue('employeeId', loggedInEmployee.id, { shouldValidate: true });
-             setIsUserRestricted(true);
+            setEmployeeOptions([{
+              value: loggedInEmployee.id,
+              label: `${loggedInEmployee.fullName} (${loggedInEmployee.employeeCode})`
+            }]);
+            form.setValue('employeeId', loggedInEmployee.id, { shouldValidate: true });
+            setIsUserRestricted(true);
           } else {
             setEmployeeOptions([]);
             setIsUserRestricted(true);
@@ -94,7 +94,7 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
       }
     };
     if (user && userRole) {
-        fetchEmployees();
+      fetchEmployees();
     }
   }, [user, userRole, form]);
 
@@ -105,7 +105,7 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
     }
     setIsSubmitting(true);
     const selectedEmployee = employeeOptions.find(emp => emp.value === data.employeeId);
-    
+
     const dataToSave: Omit<VisitApplicationDocument, 'id'> = {
       employeeId: data.employeeId,
       employeeName: selectedEmployee?.label.split(' (')[0] || 'N/A',
@@ -121,7 +121,22 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
     };
 
     try {
-      await addDoc(collection(firestore, "visit_applications"), dataToSave);
+      const docRef = await addDoc(collection(firestore, "visit_applications"), dataToSave);
+
+      // Notify Admin
+      try {
+        fetch('/api/notify/visit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'new_request',
+            requestId: docRef.id
+          })
+        });
+      } catch (err) {
+        console.error("Failed to trigger admin notification", err);
+      }
+
       Swal.fire({
         title: "Application Submitted!",
         text: `Visit application for ${selectedEmployee?.label} has been submitted.`,
@@ -142,36 +157,36 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-end">
-            <FormField
+          <FormField
             control={form.control}
             name="employeeId"
             render={({ field }) => (
-                <FormItem className="lg:col-span-1 xl:col-span-1">
+              <FormItem className="lg:col-span-1 xl:col-span-1">
                 <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Employee*</FormLabel>
-                 {isUserRestricted ? (
-                    <Input value={employeeOptions[0]?.label || 'Loading...'} readOnly disabled className="bg-muted/50" />
+                {isUserRestricted ? (
+                  <Input value={employeeOptions[0]?.label || 'Loading...'} readOnly disabled className="bg-muted/50" />
                 ) : (
-                    <Combobox
-                        options={employeeOptions}
-                        value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
-                        onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
-                        placeholder="Search Employee by Code or Name"
-                        selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee by Code or Name"}
-                        disabled={isLoadingEmployees}
-                    />
+                  <Combobox
+                    options={employeeOptions}
+                    value={field.value || PLACEHOLDER_EMPLOYEE_VALUE}
+                    onValueChange={(value) => field.onChange(value === PLACEHOLDER_EMPLOYEE_VALUE ? '' : value)}
+                    placeholder="Search Employee by Code or Name"
+                    selectPlaceholder={isLoadingEmployees ? "Loading..." : "Select Employee by Code or Name"}
+                    disabled={isLoadingEmployees}
+                  />
                 )}
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
-            />
-            <FormItem className="md:col-span-1">
-              <FormLabel>Visit Status</FormLabel>
-              <div className="flex items-center h-10 px-3 border rounded-md bg-muted/50">
-                <Badge variant="secondary" className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse"></span>
-                  Pending
-                </Badge>
-              </div>
+          />
+          <FormItem className="md:col-span-1">
+            <FormLabel>Visit Status</FormLabel>
+            <div className="flex items-center h-10 px-3 border rounded-md bg-muted/50">
+              <Badge variant="secondary" className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-orange-500 animate-pulse"></span>
+                Pending
+              </Badge>
+            </div>
           </FormItem>
           <FormField
             control={form.control}
@@ -179,7 +194,7 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />From Date*</FormLabel>
-                <DatePickerInput field={field} placeholder="dd-mm-yyyy hh:mm a" showTimeSelect/>
+                <DatePickerInput field={field} placeholder="dd-mm-yyyy hh:mm a" showTimeSelect />
                 <FormMessage />
               </FormItem>
             )}
@@ -190,14 +205,14 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel className="flex items-center"><Calendar className="mr-2 h-4 w-4 text-muted-foreground" />End Date*</FormLabel>
-                <DatePickerInput field={field} fromDate={form.getValues("fromDate")} placeholder="dd-mm-yyyy hh:mm a" showTimeSelect/>
+                <DatePickerInput field={field} fromDate={form.getValues("fromDate")} placeholder="dd-mm-yyyy hh:mm a" showTimeSelect />
                 <FormMessage />
               </FormItem>
             )}
           />
           <FormItem>
-              <FormLabel>Day Count</FormLabel>
-              <Input value={`${dayCount} Day(s)`} readOnly disabled className="bg-muted/50 h-10 cursor-not-allowed"/>
+            <FormLabel>Day Count</FormLabel>
+            <Input value={`${dayCount} Day(s)`} readOnly disabled className="bg-muted/50 h-10 cursor-not-allowed" />
           </FormItem>
         </div>
         <FormField
@@ -219,14 +234,14 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={onFormSubmit}>
-                Cancel
+              Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting || isLoadingEmployees}>
-                {isSubmitting ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Submitting...</>
-                ) : (
-                <><Save className="mr-2 h-4 w-4"/>Save</>
-                )}
+              {isSubmitting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting...</>
+              ) : (
+                <><Save className="mr-2 h-4 w-4" />Save</>
+              )}
             </Button>
           </div>
         </div>

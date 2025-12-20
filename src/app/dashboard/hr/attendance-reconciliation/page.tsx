@@ -113,10 +113,24 @@ export default function AttendanceReconciliationPage() {
         });
     };
 
+    // Helper to trigger email notification
+    const notifyDecision = async (id: string, status: 'approved' | 'rejected', rejectionReason?: string) => {
+        try {
+            await fetch('/api/attendance/notify-decision', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reconciliationId: id, status, rejectionReason })
+            });
+        } catch (error) {
+            console.error(`Failed to send ${status} notification for ${id}:`, error);
+        }
+    };
+
     const handleApprove = async (rec: AttendanceReconciliation) => {
         if (!user) return;
         try {
             await approveReconciliation(rec.id, rec, user.uid);
+            await notifyDecision(rec.id, 'approved'); // Trigger Email
             await safeSwalFire({
                 title: "Approved",
                 text: "Reconciliation approved successfully.",
@@ -142,8 +156,46 @@ export default function AttendanceReconciliationPage() {
 
     const handleReject = async (id: string) => {
         if (!user) return;
+
+        // Ask for rejection reason
+        const { value: reason } = await Swal.fire({
+            title: 'Reject Reconciliation',
+            input: 'text',
+            inputLabel: 'Reason for rejection',
+            inputPlaceholder: 'Enter reason...',
+            showCancelButton: true,
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'You need to write a reason!';
+                }
+                return null;
+            }
+        });
+
+        if (!reason) return; // User cancelled
+
         try {
+            // Pass reason to rejectReconciliation if supported, or just to email
+            // Assuming rejectReconciliation updates status. 
+            // Ideally we should save the reason in Firestore too.
+            // checking `rejectReconciliation` signature in imports... it takes (id, updatedBy). 
+            // If it doesn't support reason, we only send it in email for now or update doc manually? 
+            // Let's assume for now we just notify. 
+            // Wait, usually rejection reason should be saved.
+            // I'll update Firestore with reason if the lib function doesn't support it, but looking at file content earlier is hard.
+            // I'll proceed with calling the lib function and then updating reason if possible, or just sending email.
+            // But wait, the user implicitly asked "collect data of {{rejection_reason}} replace variable from firestore".
+            // This implies the reason MUST be in Firestore. 
+            // So `rejectReconciliation` or a separate update is needed.
+
+            // Checking imports: `updateReconciliation` is available.
+            // So I will Reject AND Update the comment.
+
+            await updateReconciliation(id, { reviewComments: reason });
             await rejectReconciliation(id, user.uid);
+
+            await notifyDecision(id, 'rejected', reason); // Trigger Email
+
             await safeSwalFire({
                 title: "Rejected",
                 text: "Reconciliation rejected.",
@@ -169,7 +221,7 @@ export default function AttendanceReconciliationPage() {
 
     const handleDelete = async (id: string) => {
         if (!user) return;
-
+        // ... (rest of delete logic)
         // Use standard Swal for the confirm dialog (Radix is still open, but we need to pause)
         // Actually, we should delay this too if it closes the dropdown implicitly?
         // Dropdown actions close the dropdown immediately.
@@ -195,6 +247,7 @@ export default function AttendanceReconciliationPage() {
                         allowEscapeKey: true,
                         timer: 3000,
                         timerProgressBar: true,
+                        showConfirmButton: true,
                         showConfirmButton: true,
                     });
                     fetchData();
@@ -261,14 +314,16 @@ export default function AttendanceReconciliationPage() {
         }
     };
 
+    // Changing handleBulkApprove
     const handleBulkApprove = async () => {
         if (!user) return;
         setProcessing(true);
         try {
-            // Need to pass full objects for approval logic (updating attendance)
-            // Filter the selected reconciliations
             const selectedRecs = reconciliations.filter(r => selectedIds.has(r.id));
             await bulkApproveReconciliations(selectedRecs, user.uid);
+
+            // Trigger emails for all
+            selectedRecs.forEach(rec => notifyDecision(rec.id, 'approved'));
 
             await safeSwalFire({
                 title: "Success",
@@ -299,9 +354,30 @@ export default function AttendanceReconciliationPage() {
 
     const handleBulkReject = async () => {
         if (!user) return;
+
+        // Ask for bulk rejection reason
+        const { value: reason } = await Swal.fire({
+            title: 'Bulk Reject',
+            input: 'text',
+            inputLabel: 'Reason for rejection (applied to all)',
+            inputPlaceholder: 'Enter reason...',
+            showCancelButton: true,
+            inputValidator: (value) => !value ? 'Reason is required!' : null
+        });
+
+        if (!reason) return;
+
         setProcessing(true);
         try {
-            await bulkRejectReconciliations(Array.from(selectedIds), user.uid);
+            // Update reasons first
+            const ids = Array.from(selectedIds);
+            await Promise.all(ids.map(id => updateReconciliation(id, { reviewComments: reason })));
+
+            await bulkRejectReconciliations(ids, user.uid);
+
+            // Trigger emails
+            ids.forEach(id => notifyDecision(id, 'rejected', reason));
+
             await safeSwalFire({
                 title: "Success",
                 text: `${selectedIds.size} requests rejected.`,
