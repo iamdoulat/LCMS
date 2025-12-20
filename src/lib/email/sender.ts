@@ -149,7 +149,7 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
                 throw new Error('Resend module not found. Please run: npm install resend');
             }
 
-            const { Resend } = resendModule;
+            const { Resend } = resendModule.default || resendModule;
             const resend = new Resend(config.resendApiKey);
 
             const { data: res, error } = await resend.emails.send({

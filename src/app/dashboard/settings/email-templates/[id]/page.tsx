@@ -240,6 +240,7 @@ export default function EditEmailTemplatePage() {
                                         '{{name}}', '{{user_name}}', '{{password}}', '{{date}}',
                                         '{{department}}', '{{designation}}',
                                         '{{in_time}}', '{{out_time}}', '{{in_time_remarks}}', '{{out_time_remarks}}',
+                                        '{{reconciliation_in_time}}', '{{reconciliation_out_time}}',
                                         '{{apply_date}}',
                                         '{{visit_start}}', '{{visit_end}}', '{{total_duration}}', '{{visit_purpose}}'
                                     ].map(v => (
@@ -310,6 +311,8 @@ export default function EditEmailTemplatePage() {
                                                 .replace(/{{visit_purpose}}/g, 'Meeting')
                                                 .replace(/{{in_time}}/g, '09:00 AM')
                                                 .replace(/{{out_time}}/g, '06:00 PM')
+                                                .replace(/{{reconciliation_in_time}}/g, '09:05 AM')
+                                                .replace(/{{reconciliation_out_time}}/g, '05:55 PM')
                                         }} />
                                     </div>
                                 </DialogContent>
