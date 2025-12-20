@@ -248,7 +248,6 @@ export default function AttendanceReconciliationPage() {
                         timer: 3000,
                         timerProgressBar: true,
                         showConfirmButton: true,
-                        showConfirmButton: true,
                     });
                     fetchData();
                 } catch (error) {
