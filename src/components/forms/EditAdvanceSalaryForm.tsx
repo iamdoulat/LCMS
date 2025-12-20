@@ -200,7 +200,7 @@ export function EditAdvanceSalaryForm({ initialData }: EditAdvanceSalaryFormProp
           name="reason"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Approved reason*</FormLabel>
+              <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Reason*</FormLabel>
               <FormControl>
                 <Textarea placeholder="Reason for advance salary request..." {...field} />
               </FormControl>
