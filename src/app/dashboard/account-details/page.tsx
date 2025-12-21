@@ -1528,7 +1528,7 @@ export default function AccountDetailsPage() {
 
               {/* Remarks */}
               <div className="space-y-2">
-                <Label htmlFor="checkInOutRemarks">Remarks (Optional)</Label>
+                <Label htmlFor="checkInOutRemarks">Remarks *</Label>
                 <Input
                   id="checkInOutRemarks"
                   placeholder="Add any additional notes"
@@ -1545,6 +1545,11 @@ export default function AccountDetailsPage() {
                   // Validation
                   if (!companyName.trim()) {
                     Swal.fire('Validation Error', 'Please enter company name', 'error');
+                    return;
+                  }
+
+                  if (!checkInOutRemarks.trim()) {
+                    Swal.fire('Validation Error', 'Please enter remarks', 'error');
                     return;
                   }
 
@@ -1616,52 +1621,6 @@ export default function AccountDetailsPage() {
                 </Link>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-              <FileDigit className="h-6 w-6 text-primary" />
-              Monthly Payslip Summary
-            </CardTitle>
-            <CardDescription>
-              A summary of your generated payslips.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingPayslips ? (
-              <div className="flex justify-center items-center h-24">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : payslips.length === 0 ? (
-              <p className="text-muted-foreground text-center">No payslip data found for this account.</p>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Month</TableHead>
-                      <TableHead>Gross Salary</TableHead>
-                      <TableHead>Advance Paid</TableHead>
-                      <TableHead>Total Deductions</TableHead>
-                      <TableHead className="font-bold">Net Salary</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payslips.map((payslip) => (
-                      <TableRow key={payslip.id}>
-                        <TableCell>{payslip.payPeriod}</TableCell>
-                        <TableCell>{formatCurrency(payslip.grossSalary)}</TableCell>
-                        <TableCell>{formatCurrency(payslip.advanceDeduction)}</TableCell>
-                        <TableCell>{formatCurrency(payslip.totalDeductions)}</TableCell>
-                        <TableCell className="font-semibold">{formatCurrency(payslip.netSalary)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -1925,6 +1884,52 @@ export default function AccountDetailsPage() {
                   </TableRow>
                 )) : <TableRow><TableCell colSpan={5} className="text-center">No visit applications found.</TableCell></TableRow>}
               </TableBody></Table>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
+          <CardHeader>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <FileDigit className="h-6 w-6 text-primary" />
+              Monthly Payslip Summary
+            </CardTitle>
+            <CardDescription>
+              A summary of your generated payslips.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingPayslips ? (
+              <div className="flex justify-center items-center h-24">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : payslips.length === 0 ? (
+              <p className="text-muted-foreground text-center">No payslip data found for this account.</p>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Month</TableHead>
+                      <TableHead>Gross Salary</TableHead>
+                      <TableHead>Advance Paid</TableHead>
+                      <TableHead>Total Deductions</TableHead>
+                      <TableHead className="font-bold">Net Salary</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payslips.map((payslip) => (
+                      <TableRow key={payslip.id}>
+                        <TableCell>{payslip.payPeriod}</TableCell>
+                        <TableCell>{formatCurrency(payslip.grossSalary)}</TableCell>
+                        <TableCell>{formatCurrency(payslip.advanceDeduction)}</TableCell>
+                        <TableCell>{formatCurrency(payslip.totalDeductions)}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(payslip.netSalary)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
 

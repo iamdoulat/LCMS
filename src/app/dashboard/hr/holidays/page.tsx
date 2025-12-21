@@ -11,6 +11,7 @@ import { format, parseISO } from 'date-fns';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import type { HolidayDocument } from '@/types';
 import Swal from 'sweetalert2';
@@ -113,6 +114,7 @@ export default function HolidaysPage() {
                     <TableHead className="w-[25%] whitespace-nowrap">Holiday Name</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Email Sent</TableHead>
                     <TableHead className="w-[40%]">Message</TableHead>
                     {!isReadOnly && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
@@ -123,6 +125,11 @@ export default function HolidaysPage() {
                       <TableCell className="whitespace-nowrap">{holiday.name}</TableCell>
                       <TableCell className="min-w-[200px]">{formatHolidayDate(holiday)}</TableCell>
                       <TableCell>{holiday.type}</TableCell>
+                      <TableCell>
+                        <Badge variant={holiday.emailSent ? "default" : "secondary"}>
+                          {holiday.emailSent ? "True" : "False"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="whitespace-pre-wrap">{holiday.message || 'N/A'}</TableCell>
                       {!isReadOnly && (
                         <TableCell className="text-right">

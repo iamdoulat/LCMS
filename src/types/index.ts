@@ -1682,6 +1682,7 @@ export interface HolidayDocument {
   toDate?: string; // ISO string
   type: HolidayType;
   message?: string;
+  emailSent?: boolean;
   createdAt: any;
 }
 // --- END Holiday Types ---

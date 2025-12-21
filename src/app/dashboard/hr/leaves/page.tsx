@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mailbox, PlusCircle, AlertTriangle, Info, ThumbsUp, ThumbsDown, Edit, Filter, XCircle, MoreHorizontal } from 'lucide-react';
+import { Mailbox, PlusCircle, AlertTriangle, Info, ThumbsUp, ThumbsDown, Edit, Filter, XCircle, MoreHorizontal, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
     Table,
@@ -19,7 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { firestore } from '@/lib/firebase/config';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import type { LeaveApplicationDocument, LeaveStatus, LeaveType } from '@/types';
 import { leaveStatusOptions, leaveTypeOptions } from '@/types';
 import { format, parseISO, isValid, differenceInCalendarDays } from 'date-fns';
@@ -207,6 +207,29 @@ export default function LeaveManagementPage() {
         });
     };
 
+    const handleDelete = (leaveId: string, employeeName: string) => {
+        if (!canApprove) return;
+
+        Swal.fire({
+            title: 'Delete Application?',
+            text: `Are you sure you want to delete the leave application for ${employeeName}? This action cannot be undone.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: 'hsl(var(--destructive))',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await deleteDoc(doc(firestore, "leave_applications", leaveId));
+                    Swal.fire('Deleted!', 'The leave application has been removed.', 'success');
+                } catch (error: any) {
+                    Swal.fire('Error!', `Could not delete: ${error.message}`, 'error');
+                }
+            }
+        });
+    };
+
 
     const getStatusBadgeVariant = (status: string) => {
         switch (status) {
@@ -351,6 +374,14 @@ export default function LeaveManagementPage() {
                                                                 <DropdownMenuItem onSelect={() => router.push(`/dashboard/hr/leaves/edit/${leave.id}`)}>
                                                                     <Edit className="mr-2 h-4 w-4" />
                                                                     <span>Edit</span>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    onSelect={() => handleDelete(leave.id, name)}
+                                                                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                                                >
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    <span>Delete</span>
                                                                 </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>

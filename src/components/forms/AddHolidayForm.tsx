@@ -56,11 +56,31 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
     }
 
     try {
-      await addDoc(collection(firestore, "holidays"), dataToSave);
+      const docRef = await addDoc(collection(firestore, "holidays"), dataToSave);
+
+      // Trigger Email Notifications asynchronously
+      fetch('/api/notify/holiday', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          holidayId: docRef.id,
+          holidayData: {
+            title: data.name,
+            fromDate: data.fromDate.toISOString(),
+            toDate: data.toDate ? data.toDate.toISOString() : undefined,
+            type: data.type,
+            description: data.message || '',
+          }
+        }),
+      }).catch(err => console.error("Holiday Notification Error:", err));
+
       Swal.fire({
         title: "Holiday Added!",
+        text: "Announcement emails are being sent to all employees.",
         icon: "success",
-        timer: 1500,
+        timer: 3000,
         showConfirmButton: false,
       });
       form.reset();
@@ -138,7 +158,7 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
             </FormItem>
           )}
         />
-         <FormField
+        <FormField
           control={form.control}
           name="message"
           render={({ field }) => (
@@ -152,19 +172,19 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
           )}
         />
         <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
-                <>
+              <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
-                </>
+              </>
             ) : (
-                <>
+              <>
                 <Save className="mr-2 h-4 w-4" />
                 Save Holiday
-                </>
+              </>
             )}
-            </Button>
+          </Button>
         </div>
       </form>
     </Form>
