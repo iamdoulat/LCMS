@@ -166,7 +166,7 @@ export function CreateSaleInvoiceForm() {
       try {
         const [customersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "customers")),
-          getDocs(collection(firestore, "quote_items"))
+          getDocs(collection(firestore, "items"))
         ]);
 
         setCustomerOptions(
@@ -178,16 +178,16 @@ export function CreateSaleInvoiceForm() {
 
         setItemOptions(
           itemsSnap.docs.map(doc => {
-            const data = doc.data() as any; // Using any to be flexible with quote_items schema vs ItemDoc
+            const data = doc.data() as ItemDoc;
             return {
               value: doc.id,
-              label: `${data.itemName || data.modelNumber || 'Unnamed Item'}${data.itemCode ? ` (${data.itemCode})` : ''}`,
+              label: `${data.itemName || 'Unnamed Item'}${data.itemCode ? ` (${data.itemCode})` : ''}`,
               description: data.description,
               salesPrice: data.salesPrice,
               itemCode: data.itemCode,
-              manageStock: false, // quote_items are not inventory tracked
-              currentQuantity: 0,
-              imageUrl: data.imageUrl,
+              manageStock: data.manageStock || false,
+              currentQuantity: data.currentQuantity || 0,
+              imageUrl: data.photoURL || data.imageUrl,
             };
           })
         );
