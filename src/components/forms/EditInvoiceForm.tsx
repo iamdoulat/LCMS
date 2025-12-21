@@ -103,7 +103,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             description: data.description,
             salesPrice: data.salesPrice,
             itemCode: data.itemCode,
-            imageUrl: data.imageUrl || data.photoURL,
+            imageUrl: data.imageUrl || data.photoURL || undefined,
           };
         });
         setItemOptions(fetchedItems);
