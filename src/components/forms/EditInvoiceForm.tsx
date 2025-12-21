@@ -103,7 +103,7 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
             description: data.description,
             salesPrice: data.salesPrice,
             itemCode: data.itemCode,
-            imageUrl: data.imageUrl,
+            imageUrl: data.imageUrl || data.photoURL,
           };
         });
         setItemOptions(fetchedItems);
@@ -393,6 +393,28 @@ export function EditInvoiceForm({ initialData, invoiceId }: EditInvoiceFormProps
                   <SelectContent>
                     {invoiceStatusOptions.map(status => (
                       <SelectItem key={status} value={status}>{status}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="shipmentMode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Shipment Mode</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value ?? shipmentTermsOptions[0]}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Shipment Mode" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {shipmentTermsOptions.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

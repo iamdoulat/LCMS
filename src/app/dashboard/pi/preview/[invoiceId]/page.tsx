@@ -107,15 +107,15 @@ export default function PrintInvoicePage() {
       if (invoiceDocSnap.exists()) {
         const invoice = { id: invoiceDocSnap.id, ...invoiceDocSnap.data() } as InvoiceDocument;
 
-        // Fetch latest images from quote_items
+        // Fetch latest images from items
         const itemsWithImages = await Promise.all(invoice.lineItems.map(async (item: any) => {
           if (item.itemId) {
             try {
-              const itemRef = doc(firestore, 'quote_items', item.itemId);
+              const itemRef = doc(firestore, 'items', item.itemId);
               const itemSnap = await getDoc(itemRef);
               if (itemSnap.exists()) {
                 const itemData = itemSnap.data();
-                return { ...item, imageUrl: itemData.imageUrl || item.imageUrl };
+                return { ...item, imageUrl: itemData.photoURL || itemData.imageUrl || item.imageUrl };
               }
             } catch (err) {
               console.error(`Error fetching image for item ${item.itemId}:`, err);

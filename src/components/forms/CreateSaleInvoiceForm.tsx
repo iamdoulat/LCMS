@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import * as React from 'react';
@@ -9,13 +7,13 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, writeBatch } from 'firebase/firestore';
-import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus } from '@/types'; // Updated types
-import { InvoiceSchema as SaleSchema, quoteTaxTypes, saleStatusOptions } from '@/types'; // Updated schemas
+import type { CustomerDocument, ItemDocument as ItemDoc, QuoteTaxType, SaleDocument, SaleFormValues as PageSaleFormValues, SaleLineItemFormValues as PageSaleLineItemFormValues, SaleStatus } from '@/types';
+import { InvoiceSchema as SaleSchema, quoteTaxTypes, saleStatusOptions, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from './DatePickerField';
-import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, FileText, CalendarDays, DollarSign, Save, X, ShoppingBag, Hash, Columns, Printer, Edit, Ship } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -91,6 +89,7 @@ export function CreateSaleInvoiceForm() {
       packingCharge: undefined,
       handlingCharge: undefined,
       otherCharges: undefined,
+      shipmentMode: shipmentTermsOptions[0],
     },
   });
 
@@ -323,6 +322,7 @@ export function CreateSaleInvoiceForm() {
           packingCharge: data.packingCharge,
           handlingCharge: data.handlingCharge,
           otherCharges: data.otherCharges,
+          shipmentMode: data.shipmentMode,
           createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
           showItemCodeColumn: data.showItemCodeColumn,
           showDiscountColumn: data.showDiscountColumn,
@@ -333,7 +333,7 @@ export function CreateSaleInvoiceForm() {
           Object.entries(dataToSave).filter(([, value]) => value !== undefined && value !== '')
         ) as Partial<Omit<SaleDocument, 'id'>>;
 
-        const newSaleRef = doc(firestore, "invoices", formattedSaleId);
+        const newSaleRef = doc(firestore, "sales_invoice", formattedSaleId);
         transaction.set(newSaleRef, cleanedDataToSave);
 
         const newCounters = {
@@ -522,6 +522,28 @@ export function CreateSaleInvoiceForm() {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="shipmentMode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Shipment Mode</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value ?? shipmentTermsOptions[0]}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Shipment Mode" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {shipmentTermsOptions.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         <Separator />
@@ -611,5 +633,3 @@ export function CreateSaleInvoiceForm() {
     </Form>
   );
 }
-
-

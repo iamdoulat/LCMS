@@ -121,19 +121,19 @@ export function CreateInventoryOrderForm() {
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
-        
+
         const itemTotalBeforeDiscount = qty * unitPrice;
-        
+
         if (qty > 0 && unitPrice >= 0) {
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const taxAmountVal = itemTotalAfterDiscount * (taxP / 100);
-          
+
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += taxAmountVal;
         }
-        
+
         const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -147,7 +147,7 @@ export function CreateInventoryOrderForm() {
     const additionalCharges = freight + other;
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
-    
+
     return {
       subtotal: currentSubtotal,
       totalDiscountAmount: currentTotalDiscount,
@@ -162,7 +162,7 @@ export function CreateInventoryOrderForm() {
       try {
         const [suppliersSnap, itemsSnap] = await Promise.all([
           getDocs(collection(firestore, "suppliers")),
-          getDocs(collection(firestore, "quote_items"))
+          getDocs(collection(firestore, "items"))
         ]);
 
         setBeneficiaryOptions(
@@ -179,7 +179,7 @@ export function CreateInventoryOrderForm() {
               value: doc.id,
               label: `${data.itemName}${data.itemCode ? ` (${data.itemCode})` : ''}`,
               description: data.description,
-              salesPrice: data.purchasePrice, // Use purchase price for purchase orders
+              salesPrice: data.purchasePrice || data.salesPrice, // Use purchase price for purchase orders, fallback to salesPrice
               itemCode: data.itemCode,
             };
           })
@@ -241,41 +241,41 @@ export function CreateInventoryOrderForm() {
         }
         const newCount = currentCount + 1;
         const formattedOrderId = `ORD${currentYear}-${String(newCount).padStart(3, '0')}`;
-        
+
         const processedLineItems = data.lineItems.map(item => {
-            const qty = parseFloat(String(item.qty || '0')) || 0;
-            const unitPriceStr = String(item.unitPrice || '0');
-            const finalUnitPrice = parseFloat(unitPriceStr) || 0;
-            const discountPercentageStr = String(item.discountPercentage || '0');
-            const finalDiscountPercentage = parseFloat(discountPercentageStr) || 0;
-            const taxPercentageStr = String(item.taxPercentage || '0');
-            const finalTaxPercentage = parseFloat(taxPercentageStr) || 0;
-    
-            const itemTotalBeforeDiscount = qty * finalUnitPrice;
-            
-            const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
-    
-            const lineItemData: Record<string, any> = {
-                itemId: item.itemId,
-                itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A', 
-                itemCode: itemDetailsFromOptions?.itemCode,
-                description: item.description || '',
-                qty: qty,
-                unitPrice: finalUnitPrice,
-                discountPercentage: finalDiscountPercentage,
-                taxPercentage: finalTaxPercentage,
-                total: itemTotalBeforeDiscount,
-            };
-            // Clean up undefined/empty fields within the line item
-            Object.keys(lineItemData).forEach(key => {
-                const value = lineItemData[key];
-                if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
-                    delete lineItemData[key];
-                }
-            });
-            return lineItemData;
+          const qty = parseFloat(String(item.qty || '0')) || 0;
+          const unitPriceStr = String(item.unitPrice || '0');
+          const finalUnitPrice = parseFloat(unitPriceStr) || 0;
+          const discountPercentageStr = String(item.discountPercentage || '0');
+          const finalDiscountPercentage = parseFloat(discountPercentageStr) || 0;
+          const taxPercentageStr = String(item.taxPercentage || '0');
+          const finalTaxPercentage = parseFloat(taxPercentageStr) || 0;
+
+          const itemTotalBeforeDiscount = qty * finalUnitPrice;
+
+          const itemDetailsFromOptions = itemOptions.find(opt => opt.value === item.itemId);
+
+          const lineItemData: Record<string, any> = {
+            itemId: item.itemId,
+            itemName: itemDetailsFromOptions?.label.split(' (')[0] || 'N/A',
+            itemCode: itemDetailsFromOptions?.itemCode,
+            description: item.description || '',
+            qty: qty,
+            unitPrice: finalUnitPrice,
+            discountPercentage: finalDiscountPercentage,
+            taxPercentage: finalTaxPercentage,
+            total: itemTotalBeforeDiscount,
+          };
+          // Clean up undefined/empty fields within the line item
+          Object.keys(lineItemData).forEach(key => {
+            const value = lineItemData[key];
+            if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
+              delete lineItemData[key];
+            }
+          });
+          return lineItemData;
         });
-        
+
         const orderDataToSave: Record<string, any> = {
           beneficiaryId: data.beneficiaryId,
           beneficiaryName: selectedBeneficiary?.label || 'N/A',
@@ -313,7 +313,7 @@ export function CreateInventoryOrderForm() {
             cleanedDataToSave[key] = value;
           }
         }
-        
+
         const newOrderRef = doc(firestore, "inventory_orders", formattedOrderId);
         transaction.set(newOrderRef, cleanedDataToSave);
 
@@ -324,7 +324,7 @@ export function CreateInventoryOrderForm() {
           }
         };
         transaction.set(counterRef, newCounters, { merge: true });
-        
+
         return formattedOrderId;
       });
       return newOrderId;
@@ -372,7 +372,7 @@ export function CreateInventoryOrderForm() {
       Swal.fire("No Order Saved", "Please save a purchase order first to preview it.", "info");
     }
   };
-  
+
   const grandTotalLabel = `${watchedShipmentMode} Total (USD):`;
 
   if (isLoadingDropdowns) {
@@ -383,14 +383,14 @@ export function CreateInventoryOrderForm() {
       </div>
     );
   }
-  
+
   const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
   const actionButtonsDisabled = !generatedOrderId || isSubmitting;
 
   return (
     <Form {...form}>
       <form className="space-y-8">
-        
+
         <h3 className={cn(sectionHeadingClass)}><Building className="mr-2 h-5 w-5 text-primary" />Beneficiary & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -430,115 +430,115 @@ export function CreateInventoryOrderForm() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)}/></div>
-          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/></div>
+          <div><FormField control={control} name="salesperson" render={({ field }) => (<FormItem><FormLabel>Salesperson*</FormLabel><FormControl><Input placeholder="Salesperson name" {...field} /></FormControl><FormMessage /></FormItem>)} /></div>
+          <div><FormField control={control} name="shippingAddress" render={({ field }) => (<FormItem><FormLabel>Delivery Address*</FormLabel><FormControl><Textarea placeholder="Delivery address" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)} /></div>
         </div>
-        
+
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Order Details</h3>
-         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
-             <FormItem>
-              <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel>
-              <Input value={generatedOrderId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
-            </FormItem>
-            <FormField
-                control={control}
-                name="orderDate"
-                render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>Order Date*</FormLabel>
-                    <DatePickerField field={field} placeholder="Select order date" />
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-             <FormField
-                control={form.control}
-                name="taxType"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Tax</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? 'Default'}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select tax type" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {quoteTaxTypes.map((type) => (
-                            <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-             />
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
+          <FormItem>
+            <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Order Number</FormLabel>
+            <Input value={generatedOrderId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
+          </FormItem>
+          <FormField
+            control={control}
+            name="orderDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Order Date*</FormLabel>
+                <DatePickerField field={field} placeholder="Select order date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="taxType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tax</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value ?? 'Default'}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select tax type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {quoteTaxTypes.map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-          <FormField control={control} name="terms" render={({ field }) => (<FormItem><FormLabel>Terms</FormLabel><FormControl><Input placeholder="e.g., FOB, CIF" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
-          <FormField control={control} name="shipVia" render={({ field }) => (<FormItem><FormLabel>Ship Via</FormLabel><FormControl><Input placeholder="e.g., Sea, Air" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
-          <FormField control={control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel>Port of Loading</FormLabel><FormControl><Input placeholder="e.g., Shanghai" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
-          <FormField control={control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel>Port of Discharge</FormLabel><FormControl><Input placeholder="e.g., Chattogram" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)}/>
+          <FormField control={control} name="terms" render={({ field }) => (<FormItem><FormLabel>Terms</FormLabel><FormControl><Input placeholder="e.g., FOB, CIF" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="shipVia" render={({ field }) => (<FormItem><FormLabel>Ship Via</FormLabel><FormControl><Input placeholder="e.g., Sea, Air" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="portOfLoading" render={({ field }) => (<FormItem><FormLabel>Port of Loading</FormLabel><FormControl><Input placeholder="e.g., Shanghai" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="portOfDischarge" render={({ field }) => (<FormItem><FormLabel>Port of Discharge</FormLabel><FormControl><Input placeholder="e.g., Chattogram" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
         </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-           <FormField
-              control={form.control}
-              name="shipmentMode"
-              render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Shipment Mode</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value ?? shipmentTermsOptions[0]}>
-                          <FormControl>
-                              <SelectTrigger>
-                                  <SelectValue placeholder="Select shipment mode" />
-                              </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                              {shipmentTermsOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
-                      <FormMessage />
-                  </FormItem>
-              )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+          <FormField
+            control={form.control}
+            name="shipmentMode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Shipment Mode</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value ?? shipmentTermsOptions[0]}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select shipment mode" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {shipmentTermsOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
           />
           <FormField control={control} name="freightCharges" render={({ field }) => (<FormItem><FormLabel>Freight Charges:</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
-        
+
         <Separator className="my-6" />
         <div className="flex justify-between items-center">
-            <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
-                <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
-            </h3>
-            <div className="flex items-center gap-2">
-                <Link href="/dashboard/quotations/items/add" target="_blank">
-                    <Button variant="outline" size="sm" type="button">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
-                    </Button>
-                </Link>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
-                    </DropdownMenuContent></DropdownMenu>
-            </div>
+          <h3 className={cn(sectionHeadingClass, "mb-0 border-b-0")}>
+            <ShoppingCart className="mr-2 h-5 w-5 text-primary" /> Line Items
+          </h3>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/quotations/items/add" target="_blank">
+              <Button variant="outline" size="sm" type="button">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Quote Item
+              </Button>
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button variant="outline" size="sm"><Columns className="mr-2 h-4 w-4" />Columns</Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end"><DropdownMenuLabel>Toggle Columns</DropdownMenuLabel><DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem checked={showItemCodeColumn} onCheckedChange={(checked) => setValue('showItemCodeColumn', !!checked)}>Item Code</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showDiscountColumn} onCheckedChange={(checked) => setValue('showDiscountColumn', !!checked)}>Discount %</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem checked={showTaxColumn} onCheckedChange={(checked) => setValue('showTaxColumn', !!checked)}>Tax %</DropdownMenuCheckboxItem>
+              </DropdownMenuContent></DropdownMenu>
+          </div>
         </div>
         <div className="rounded-md border overflow-x-auto">
           <Table><TableHeader><TableRow><TableHead className="w-[120px]">Qty*</TableHead><TableHead className="min-w-[200px]">Item*</TableHead>{showItemCodeColumn && <TableHead className="min-w-[150px]">Item Code</TableHead>}<TableHead className="min-w-[250px]">Description</TableHead><TableHead className="w-[120px]">Unit Price*</TableHead>
-          {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
-          {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
-          <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
+            {showDiscountColumn && <TableHead className="w-[100px]">Discount %</TableHead>}
+            {showTaxColumn && <TableHead className="w-[100px]">Tax %</TableHead>}
+            <TableHead className="w-[130px] text-right">Total Price</TableHead><TableHead className="w-[50px] text-right">Action</TableHead></TableRow></TableHeader>
             <TableBody>
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
-                  <TableCell><FormField control={control} name={`lineItems.${index}.qty`} render={({ field: itemField }) => (<Input type="text" placeholder="1" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage></TableCell>
-                  <TableCell><FormField control={control} name={`lineItems.${index}.itemId`} render={({ field: itemField }) => (<Combobox options={itemOptions} value={itemField.value || PLACEHOLDER_ITEM_VALUE} onValueChange={(itemId) => { itemField.onChange(itemId === PLACEHOLDER_ITEM_VALUE ? '' : itemId); handleItemSelect(itemId, index);}} placeholder="Search Item..." selectPlaceholder="Select Item" emptyStateMessage="No item found." className="h-9"/>)}/><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage></TableCell>
-                  {showItemCodeColumn && (<TableCell><FormField control={control} name={`lineItems.${index}.itemCode`} render={({ field: itemField }) => (<Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />)}/></TableCell>)}
-                  <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>)} /></TableCell>
-                  <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
-                  {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
-                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9"/>)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
+                  <TableCell><FormField control={control} name={`lineItems.${index}.qty`} render={({ field: itemField }) => (<Input type="text" placeholder="1" {...itemField} className="h-9" />)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage></TableCell>
+                  <TableCell><FormField control={control} name={`lineItems.${index}.itemId`} render={({ field: itemField }) => (<Combobox options={itemOptions} value={itemField.value || PLACEHOLDER_ITEM_VALUE} onValueChange={(itemId) => { itemField.onChange(itemId === PLACEHOLDER_ITEM_VALUE ? '' : itemId); handleItemSelect(itemId, index); }} placeholder="Search Item..." selectPlaceholder="Select Item" emptyStateMessage="No item found." className="h-9" />)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.itemId?.message}</FormMessage></TableCell>
+                  {showItemCodeColumn && (<TableCell><FormField control={control} name={`lineItems.${index}.itemCode`} render={({ field: itemField }) => (<Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />)} /></TableCell>)}
+                  <TableCell><FormField control={control} name={`lineItems.${index}.description`} render={({ field: itemField }) => (<Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y" />)} /></TableCell>
+                  <TableCell><FormField control={control} name={`lineItems.${index}.unitPrice`} render={({ field: itemField }) => (<Input type="text" placeholder="0.00" {...itemField} className="h-9" />)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage></TableCell>
+                  {showDiscountColumn && <TableCell><FormField control={control} name={`lineItems.${index}.discountPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9" />)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage></TableCell>}
+                  {showTaxColumn && <TableCell><FormField control={control} name={`lineItems.${index}.taxPercentage`} render={({ field: itemField }) => (<Input type="text" placeholder="0" {...itemField} className="h-9" />)} /><FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage></TableCell>}
                   <TableCell className="text-right font-medium">{`$${(parseFloat(watch(`lineItems.${index}.qty`) || '0') * parseFloat(watch(`lineItems.${index}.unitPrice`) || '0')).toFixed(2)}`}</TableCell>
                   <TableCell className="text-right"><Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1} title="Remove line item"><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>))}
@@ -550,43 +550,43 @@ export function CreateInventoryOrderForm() {
 
         <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField control={control} name="comments" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
-                <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}/>
-            <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)}/>
+          <FormField control={control} name="comments" render={({ field }) => (
+            <FormItem>
+              <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
+              <FormControl><Textarea placeholder="Enter terms and conditions visible to the customer" {...field} rows={3} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField control={control} name="privateComments" render={({ field }) => (<FormItem><FormLabel>Private Comments (Internal)</FormLabel><FormControl><Textarea placeholder="Internal notes, not visible to customer" {...field} rows={3} /></FormControl><FormMessage /></FormItem>)} />
         </div>
         <div className="flex justify-end space-y-2 mt-6">
-            <div className="w-full max-w-sm space-y-2">
-                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
-                {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
-                {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
-                <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedFreightCharges||0) + Number(watchedOtherCharges||0)).toFixed(2)}</span></div>
-                <Separator />
-                <div className="flex justify-between text-base font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
-            </div>
+          <div className="w-full max-w-sm space-y-2">
+            <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span><span className="font-medium text-foreground">{subtotal.toFixed(2)}</span></div>
+            {showDiscountColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Discount:</span><span className="font-medium text-foreground">(-) {totalDiscountAmount.toFixed(2)}</span></div>}
+            {showTaxColumn && <div className="flex justify-between"><span className="text-muted-foreground">Total Tax:</span><span className="font-medium text-foreground">(+) {totalTaxAmount.toFixed(2)}</span></div>}
+            <div className="flex justify-between"><span className="text-muted-foreground">Freight Charges:</span><span className="font-medium text-foreground">(+) {(Number(watchedFreightCharges || 0) + Number(watchedOtherCharges || 0)).toFixed(2)}</span></div>
+            <Separator />
+            <div className="flex justify-between text-base font-bold"><span className="text-primary">{grandTotalLabel}</span><span className="text-primary">{grandTotal.toFixed(2)}</span></div>
+          </div>
         </div>
         <Separator />
-        
+
         <div className="flex flex-wrap gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => {
-                form.reset();
-                setGeneratedOrderId(null);
-            }}>
-                <X className="mr-2 h-4 w-4" />Cancel
-            </Button>
-            <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
-              {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Order...</> ) : ( <><Save className="mr-2 h-4 w-4" />Save Order</> )}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
-                <Printer className="mr-2 h-4 w-4" />Save and Preview
-            </Button>
-            <Button type="button" variant="outline" onClick={handlePreviewLastSaved} disabled={actionButtonsDisabled}>
-                <Printer className="mr-2 h-4 w-4" />Preview Last Saved
-            </Button>
+          <Button type="button" variant="outline" onClick={() => {
+            form.reset();
+            setGeneratedOrderId(null);
+          }}>
+            <X className="mr-2 h-4 w-4" />Cancel
+          </Button>
+          <Button type="button" onClick={handleSubmit(handleRegularSave)} className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={saveButtonsDisabled}>
+            {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving Order...</>) : (<><Save className="mr-2 h-4 w-4" />Save Order</>)}
+          </Button>
+          <Button type="button" variant="outline" onClick={handleSubmit(handleSaveAndPreview)} disabled={saveButtonsDisabled}>
+            <Printer className="mr-2 h-4 w-4" />Save and Preview
+          </Button>
+          <Button type="button" variant="outline" onClick={handlePreviewLastSaved} disabled={actionButtonsDisabled}>
+            <Printer className="mr-2 h-4 w-4" />Preview Last Saved
+          </Button>
         </div>
       </form>
     </Form>

@@ -35,11 +35,12 @@ export default function EditQuoteItemPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const itemDocRef = doc(firestore, "quote_items", itemId); // Changed collection
+      const itemDocRef = doc(firestore, "quote_items", itemId);
       const itemDocSnap = await getDoc(itemDocRef);
 
       if (itemDocSnap.exists()) {
-        setItemData({ id: itemDocSnap.id, ...itemDocSnap.data() } as ItemDocument);
+        const data = itemDocSnap.data();
+        setItemData({ id: itemDocSnap.id, ...data, imageUrl: data.photoURL || data.imageUrl } as ItemDocument);
       } else {
         setError("Quote Item not found.");
         Swal.fire("Error", `Quote Item with ID ${itemId} not found.`, "error");

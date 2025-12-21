@@ -53,20 +53,20 @@ export default function QuoteItemsListPage() {
       setIsLoading(true);
       setFetchError(null);
       try {
-        const itemsCollectionRef = collection(firestore, "quote_items"); // Changed collection
+        const itemsCollectionRef = collection(firestore, "quote_items");
         const q = query(itemsCollectionRef, orderBy("createdAt", "desc"));
         const querySnapshot = await getDocs(q);
         const fetchedItems = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ItemDocument));
         setAllItems(fetchedItems);
       } catch (error: any) {
-        console.error("Error fetching quote items: ", error);
-        let errorMessage = `Could not fetch quote items from Firestore. Please check console for details and ensure Firestore rules allow reads.`;
+        console.error("Error fetching items: ", error);
+        let errorMessage = `Could not fetch items from Firestore. Please check console for details and ensure Firestore rules allow reads.`;
         if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required for 'quote_items' collection ordered by 'createdAt'. Please check the browser console for a link to create it.`;
+          errorMessage = `Could not fetch data: A Firestore index might be required for 'quote_items' collection ordered by 'createdAt'. Please check the browser console for a link to create it.`;
         } else if (error.code === 'permission-denied' || error.message?.toLowerCase().includes("permission")) {
-           errorMessage = `Could not fetch data: Missing or insufficient permissions for 'quote_items'. Please check Firestore security rules.`;
+          errorMessage = `Could not fetch data: Missing or insufficient permissions for 'quote_items'. Please check Firestore security rules.`;
         } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+          errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
         Swal.fire("Fetch Error", errorMessage, "error");
@@ -324,7 +324,7 @@ export default function QuoteItemsListPage() {
               </TableCaption>
             </Table>
           </div>
-           {totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4">
               <Button
                 variant="outline"

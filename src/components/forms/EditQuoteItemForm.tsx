@@ -106,7 +106,8 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       description: data.description || undefined,
       unit: data.unit || undefined,
       salesPrice: data.salesPrice,
-      imageUrl: data.imageUrl || undefined, // Start with text input value
+      imageUrl: data.imageUrl || undefined,
+      photoURL: data.imageUrl || undefined,
       updatedAt: serverTimestamp(),
     };
 
@@ -125,7 +126,8 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
           const imageRef = ref(storage, `quote_items/${itemId}/product_image.jpg`);
           await uploadBytes(imageRef, imageFile);
           const downloadURL = await getDownloadURL(imageRef);
-          dataToSave.imageUrl = downloadURL; // Override text input if file uploaded
+          dataToSave.imageUrl = downloadURL;
+          dataToSave.photoURL = downloadURL;
         } catch (uploadError) {
           console.error("Error uploading image:", uploadError);
           Swal.fire({

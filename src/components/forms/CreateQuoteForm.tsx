@@ -10,19 +10,19 @@ import Swal from 'sweetalert2';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { collection, doc, serverTimestamp, getDocs, runTransaction, setDoc } from 'firebase/firestore';
-import type { 
-  CustomerDocument, 
-  ItemDocument as ItemDoc, 
-  QuoteTaxType, 
-  QuoteDocument, 
-  SaleDocument, 
-  SaleFormValues as PageSaleFormValues, 
-  SaleLineItemFormValues as PageSaleLineItemFormValues, 
-  SaleStatus, 
-  ShipmentTerms, 
-  QuoteFormValues as PageQuoteFormValues, 
+import type {
+  CustomerDocument,
+  ItemDocument as ItemDoc,
+  QuoteTaxType,
+  QuoteDocument,
+  SaleDocument,
+  SaleFormValues as PageSaleFormValues,
+  SaleLineItemFormValues as PageSaleLineItemFormValues,
+  SaleStatus,
+  ShipmentTerms,
+  QuoteFormValues as PageQuoteFormValues,
   QuoteLineItemFormValues as PageQuoteLineItemFormValues,
-  QuoteLineItemDocument 
+  QuoteLineItemDocument
 } from '@/types';
 import { QuoteSchema, quoteTaxTypes, invoiceStatusOptions as saleStatusOptions, shipmentTermsOptions } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -144,21 +144,21 @@ export function CreateQuoteForm() {
         const unitPrice = parseFloat(String(item.unitPrice || '0')) || 0;
         const discountP = showDiscountColumn ? (parseFloat(String(item.discountPercentage || '0')) || 0) : 0;
         const taxP = showTaxColumn ? (parseFloat(String(item.taxPercentage || '0')) || 0) : 0;
-        
+
         let itemTotalBeforeDiscount = 0;
         if (qty > 0 && unitPrice >= 0) {
           itemTotalBeforeDiscount = qty * unitPrice;
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          
+
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-        
+
         const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
-        
+
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
           setValue(`lineItems.${index}.total`, displayLineTotal.toFixed(2));
@@ -173,7 +173,7 @@ export function CreateQuoteForm() {
     const additionalCharges = packing + handling + other + freight;
 
     const currentGrandTotal = currentSubtotal - currentTotalDiscount + currentTotalTax + additionalCharges;
-    
+
     return {
       subtotal: currentSubtotal,
       totalDiscountAmount: currentTotalDiscount,
@@ -207,7 +207,7 @@ export function CreateQuoteForm() {
               description: data.description,
               salesPrice: data.salesPrice,
               itemCode: data.itemCode,
-              imageUrl: data.imageUrl,
+              imageUrl: data.photoURL || data.imageUrl,
             };
           })
         );
@@ -239,8 +239,8 @@ export function CreateQuoteForm() {
   const handleItemSelect = (itemId: string, index: number) => {
     const selectedItem = itemOptions.find(opt => opt.value === itemId);
     if (selectedItem) {
-      let autoDescription = selectedItem.label; 
-      if (selectedItem.description) { 
+      let autoDescription = selectedItem.label;
+      if (selectedItem.description) {
         autoDescription = selectedItem.description;
       }
       setValue(`lineItems.${index}.itemCode`, selectedItem.itemCode || '', { shouldValidate: true });
@@ -278,7 +278,7 @@ export function CreateQuoteForm() {
           const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
           return {
             itemId: item.itemId,
-            itemName: itemDetails?.label.split(' (')[0] || 'N/A', 
+            itemName: itemDetails?.label.split(' (')[0] || 'N/A',
             itemCode: itemDetails?.itemCode || undefined,
             description: item.description || '',
             qty: parseFloat(String(item.qty || '0')),
@@ -289,7 +289,7 @@ export function CreateQuoteForm() {
             imageUrl: item.imageUrl || undefined,
           };
         });
-        
+
         const quoteDataToSave: Partial<Omit<QuoteDocument, 'id'>> & { createdAt: ReturnType<typeof serverTimestamp>, updatedAt: ReturnType<typeof serverTimestamp> } = {
           customerId: data.customerId,
           customerName: selectedCustomer?.label || 'N/A',
@@ -320,7 +320,7 @@ export function CreateQuoteForm() {
         };
 
         const cleanedDataToSave = Object.fromEntries(
-            Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined && value !== '')
+          Object.entries(quoteDataToSave).filter(([, value]) => value !== undefined && value !== '')
         ) as typeof quoteDataToSave;
 
         const newQuoteRef = doc(firestore, "quotes", formattedQuoteId);
@@ -375,7 +375,7 @@ export function CreateQuoteForm() {
       Swal.fire("No Quote Saved", "Please save a quote first to preview it.", "info");
     }
   };
-  
+
   const grandTotalLabel = `TOTAL (USD):`;
   const saveButtonsDisabled = isSubmitting || isLoadingDropdowns;
   const actionButtonsDisabled = !generatedSaleId || isSubmitting;
@@ -393,7 +393,7 @@ export function CreateQuoteForm() {
   return (
     <Form {...form}>
       <form className="space-y-8">
-        
+
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -433,9 +433,9 @@ export function CreateQuoteForm() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <FormField 
-              control={control} 
-              name="salesperson" 
+            <FormField
+              control={control}
+              name="salesperson"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Salesperson*</FormLabel>
@@ -446,9 +446,9 @@ export function CreateQuoteForm() {
             />
           </div>
           <div>
-            <FormField 
-              control={control} 
-              name="shippingAddress" 
+            <FormField
+              control={control}
+              name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Delivery Address*</FormLabel>
@@ -459,16 +459,16 @@ export function CreateQuoteForm() {
             />
           </div>
         </div>
-        
+
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
           <FormItem>
             <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel>
             <Input value={generatedSaleId || "(Auto-generated on save)"} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
           </FormItem>
-          <FormField 
-            control={control} 
-            name="quoteDate" 
+          <FormField
+            control={control}
+            name="quoteDate"
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Quote Date*</FormLabel>
@@ -477,9 +477,9 @@ export function CreateQuoteForm() {
               </FormItem>
             )}
           />
-          <FormField 
-            control={form.control} 
-            name="taxType" 
+          <FormField
+            control={form.control}
+            name="taxType"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Tax</FormLabel>
@@ -566,30 +566,30 @@ export function CreateQuoteForm() {
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
                   <TableCell>
-                    <FormField 
-                      control={control} 
-                      name={`lineItems.${index}.qty`} 
+                    <FormField
+                      control={control}
+                      name={`lineItems.${index}.qty`}
                       render={({ field: itemField }) => (
-                        <Input type="text" placeholder="1" {...itemField} className="h-9"/>
-                      )} 
+                        <Input type="text" placeholder="1" {...itemField} className="h-9" />
+                      )}
                     />
                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage>
                   </TableCell>
                   <TableCell>
-                    <FormField 
-                      control={control} 
-                      name={`lineItems.${index}.itemId`} 
+                    <FormField
+                      control={control}
+                      name={`lineItems.${index}.itemId`}
                       render={({ field: itemField }) => (
-                        <Combobox 
-                          options={itemOptions} 
-                          value={itemField.value || PLACEHOLDER_ITEM_VALUE} 
-                          onValueChange={(itemId) => { 
-                            itemField.onChange(itemId === PLACEHOLDER_ITEM_VALUE ? '' : itemId); 
+                        <Combobox
+                          options={itemOptions}
+                          value={itemField.value || PLACEHOLDER_ITEM_VALUE}
+                          onValueChange={(itemId) => {
+                            itemField.onChange(itemId === PLACEHOLDER_ITEM_VALUE ? '' : itemId);
                             handleItemSelect(itemId, index);
-                          }} 
-                          placeholder="Search Item..." 
-                          selectPlaceholder="Select Item" 
-                          emptyStateMessage="No item found." 
+                          }}
+                          placeholder="Search Item..."
+                          selectPlaceholder="Select Item"
+                          emptyStateMessage="No item found."
                           className="h-9"
                         />
                       )}
@@ -598,9 +598,9 @@ export function CreateQuoteForm() {
                   </TableCell>
                   {showItemCodeColumn && (
                     <TableCell>
-                      <FormField 
-                        control={control} 
-                        name={`lineItems.${index}.itemCode`} 
+                      <FormField
+                        control={control}
+                        name={`lineItems.${index}.itemCode`}
                         render={({ field: itemField }) => (
                           <Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />
                         )}
@@ -608,44 +608,44 @@ export function CreateQuoteForm() {
                     </TableCell>
                   )}
                   <TableCell>
-                    <FormField 
-                      control={control} 
-                      name={`lineItems.${index}.description`} 
+                    <FormField
+                      control={control}
+                      name={`lineItems.${index}.description`}
                       render={({ field: itemField }) => (
-                        <Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>
-                      )} 
+                        <Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y" />
+                      )}
                     />
                   </TableCell>
                   <TableCell>
-                    <FormField 
-                      control={control} 
-                      name={`lineItems.${index}.unitPrice`} 
+                    <FormField
+                      control={control}
+                      name={`lineItems.${index}.unitPrice`}
                       render={({ field: itemField }) => (
-                        <Input type="text" placeholder="0.00" {...itemField} className="h-9"/>
-                      )} 
+                        <Input type="text" placeholder="0.00" {...itemField} className="h-9" />
+                      )}
                     />
                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage>
                   </TableCell>
                   {showDiscountColumn && (
                     <TableCell>
-                      <FormField 
-                        control={control} 
-                        name={`lineItems.${index}.discountPercentage`} 
+                      <FormField
+                        control={control}
+                        name={`lineItems.${index}.discountPercentage`}
                         render={({ field: itemField }) => (
-                          <Input type="text" placeholder="0" {...itemField} className="h-9"/>
-                        )} 
+                          <Input type="text" placeholder="0" {...itemField} className="h-9" />
+                        )}
                       />
                       <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage>
                     </TableCell>
                   )}
                   {showTaxColumn && (
                     <TableCell>
-                      <FormField 
-                        control={control} 
-                        name={`lineItems.${index}.taxPercentage`} 
+                      <FormField
+                        control={control}
+                        name={`lineItems.${index}.taxPercentage`}
                         render={({ field: itemField }) => (
-                          <Input type="text" placeholder="0" {...itemField} className="h-9"/>
-                        )} 
+                          <Input type="text" placeholder="0" {...itemField} className="h-9" />
+                        )}
                       />
                       <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage>
                     </TableCell>
@@ -692,23 +692,23 @@ export function CreateQuoteForm() {
               </FormItem>
             )}
           />
-          <FormField 
-            control={control} 
-            name="freightCharges" 
+          <FormField
+            control={control}
+            name="freightCharges"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Freight Charges:</FormLabel>
                 <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
-            )} 
+            )}
           />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField 
-            control={control} 
-            name="comments" 
+          <FormField
+            control={control}
+            name="comments"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
@@ -717,9 +717,9 @@ export function CreateQuoteForm() {
               </FormItem>
             )}
           />
-          <FormField 
-            control={control} 
-            name="privateComments" 
+          <FormField
+            control={control}
+            name="privateComments"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Private Comments (Internal)</FormLabel>
@@ -729,7 +729,7 @@ export function CreateQuoteForm() {
             )}
           />
         </div>
-        
+
         <div className="flex justify-end space-y-2 mt-6">
           <div className="w-full max-w-sm space-y-2">
             <div className="flex justify-between">
@@ -760,7 +760,7 @@ export function CreateQuoteForm() {
           </div>
         </div>
         <Separator />
-        
+
         <div className="flex flex-wrap gap-2 justify-end">
           <Button type="button" variant="outline" onClick={() => {
             form.reset();

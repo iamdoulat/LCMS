@@ -99,7 +99,7 @@ export function AddQuoteItemForm() {
       // 2. Upload image if exists
       if (imageFile) {
         try {
-          const imageRef = ref(storage, `quote_items/${docRef.id}/product_image.jpg`);
+          const imageRef = ref(storage, `items/${docRef.id}/product_image.jpg`);
           await uploadBytes(imageRef, imageFile);
           const downloadURL = await getDownloadURL(imageRef);
 
@@ -120,7 +120,7 @@ export function AddQuoteItemForm() {
           const { updateDoc } = await import('firebase/firestore'); // Dynamic import to be safe if I missed it? 
           // No, better to stick to standard. I will update the first chunk to include updateDoc.
 
-          await updateDoc(docRef, { imageUrl: downloadURL });
+          await updateDoc(docRef, { photoURL: downloadURL, imageUrl: downloadURL });
 
         } catch (uploadError) {
           console.error("Error uploading image:", uploadError);

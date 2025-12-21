@@ -13,7 +13,7 @@ export async function POST(request: Request) {
         }
 
         // 1. Fetch Leave Request Data
-        const doc = await admin.firestore().collection('leaves').doc(requestId).get();
+        const doc = await admin.firestore().collection('leave_applications').doc(requestId).get();
         if (!doc.exists) {
             return NextResponse.json({ error: 'Request not found' }, { status: 404 });
         }
@@ -28,7 +28,21 @@ export async function POST(request: Request) {
             if (empDoc.exists) {
                 const empData = empDoc.data();
                 employeeEmail = empData?.email;
-                if (!employeeName && empData?.name) employeeName = empData.name;
+                if (!employeeName && empData?.fullName) employeeName = empData.fullName;
+                else if (!employeeName && empData?.name) employeeName = empData.name;
+            }
+        }
+
+        // Calculate total days if missing
+        let totalDays = data?.totalDays;
+        if (!totalDays && data?.fromDate && data?.toDate) {
+            try {
+                const start = new Date(data.fromDate);
+                const end = new Date(data.toDate);
+                const diffTime = Math.abs(end.getTime() - start.getTime());
+                totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            } catch (e) {
+                totalDays = 0;
             }
         }
 
@@ -50,9 +64,9 @@ export async function POST(request: Request) {
                     data: {
                         employee_name: employeeName,
                         leave_type: data?.leaveType || 'N/A',
-                        start_date: data?.startDate || 'N/A',
-                        end_date: data?.endDate || 'N/A',
-                        days: data?.totalDays?.toString() || '0',
+                        start_date: data?.fromDate || 'N/A',
+                        end_date: data?.toDate || 'N/A',
+                        days: totalDays?.toString() || '0',
                         reason: data?.reason || 'N/A',
                         link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/hr/leaves`
                     }
@@ -77,8 +91,8 @@ export async function POST(request: Request) {
                 data: {
                     employee_name: employeeName,
                     leave_type: data?.leaveType || 'N/A',
-                    start_date: data?.startDate || 'N/A',
-                    end_date: data?.endDate || 'N/A',
+                    start_date: data?.fromDate || 'N/A',
+                    end_date: data?.toDate || 'N/A',
                     rejection_reason: rejectionReason || data?.rejectionReason || 'No reason provided'
                 }
             });

@@ -72,8 +72,8 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
 
   const form = useForm<PageQuoteFormValues>({
     resolver: zodResolver(QuoteSchema.extend({
-        status: z.enum(quoteStatusOptions).optional(),
-    })), 
+      status: z.enum(quoteStatusOptions).optional(),
+    })),
   });
 
   const { control, setValue, watch, getValues, reset, handleSubmit } = form;
@@ -112,7 +112,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             description: data.description,
             salesPrice: data.salesPrice,
             itemCode: data.itemCode,
-            imageUrl: data.imageUrl,
+            imageUrl: data.photoURL || data.imageUrl,
           };
         });
         setItemOptions(fetchedItems);
@@ -156,7 +156,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
     };
     fetchOptionsAndSetData();
   }, [initialData, reset]);
-  
+
   const watchedCustomerId = watch("customerId");
   const watchedLineItems = watch("lineItems");
   const watchedFreightCharges = watch("freightCharges");
@@ -178,12 +178,12 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           const lineDiscountAmount = itemTotalBeforeDiscount * (discountP / 100);
           const itemTotalAfterDiscount = itemTotalBeforeDiscount - lineDiscountAmount;
           const lineTaxAmount = itemTotalAfterDiscount * (taxP / 100);
-          
+
           currentSubtotal += itemTotalBeforeDiscount;
           currentTotalDiscount += lineDiscountAmount;
           currentTotalTax += lineTaxAmount;
         }
-        
+
         const displayLineTotal = isNaN(itemTotalBeforeDiscount) ? 0 : itemTotalBeforeDiscount;
         const currentFormLineTotal = getValues(`lineItems.${index}.total`);
         if (String(displayLineTotal.toFixed(2)) !== currentFormLineTotal) {
@@ -207,7 +207,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       const selectedCustomer = customerOptions.find(opt => opt.value === watchedCustomerId);
       if (selectedCustomer) {
         setValue("billingAddress", selectedCustomer.address || "");
-        if(!getValues("shippingAddress")) {
+        if (!getValues("shippingAddress")) {
           setValue("shippingAddress", selectedCustomer.address || "");
         }
       }
@@ -232,132 +232,132 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       setValue(`lineItems.${index}.imageUrl`, '', { shouldValidate: true });
     }
   };
-  
+
   const handleViewPdf = () => {
     window.open(`/dashboard/quotations/preview/${quoteId}`, '_blank');
   };
 
   const handleConvertToInvoice = async () => {
     if (!quoteId) {
-        Swal.fire("Error", "Quote ID is missing.", "error");
-        return;
+      Swal.fire("Error", "Quote ID is missing.", "error");
+      return;
     }
 
     const result = await Swal.fire({
-        title: 'Convert to Invoice?',
-        text: `This will create a new invoice from this quote (${quoteId}) and mark the quote as 'Invoiced'. This action cannot be undone.`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, convert it!',
-        cancelButtonText: 'Cancel',
+      title: 'Convert to Invoice?',
+      text: `This will create a new invoice from this quote (${quoteId}) and mark the quote as 'Invoiced'. This action cannot be undone.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, convert it!',
+      cancelButtonText: 'Cancel',
     });
 
     if (!result.isConfirmed) {
-        return;
+      return;
     }
 
     setIsSubmitting(true);
     const data = getValues();
 
     try {
-        const newInvoiceId = await runTransaction(firestore, async (transaction) => {
-            const quoteDocRef = doc(firestore, "quotes", quoteId);
-            const counterRef = doc(firestore, "counters", "invoiceNumberGenerator");
+      const newInvoiceId = await runTransaction(firestore, async (transaction) => {
+        const quoteDocRef = doc(firestore, "quotes", quoteId);
+        const counterRef = doc(firestore, "counters", "invoiceNumberGenerator");
 
-            const counterDoc = await transaction.get(counterRef);
-            const currentYear = new Date().getFullYear();
-            let currentCount = 0;
-            if (counterDoc.exists()) {
-                const counterData = counterDoc.data();
-                currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
-            }
-            const newCount = currentCount + 1;
-            const formattedInvoiceId = `INV${currentYear}-${String(newCount).padStart(3, '0')}`;
-            
-            const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+        const counterDoc = await transaction.get(counterRef);
+        const currentYear = new Date().getFullYear();
+        let currentCount = 0;
+        if (counterDoc.exists()) {
+          const counterData = counterDoc.data();
+          currentCount = counterData?.yearlyCounts?.[currentYear] || 0;
+        }
+        const newCount = currentCount + 1;
+        const formattedInvoiceId = `INV${currentYear}-${String(newCount).padStart(3, '0')}`;
 
-            const invoiceDataToSave: Omit<InvoiceDocument, 'id'> & { createdAt: ReturnType<typeof serverTimestamp>, updatedAt: ReturnType<typeof serverTimestamp> } = {
-                customerId: data.customerId,
-                customerName: selectedCustomer?.label || 'N/A',
-                billingAddress: data.billingAddress,
-                shippingAddress: data.shippingAddress,
-                invoiceDate: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-                dueDate: undefined,
-                paymentTerms: '',
-                salesperson: data.salesperson,
-                subject: data.subject || undefined,
-                lineItems: data.lineItems.map(item => {
-                    const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
-                    return {
-                        itemId: item.itemId,
-                        itemName: itemDetails?.label.split(' (')[0] || 'N/A',
-                        itemCode: itemDetails?.itemCode || undefined,
-                        description: item.description || '',
-                        qty: parseFloat(String(item.qty || '0')),
-                        unitPrice: parseFloat(String(item.unitPrice || '0')),
-                        discountPercentage: parseFloat(String(item.discountPercentage || '0')),
-                        taxPercentage: parseFloat(String(item.taxPercentage || '0')),
-                        total: parseFloat(String(item.qty || '0')) * parseFloat(String(item.unitPrice || '0')),
-                        imageUrl: item.imageUrl || undefined,
-                    };
-                }),
-                taxType: data.taxType,
-                comments: data.comments,
-                privateComments: data.privateComments,
-                subtotal: subtotal,
-                totalDiscountAmount: totalDiscountAmount,
-                totalTaxAmount: totalTaxAmount,
-                totalAmount: grandTotal,
-                status: "Draft",
-                amountPaid: 0,
-                showItemCodeColumn: data.showItemCodeColumn,
-                showDiscountColumn: data.showDiscountColumn,
-                showTaxColumn: data.showTaxColumn,
-                convertedFromQuoteId: quoteId,
-                shipmentMode: data.shipmentMode,
-                freightCharges: data.freightCharges,
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
+        const selectedCustomer = customerOptions.find(opt => opt.value === data.customerId);
+
+        const invoiceDataToSave: Omit<InvoiceDocument, 'id'> & { createdAt: ReturnType<typeof serverTimestamp>, updatedAt: ReturnType<typeof serverTimestamp> } = {
+          customerId: data.customerId,
+          customerName: selectedCustomer?.label || 'N/A',
+          billingAddress: data.billingAddress,
+          shippingAddress: data.shippingAddress,
+          invoiceDate: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          dueDate: undefined,
+          paymentTerms: '',
+          salesperson: data.salesperson,
+          subject: data.subject || undefined,
+          lineItems: data.lineItems.map(item => {
+            const itemDetails = itemOptions.find(opt => opt.value === item.itemId);
+            return {
+              itemId: item.itemId,
+              itemName: itemDetails?.label.split(' (')[0] || 'N/A',
+              itemCode: itemDetails?.itemCode || undefined,
+              description: item.description || '',
+              qty: parseFloat(String(item.qty || '0')),
+              unitPrice: parseFloat(String(item.unitPrice || '0')),
+              discountPercentage: parseFloat(String(item.discountPercentage || '0')),
+              taxPercentage: parseFloat(String(item.taxPercentage || '0')),
+              total: parseFloat(String(item.qty || '0')) * parseFloat(String(item.unitPrice || '0')),
+              imageUrl: item.imageUrl || undefined,
             };
+          }),
+          taxType: data.taxType,
+          comments: data.comments,
+          privateComments: data.privateComments,
+          subtotal: subtotal,
+          totalDiscountAmount: totalDiscountAmount,
+          totalTaxAmount: totalTaxAmount,
+          totalAmount: grandTotal,
+          status: "Draft",
+          amountPaid: 0,
+          showItemCodeColumn: data.showItemCodeColumn,
+          showDiscountColumn: data.showDiscountColumn,
+          showTaxColumn: data.showTaxColumn,
+          convertedFromQuoteId: quoteId,
+          shipmentMode: data.shipmentMode,
+          freightCharges: data.freightCharges,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
 
-            const cleanedDataToSave = Object.fromEntries(
-                Object.entries(invoiceDataToSave).filter(([, value]) => value !== undefined)
-            ) as typeof invoiceDataToSave;
+        const cleanedDataToSave = Object.fromEntries(
+          Object.entries(invoiceDataToSave).filter(([, value]) => value !== undefined)
+        ) as typeof invoiceDataToSave;
 
-            const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId);
-            transaction.set(newInvoiceRef, cleanedDataToSave);
+        const newInvoiceRef = doc(firestore, "invoices", formattedInvoiceId);
+        transaction.set(newInvoiceRef, cleanedDataToSave);
 
-            transaction.update(quoteDocRef, {
-                status: "Invoiced",
-                convertedToInvoiceId: formattedInvoiceId,
-                updatedAt: serverTimestamp()
-            });
-            
-            transaction.set(counterRef, { yearlyCounts: { ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}), [currentYear]: newCount } }, { merge: true });
-
-            return formattedInvoiceId;
+        transaction.update(quoteDocRef, {
+          status: "Invoiced",
+          convertedToInvoiceId: formattedInvoiceId,
+          updatedAt: serverTimestamp()
         });
 
-        setValue("status", "Invoiced" as any);
+        transaction.set(counterRef, { yearlyCounts: { ...(counterDoc.exists() ? counterDoc.data().yearlyCounts : {}), [currentYear]: newCount } }, { merge: true });
 
-        Swal.fire({
-            title: 'Conversion Successful!',
-            html: `A new invoice has been created with ID: <strong>${newInvoiceId}</strong>.`,
-            icon: 'success',
-            showCancelButton: true,
-            confirmButtonText: 'Edit New Invoice',
-            cancelButtonText: 'Close',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                router.push(`/dashboard/pi/edit/${newInvoiceId}`);
-            }
-        });
+        return formattedInvoiceId;
+      });
+
+      setValue("status", "Invoiced" as any);
+
+      Swal.fire({
+        title: 'Conversion Successful!',
+        html: `A new invoice has been created with ID: <strong>${newInvoiceId}</strong>.`,
+        icon: 'success',
+        showCancelButton: true,
+        confirmButtonText: 'Edit New Invoice',
+        cancelButtonText: 'Close',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push(`/dashboard/pi/edit/${newInvoiceId}`);
+        }
+      });
 
     } catch (error: any) {
-        console.error("Error converting quote to invoice: ", error);
-        Swal.fire("Conversion Failed", `Failed to convert quote: ${error.message}`, "error");
+      console.error("Error converting quote to invoice: ", error);
+      Swal.fire("Conversion Failed", `Failed to convert quote: ${error.message}`, "error");
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -390,16 +390,16 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       };
 
       Object.keys(lineItemData).forEach(key => {
-          if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
-              delete lineItemData[key];
-          }
+        if (lineItemData[key] === undefined || lineItemData[key] === null || lineItemData[key] === '') {
+          delete lineItemData[key];
+        }
       });
       return lineItemData;
     });
 
     const finalSubtotal = processedLineItems.reduce((sum, item) => sum + item.total, 0);
     const finalTotalDiscount = data.showDiscountColumn ? processedLineItems.reduce((sum, item) => sum + (item.total * ((item.discountPercentage ?? 0) / 100)), 0) : 0;
-    const finalTotalTax = data.showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0)/100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
+    const finalTotalTax = data.showTaxColumn ? processedLineItems.reduce((sum, item) => sum + ((item.total * (1 - ((item.discountPercentage ?? 0) / 100))) * ((item.taxPercentage ?? 0) / 100)), 0) : 0;
     const finalGrandTotal = finalSubtotal - finalTotalDiscount + finalTotalTax + Number(data.freightCharges || 0);
 
     const dataToUpdate: Record<string, any> = {
@@ -427,11 +427,11 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
       shipmentMode: data.shipmentMode,
       freightCharges: data.freightCharges,
     };
-    
+
     Object.keys(dataToUpdate).forEach(key => {
-        if (dataToUpdate[key] === undefined || dataToUpdate[key] === null || dataToUpdate[key] === '') {
-            delete dataToUpdate[key];
-        }
+      if (dataToUpdate[key] === undefined || dataToUpdate[key] === null || dataToUpdate[key] === '') {
+        delete dataToUpdate[key];
+      }
     });
 
     try {
@@ -454,11 +454,11 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
   if (isLoadingDropdowns) {
     return <div className="flex items-center justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /><p className="ml-2">Loading...</p></div>;
   }
-  
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        
+
         <h3 className={cn(sectionHeadingClass)}><Users className="mr-2 h-5 w-5 text-primary" />Customer & Delivery Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -497,9 +497,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <FormField 
-              control={control} 
-              name="salesperson" 
+            <FormField
+              control={control}
+              name="salesperson"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Salesperson*</FormLabel>
@@ -510,9 +510,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             />
           </div>
           <div>
-            <FormField 
-              control={control} 
-              name="shippingAddress" 
+            <FormField
+              control={control}
+              name="shippingAddress"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Delivery Address*</FormLabel>
@@ -523,16 +523,16 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             />
           </div>
         </div>
-        
+
         <h3 className={cn(sectionHeadingClass)}><CalendarDays className="mr-2 h-5 w-5 text-primary" />Quote Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end">
           <FormItem>
             <FormLabel className="flex items-center"><Hash className="mr-2 h-4 w-4 text-muted-foreground" />Quote Number</FormLabel>
             <Input value={quoteId} readOnly disabled className="bg-muted/50 cursor-not-allowed h-10" />
           </FormItem>
-          <FormField 
-            control={control} 
-            name="quoteDate" 
+          <FormField
+            control={control}
+            name="quoteDate"
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Quote Date*</FormLabel>
@@ -541,9 +541,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               </FormItem>
             )}
           />
-          <FormField 
-            control={form.control} 
-            name="taxType" 
+          <FormField
+            control={form.control}
+            name="taxType"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Tax</FormLabel>
@@ -575,9 +575,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   </FormControl>
                   <SelectContent>
                     {quoteStatusOptions.map(status => (
-                      <SelectItem 
-                        key={status} 
-                        value={status} 
+                      <SelectItem
+                        key={status}
+                        value={status}
                         disabled={status === 'Invoiced' && !isInvoiced}
                       >
                         {status}
@@ -659,30 +659,30 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               {fields.map((field, index) => (
                 <TableRow key={field.id}>
                   <TableCell>
-                    <FormField 
-                      control={control} 
-                      name={`lineItems.${index}.qty`} 
+                    <FormField
+                      control={control}
+                      name={`lineItems.${index}.qty`}
                       render={({ field: itemField }) => (
-                        <Input type="text" placeholder="1" {...itemField} className="h-9"/>
-                      )} 
+                        <Input type="text" placeholder="1" {...itemField} className="h-9" />
+                      )}
                     />
                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.qty?.message}</FormMessage>
                   </TableCell>
                   <TableCell>
-                    <FormField 
-                      control={control} 
-                      name={`lineItems.${index}.itemId`} 
+                    <FormField
+                      control={control}
+                      name={`lineItems.${index}.itemId`}
                       render={({ field: itemField }) => (
-                        <Combobox 
-                          options={itemOptions} 
-                          value={itemField.value || PLACEHOLDER_ITEM_VALUE_PREFIX + index} 
-                          onValueChange={(itemId) => { 
-                            itemField.onChange(itemId === (PLACEHOLDER_ITEM_VALUE_PREFIX + index) ? '' : itemId); 
+                        <Combobox
+                          options={itemOptions}
+                          value={itemField.value || PLACEHOLDER_ITEM_VALUE_PREFIX + index}
+                          onValueChange={(itemId) => {
+                            itemField.onChange(itemId === (PLACEHOLDER_ITEM_VALUE_PREFIX + index) ? '' : itemId);
                             handleItemSelect(itemId, index);
-                          }} 
-                          placeholder="Search Item..." 
-                          selectPlaceholder="Select Item" 
-                          emptyStateMessage="No item found." 
+                          }}
+                          placeholder="Search Item..."
+                          selectPlaceholder="Select Item"
+                          emptyStateMessage="No item found."
                           className="h-9"
                         />
                       )}
@@ -691,9 +691,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                   </TableCell>
                   {showItemCodeColumn && (
                     <TableCell>
-                      <FormField 
-                        control={control} 
-                        name={`lineItems.${index}.itemCode`} 
+                      <FormField
+                        control={control}
+                        name={`lineItems.${index}.itemCode`}
                         render={({ field: itemField }) => (
                           <Input placeholder="Code" {...itemField} value={itemField.value ?? ''} className="h-9 bg-muted/50" readOnly disabled />
                         )}
@@ -701,55 +701,55 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
                     </TableCell>
                   )}
                   <TableCell>
-                    <FormField 
-                      control={control} 
-                      name={`lineItems.${index}.description`} 
+                    <FormField
+                      control={control}
+                      name={`lineItems.${index}.description`}
                       render={({ field: itemField }) => (
-                        <Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y"/>
-                      )} 
+                        <Textarea placeholder="Item description" {...itemField} rows={1} className="h-9 min-h-[2.25rem] resize-y" />
+                      )}
                     />
                   </TableCell>
                   <TableCell>
-                    <FormField 
-                      control={control} 
-                      name={`lineItems.${index}.unitPrice`} 
+                    <FormField
+                      control={control}
+                      name={`lineItems.${index}.unitPrice`}
                       render={({ field: itemField }) => (
-                        <Input type="text" placeholder="0.00" {...itemField} className="h-9"/>
-                      )} 
+                        <Input type="text" placeholder="0.00" {...itemField} className="h-9" />
+                      )}
                     />
                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.unitPrice?.message}</FormMessage>
                   </TableCell>
                   {showDiscountColumn && (
                     <TableCell>
-                      <FormField 
-                        control={control} 
-                        name={`lineItems.${index}.discountPercentage`} 
+                      <FormField
+                        control={control}
+                        name={`lineItems.${index}.discountPercentage`}
                         render={({ field: itemField }) => (
-                          <Input type="text" placeholder="0" {...itemField} className="h-9"/>
-                        )} 
+                          <Input type="text" placeholder="0" {...itemField} className="h-9" />
+                        )}
                       />
                       <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.discountPercentage?.message}</FormMessage>
                     </TableCell>
                   )}
                   {showTaxColumn && (
                     <TableCell>
-                      <FormField 
-                        control={control} 
-                        name={`lineItems.${index}.taxPercentage`} 
+                      <FormField
+                        control={control}
+                        name={`lineItems.${index}.taxPercentage`}
                         render={({ field: itemField }) => (
-                          <Input type="text" placeholder="0" {...itemField} className="h-9"/>
-                        )} 
+                          <Input type="text" placeholder="0" {...itemField} className="h-9" />
+                        )}
                       />
                       <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.taxPercentage?.message}</FormMessage>
                     </TableCell>
                   )}
                   <TableCell className="text-right">
-                    <FormField 
-                      control={control} 
-                      name={`lineItems.${index}.total`} 
+                    <FormField
+                      control={control}
+                      name={`lineItems.${index}.total`}
                       render={({ field: itemField }) => (
-                        <Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium"/>
-                      )} 
+                        <Input type="text" {...itemField} readOnly disabled className="h-9 bg-muted/50 text-right font-medium" />
+                      )}
                     />
                   </TableCell>
                   <TableCell className="text-right">
@@ -791,23 +791,23 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               </FormItem>
             )}
           />
-          <FormField 
-            control={control} 
-            name="freightCharges" 
+          <FormField
+            control={control}
+            name="freightCharges"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Freight Charges:</FormLabel>
-                <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/></FormControl>
+                <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} /></FormControl>
                 <FormMessage />
               </FormItem>
-            )} 
+            )}
           />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField 
-            control={control} 
-            name="comments" 
+          <FormField
+            control={control}
+            name="comments"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="font-bold">Terms and Conditions:</FormLabel>
@@ -816,9 +816,9 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
               </FormItem>
             )}
           />
-          <FormField 
-            control={control} 
-            name="privateComments" 
+          <FormField
+            control={control}
+            name="privateComments"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Private Comments (Internal)</FormLabel>
@@ -828,7 +828,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             )}
           />
         </div>
-        
+
         <div className="flex justify-end space-y-2 mt-6">
           <div className="w-full max-w-sm space-y-2">
             <div className="flex justify-between">
@@ -859,7 +859,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
           </div>
         </div>
         <Separator />
-        
+
         <div className="flex flex-wrap gap-2 justify-end">
           <Button type="button" variant="outline" onClick={handleViewPdf}>
             <Printer className="mr-2 h-4 w-4" />
@@ -882,7 +882,7 @@ export function EditQuoteForm({ initialData, quoteId }: EditQuoteFormProps) {
             showItemCodeColumn: initialData.showItemCodeColumn,
             showDiscountColumn: initialData.showDiscountColumn,
             showTaxColumn: initialData.showTaxColumn,
-          } : {} )}>
+          } : {})}>
             <X className="mr-2 h-4 w-4" />Reset
           </Button>
           <Button type="button" onClick={handleConvertToInvoice} className="bg-green-600 hover:bg-green-700" disabled={actionButtonsDisabled}>
