@@ -17,7 +17,7 @@ export default function AddVisitApplicationPage() {
   const canNavigateBack = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="m-[10px] p-0 md:container md:mx-auto md:py-8 md:px-5">
       <div className="mb-6">
         <Link href="/dashboard/hr/visit-applications" passHref>
           <Button variant="outline" disabled={!canNavigateBack}>

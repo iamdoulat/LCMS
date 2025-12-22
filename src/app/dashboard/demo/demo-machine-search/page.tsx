@@ -188,7 +188,7 @@ export default function DemoMachineSearchPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8 px-5">
+    <div className="m-[10px] p-0 md:container md:mx-auto md:py-8 md:px-5 space-y-8">
       <Card
         className="shadow-xl max-w-6xl mx-auto relative overflow-hidden"
       >

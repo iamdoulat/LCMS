@@ -1150,7 +1150,7 @@ export default function AccountDetailsPage() {
   }
 
   return (
-    <div className="mx-[10px] mt-[10px] p-0 md:mx-0 md:mt-0 md:py-8 md:px-5 space-y-8 max-w-[calc(100vw-20px)] md:max-w-full overflow-x-hidden">
+    <div className="mx-[10px] mt-[10px] mb-[10px] p-0 pb-[10px] md:mx-0 md:mt-0 md:mb-0 md:py-8 md:px-5 space-y-8 max-w-[calc(100vw-20px)] md:max-w-full overflow-x-hidden">
       <Form {...form}>
         <Card className="shadow-xl">
           <CardHeader>

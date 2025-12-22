@@ -246,7 +246,7 @@ export default function MultipleCheckInOutPage() {
     }, [records]);
 
     return (
-        <div className="w-full p-6 space-y-6">
+        <div className="m-[10px] p-0 md:w-full md:p-6 md:space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="text-2xl font-bold flex items-center gap-2">

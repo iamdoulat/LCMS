@@ -19,7 +19,7 @@ import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge'; 
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,8 +103,8 @@ export default function QuotesListPage() {
         const fetchedQuotes = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
           return {
-             id: docSnap.id,
-             ...data,
+            id: docSnap.id,
+            ...data,
           } as QuoteDocument;
         });
         setAllQuotes(fetchedQuotes);
@@ -112,11 +112,11 @@ export default function QuotesListPage() {
         console.error("Error fetching quotes: ", error);
         let errorMessage = `Could not fetch quote data from Firestore. Please ensure Firestore rules allow reads.`;
         if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-           errorMessage = `Could not fetch quote data: Missing or insufficient permissions. Please check Firestore security rules for the 'quotes' collection.`;
+          errorMessage = `Could not fetch quote data: Missing or insufficient permissions. Please check Firestore security rules for the 'quotes' collection.`;
         } else if (error.message && error.message.toLowerCase().includes("index")) {
-           errorMessage = `Could not fetch quote data: A Firestore index might be required for this query. Please check the browser's developer console for a link to create it automatically.`;
+          errorMessage = `Could not fetch quote data: A Firestore index might be required for this query. Please check the browser's developer console for a link to create it automatically.`;
         } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+          errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
         Swal.fire("Fetch Error", errorMessage, "error");
@@ -178,15 +178,15 @@ export default function QuotesListPage() {
           try {
             valA = parseISO(valA);
             valB = parseISO(valB);
-             if (!isValid(valA) && isValid(valB)) return sortOrder === 'asc' ? 1 : -1;
-             if (isValid(valA) && !isValid(valB)) return sortOrder === 'asc' ? -1 : 1;
-             if (!isValid(valA) && !isValid(valB)) return 0;
+            if (!isValid(valA) && isValid(valB)) return sortOrder === 'asc' ? 1 : -1;
+            if (isValid(valA) && !isValid(valB)) return sortOrder === 'asc' ? -1 : 1;
+            if (!isValid(valA) && !isValid(valB)) return 0;
           } catch { /* ignore */ }
         }
-        
+
         if (sortBy === 'totalAmount') {
-            valA = Number(valA) || 0;
-            valB = Number(valB) || 0;
+          valA = Number(valA) || 0;
+          valB = Number(valB) || 0;
         }
 
         if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
@@ -195,7 +195,7 @@ export default function QuotesListPage() {
       });
     }
     setDisplayedQuotes(filtered);
-    setCurrentPage(1); 
+    setCurrentPage(1);
   }, [allQuotes, filterQuoteNumber, filterCustomerId, filterSalesperson, filterYear, sortBy, sortOrder]);
 
   const handleEditQuote = (quoteId: string) => {
@@ -216,7 +216,7 @@ export default function QuotesListPage() {
       if (result.isConfirmed) {
         try {
           await deleteDoc(doc(firestore, "quotes", quoteId));
-          setAllQuotes(prevQuotes => prevQuotes.filter(q => q.id !== quoteId)); 
+          setAllQuotes(prevQuotes => prevQuotes.filter(q => q.id !== quoteId));
           Swal.fire('Deleted!', `Quote "${quoteIdentifier || quoteId}" has been removed.`, 'success');
         } catch (error: any) {
           Swal.fire("Error", `Could not delete quote: ${error.message}`, "error");
@@ -263,7 +263,7 @@ export default function QuotesListPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="m-[10px] p-0 md:container md:mx-auto md:py-8 md:px-5">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -296,7 +296,7 @@ export default function QuotesListPage() {
                   <Input id="quoteNoFilter" placeholder="Search by Quote No..." value={filterQuoteNumber} onChange={(e) => setFilterQuoteNumber(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="customerFilterQuote" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Customer</Label>
+                  <Label htmlFor="customerFilterQuote" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground" />Customer</Label>
                   <Combobox
                     options={customerOptions}
                     value={filterCustomerId || ALL_CUSTOMERS_VALUE}
@@ -312,7 +312,7 @@ export default function QuotesListPage() {
                   <Input id="salespersonFilter" placeholder="Search by Salesperson..." value={filterSalesperson} onChange={(e) => setFilterSalesperson(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="yearFilterQuote" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year (Quote Date)</Label>
+                  <Label htmlFor="yearFilterQuote" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground" />Year (Quote Date)</Label>
                   <Select value={filterYear} onValueChange={(value) => setFilterYear(value)}>
                     <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
                     <SelectContent>
@@ -321,25 +321,25 @@ export default function QuotesListPage() {
                   </Select>
                 </div>
                 <div>
-                    <Label htmlFor="sortByQuote" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground"/>Sort By</Label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {quoteSortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                  <Label htmlFor="sortByQuote" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground" />Sort By</Label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {quoteSortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-                 <div>
-                    <Label htmlFor="sortOrderQuote" className="text-sm font-medium">Order</Label>
-                    <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="asc">Ascending</SelectItem>
-                            <SelectItem value="desc">Descending</SelectItem>
-                        </SelectContent>
-                    </Select>
+                <div>
+                  <Label htmlFor="sortOrderQuote" className="text-sm font-medium">Order</Label>
+                  <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'asc' | 'desc')}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="asc">Ascending</SelectItem>
+                      <SelectItem value="desc">Descending</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                 <div className="xl:col-start-4">
+                <div className="xl:col-start-4">
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters & Sort
                   </Button>
@@ -364,10 +364,10 @@ export default function QuotesListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                 {isLoading ? (
-                   <TableRow><TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary inline" /> Loading Quotes...</TableCell></TableRow>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={9} className="h-24 text-center p-2 sm:p-4"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary inline" /> Loading Quotes...</TableCell></TableRow>
                 ) : fetchError ? (
-                     <TableRow><TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((quote) => (
                     <TableRow key={quote.id}>
@@ -396,7 +396,7 @@ export default function QuotesListPage() {
                               <FileEdit className="mr-2 h-4 w-4" />
                               <span>Edit</span>
                             </DropdownMenuItem>
-                             <DropdownMenuItem onClick={() => quote.id && handlePreviewPdf(quote.id)}>
+                            <DropdownMenuItem onClick={() => quote.id && handlePreviewPdf(quote.id)}>
                               <Printer className="mr-2 h-4 w-4" />
                               <span>Preview</span>
                             </DropdownMenuItem>
@@ -428,7 +428,7 @@ export default function QuotesListPage() {
               </Button>
               {getPageNumbers().map((page, index) =>
                 typeof page === 'number' ? (<Button key={page} variant={currentPage === page ? 'default' : 'outline'} size="sm" onClick={() => handlePageChange(page)} className="w-9 h-9 p-0">{page}</Button>)
-                : (<span key={`ellipsis-quote-${index}`} className="px-2 py-1 text-sm">{page}</span>)
+                  : (<span key={`ellipsis-quote-${index}`} className="px-2 py-1 text-sm">{page}</span>)
               )}
               <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages}>
                 Next <ChevronRight className="h-4 w-4" />
