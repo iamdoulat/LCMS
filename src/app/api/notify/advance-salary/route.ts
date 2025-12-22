@@ -105,6 +105,7 @@ export async function POST(request: Request) {
                 data: {
                     employee_name: employeeName,
                     amount: data?.amount?.toString() || '0',
+                    requested_amount: data?.advanceAmount?.toString() || data?.amount?.toString() || '0',
                     rejection_reason: rejectionReason || data?.remarks || 'No reason provided'
                 }
             });
@@ -117,6 +118,7 @@ export async function POST(request: Request) {
                     data: {
                         employee_name: employeeName,
                         amount: data?.amount?.toString() || '0',
+                        requested_amount: data?.advanceAmount?.toString() || data?.amount?.toString() || '0',
                         rejection_reason: rejectionReason || data?.remarks || 'No reason provided'
                     }
                 });
