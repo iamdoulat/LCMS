@@ -182,6 +182,7 @@ export default function AccountDetailsPage() {
   const [isLoadingLocation, setIsLoadingLocation] = React.useState(false);
   const [isSubmittingCheckInOut, setIsSubmittingCheckInOut] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const profilePictureRef = React.useRef<HTMLInputElement>(null);
 
   // Reconciliation State
   const [reconciliations, setReconciliations] = useState<Map<string, AttendanceReconciliation>>(new Map());
@@ -1196,22 +1197,13 @@ export default function AccountDetailsPage() {
 
             <form onSubmit={form.handleSubmit(onSubmitProfile)} className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-x-8 gap-y-6 items-center">
-                <div className="lg:col-span-1 flex flex-col sm:flex-row items-center gap-4">
+                <div className="lg:col-span-1 flex flex-col items-center justify-center">
                   <Avatar className="h-24 w-24 border-2 border-primary shadow-md flex-shrink-0">
                     <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} />
                     <AvatarFallback className="text-3xl">
                       {getInitials(user.displayName || user.email || "U")}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="space-y-2 w-full">
-                    <FormLabel htmlFor="profile-picture-upload" className="text-sm">Update Picture</FormLabel>
-                    <div className="flex gap-2">
-                      <Input id="profile-picture-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="w-full h-9 text-xs" />
-                      <Button type="button" variant="outline" size="icon" onClick={handlePasteURL} title="Paste URL" className="h-9 w-9 flex-shrink-0">
-                        <Link2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
@@ -1221,9 +1213,40 @@ export default function AccountDetailsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Display Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your display name" {...field} />
-                        </FormControl>
+                        <div className="flex gap-2 items-center">
+                          <FormControl>
+                            <Input placeholder="Your display name" {...field} />
+                          </FormControl>
+                          <div className="flex gap-1">
+                            <input
+                              type="file"
+                              ref={profilePictureRef}
+                              className="hidden"
+                              accept="image/png, image/jpeg"
+                              onChange={onFileSelect}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => profilePictureRef.current?.click()}
+                              title="Upload Picture"
+                              className="h-10 w-10 flex-shrink-0"
+                            >
+                              <Camera className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={handlePasteURL}
+                              title="Paste URL"
+                              className="h-10 w-10 flex-shrink-0"
+                            >
+                              <Link2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
                         <FormDescription>This name will be displayed to others.</FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -1328,7 +1351,7 @@ export default function AccountDetailsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
               <StatCard title="Total Present" value={monthlyStats.present} icon={<UserCheck />} description="Days present this month" className="bg-green-500" />
               <StatCard title="Total Absent" value={monthlyStats.absent} icon={<UserX />} description="Days absent this month" className="bg-red-500" />
               <StatCard title="Total Delayed" value={monthlyStats.delayed} icon={<Clock />} description="Late arrivals this month" className="bg-yellow-500" />
@@ -1823,7 +1846,10 @@ export default function AccountDetailsPage() {
         <Card className="shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-primary" />Advance Salary Requests</CardTitle>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Wallet className="h-6 w-6 text-primary" />
+                Advance Salary Requests
+              </CardTitle>
               <CardDescription>Your recent advance salary applications.</CardDescription>
             </div>
             <Button asChild><Link href="/dashboard/hr/payroll/advance-salary/add"><PlusCircle className="mr-2 h-4 w-4" />Apply</Link></Button>
@@ -1843,7 +1869,10 @@ export default function AccountDetailsPage() {
         <Card className="shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2"><Plane className="h-5 w-5 text-primary" />Leave Applications</CardTitle>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Plane className="h-6 w-6 text-primary" />
+                Leave Applications
+              </CardTitle>
               <CardDescription>Your recent leave applications.</CardDescription>
             </div>
             <Button asChild><Link href="/dashboard/hr/leaves/add"><PlusCircle className="mr-2 h-4 w-4" />Apply</Link></Button>
@@ -1870,7 +1899,10 @@ export default function AccountDetailsPage() {
         <Card className="shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2"><Briefcase className="h-5 w-5 text-primary" />Visit Applications</CardTitle>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Briefcase className="h-6 w-6 text-primary" />
+                Visit Applications
+              </CardTitle>
               <CardDescription>Your recent official visit applications.</CardDescription>
             </div>
             <Button asChild><Link href="/dashboard/hr/visit-applications/add"><PlusCircle className="mr-2 h-4 w-4" />Apply</Link></Button>
@@ -1947,7 +1979,10 @@ export default function AccountDetailsPage() {
 
         <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Info className="h-6 w-6 text-primary" />Employee Information</CardTitle>
+            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+              <Info className="h-6 w-6 text-primary" />
+              Employee Information
+            </CardTitle>
             <CardDescription>Your complete employee profile details organized by category.</CardDescription>
           </CardHeader>
           <CardContent>

@@ -12,9 +12,10 @@ import { firestore } from '@/lib/firebase/config';
 import type { LeaveApplicationDocument, EmployeeDocument, BranchDocument, DepartmentDocument, HolidayDocument, LeaveType } from '@/types';
 import { leaveTypeOptions } from '@/types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWithinInterval, parseISO, addMonths, subMonths, isToday } from 'date-fns';
-import { ChevronLeft, ChevronRight, Cake } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Cake, Calendar as CalendarIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const ALL_BRANCHES = '__ALL_BRANCHES_LEAVE_CALENDAR__';
 const ALL_DEPTS = '__ALL_DEPTS_LEAVE_CALENDAR__';
@@ -107,7 +108,10 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
     <Card className="shadow-xl">
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle>Leave Calendar</CardTitle>
+          <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+            <CalendarIcon className="h-6 w-6 text-primary" />
+            Leave Calendar
+          </CardTitle>
           <div className="flex gap-2 w-full sm:w-auto">
             <Select value={filterLeaveType} onValueChange={(val) => setFilterLeaveType(val as any)}>
               <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Leave Type" /></SelectTrigger>
