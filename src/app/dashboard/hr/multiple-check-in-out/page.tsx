@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Image as ImageIcon, Loader2, Clock, AlertCircle, Building2, User, Calendar } from 'lucide-react';
+import { MapPin, Image as ImageIcon, Loader2, Clock, AlertCircle, Building2, User, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { getCheckInOutRecords, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -245,6 +245,26 @@ export default function MultipleCheckInOutPage() {
         return visits;
     }, [records]);
 
+    // Pagination Logic
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 5;
+
+    // Reset to first page when records change (e.g. filters applied)
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [records]);
+
+    const totalPages = Math.ceil(groupedVisits.length / ITEMS_PER_PAGE);
+    const paginatedVisits = groupedVisits.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     return (
         <div className="m-[10px] p-0 md:w-full md:p-6 md:space-y-6">
             <Card>
@@ -322,205 +342,254 @@ export default function MultipleCheckInOutPage() {
                                 No records found
                             </div>
                         ) : (
-                            groupedVisits.map((visit, index) => (
-                                <Card
-                                    key={`${visit.checkIn.id}-${index}`}
-                                    className="overflow-hidden border-2 hover:shadow-lg transition-shadow duration-300"
-                                >
-                                    {/* Company Header */}
-                                    <div className={cn(
-                                        "bg-gradient-to-r text-white p-4",
-                                        visit.companyColor
-                                    )}>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <Building2 className="h-5 w-5" />
-                                                <div>
-                                                    <h3 className="font-bold text-lg">{visit.companyName}</h3>
-                                                    <p className="text-sm opacity-90 flex items-center gap-1">
-                                                        <User className="h-3 w-3" />
-                                                        {visit.employeeName}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                {visit.duration && (
-                                                    <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full">
-                                                        <Clock className="h-4 w-4" />
-                                                        <span className="font-semibold">{formatDuration(visit.duration)}</span>
+                            <>
+                                {paginatedVisits.map((visit, index) => (
+                                    <Card
+                                        key={`${visit.checkIn.id}-${index}`}
+                                        className="overflow-hidden border-2 hover:shadow-lg transition-shadow duration-300"
+                                    >
+                                        {/* Company Header */}
+                                        <div className={cn(
+                                            "bg-gradient-to-r text-white p-4",
+                                            visit.companyColor
+                                        )}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <Building2 className="h-5 w-5" />
+                                                    <div>
+                                                        <h3 className="font-bold text-lg">{visit.companyName}</h3>
+                                                        <p className="text-sm opacity-90 flex items-center gap-1">
+                                                            <User className="h-3 w-3" />
+                                                            {visit.employeeName}
+                                                        </p>
                                                     </div>
-                                                )}
-                                                {visit.exceedsEightHours && (
-                                                    <Badge variant="destructive" className="mt-2">
-                                                        <AlertCircle className="h-3 w-3 mr-1" />
-                                                        Exceeded 8 Hours
-                                                    </Badge>
-                                                )}
+                                                </div>
+                                                <div className="text-right">
+                                                    {visit.duration && (
+                                                        <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full">
+                                                            <Clock className="h-4 w-4" />
+                                                            <span className="font-semibold">{formatDuration(visit.duration)}</span>
+                                                        </div>
+                                                    )}
+                                                    {visit.exceedsEightHours && (
+                                                        <Badge variant="destructive" className="mt-2">
+                                                            <AlertCircle className="h-3 w-3 mr-1" />
+                                                            Exceeded 8 Hours
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Visit Details */}
-                                    <CardContent className="p-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            {/* Check In */}
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                                                        <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                                                    </div>
-                                                    <h4 className="font-semibold text-green-700 dark:text-green-400">Check In</h4>
-                                                </div>
-
-                                                <div className="space-y-2 pl-10">
-                                                    <div className="flex items-start gap-2 text-sm">
-                                                        <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                                        <span>{format(new Date(visit.checkIn.timestamp), 'PPP')}</span>
-                                                    </div>
-                                                    <div className="flex items-start gap-2 text-sm">
-                                                        <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                                        <span className="font-medium">{format(new Date(visit.checkIn.timestamp), 'hh:mm a')}</span>
-                                                    </div>
-                                                    <div className="flex items-start gap-2 text-sm">
-                                                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                                        <span className="text-muted-foreground truncate">
-                                                            {visit.checkIn.location.address || `${visit.checkIn.location.latitude.toFixed(4)}, ${visit.checkIn.location.longitude.toFixed(4)}`}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-sm">
-                                                        <span className="font-medium text-muted-foreground">Remarks: </span>
-                                                        <span className="text-muted-foreground italic">
-                                                            {visit.checkIn.remarks || 'No remarks'}
-                                                        </span>
+                                        {/* Visit Details */}
+                                        <CardContent className="p-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                {/* Check In */}
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                                                            <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                                                        </div>
+                                                        <h4 className="font-semibold text-green-700 dark:text-green-400">Check In</h4>
                                                     </div>
 
-                                                    <div className="flex gap-2 pt-2">
-                                                        <div className="flex items-center gap-2">
-                                                            {visit.checkIn.imageURL && (
-                                                                <img
-                                                                    src={visit.checkIn.imageURL}
-                                                                    alt="Check-in thumbnail"
-                                                                    className="h-12 w-12 rounded-md object-cover border-2 border-gray-200 dark:border-gray-700 hover:border-primary transition-colors cursor-pointer"
+                                                    <div className="space-y-2 pl-10">
+                                                        <div className="flex items-start gap-2 text-sm">
+                                                            <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                            <span>{format(new Date(visit.checkIn.timestamp), 'PPP')}</span>
+                                                        </div>
+                                                        <div className="flex items-start gap-2 text-sm">
+                                                            <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                            <span className="font-medium">{format(new Date(visit.checkIn.timestamp), 'hh:mm a')}</span>
+                                                        </div>
+                                                        <div className="flex items-start gap-2 text-sm">
+                                                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                            <span className="text-muted-foreground truncate">
+                                                                {visit.checkIn.location.address || `${visit.checkIn.location.latitude.toFixed(4)}, ${visit.checkIn.location.longitude.toFixed(4)}`}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-sm">
+                                                            <span className="font-medium text-muted-foreground">Remarks: </span>
+                                                            <span className="text-muted-foreground italic">
+                                                                {visit.checkIn.remarks || 'No remarks'}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="flex gap-2 pt-2">
+                                                            <div className="flex items-center gap-2">
+                                                                {visit.checkIn.imageURL && (
+                                                                    <img
+                                                                        src={visit.checkIn.imageURL}
+                                                                        alt="Check-in thumbnail"
+                                                                        className="h-12 w-12 rounded-md object-cover border-2 border-gray-200 dark:border-gray-700 hover:border-primary transition-colors cursor-pointer"
+                                                                        onClick={() => {
+                                                                            setSelectedRecord(visit.checkIn);
+                                                                            setShowImageDialog(true);
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
                                                                     onClick={() => {
                                                                         setSelectedRecord(visit.checkIn);
                                                                         setShowImageDialog(true);
                                                                     }}
-                                                                />
-                                                            )}
+                                                                >
+                                                                    <ImageIcon className="h-4 w-4 mr-1" />
+                                                                    View Photo
+                                                                </Button>
+                                                            </div>
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => {
-                                                                    setSelectedRecord(visit.checkIn);
-                                                                    setShowImageDialog(true);
-                                                                }}
+                                                                onClick={() => openMap(visit.checkIn)}
                                                             >
-                                                                <ImageIcon className="h-4 w-4 mr-1" />
-                                                                View Photo
+                                                                <MapPin className="h-4 w-4 mr-1" />
+                                                                View Map
                                                             </Button>
                                                         </div>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => openMap(visit.checkIn)}
-                                                        >
-                                                            <MapPin className="h-4 w-4 mr-1" />
-                                                            View Map
-                                                        </Button>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Check Out */}
-                                            <div className="space-y-3">
-                                                {visit.checkOut ? (
-                                                    <>
-                                                        <div className="flex items-center gap-2 mb-3">
-                                                            <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                                                                <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                                                            </div>
-                                                            <h4 className="font-semibold text-red-700 dark:text-red-400">Check Out</h4>
-                                                        </div>
-
-                                                        <div className="space-y-2 pl-10">
-                                                            <div className="flex items-start gap-2 text-sm">
-                                                                <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                                                <span>{format(new Date(visit.checkOut.timestamp), 'PPP')}</span>
-                                                            </div>
-                                                            <div className="flex items-start gap-2 text-sm">
-                                                                <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                                                <span className="font-medium">{format(new Date(visit.checkOut.timestamp), 'hh:mm a')}</span>
-                                                            </div>
-                                                            <div className="flex items-start gap-2 text-sm">
-                                                                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                                                <span className="text-muted-foreground truncate">
-                                                                    {visit.checkOut.location.address || `${visit.checkOut.location.latitude.toFixed(4)}, ${visit.checkOut.location.longitude.toFixed(4)}`}
-                                                                </span>
-                                                            </div>
-                                                            <div className="text-sm">
-                                                                <span className="font-medium text-muted-foreground">Remarks: </span>
-                                                                <span className="text-muted-foreground italic">
-                                                                    {visit.checkOut.remarks || 'No remarks'}
-                                                                </span>
+                                                {/* Check Out */}
+                                                <div className="space-y-3">
+                                                    {visit.checkOut ? (
+                                                        <>
+                                                            <div className="flex items-center gap-2 mb-3">
+                                                                <div className="h-8 w-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                                                    <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                                                                </div>
+                                                                <h4 className="font-semibold text-red-700 dark:text-red-400">Check Out</h4>
                                                             </div>
 
-                                                            <div className="flex gap-2 pt-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    {visit.checkOut.imageURL && (
-                                                                        <img
-                                                                            src={visit.checkOut.imageURL}
-                                                                            alt="Check-out thumbnail"
-                                                                            className="h-12 w-12 rounded-md object-cover border-2 border-gray-200 dark:border-gray-700 hover:border-primary transition-colors cursor-pointer"
+                                                            <div className="space-y-2 pl-10">
+                                                                <div className="flex items-start gap-2 text-sm">
+                                                                    <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                                    <span>{format(new Date(visit.checkOut.timestamp), 'PPP')}</span>
+                                                                </div>
+                                                                <div className="flex items-start gap-2 text-sm">
+                                                                    <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                                    <span className="font-medium">{format(new Date(visit.checkOut.timestamp), 'hh:mm a')}</span>
+                                                                </div>
+                                                                <div className="flex items-start gap-2 text-sm">
+                                                                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                                                    <span className="text-muted-foreground truncate">
+                                                                        {visit.checkOut.location.address || `${visit.checkOut.location.latitude.toFixed(4)}, ${visit.checkOut.location.longitude.toFixed(4)}`}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-sm">
+                                                                    <span className="font-medium text-muted-foreground">Remarks: </span>
+                                                                    <span className="text-muted-foreground italic">
+                                                                        {visit.checkOut.remarks || 'No remarks'}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="flex gap-2 pt-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        {visit.checkOut.imageURL && (
+                                                                            <img
+                                                                                src={visit.checkOut.imageURL}
+                                                                                alt="Check-out thumbnail"
+                                                                                className="h-12 w-12 rounded-md object-cover border-2 border-gray-200 dark:border-gray-700 hover:border-primary transition-colors cursor-pointer"
+                                                                                onClick={() => {
+                                                                                    setSelectedRecord(visit.checkOut);
+                                                                                    setShowImageDialog(true);
+                                                                                }}
+                                                                            />
+                                                                        )}
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
                                                                             onClick={() => {
                                                                                 setSelectedRecord(visit.checkOut);
                                                                                 setShowImageDialog(true);
                                                                             }}
-                                                                        />
-                                                                    )}
+                                                                        >
+                                                                            <ImageIcon className="h-4 w-4 mr-1" />
+                                                                            View Photo
+                                                                        </Button>
+                                                                    </div>
                                                                     <Button
                                                                         variant="outline"
                                                                         size="sm"
-                                                                        onClick={() => {
-                                                                            setSelectedRecord(visit.checkOut);
-                                                                            setShowImageDialog(true);
-                                                                        }}
+                                                                        onClick={() => openMap(visit.checkOut!)}
                                                                     >
-                                                                        <ImageIcon className="h-4 w-4 mr-1" />
-                                                                        View Photo
+                                                                        <MapPin className="h-4 w-4 mr-1" />
+                                                                        View Map
                                                                     </Button>
                                                                 </div>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => openMap(visit.checkOut!)}
-                                                                >
-                                                                    <MapPin className="h-4 w-4 mr-1" />
-                                                                    View Map
-                                                                </Button>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex items-center justify-center h-full">
+                                                            <div className="text-center space-y-2 p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-2 border-dashed border-yellow-300 dark:border-yellow-700">
+                                                                <AlertCircle className="h-8 w-8 text-yellow-600 dark:text-yellow-400 mx-auto" />
+                                                                <p className="font-semibold text-yellow-700 dark:text-yellow-400">No Check Out Yet</p>
+                                                                <p className="text-sm text-yellow-600 dark:text-yellow-500">
+                                                                    {(() => {
+                                                                        const now = new Date().getTime();
+                                                                        const checkInTime = new Date(visit.checkIn.timestamp).getTime();
+                                                                        const elapsed = now - checkInTime;
+                                                                        return `Elapsed: ${formatDuration(elapsed)}`;
+                                                                    })()}
+                                                                </p>
                                                             </div>
                                                         </div>
-                                                    </>
-                                                ) : (
-                                                    <div className="flex items-center justify-center h-full">
-                                                        <div className="text-center space-y-2 p-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-2 border-dashed border-yellow-300 dark:border-yellow-700">
-                                                            <AlertCircle className="h-8 w-8 text-yellow-600 dark:text-yellow-400 mx-auto" />
-                                                            <p className="font-semibold text-yellow-700 dark:text-yellow-400">No Check Out Yet</p>
-                                                            <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                                                                {(() => {
-                                                                    const now = new Date().getTime();
-                                                                    const checkInTime = new Date(visit.checkIn.timestamp).getTime();
-                                                                    const elapsed = now - checkInTime;
-                                                                    return `Elapsed: ${formatDuration(elapsed)}`;
-                                                                })()}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                    )}
+                                                </div>
                                             </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+
+                                {/* Pagination Controls */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-2 mt-8 py-4">
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => handlePageChange(1)}
+                                            disabled={currentPage === 1}
+                                            title="First Page"
+                                        >
+                                            <ChevronsLeft className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                                            disabled={currentPage === 1}
+                                            title="Previous Page"
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </Button>
+
+                                        <div className="flex items-center gap-1 mx-2">
+                                            <span className="text-sm font-medium">Page {currentPage} of {totalPages}</span>
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            ))
+
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                                            disabled={currentPage === totalPages}
+                                            title="Next Page"
+                                        >
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => handlePageChange(totalPages)}
+                                            disabled={currentPage === totalPages}
+                                            title="Last Page"
+                                        >
+                                            <ChevronsRight className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </CardContent>
@@ -588,6 +657,6 @@ export default function MultipleCheckInOutPage() {
                     )}
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }
