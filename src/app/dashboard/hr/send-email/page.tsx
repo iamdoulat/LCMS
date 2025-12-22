@@ -32,7 +32,7 @@ export default function SendEmailPage() {
                         Send Email to Employees
                     </CardTitle>
                     <CardDescription>
-                        Compose and send customized emails to selected employees. You can use variables and attach files.
+                        Compose and send customized emails to selected employees. You can use variables to personalize messages.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -14,7 +14,7 @@ export async function POST(request: Request) {
         }
 
         // 1. Fetch Advance Request Data
-        const doc = await admin.firestore().collection('advance_salaries').doc(requestId).get();
+        const doc = await admin.firestore().collection('advance_salary').doc(requestId).get();
         if (!doc.exists) {
             return NextResponse.json({ error: 'Request not found' }, { status: 404 });
         }

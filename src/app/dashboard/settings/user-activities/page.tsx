@@ -20,7 +20,10 @@ import {
   Mail,
   AlertCircle,
   RefreshCcw,
-  Search
+  Search,
+  Trash2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { LogEntry, LogStatus, LogType } from '@/lib/logger';
 import { format } from 'date-fns';
@@ -40,6 +43,10 @@ export default function ActivityLogsPage() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<LogType | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalLogs, setTotalLogs] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const logsPerPage = 20;
   const isSuperAdminOrAdmin = userRole?.some(role => ['Super Admin', 'Admin'].includes(role));
 
   useEffect(() => {
@@ -54,20 +61,58 @@ export default function ActivityLogsPage() {
     } else if (!authLoading && isSuperAdminOrAdmin) {
       fetchLogs();
     }
-  }, [userRole, authLoading, router, isSuperAdminOrAdmin]);
+  }, [userRole, authLoading, router, isSuperAdminOrAdmin, currentPage]);
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/logs');
+      const offset = (currentPage - 1) * logsPerPage;
+      const res = await fetch(`/api/logs?limit=${logsPerPage}&offset=${offset}`);
       if (!res.ok) throw new Error("Failed to fetch logs");
       const data = await res.json();
       setLogs(data.logs || []);
+      setTotalLogs(data.total || 0);
     } catch (error) {
       console.error("Error fetching logs:", error);
-      // toast.error("Failed to load logs");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAllLogs = async () => {
+    const result = await Swal.fire({
+      title: 'Delete All Logs?',
+      text: 'This will permanently delete all system logs. This action cannot be undone!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete all logs!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/logs', { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete logs');
+
+      await Swal.fire({
+        title: 'Deleted!',
+        text: 'All logs have been deleted successfully.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+      setCurrentPage(1);
+      fetchLogs();
+    } catch (error: any) {
+      console.error('Error deleting logs:', error);
+      Swal.fire('Error', error.message || 'Failed to delete logs', 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -118,9 +163,14 @@ export default function ActivityLogsPage() {
           <h1 className="text-3xl font-bold tracking-tight">System Activity Logs</h1>
           <p className="text-muted-foreground">Monitor WhatsApp, Email, and User activities.</p>
         </div>
-        <Button variant="outline" onClick={fetchLogs}>
-          <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchLogs} disabled={loading}>
+            <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
+          </Button>
+          <Button variant="destructive" onClick={handleDeleteAllLogs} disabled={deleting || totalLogs === 0}>
+            <Trash2 className="mr-2 h-4 w-4" /> {deleting ? 'Deleting...' : 'Delete All Logs'}
+          </Button>
+        </div>
       </div>
 
       {/* Analytics Cards */}
@@ -224,6 +274,35 @@ export default function ActivityLogsPage() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          {!loading && filteredLogs.length > 0 && (
+            <div className="flex items-center justify-between px-2 py-4">
+              <div className="text-sm text-muted-foreground">
+                Showing page {currentPage} of {Math.ceil(totalLogs / logsPerPage)} ({totalLogs} total logs)
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  disabled={currentPage >= Math.ceil(totalLogs / logsPerPage)}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

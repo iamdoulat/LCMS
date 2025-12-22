@@ -15,6 +15,9 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 
+// Import logging utility
+import { logActivity } from '@/lib/logger';
+
 
 interface SendEmailOptions {
     to: string | string[];
@@ -115,18 +118,29 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
 
         // 2. Fetch Template if slug provided
         if (templateSlug) {
-            const template = await getEmailTemplate(templateSlug);
-            subject = template.subject;
-            body = template.body;
+            try {
+                const template = await getEmailTemplate(templateSlug);
+                subject = template.subject;
+                body = template.body;
+            } catch (err: any) {
+                console.error(`Error loading email template ${templateSlug}:`, err);
+                await logActivity({
+                    type: 'email',
+                    action: 'template_load_failed',
+                    status: 'failed',
+                    message: `Failed to load email template: ${templateSlug}`,
+                    details: { error: err.message }
+                });
+                throw err;
+            }
         } else if (!subject || !body) {
             throw new Error('Either templateSlug OR subject and body must be provided.');
         }
 
         // 3. Process Template Variables
-        // Default variables
         const allData: Record<string, any> = {
             ...data,
-            company_name: process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew', // Use app name, not SMTP config name
+            company_name: process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew',
             year: new Date().getFullYear(),
             date: new Date().toLocaleDateString()
         };
@@ -147,40 +161,107 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
 
             const resend = new Resend(config.resendApiKey);
 
-            const { data: res, error } = await resend.emails.send({
-                from: config.fromEmail,
-                to: toAddresses,
-                subject: subject,
-                html: body,
-            });
+            try {
+                const { data: res, error } = await resend.emails.send({
+                    from: config.fromEmail,
+                    to: toAddresses,
+                    subject: subject,
+                    html: body,
+                });
 
-            if (error) throw error;
-            return { success: true, messageId: res?.id };
+                if (error) throw error;
+
+                // Log success
+                await logActivity({
+                    type: 'email',
+                    action: 'send_email',
+                    status: 'success',
+                    message: `Email sent via Resend to ${toAddresses.join(', ')}`,
+                    recipient: toAddresses.join(', '),
+                    details: {
+                        template: templateSlug || 'custom',
+                        provider: 'resend_api',
+                        messageId: res?.id,
+                        subject
+                    }
+                });
+
+                return { success: true, messageId: res?.id };
+
+            } catch (error: any) {
+                console.error('Resend API Error:', error);
+                await logActivity({
+                    type: 'email',
+                    action: 'send_email',
+                    status: 'failed',
+                    message: `Failed to send email via Resend: ${error.message}`,
+                    recipient: toAddresses.join(', '),
+                    details: { error: error.message, template: templateSlug, provider: 'resend_api' }
+                });
+                throw error;
+            }
 
         } else {
             // SMTP with Nodemailer
-            const transporter = nodemailer.createTransport({
-                host: config.host,
-                port: config.port,
-                secure: config.port === 465, // true for 465, false for other ports
-                auth: {
-                    user: config.user,
-                    pass: config.pass,
-                },
-            });
+            try {
+                const transporter = nodemailer.createTransport({
+                    host: config.host,
+                    port: config.port,
+                    secure: config.port === 465,
+                    auth: {
+                        user: config.user,
+                        pass: config.pass,
+                    },
+                });
 
-            const info = await transporter.sendMail({
-                from: config.fromEmail,
-                to: toAddresses.join(','),
-                subject: subject,
-                html: body,
-            });
+                const info = await transporter.sendMail({
+                    from: config.fromEmail,
+                    to: toAddresses.join(','),
+                    subject: subject,
+                    html: body,
+                });
 
-            return { success: true, messageId: info.messageId };
+                // Log success
+                await logActivity({
+                    type: 'email',
+                    action: 'send_email',
+                    status: 'success',
+                    message: `Email sent via SMTP to ${toAddresses.join(', ')}`,
+                    recipient: toAddresses.join(', '),
+                    details: {
+                        template: templateSlug || 'custom',
+                        provider: 'smtp',
+                        messageId: info.messageId,
+                        subject,
+                        host: config.host
+                    }
+                });
+
+                return { success: true, messageId: info.messageId };
+
+            } catch (error: any) {
+                console.error('SMTP Error:', error);
+                await logActivity({
+                    type: 'email',
+                    action: 'send_email',
+                    status: 'failed',
+                    message: `Failed to send email via SMTP: ${error.message}`,
+                    recipient: toAddresses.join(', '),
+                    details: { error: error.message, template: templateSlug, provider: 'smtp' }
+                });
+                throw error;
+            }
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Send Email Error:', error);
+        await logActivity({
+            type: 'email',
+            action: 'send_email_process',
+            status: 'failed',
+            message: `Critical error in sendEmail process: ${error.message}`,
+            details: { error: error.message }
+        });
         throw error;
     }
 }

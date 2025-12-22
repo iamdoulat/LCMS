@@ -105,8 +105,6 @@ export function SendEmailForm() {
     const [employees, setEmployees] = React.useState<EmployeeOption[]>([]);
     const [templates, setTemplates] = React.useState<EmailTemplate[]>([]);
     const [isLoadingEmployees, setIsLoadingEmployees] = React.useState(true);
-    const [attachments, setAttachments] = React.useState<{ name: string; url: string; size: number }[]>([]);
-    const [isUploading, setIsUploading] = React.useState(false);
 
     // New state for HTML mode toggle
     const [isHtmlMode, setIsHtmlMode] = React.useState(true);
@@ -197,45 +195,7 @@ export function SendEmailForm() {
         }
     };
 
-    // Handle file upload
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (!files || files.length === 0) return;
 
-        const totalCurrentSize = attachments.reduce((sum, att) => sum + att.size, 0);
-        const newFilesSize = Array.from(files).reduce((sum, file) => sum + file.size, 0);
-        const maxSize = 10 * 1024 * 1024; // 10MB
-
-        if (totalCurrentSize + newFilesSize > maxSize) {
-            Swal.fire('Error', 'Total file size cannot exceed 10MB', 'error');
-            return;
-        }
-
-        setIsUploading(true);
-        try {
-            const uploadedFiles = await Promise.all(
-                Array.from(files).map(async (file) => {
-                    const timestamp = Date.now();
-                    const storageRef = ref(storage, `email_attachments/${timestamp}/${file.name}`);
-                    await uploadBytes(storageRef, file);
-                    const url = await getDownloadURL(storageRef);
-                    return { name: file.name, url, size: file.size };
-                })
-            );
-
-            setAttachments(prev => [...prev, ...uploadedFiles]);
-        } catch (error) {
-            console.error('Error uploading files:', error);
-            Swal.fire('Error', 'Failed to upload files', 'error');
-        } finally {
-            setIsUploading(false);
-            event.target.value = ''; // Reset input
-        }
-    };
-
-    const removeAttachment = (index: number) => {
-        setAttachments(prev => prev.filter((_, i) => i !== index));
-    };
 
     // Submit form
     const onSubmit = async (data: EmailFormValues) => {
@@ -258,7 +218,6 @@ export function SendEmailForm() {
                     employeeIds: data.employeeIds,
                     subject: data.subject,
                     body: finalBody,
-                    attachmentUrls: attachments.map(att => ({ name: att.name, url: att.url })),
                 }),
             });
 
@@ -276,7 +235,6 @@ export function SendEmailForm() {
 
             // Reset form
             form.reset();
-            setAttachments([]);
         } catch (error: any) {
             console.error('Error sending email:', error);
             Swal.fire('Error', error.message || 'Failed to send email', 'error');
@@ -284,8 +242,6 @@ export function SendEmailForm() {
             setIsSubmitting(false);
         }
     };
-
-    const totalSizeMB = (attachments.reduce((sum, att) => sum + att.size, 0) / (1024 * 1024)).toFixed(2);
 
     // Filter employees options for MultiSelect
     const employeeOptions = employees.map(emp => ({
@@ -503,53 +459,6 @@ export function SendEmailForm() {
                     )}
                 />
 
-                {/* File Attachments */}
-                <div className="space-y-3">
-                    <Label>File Attachments (Optional)</Label>
-                    <FormDescription>
-                        Upload files to include as download links in the email (Max 10MB total)
-                    </FormDescription>
-
-                    <div className="flex items-center gap-2">
-                        <Input
-                            type="file"
-                            multiple
-                            onChange={handleFileUpload}
-                            disabled={isUploading}
-                            className="flex-1"
-                            accept="*/*"
-                        />
-                        {isUploading && <Loader2 className="h-5 w-5 animate-spin" />}
-                    </div>
-
-                    {attachments.length > 0 && (
-                        <div className="border rounded-md p-3 space-y-2">
-                            <div className="text-sm font-medium">
-                                Attached Files ({attachments.length}) - Total Size: {totalSizeMB} MB
-                            </div>
-                            {attachments.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                                    <div className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4" />
-                                        <span className="text-sm">{file.name}</span>
-                                        <span className="text-xs text-muted-foreground">
-                                            ({(file.size / 1024).toFixed(2)} KB)
-                                        </span>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => removeAttachment(index)}
-                                    >
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
                 <Separator />
 
                 {/* Action Buttons */}
@@ -557,10 +466,7 @@ export function SendEmailForm() {
                     <Button
                         type="button"
                         variant="outline"
-                        onClick={() => {
-                            form.reset();
-                            setAttachments([]);
-                        }}
+                        onClick={() => form.reset()}
                     >
                         <X className="mr-2 h-4 w-4" />
                         Reset
