@@ -1149,7 +1149,7 @@ export default function AccountDetailsPage() {
   }
 
   return (
-    <div className="py-8 space-y-8 px-5">
+    <div className="mx-[10px] mt-[10px] p-0 md:mx-0 md:mt-0 md:py-8 md:px-5 space-y-8">
       <Form {...form}>
         <Card className="shadow-xl">
           <CardHeader>

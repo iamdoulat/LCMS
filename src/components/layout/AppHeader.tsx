@@ -60,6 +60,14 @@ export function AppHeader() {
         <SidebarTrigger className="md:hidden" />
         {user && ( // Only show this link if a user is logged in
           <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="relative h-8 w-8 overflow-hidden rounded-full border border-border md:hidden shrink-0">
+              <Image
+                src={companyLogoUrl || '/icons/icon-192x192.png'}
+                alt={companyName || 'Logo'}
+                fill
+                className="object-cover"
+              />
+            </div>
             <span
               className={cn(
                 "font-bold text-base truncate",

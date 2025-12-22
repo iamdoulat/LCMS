@@ -27,31 +27,31 @@ export function BottomNavBar() {
     <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-card border-t md:hidden noprint pb-[5px]">
       <div className="grid h-full max-w-lg grid-cols-5 mx-auto">
         <TooltipProvider>
-            {navItems.map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.pathPrefix);
             return (
-                <Tooltip key={item.label}>
-                    <TooltipTrigger asChild>
-                    <Link href={item.href} passHref>
-                        <button
-                        type="button"
-                        className={cn(
-                            "inline-flex flex-col items-center justify-center px-5 hover:bg-muted group w-full h-full",
-                            active ? "text-primary" : "text-muted-foreground"
-                        )}
-                        >
-                        <Icon className="w-6 h-6 mb-1" />
-                        <span className="text-xs">{item.label}</span>
-                        </button>
-                    </Link>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                    <p>{item.label}</p>
-                    </TooltipContent>
-                </Tooltip>
+              <Tooltip key={item.label}>
+                <TooltipTrigger asChild>
+                  <Link href={item.href} passHref>
+                    <button
+                      type="button"
+                      className={cn(
+                        "inline-flex flex-col items-center justify-center px-5 hover:bg-muted group w-full h-full",
+                        active ? "text-primary" : "text-muted-foreground"
+                      )}
+                    >
+                      <Icon className="w-6 h-6 mb-1" />
+                      <span className="text-xs">{item.label}</span>
+                    </button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{item.label}</p>
+                </TooltipContent>
+              </Tooltip>
             );
-            })}
+          })}
         </TooltipProvider>
       </div>
     </div>
