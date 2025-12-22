@@ -7,3 +7,14 @@ export interface WhatsAppGatewayConfig {
     createdAt?: any;
     updatedAt?: any;
 }
+
+export interface WhatsAppTemplate {
+    id?: string;
+    slug: string;
+    name: string;
+    subject: string;
+    body: string; // Plain text content
+    variables: string[];
+    createdAt?: any;
+    updatedAt?: any;
+}

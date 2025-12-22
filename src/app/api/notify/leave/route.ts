@@ -57,6 +57,12 @@ export async function POST(request: Request) {
                 .map(doc => doc.data().email)
                 .filter(email => email);
 
+
+            // Fetch Admin Phones for WhatsApp
+            const { sendWhatsApp, getPhonesByRole } = await import('@/lib/whatsapp/sender');
+            // Notify Admin, HR, Super Admin about new leave
+            const adminPhones = await getPhonesByRole(['Admin', 'HR', 'Super Admin']);
+
             if (adminEmails.length > 0) {
                 await sendEmail({
                     to: adminEmails,
@@ -72,10 +78,45 @@ export async function POST(request: Request) {
                     }
                 });
             }
+
+            if (adminPhones.length > 0) {
+                // sendWhatsApp is already imported
+                for (const phone of adminPhones) {
+                    await sendWhatsApp({
+                        to: phone,
+                        templateSlug: 'admin_new_leave_application',
+                        data: {
+                            employee_name: employeeName,
+                            leave_type: data?.leaveType || 'N/A',
+                            start_date: data?.fromDate || 'N/A',
+                            end_date: data?.toDate || 'N/A',
+                            days: totalDays?.toString() || '0',
+                            reason: data?.reason || 'N/A',
+                            link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/hr/leaves`
+                        }
+                    });
+                }
+            }
+
             return NextResponse.json({ success: true, notified: 'admins' });
 
         } else if (type === 'decision') {
             // Notify Employee
+
+            // 2. Fetch Employee Data (Need phone now)
+            let employeePhone = '';
+            // We already fetched empDoc in step 2 (if we restructure a bit or fetch again)
+            // The code above had strict scoping or didn't save the doc.
+            // Re-fetch or reuse if possible. The code above in step 2 declared variables inside if block? 
+            // No, declared outside. But empDoc was inside.
+            // Let's fetch phone if we don't have it.
+            if (data?.employeeId) {
+                const empDoc = await admin.firestore().collection('employees').doc(data.employeeId).get();
+                if (empDoc.exists) {
+                    employeePhone = empDoc.data()?.phone;
+                }
+            }
+
             if (!employeeEmail) {
                 return NextResponse.json({ message: 'Employee email not found' });
             }
@@ -96,6 +137,22 @@ export async function POST(request: Request) {
                     rejection_reason: rejectionReason || data?.rejectionReason || 'No reason provided'
                 }
             });
+
+            if (employeePhone) {
+                const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
+                await sendWhatsApp({
+                    to: employeePhone,
+                    templateSlug: templateSlug, // Same slug for WA
+                    data: {
+                        employee_name: employeeName,
+                        leave_type: data?.leaveType || 'N/A',
+                        start_date: data?.fromDate || 'N/A',
+                        end_date: data?.toDate || 'N/A',
+                        rejection_reason: rejectionReason || data?.rejectionReason || 'No reason provided'
+                    }
+                });
+            }
+
             return NextResponse.json({ success: true, notified: 'employee' });
         }
 

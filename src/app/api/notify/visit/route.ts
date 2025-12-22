@@ -42,6 +42,10 @@ export async function POST(request: Request) {
                 .map(doc => doc.data().email)
                 .filter(email => email);
 
+
+            const { sendWhatsApp, getPhonesByRole } = await import('@/lib/whatsapp/sender');
+            const adminPhones = await getPhonesByRole(['Admin', 'HR', 'Super Admin']);
+
             if (adminEmails.length > 0) {
                 await sendEmail({
                     to: adminEmails,
@@ -57,10 +61,38 @@ export async function POST(request: Request) {
                     }
                 });
             }
+
+            if (adminPhones.length > 0) {
+                // sendWhatsApp imported above
+                for (const phone of adminPhones) {
+                    await sendWhatsApp({
+                        to: phone,
+                        templateSlug: 'admin_new_visit_application',
+                        data: {
+                            employee_name: employeeName,
+                            customer_name: data?.customerName || 'N/A',
+                            location: data?.location || 'N/A',
+                            visit_date_start: data?.fromDate || data?.visitDate || 'N/A',
+                            visit_date_end: data?.toDate || data?.visitDate || 'N/A',
+                            reason: data?.reason || 'N/A',
+                            link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/hr/visit-applications`
+                        }
+                    });
+                }
+            }
+
             return NextResponse.json({ success: true, notified: 'admins' });
 
         } else if (type === 'decision') {
             // Notify Employee
+            let employeePhone = '';
+            if (data?.employeeId) {
+                const empDoc = await admin.firestore().collection('employees').doc(data.employeeId).get();
+                if (empDoc.exists) {
+                    employeePhone = empDoc.data()?.phone;
+                }
+            }
+
             if (!employeeEmail) {
                 return NextResponse.json({ message: 'Employee email not found' });
             }
@@ -81,6 +113,22 @@ export async function POST(request: Request) {
                     rejection_reason: rejectionReason || data?.rejectionReason || 'No reason provided'
                 }
             });
+
+            if (employeePhone) {
+                const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
+                await sendWhatsApp({
+                    to: employeePhone,
+                    templateSlug: templateSlug,
+                    data: {
+                        employee_name: employeeName,
+                        customer_name: data?.customerName || 'N/A',
+                        visit_date_start: data?.fromDate || data?.visitDate || 'N/A',
+                        visit_date_end: data?.toDate || data?.visitDate || 'N/A',
+                        rejection_reason: rejectionReason || data?.rejectionReason || 'No reason provided'
+                    }
+                });
+            }
+
             return NextResponse.json({ success: true, notified: 'employee' });
         }
 

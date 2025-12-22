@@ -152,11 +152,40 @@ export async function POST(request: Request) {
             logToFile(`ERROR sending email to ${email}: ${emailError.message} | Stack: ${emailError.stack}`);
         }
 
+        // 6. Send WhatsApp
+        let whatsappStatus = 'skipped';
+        try {
+            // We need the phone number. It should be in `otherData.phone`.
+            // `create` endpoint receives `phone`.
+            if ((otherData as any).phone) {
+                const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
+                await sendWhatsApp({
+                    to: (otherData as any).phone,
+                    templateSlug: 'account_creation_details',
+                    data: {
+                        name: displayName,
+                        user_name: email,
+                        password: password,
+                        login_url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+                    }
+                });
+                whatsappStatus = 'sent';
+                logToFile(`SUCCESS: WhatsApp sent to ${(otherData as any).phone}`);
+            } else {
+                console.warn("No phone number provided for WhatsApp notification.");
+            }
+        } catch (waError: any) {
+            console.error("Error sending WhatsApp:", waError);
+            whatsappStatus = `failed: ${waError.message}`;
+            logToFile(`ERROR sending WhatsApp to ${email}: ${waError.message}`);
+        }
+
         return NextResponse.json({
             success: true,
             userId: uid,
             message: 'Employee created successfully.',
-            emailStatus
+            emailStatus,
+            whatsappStatus
         });
 
     } catch (error: any) {

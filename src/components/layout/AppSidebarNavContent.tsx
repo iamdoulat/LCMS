@@ -89,6 +89,7 @@ import {
   UserCheck,
   Mail,
   MessageSquare,
+  MessageSquareText,
   Smartphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -207,6 +208,7 @@ const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/user-activities', label: 'User Activities', icon: History, iconColorClass: 'bg-icon-logs' },
   { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Invoice Header Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
   { href: '/dashboard/settings/smtp-settings', label: 'SMTP Setting', icon: Settings, iconColorClass: 'bg-icon-settings' },
+  { href: "/dashboard/settings/whatsapp-templates", label: "WhatsApp Templates", icon: MessageSquareText, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/settings/email-templates', label: 'Email Template', icon: FileText, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/settings/whatsapp', label: 'WhatsApp Settings', icon: MessageSquare, iconColorClass: 'bg-icon-settings' },
 ];

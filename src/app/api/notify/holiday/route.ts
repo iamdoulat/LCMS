@@ -28,14 +28,15 @@ export async function POST(request: Request) {
         const employees = employeesSnapshot.docs.map(doc => ({
             id: doc.id,
             email: doc.data().email,
+            phone: doc.data().phone, // Added phone
             name: doc.data().name || 'Employee'
-        })).filter(emp => emp.email);
+        })).filter(emp => emp.email || emp.phone); // Filter if either contact exists
 
         if (employees.length === 0) {
-            return NextResponse.json({ message: 'No active employees with emails found' });
+            return NextResponse.json({ message: 'No active employees with emails or phones found' });
         }
 
-        // 3. Send emails
+        // 3. Send emails & WhatsApp
         const holidayFromDate = new Date(holidayData.fromDate);
         const formattedFromDate = format(holidayFromDate, 'PPPP');
 
@@ -45,28 +46,61 @@ export async function POST(request: Request) {
             formattedToDate = format(holidayToDate, 'PPPP');
         }
 
+        // Dynamically import to avoid top-level issues if any
+        const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
+
         let successCount = 0;
-        const sendPromises = employees.map(employee =>
-            sendEmail({
-                to: employee.email,
-                templateSlug: 'holiday_announcement', // Fixed: underscore instead of hyphen
-                data: {
-                    employee_name: employee.name,
-                    holiday_title: holidayData.title,
-                    holiday_date: formattedFromDate, // Keep for backward compatibility
-                    holiday_start_date: formattedFromDate,
-                    holiday_end_date: formattedToDate,
-                    holiday_type: holidayData.type,
-                    holiday_description: holidayData.description || 'No additional details provided.',
+        const sendPromises = employees.map(async (employee) => {
+            let emailSent = false;
+            let waSent = false;
+
+            // Send Email
+            if (employee.email) {
+                try {
+                    await sendEmail({
+                        to: employee.email,
+                        templateSlug: 'holiday_announcement',
+                        data: {
+                            employee_name: employee.name,
+                            holiday_title: holidayData.title,
+                            holiday_date: formattedFromDate,
+                            holiday_start_date: formattedFromDate,
+                            holiday_end_date: formattedToDate,
+                            holiday_type: holidayData.type,
+                            holiday_description: holidayData.description || 'No additional details provided.',
+                        }
+                    });
+                    emailSent = true;
+                } catch (err) {
+                    console.error(`Failed to send holiday email to ${employee.email}:`, err);
                 }
-            }).then(() => {
-                successCount++;
-                return true;
-            }).catch(err => {
-                console.error(`Failed to send holiday email to ${employee.email}:`, err);
-                return null;
-            })
-        );
+            }
+
+            // Send WhatsApp
+            if (employee.phone) {
+                try {
+                    await sendWhatsApp({
+                        to: employee.phone,
+                        templateSlug: 'holiday_announcement', // Same slug
+                        data: {
+                            employee_name: employee.name,
+                            holiday_title: holidayData.title,
+                            holiday_date: formattedFromDate,
+                            holiday_start_date: formattedFromDate,
+                            holiday_end_date: formattedToDate,
+                            holiday_type: holidayData.type,
+                            holiday_description: holidayData.description || 'No additional details provided.',
+                        }
+                    });
+                    waSent = true;
+                } catch (err) {
+                    console.error(`Failed to send holiday WA to ${employee.phone}:`, err);
+                }
+            }
+
+            if (emailSent || waSent) successCount++;
+            return true;
+        });
 
         await Promise.all(sendPromises);
 

@@ -130,20 +130,37 @@ export async function POST(request: Request) {
                         attendance_chart: tableHtml
                     }
                 });
+
+                if (emp.phone) {
+                    const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
+                    // WhatsApp cannot render HTML table. We send summary text.
+                    const waSummary = `Present: ${stats.present}, Absent: ${stats.absent}, Delayed: ${stats.delayed}, Leave: ${stats.leave}, Visit: ${stats.visit}`;
+                    try {
+                        await sendWhatsApp({
+                            to: emp.phone,
+                            templateSlug: 'employee_monthly_attendance_report',
+                            data: {
+                                employee_name: emp.fullName || emp.name || 'Employee',
+                                month_year: format(date, 'MMMM yyyy'),
+                                attendance_chart: waSummary // Override HTML with text summary for WA
+                            }
+                        });
+                    } catch (e) { console.error("WA Report Error", e); }
+                }
+
                 sentCount++;
             }
 
         } else if (type === 'payslip') {
-            // Fetch Payroll Data for this month
-            // Assuming 'payroll_records' or similar. 
-            // NOTE: I need to verify collection name. defaulting to 'payroll_records' for now.
+            // ... (existing payroll fetch code) ...
+            // Assuming 'payroll_records'
             const payrollSnap = await admin.firestore().collection('payroll_records')
                 .where('month', '==', monthYear) // Assuming month stored as 'YYYY-MM'
                 .get();
             const allPayroll = payrollSnap.docs.map(d => d.data());
 
             for (const emp of employees) {
-                if (!emp.email) continue;
+                if (!emp.email && !emp.phone) continue; // Skip if no contact
 
                 const record = allPayroll.find(r => r.employeeId === emp.id);
                 if (!record) continue; // Skip if no payslip generated
@@ -155,15 +172,34 @@ export async function POST(request: Request) {
                     <p><strong>Net Salary:</strong> <h3>${record.netSalary || 0}</h3></p>
                 `;
 
-                await sendEmail({
-                    to: emp.email,
-                    templateSlug: 'employee_monthly_payslip_summary',
-                    data: {
-                        employee_name: emp.fullName || emp.name,
-                        month_year: format(date, 'MMMM yyyy'),
-                        payslip_summary: summaryHtml
-                    }
-                });
+                if (emp.email) {
+                    await sendEmail({
+                        to: emp.email,
+                        templateSlug: 'employee_monthly_payslip_summary',
+                        data: {
+                            employee_name: emp.fullName || emp.name,
+                            month_year: format(date, 'MMMM yyyy'),
+                            payslip_summary: summaryHtml
+                        }
+                    });
+                }
+
+                if (emp.phone) {
+                    const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
+                    const waSummary = `Basic: ${record.basicSalary || 0}\nNet Salary: ${record.netSalary || 0}`;
+                    try {
+                        await sendWhatsApp({
+                            to: emp.phone,
+                            templateSlug: 'employee_monthly_payslip_summary',
+                            data: {
+                                employee_name: emp.fullName || emp.name,
+                                month_year: format(date, 'MMMM yyyy'),
+                                payslip_summary: waSummary
+                            }
+                        });
+                    } catch (e) { console.error("WA Payslip Error", e); }
+                }
+
                 sentCount++;
             }
         }

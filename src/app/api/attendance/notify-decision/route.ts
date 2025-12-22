@@ -19,18 +19,21 @@ export async function POST(request: Request) {
         }
         const recData = recDoc.data();
 
-        // 2. Fetch Employee Email
+        // 2. Fetch Employee Email & Phone
         let employeeEmail = '';
+        let employeePhone = '';
         if (recData?.employeeId) {
             const empDoc = await admin.firestore().collection('employees').doc(recData.employeeId).get();
             if (empDoc.exists) {
-                employeeEmail = empDoc.data()?.email;
+                const d = empDoc.data();
+                employeeEmail = d?.email;
+                employeePhone = d?.phone; // Get phone
             }
         }
 
         if (!employeeEmail) {
             console.warn(`No email found for employee ID: ${recData?.employeeId}`);
-            return NextResponse.json({ message: 'Employee email not found, cannot send notification.' });
+            // We can still try WA if phone exists, but let's stick to existing flow structure
         }
 
         // 3. Determine Template and Variables
@@ -55,11 +58,23 @@ export async function POST(request: Request) {
         };
 
         // 4. Send Email
-        await sendEmail({
-            to: employeeEmail,
-            templateSlug: templateSlug,
-            data: templateData
-        });
+        if (employeeEmail) {
+            await sendEmail({
+                to: employeeEmail,
+                templateSlug: templateSlug,
+                data: templateData
+            });
+        }
+
+        // 5. Send WhatsApp
+        if (employeePhone) {
+            const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
+            await sendWhatsApp({
+                to: employeePhone,
+                templateSlug: templateSlug,
+                data: templateData
+            });
+        }
 
         return NextResponse.json({ success: true, recipient: employeeEmail });
 

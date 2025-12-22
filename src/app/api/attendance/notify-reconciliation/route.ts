@@ -37,6 +37,7 @@ export async function POST(request: Request) {
         // But 'in' works on exact equality. 'array-contains-any' is what we want.
 
         let targetEmails: string[] = [];
+        let targetPhones: string[] = [];
 
         try {
             const usersRef = admin.firestore().collection('users');
@@ -53,9 +54,12 @@ export async function POST(request: Request) {
             // Fallback or non-blocking? logic continues but emails won't be sent to list if fetch fails
         }
 
+        const { sendWhatsApp, getPhonesByRole } = await import('@/lib/whatsapp/sender');
+        const uniquePhones = await getPhonesByRole(['Admin', 'Super Admin', 'HR']);
+
         if (targetEmails.length === 0) {
             console.warn("No Admin/HR emails found to notify.");
-            return NextResponse.json({ message: 'No recipients found, but request logged.' });
+            // We might still have phones? Check later, but normally return if no one to notify.
         }
 
         // Deduplicate emails
@@ -84,11 +88,25 @@ export async function POST(request: Request) {
         };
 
         // 3. Send Email
-        await sendEmail({
-            to: uniqueEmails,
-            templateSlug: 'admin:_incoming_attendance_reconciliation_application',
-            data: templateData
-        });
+        if (uniqueEmails.length > 0) {
+            await sendEmail({
+                to: uniqueEmails,
+                templateSlug: 'admin:_incoming_attendance_reconciliation_application',
+                data: templateData
+            });
+        }
+
+        // 5. Send WhatsApp
+        if (uniquePhones.length > 0) {
+            // sendWhatsApp already imported above
+            for (const phone of uniquePhones) {
+                await sendWhatsApp({
+                    to: phone,
+                    templateSlug: 'admin:_incoming_attendance_reconciliation_application',
+                    data: templateData
+                });
+            }
+        }
 
         return NextResponse.json({ success: true, recipients: uniqueEmails.length });
 
