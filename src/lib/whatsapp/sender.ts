@@ -2,6 +2,7 @@
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { WhatsAppTemplate } from '@/types/whatsapp-settings';
+import { logActivity } from '@/lib/logger';
 
 interface SendWhatsAppOptions {
     to: string | string[]; // Phone numbers
@@ -78,8 +79,20 @@ export async function sendWhatsApp({ to, templateSlug, data, message }: SendWhat
         let finalMessage = message || '';
 
         if (templateSlug) {
-            const template = await getWhatsAppTemplate(templateSlug);
-            finalMessage = formatWhatsAppMessage(template, data || {});
+            try {
+                const template = await getWhatsAppTemplate(templateSlug);
+                finalMessage = formatWhatsAppMessage(template, data || {});
+            } catch (err: any) {
+                console.error(`Error loading template ${templateSlug}:`, err);
+                await logActivity({
+                    type: 'whatsapp',
+                    action: 'template_load_failed',
+                    status: 'failed',
+                    message: `Failed to load template: ${templateSlug}`,
+                    details: { error: err.message },
+                });
+                throw err;
+            }
         }
 
         if (!finalMessage) {
@@ -89,52 +102,115 @@ export async function sendWhatsApp({ to, templateSlug, data, message }: SendWhat
         const recipients = Array.isArray(to) ? to : [to];
         const results = [];
 
-        // We will call the internal API route for sending to reuse the Gateway selection logic
-        // Alternatively, we could duplicate the gateway fetch logic here, but calling the API is cleaner if we are already on server?
-        // Actually, calling our own API from server code is tricky because of full URL requirement.
-        // Better to import the sending logic or Gateway fetch logic.
-        // Let's rely on `fetch` with full URL if NEXT_PUBLIC_APP_URL is set, or just duplicate the simple gateway fetch.
-        // Duplicating gateway fetch is safer to avoid self-call lag and URL issues.
-
         // Fetch Active Gateway
-        // Using Admin SDK if on server
         let gateway = null;
         if (typeof window === 'undefined') {
             const { admin } = await import('@/lib/firebase/admin');
             const snap = await admin.firestore().collection('whatsapp_gateways').where('isActive', '==', true).limit(1).get();
             if (!snap.empty) gateway = snap.docs[0].data();
         } else {
-            // Client side fallback (should not happen for system notifications)
             const q = query(collection(firestore, 'whatsapp_gateways'), where('isActive', '==', true));
             const snap = await getDocs(q);
             if (!snap.empty) gateway = snap.docs[0].data();
         }
 
         if (!gateway) {
-            console.error("No active WhatsApp gateway found.");
+            const errorMsg = "No active WhatsApp gateway found.";
+            console.error(errorMsg);
+            await logActivity({
+                type: 'whatsapp',
+                action: 'send_whatsapp',
+                status: 'failed',
+                message: errorMsg,
+                details: { recipients },
+            });
             return { success: false, error: "No active gateway" };
         }
 
         for (const phone of recipients) {
-            if (!phone) continue;
+            if (!phone) {
+                await logActivity({
+                    type: 'whatsapp',
+                    action: 'send_whatsapp',
+                    status: 'warning',
+                    message: 'Skipped empty phone number',
+                    recipient: 'N/A'
+                });
+                continue;
+            }
 
-            // Send via bipsms
-            const apiUrl = `https://bipsms.com/api/bulksms?api_key=${gateway.apiSecret}&sender_id=${gateway.accountUniqueId}&mobile=${phone}&message=${encodeURIComponent(finalMessage)}`;
+            // Send via bipsms WhatsApp API
+            const formData = new FormData();
+            formData.append('secret', gateway.apiSecret);
+            formData.append('account', gateway.accountUniqueId);
+            formData.append('recipient', phone);
+            formData.append('type', 'text');
+            formData.append('message', finalMessage);
 
             try {
-                const res = await fetch(apiUrl);
+                const res = await fetch("https://app.bipsms.com/api/send/whatsapp", {
+                    method: 'POST',
+                    body: formData,
+                });
                 const result = await res.json();
-                results.push({ phone, success: true, result });
+
+                // Check if bipsms returned success (status 200 means success)
+                if (res.ok && (result.status === 200 || result.status === 'success')) {
+                    results.push({ phone, success: true, result });
+
+                    await logActivity({
+                        type: 'whatsapp',
+                        action: 'send_whatsapp',
+                        status: 'success',
+                        message: `Message sent to ${phone}`,
+                        recipient: phone,
+                        details: {
+                            template: templateSlug || 'custom',
+                            gateway: gateway.accountUniqueId,
+                            apiResult: result
+                        }
+                    });
+                } else {
+                    // API call succeeded but bipsms returned an error
+                    console.error(`bipsms API error for ${phone}:`, result);
+                    results.push({ phone, success: false, error: result.message || 'Provider error' });
+
+                    await logActivity({
+                        type: 'whatsapp',
+                        action: 'send_whatsapp',
+                        status: 'failed',
+                        message: `Failed to send to ${phone}: ${result.message || 'Provider error'}`,
+                        recipient: phone,
+                        details: { error: result.message, apiResult: result, template: templateSlug }
+                    });
+                }
+
             } catch (e: any) {
                 console.error(`Failed to send WA to ${phone}:`, e);
                 results.push({ phone, success: false, error: e.message });
+
+                await logActivity({
+                    type: 'whatsapp',
+                    action: 'send_whatsapp',
+                    status: 'failed',
+                    message: `Failed to send to ${phone}: ${e.message}`,
+                    recipient: phone,
+                    details: { error: e.message, template: templateSlug }
+                });
             }
         }
 
         return { success: true, results };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("sendWhatsApp error:", error);
+        await logActivity({
+            type: 'whatsapp',
+            action: 'send_whatsapp_process',
+            status: 'failed',
+            message: 'Critical error in sendWhatsApp process',
+            details: { error: error.message }
+        });
         throw error; // Re-throw to caller
     }
 }

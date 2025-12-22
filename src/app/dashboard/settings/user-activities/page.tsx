@@ -1,226 +1,229 @@
+
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { Loader2, History, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Activity,
+  MessageSquare,
+  Mail,
+  AlertCircle,
+  RefreshCcw,
+  Search
+} from 'lucide-react';
+import { LogEntry, LogStatus, LogType } from '@/lib/logger';
+import { format } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { UserRole } from '@/types';
-import { Badge } from '@/components/ui/badge';
 
-
-interface ActivityLog {
+interface SystemLog extends LogEntry {
   id: string;
-  timestamp: Date;
-  userName: string;
-  userEmail: string;
-  userRole: UserRole[];
-  activity: string;
+  createdAt: string; // ISO string from API
 }
 
-const ITEMS_PER_PAGE = 50;
-
-// Generate placeholder logs
-const generatePlaceholderActivityLogs = (count: number): ActivityLog[] => {
-  const logs: ActivityLog[] = [];
-  const actions = ["User Login", "Created L/C", "Updated Profile", "Changed Settings", "Exported Report", "Added PI", "Deleted Item", "Updated Invoice"];
-  const users = [
-    { name: 'Doulat', email: 'mddoulat@gmail.com', role: ['Super Admin'] as UserRole[] },
-    { name: 'Commercial Team', email: 'commercial@smartsolution-bd.com', role: ['Commercial'] as UserRole[] },
-    { name: 'Service User', email: 'user@example.com', role: ['Service'] as UserRole[] },
-    { name: 'Test Account', email: 'test@example.com', role: ['Accounts'] as UserRole[] }
-  ];
-  for (let i = 0; i < count; i++) {
-    const user = users[Math.floor(Math.random() * users.length)];
-    logs.push({
-      id: `activity-${i + 1}`,
-      timestamp: new Date(Date.now() - Math.random() * 1000 * 60 * 60 * 24 * 30), // Within last 30 days
-      userName: user.name,
-      userEmail: user.email,
-      userRole: user.role,
-      activity: actions[Math.floor(Math.random() * actions.length)],
-    });
-  }
-  return logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-};
-
-
-export default function UserActivitiesPage() {
+export default function ActivityLogsPage() {
   const { userRole, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [allLogs, setAllLogs] = useState<ActivityLog[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [logs, setLogs] = useState<SystemLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState<LogType | 'all'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const isSuperAdminOrAdmin = userRole?.some(role => ['Super Admin', 'Admin'].includes(role));
 
   useEffect(() => {
     if (!authLoading && !isSuperAdminOrAdmin) {
       Swal.fire({
         title: 'Access Denied',
-        text: 'You do not have permission to view user activities.',
+        text: 'You do not have permission to view system logs.',
         icon: 'error',
         timer: 2000,
         showConfirmButton: false,
-      }).then(() => {
-        router.push('/dashboard');
-      });
+      }).then(() => router.push('/dashboard'));
     } else if (!authLoading && isSuperAdminOrAdmin) {
-      if (allLogs.length === 0) {
-        setAllLogs(generatePlaceholderActivityLogs(250)); // Generate more logs
-      }
+      fetchLogs();
     }
-  }, [userRole, authLoading, router, allLogs.length, isSuperAdminOrAdmin]);
+  }, [userRole, authLoading, router, isSuperAdminOrAdmin]);
 
-  const paginatedLogs = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return allLogs.slice(startIndex, endIndex);
-  }, [allLogs, currentPage]);
-
-  const totalPages = Math.ceil(allLogs.length / ITEMS_PER_PAGE);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/logs');
+      if (!res.ok) throw new Error("Failed to fetch logs");
+      const data = await res.json();
+      setLogs(data.logs || []);
+    } catch (error) {
+      console.error("Error fetching logs:", error);
+      // toast.error("Failed to load logs");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getPageNumbers = () => {
-    const pageNumbers = [];
-    const maxPagesToShow = 5;
-    const halfPagesToShow = Math.floor(maxPagesToShow / 2);
-
-    if (totalPages <= maxPagesToShow + 2) {
-      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
-    } else {
-      pageNumbers.push(1);
-      let startPage = Math.max(2, currentPage - halfPagesToShow);
-      let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
-      if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
-      if (currentPage >= totalPages - halfPagesToShow) startPage = Math.max(2, totalPages - maxPagesToShow + 1);
-      if (startPage > 2) pageNumbers.push("...");
-      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
-      if (endPage < totalPages - 1) pageNumbers.push("...");
-      pageNumbers.push(totalPages);
-    }
-    return pageNumbers;
+  // Analytics
+  const stats = {
+    total: logs.length,
+    whatsapp: logs.filter(l => l.type === 'whatsapp').length,
+    email: logs.filter(l => l.type === 'email').length,
+    errors: logs.filter(l => l.status === 'failed').length
   };
 
+  // Filtered Logs
+  const filteredLogs = logs.filter(log => {
+    const matchesType = filterType === 'all' || log.type === filterType;
+    const matchesSearch = searchTerm === '' ||
+      (log.message || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.recipient || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.action || '').toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesType && matchesSearch;
+  });
 
-  if (authLoading || !isSuperAdminOrAdmin) {
-    return (
-      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">Verifying access...</p>
-      </div>
-    );
-  }
+  const getTypeIcon = (type: LogType) => {
+    switch (type) {
+      case 'whatsapp': return <MessageSquare className="h-4 w-4 text-green-500" />;
+      case 'email': return <Mail className="h-4 w-4 text-blue-500" />;
+      case 'error': return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case 'user_activity': return <Activity className="h-4 w-4 text-orange-500" />;
+      default: return <Activity className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusBadge = (status: LogStatus) => {
+    switch (status) {
+      case 'success': return <Badge variant="default" className="bg-green-600">Success</Badge>;
+      case 'failed': return <Badge variant="destructive">Failed</Badge>;
+      case 'pending': return <Badge variant="secondary">Pending</Badge>;
+      case 'warning': return <Badge variant="outline" className="border-yellow-500 text-yellow-600">Warning</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  if (authLoading || !isSuperAdminOrAdmin) return <div className="p-8 text-center">Loading...</div>;
 
   return (
-    <div className="container mx-auto py-8 px-5">
-      <Card className="shadow-xl">
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">System Activity Logs</h1>
+          <p className="text-muted-foreground">Monitor WhatsApp, Email, and User activities.</p>
+        </div>
+        <Button variant="outline" onClick={fetchLogs}>
+          <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
+        </Button>
+      </div>
+
+      {/* Analytics Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Logs</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent><div className="text-2xl font-bold">{stats.total}</div><p className="text-xs text-muted-foreground">Recent events</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">WhatsApp Sent</CardTitle>
+            <MessageSquare className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent><div className="text-2xl font-bold">{stats.whatsapp}</div><p className="text-xs text-muted-foreground">Attempted messages</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Emails Sent</CardTitle>
+            <Mail className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent><div className="text-2xl font-bold">{stats.email}</div><p className="text-xs text-muted-foreground">Attempted emails</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Failures</CardTitle>
+            <AlertCircle className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent><div className="text-2xl font-bold">{stats.errors}</div><p className="text-xs text-muted-foreground">Failed actions</p></CardContent>
+        </Card>
+      </div>
+
+      {/* Logs Table */}
+      <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <History className="h-7 w-7 text-primary" />
-                User Activities
-              </CardTitle>
-              <CardDescription>
-                A log of recent user activities across the application.
-              </CardDescription>
+          <div className="flex items-center justify-between">
+            <CardTitle>Activity Log</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search logs..."
+                  className="pl-8 w-[250px]"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-1 bg-muted p-1 rounded-md">
+                <Button variant={filterType === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('all')}>All</Button>
+                <Button variant={filterType === 'whatsapp' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('whatsapp')}><MessageSquare className="h-4 w-4 mr-1" /> WA</Button>
+                <Button variant={filterType === 'email' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('email')}><Mail className="h-4 w-4 mr-1" /> Email</Button>
+              </div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-           <Alert variant="default" className="mb-6 bg-blue-500/10 border-blue-500/30">
-            <ShieldAlert className="h-5 w-5 text-blue-600" />
-            <AlertTitle className="text-blue-700 font-semibold">Placeholder Data</AlertTitle>
-            <AlertDescription className="text-blue-700/90">
-              The activity logs shown here are for demonstration purposes. A full implementation would require backend services to capture and store these events securely.
-            </AlertDescription>
-          </Alert>
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>User Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Activity</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Recipient / User</TableHead>
+                  <TableHead>Message</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedLogs.length > 0 ? (
-                  paginatedLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell>{format(log.timestamp, 'PPP p')}</TableCell>
-                      <TableCell className="font-medium">{log.userName}</TableCell>
-                      <TableCell className="text-muted-foreground">{log.userEmail}</TableCell>
-                       <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                            {log.userRole.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">Loading logs...</TableCell>
+                  </TableRow>
+                ) : filteredLogs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">No logs found.</TableCell>
+                  </TableRow>
+                ) : (
+                  filteredLogs.map((log) => (
+                    <TableRow key={log.id} className="hover:bg-muted/50">
+                      <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+                        {log.createdAt ? format(new Date(log.createdAt), 'MMM dd, HH:mm:ss') : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getTypeIcon(log.type)}
+                          <span className="capitalize text-xs">{log.type}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{log.activity}</TableCell>
+                      <TableCell className="font-medium text-sm">{log.action}</TableCell>
+                      <TableCell className="text-sm">{log.recipient || log.userId || '-'}</TableCell>
+                      <TableCell className="max-w-[300px] truncate text-sm" title={log.message}>
+                        {log.message}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(log.status)}</TableCell>
                     </TableRow>
                   ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      No activity logs to display.
-                    </TableCell>
-                  </TableRow>
                 )}
               </TableBody>
-              <TableCaption>
-                Showing {paginatedLogs.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-
-                {Math.min(currentPage * ITEMS_PER_PAGE, allLogs.length)} of {allLogs.length} log entries.
-              </TableCaption>
             </Table>
           </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center space-x-2 py-4 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              {getPageNumbers().map((page, index) =>
-                typeof page === 'number' ? (
-                  <Button
-                    key={`activity-log-page-${page}`}
-                    variant={currentPage === page ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handlePageChange(page)}
-                    className="w-9 h-9 p-0"
-                  >
-                    {page}
-                  </Button>
-                ) : (
-                  <span key={`ellipsis-log-${index}`} className="px-2 py-1 text-sm">{page}</span>
-                )
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
