@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Plus, Edit, Trash2, Smartphone } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import Swal from 'sweetalert2';
 import { collection, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, writeBatch, where, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
@@ -16,6 +18,7 @@ export default function WhatsAppTemplatesPage() {
     const [templates, setTemplates] = useState<WhatsAppTemplate[]>([]);
     const [loading, setLoading] = useState(true);
     const [importing, setImporting] = useState(false);
+    const [importEnabled, setImportEnabled] = useState(false);
 
     useEffect(() => {
         const q = query(collection(firestore, 'whatsapp_templates'), orderBy('createdAt', 'desc'));
@@ -141,8 +144,23 @@ export default function WhatsAppTemplatesPage() {
                     <h1 className="text-3xl font-bold tracking-tight">WhatsApp Templates</h1>
                     <p className="text-muted-foreground">Manage templates for automated WhatsApp notifications.</p>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleImportFromEmail} disabled={importing} className="gap-2">
+                <div className="flex gap-4 items-center">
+                    <div className="flex items-center gap-2 border rounded-md px-3 py-2">
+                        <Switch
+                            id="import-toggle"
+                            checked={importEnabled}
+                            onCheckedChange={setImportEnabled}
+                        />
+                        <Label htmlFor="import-toggle" className="cursor-pointer text-sm">
+                            Enable Import
+                        </Label>
+                    </div>
+                    <Button
+                        variant="outline"
+                        onClick={handleImportFromEmail}
+                        disabled={!importEnabled || importing}
+                        className="gap-2"
+                    >
                         {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                         {importing ? 'Importing...' : 'Import from Email'}
                     </Button>
@@ -161,7 +179,7 @@ export default function WhatsAppTemplatesPage() {
                         <p className="text-lg font-medium">No Templates Found</p>
                         <p className="text-muted-foreground mb-6">Create your first WhatsApp template to get started.</p>
                         <div className="flex gap-2 justify-center">
-                            <Button variant="outline" onClick={handleImportFromEmail} disabled={importing}>
+                            <Button variant="outline" onClick={handleImportFromEmail} disabled={!importEnabled || importing}>
                                 {importing ? 'Importing...' : 'Import from Email'}
                             </Button>
                             <Link href="/dashboard/settings/whatsapp-templates/new">
