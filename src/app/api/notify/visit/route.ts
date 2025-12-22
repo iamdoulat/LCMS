@@ -1,7 +1,31 @@
-
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
+import { differenceInDays, parseISO, format } from 'date-fns';
+
+const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return 'N/A';
+    try {
+        return format(parseISO(dateString), 'dd MMM yyyy');
+    } catch (e) {
+        return dateString; // Return original if parsing fails
+    }
+};
+
+const calculateDays = (start: string | undefined, end: string | undefined): string => {
+    if (!start || !end) return '1 day';
+    try {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        // Calculate difference in milliseconds
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+        // Calculate difference in days (add 1 to include both start and end dates)
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        return `${diffDays} day${diffDays > 1 ? 's' : ''}`;
+    } catch (e) {
+        return '1 day';
+    }
+};
 
 export async function POST(request: Request) {
     try {
@@ -43,22 +67,27 @@ export async function POST(request: Request) {
                 .filter(email => email);
 
 
+
             const { sendWhatsApp, getPhonesByRole } = await import('@/lib/whatsapp/sender');
             const adminPhones = await getPhonesByRole(['Admin', 'HR', 'Super Admin']);
+
+            const templateData = {
+                employee_name: employeeName,
+                customer_name: data?.customerName || 'N/A',
+                location: data?.location || 'N/A',
+                visit_date_start: formatDate(data?.fromDate || data?.visitDate),
+                visit_date_end: formatDate(data?.toDate || data?.visitDate),
+                visit_purpose: data?.reason || 'N/A',
+                days: calculateDays(data?.fromDate || data?.visitDate, data?.toDate || data?.visitDate),
+                day_count: data?.day || calculateDays(data?.fromDate || data?.visitDate, data?.toDate || data?.visitDate).split(' ')[0],
+                link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/hr/visit-applications`
+            };
 
             if (adminEmails.length > 0) {
                 await sendEmail({
                     to: adminEmails,
                     templateSlug: 'admin_new_visit_application',
-                    data: {
-                        employee_name: employeeName,
-                        customer_name: data?.customerName || 'N/A',
-                        location: data?.location || 'N/A',
-                        visit_date_start: data?.fromDate || data?.visitDate || 'N/A',
-                        visit_date_end: data?.toDate || data?.visitDate || 'N/A',
-                        reason: data?.reason || 'N/A',
-                        link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/hr/visit-applications`
-                    }
+                    data: templateData
                 });
             }
 
@@ -68,15 +97,7 @@ export async function POST(request: Request) {
                     await sendWhatsApp({
                         to: phone,
                         templateSlug: 'admin_new_visit_application',
-                        data: {
-                            employee_name: employeeName,
-                            customer_name: data?.customerName || 'N/A',
-                            location: data?.location || 'N/A',
-                            visit_date_start: data?.fromDate || data?.visitDate || 'N/A',
-                            visit_date_end: data?.toDate || data?.visitDate || 'N/A',
-                            reason: data?.reason || 'N/A',
-                            link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/hr/visit-applications`
-                        }
+                        data: templateData
                     });
                 }
             }
@@ -108,8 +129,8 @@ export async function POST(request: Request) {
                 data: {
                     employee_name: employeeName,
                     customer_name: data?.customerName || 'N/A',
-                    visit_date_start: data?.fromDate || data?.visitDate || 'N/A',
-                    visit_date_end: data?.toDate || data?.visitDate || 'N/A',
+                    visit_date_start: formatDate(data?.fromDate || data?.visitDate),
+                    visit_date_end: formatDate(data?.toDate || data?.visitDate),
                     rejection_reason: rejectionReason || data?.rejectionReason || 'No reason provided'
                 }
             });
@@ -122,8 +143,8 @@ export async function POST(request: Request) {
                     data: {
                         employee_name: employeeName,
                         customer_name: data?.customerName || 'N/A',
-                        visit_date_start: data?.fromDate || data?.visitDate || 'N/A',
-                        visit_date_end: data?.toDate || data?.visitDate || 'N/A',
+                        visit_date_start: formatDate(data?.fromDate || data?.visitDate),
+                        visit_date_end: formatDate(data?.toDate || data?.visitDate),
                         rejection_reason: rejectionReason || data?.rejectionReason || 'No reason provided'
                     }
                 });

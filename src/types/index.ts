@@ -1853,6 +1853,8 @@ export const VisitApplicationSchema = z.object({
   employeeId: z.string().min(1, "Employee is required."),
   fromDate: z.date({ required_error: "Start date is required." }),
   toDate: z.date({ required_error: "End date is required." }),
+  customerName: z.string().min(1, "Customer Name is required."),
+  location: z.string().min(1, "Location is required."),
   remarks: z.string().min(1, "Remarks are required."),
   status: z.enum(visitStatusOptions).optional(),
   approverComment: z.string().optional(),
@@ -1875,6 +1877,8 @@ export interface VisitApplication {
   applyDate: string; // ISO String
   fromDate: string; // ISO String
   toDate: string; // ISO String
+  customerName: string;
+  location: string;
   day: number;
   remarks: string;
   status: VisitStatus;

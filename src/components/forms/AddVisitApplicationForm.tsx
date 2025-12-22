@@ -40,6 +40,8 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
       employeeId: '',
       fromDate: new Date(),
       toDate: new Date(),
+      customerName: '',
+      location: '',
       remarks: '',
     },
   });
@@ -113,6 +115,8 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
       applyDate: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       toDate: format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      customerName: data.customerName,
+      location: data.location,
       day: dayCount,
       remarks: data.remarks,
       status: 'Pending',
@@ -156,7 +160,7 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
           <FormField
             control={form.control}
             name="employeeId"
@@ -214,12 +218,38 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
             <FormLabel>Day Count</FormLabel>
             <Input value={`${dayCount} Day(s)`} readOnly disabled className="bg-muted/50 h-10 cursor-not-allowed" />
           </FormItem>
+          <FormField
+            control={form.control}
+            name="customerName"
+            render={({ field }) => (
+              <FormItem className="lg:col-span-1 xl:col-span-1">
+                <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Customer Name*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Customer Name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem className="lg:col-span-1 xl:col-span-1">
+                <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Location*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Location" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <FormField
           control={form.control}
           name="remarks"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="md:col-span-2">
               <FormLabel className="flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />Visit Purpose*</FormLabel>
               <FormControl>
                 <Textarea placeholder="Type here" {...field} />

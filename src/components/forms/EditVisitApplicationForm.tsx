@@ -46,6 +46,8 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
       ...initialData,
       fromDate: parseISO(initialData.fromDate),
       toDate: parseISO(initialData.toDate),
+      customerName: initialData.customerName || '',
+      location: initialData.location || '',
       approverComment: initialData.approverComment || '',
     },
   });
@@ -89,6 +91,8 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
       employeeCode: selectedEmployee?.label.match(/\(([^)]+)\)/)?.[1] || initialData.employeeCode,
       fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       toDate: format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+      customerName: data.customerName,
+      location: data.location,
       day: dayCount,
       approverComment: data.approverComment || '',
       updatedAt: serverTimestamp(),
@@ -135,7 +139,7 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
           <FormField
             control={form.control}
             name="employeeId"
@@ -202,6 +206,32 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
             <FormLabel>Day Count</FormLabel>
             <Input value={`${dayCount} Day(s)`} readOnly disabled className="bg-muted/50 h-10 cursor-not-allowed" />
           </FormItem>
+          <FormField
+            control={form.control}
+            name="customerName"
+            render={({ field }) => (
+              <FormItem className="lg:col-span-1 xl:col-span-1">
+                <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Customer Name*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Customer Name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem className="lg:col-span-1 xl:col-span-1">
+                <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Location*</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter Location" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <FormField
           control={form.control}

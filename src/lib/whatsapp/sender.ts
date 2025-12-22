@@ -83,7 +83,7 @@ export const formatWhatsAppMessage = (template: WhatsAppTemplate, data: Record<s
 
     let fullMessage = "";
     if (subject) {
-        fullMessage += `*// ${subject} //*\n----------------\n`;
+        fullMessage += `*// ${subject} //*\n----------------------------------------\n`;
     }
     fullMessage += body;
 
