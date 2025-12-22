@@ -24,13 +24,29 @@ const getWhatsAppTemplate = async (slug: string) => {
         const { admin } = await import('@/lib/firebase/admin');
         const snapshot = await admin.firestore().collection('whatsapp_templates').where('slug', '==', slug).get();
         if (!snapshot.empty) {
-            return snapshot.docs[0].data() as WhatsAppTemplate;
+            const template = snapshot.docs[0].data() as WhatsAppTemplate;
+
+            // Check if template is active (default true if not set)
+            if (template.isActive === false) {
+                console.log(`WhatsApp template '${slug}' is disabled. Skipping send.`);
+                throw new Error(`WhatsApp template '${slug}' is currently disabled.`);
+            }
+
+            return template;
         }
     } else {
         const q = query(collection(firestore, 'whatsapp_templates'), where('slug', '==', slug));
         const snapshot = await getDocs(q);
         if (!snapshot.empty) {
-            return snapshot.docs[0].data() as WhatsAppTemplate;
+            const template = snapshot.docs[0].data() as WhatsAppTemplate;
+
+            // Check if template is active (default true if not set)
+            if (template.isActive === false) {
+                console.log(`WhatsApp template '${slug}' is disabled. Skipping send.`);
+                throw new Error(`WhatsApp template '${slug}' is currently disabled.`);
+            }
+
+            return template;
         }
     }
 

@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Plus, Edit, Trash2, FileText, Code } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import Swal from 'sweetalert2';
-import { collection, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, deleteDoc, doc, onSnapshot, query, orderBy, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { EmailTemplate } from '@/types/email-settings';
 import { Loader2 } from 'lucide-react';
@@ -49,6 +50,26 @@ export default function EmailTemplatesPage() {
         } catch (error) {
             console.error("Error deleting template:", error);
             Swal.fire('Error', 'Failed to delete template', 'error');
+        }
+    };
+
+    const handleToggle = async (id: string, currentStatus: boolean, name: string) => {
+        try {
+            await updateDoc(doc(firestore, 'email_templates', id), {
+                isActive: !currentStatus
+            });
+
+            const statusText = !currentStatus ? 'enabled' : 'disabled';
+            Swal.fire({
+                title: 'Success',
+                text: `Template "${name}" has been ${statusText}`,
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } catch (error) {
+            console.error("Error toggling template:", error);
+            Swal.fire('Error', 'Failed to update template status', 'error');
         }
     };
 
@@ -97,15 +118,31 @@ export default function EmailTemplatesPage() {
                                         <span className="font-medium text-foreground">Subject:</span> {template.subject}
                                     </div>
 
-                                    <div className="flex gap-2 justify-end mt-4">
-                                        <Link href={`/dashboard/settings/email-templates/${template.id}`}>
-                                            <Button variant="outline" size="sm">
-                                                <Edit className="mr-2 h-4 w-4" /> Edit
+                                    <div className="flex items-center justify-between pt-2 border-t">
+                                        <div className="flex items-center gap-2">
+                                            <Switch
+                                                checked={template.isActive !== false}
+                                                onCheckedChange={() => handleToggle(template.id!, template.isActive !== false, template.name)}
+                                                id={`template-${template.id}`}
+                                            />
+                                            <label
+                                                htmlFor={`template-${template.id}`}
+                                                className="text-sm cursor-pointer"
+                                            >
+                                                {template.isActive !== false ? 'Active' : 'Inactive'}
+                                            </label>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <Link href={`/dashboard/settings/email-templates/${template.id}`}>
+                                                <Button variant="outline" size="sm">
+                                                    <Edit className="mr-2 h-4 w-4" /> Edit
+                                                </Button>
+                                            </Link>
+                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(template.id!, template.name)}>
+                                                <Trash2 className="h-4 w-4" />
                                             </Button>
-                                        </Link>
-                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(template.id!, template.name)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        </div>
                                     </div>
                                 </div>
                             </CardContent>

@@ -15,6 +15,7 @@ export interface WhatsAppTemplate {
     subject: string;
     body: string; // Plain text content
     variables: string[];
+    isActive?: boolean; // Enable/disable template
     createdAt?: any;
     updatedAt?: any;
 }

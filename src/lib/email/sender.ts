@@ -83,7 +83,15 @@ const getEmailTemplate = async (slug: string) => {
 
             const snapshot = await admin.firestore().collection('email_templates').where('slug', '==', slug).get();
             if (!snapshot.empty) {
-                return snapshot.docs[0].data() as EmailTemplate;
+                const template = snapshot.docs[0].data() as EmailTemplate;
+
+                // Check if template is active (default true if not set)
+                if (template.isActive === false) {
+                    console.log(`Email template '${slug}' is disabled. Skipping send.`);
+                    throw new Error(`Email template '${slug}' is currently disabled.`);
+                }
+
+                return template;
             } else {
                 throw new Error(`Email template '${slug}' not found in database.`);
             }

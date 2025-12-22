@@ -880,6 +880,26 @@ export default function AccountDetailsPage() {
             await setDoc(docRef, dataToSet, { merge: true });
             setDailyAttendance(dataToSet as AttendanceDocument);
             fetchAttendanceForRange();
+
+            // Send notifications (non-blocking)
+            fetch('/api/notify/attendance', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'in_time',
+                employeeId: employeeData.id,
+                employeeName: employeeData.fullName,
+                employeeCode: employeeData.employeeCode,
+                employeeEmail: employeeData.email,
+                employeePhone: employeeData.phone,
+                time: currentTime,
+                date: format(now, 'PPP'),
+                flag: flag,
+                location: locationData,
+                remarks: remarks
+              })
+            }).catch(err => console.error('Notification error:', err));
+
             Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
           } else {
             const currentDoc = await getDoc(docRef);
@@ -897,6 +917,25 @@ export default function AccountDetailsPage() {
             await updateDoc(docRef, dataToSet);
             setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
             fetchAttendanceForRange();
+
+            // Send notifications (non-blocking)
+            fetch('/api/notify/attendance', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'out_time',
+                employeeId: employeeData.id,
+                employeeName: employeeData.fullName,
+                employeeCode: employeeData.employeeCode,
+                employeeEmail: employeeData.email,
+                employeePhone: employeeData.phone,
+                time: currentTime,
+                date: format(now, 'PPP'),
+                location: locationData,
+                remarks: remarks
+              })
+            }).catch(err => console.error('Notification error:', err));
+
             Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
           }
         } catch (error: any) {
@@ -1600,19 +1639,30 @@ export default function AccountDetailsPage() {
                       checkInOutRemarks
                     );
 
-                    Swal.fire({
-                      title: 'Success!',
-                      text: `${checkInOutType} recorded successfully`,
-                      icon: 'success',
-                      timer: 2000,
-                      showConfirmButton: false,
-                    });
+                    // Send notifications (non-blocking)
+                    const now = new Date();
+                    fetch('/api/notify/attendance', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        type: checkInOutType === 'Check In' ? 'check_in' : 'check_out',
+                        employeeId: employeeData.id,
+                        employeeName: employeeData.fullName,
+                        employeeCode: employeeData.employeeCode,
+                        employeeEmail: employeeData.email,
+                        employeePhone: employeeData.phone,
+                        time: format(now, 'hh:mm a'),
+                        date: format(now, 'PPP'),
+                        location: currentLocation,
+                        companyName: companyName,
+                        remarks: checkInOutRemarks
+                      })
+                    }).catch(err => console.error('Notification error:', err));
 
-                    // Reset form (preserve company name for next check-out if this was a check-in)
-                    const wasCheckIn = checkInOutType === 'Check In';
-                    if (!wasCheckIn) {
-                      setCompanyName('');
-                    }
+                    Swal.fire('Success', `${checkInOutType} recorded successfully!`, 'success');
+
+                    // Reset form
+                    setCompanyName('');
                     setCheckInOutRemarks('');
                     setCapturedImage(null);
                     setImagePreview('');

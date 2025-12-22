@@ -21,6 +21,7 @@ export interface EmailTemplate {
     subject: string;
     body: string; // HTML content
     variables: string[];
+    isActive?: boolean; // Enable/disable template
     createdAt?: any;
     updatedAt?: any;
 }

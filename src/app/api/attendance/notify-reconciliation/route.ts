@@ -67,19 +67,22 @@ export async function POST(request: Request) {
 
         // 4. Prepare Data for Template
         const templateData = {
-            name: recData?.employeeName || 'Unknown Employee',
+            employee_name: recData?.employeeName || 'Unknown Employee',
+            employee_code: recData?.employeeCode || 'N/A',
             designation: recData?.designation || 'N/A',
             department: department,
-            date: recData?.attendanceDate || 'N/A', // Attendance Reconciliation Date
+            attendance_date: recData?.attendanceDate || 'N/A', // Attendance Reconciliation Date
             apply_date: recData?.applyDate || new Date().toLocaleDateString(), // Apply Date
 
-            // In Time
+            // Original In Time
             in_time: recData?.originalInTime || 'N/A',
+            // Requested In Time
             reconciliation_in_time: recData?.requestedInTime || 'N/A',
             in_time_remarks: recData?.inTimeRemarks || 'N/A',
 
-            // Out Time
+            // Original Out Time
             out_time: recData?.originalOutTime || 'N/A',
+            // Requested Out Time
             reconciliation_out_time: recData?.requestedOutTime || 'N/A',
             out_time_remarks: recData?.outTimeRemarks || 'N/A',
 
@@ -91,7 +94,7 @@ export async function POST(request: Request) {
         if (uniqueEmails.length > 0) {
             await sendEmail({
                 to: uniqueEmails,
-                templateSlug: 'admin:_incoming_attendance_reconciliation_application',
+                templateSlug: 'admin_incoming_attendance_reconciliation_application',
                 data: templateData
             });
         }
@@ -102,7 +105,7 @@ export async function POST(request: Request) {
             for (const phone of uniquePhones) {
                 await sendWhatsApp({
                     to: phone,
-                    templateSlug: 'admin:_incoming_attendance_reconciliation_application',
+                    templateSlug: 'admin_incoming_attendance_reconciliation_application',
                     data: templateData
                 });
             }
