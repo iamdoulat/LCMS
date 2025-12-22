@@ -54,6 +54,7 @@
     "date-fns": "^3.6.0",
     "dompurify": "^3.3.1",
     "dotenv": "^16.5.0",
+    "emoji-picker-react": "^4.16.1",
     "eslint-config-next": "14.2.33",
     "firebase": "^11.7.0",
     "firebase-admin": "^12.3.0",

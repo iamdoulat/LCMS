@@ -88,6 +88,8 @@ import {
   MapPin,
   UserCheck,
   Mail,
+  MessageSquare,
+  Smartphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -193,6 +195,7 @@ const hrNavItems: NavItem[] = [
   { href: "/dashboard/hr/holidays", label: "Holidays", icon: CalendarPlus, iconColorClass: 'bg-icon-upcoming' },
   { href: "/dashboard/hr/attendance/reports", label: "Attendance Reports", icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: "/dashboard/hr/notice", label: "Manage Notice Board", icon: Bell, iconColorClass: 'bg-icon-notifications' },
+  { href: "/dashboard/hr/send-whatsapp", label: "Send WhatsApp", icon: Smartphone, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/send-email", label: "Send Email", icon: Mail, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/hr/settings', label: 'HRM Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
@@ -205,6 +208,7 @@ const settingsNavItems: NavItem[] = [
   { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Invoice Header Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
   { href: '/dashboard/settings/smtp-settings', label: 'SMTP Setting', icon: Settings, iconColorClass: 'bg-icon-settings' },
   { href: '/dashboard/settings/email-templates', label: 'Email Template', icon: FileText, iconColorClass: 'bg-icon-reports' },
+  { href: '/dashboard/settings/whatsapp', label: 'WhatsApp Settings', icon: MessageSquare, iconColorClass: 'bg-icon-settings' },
 ];
 
 // Define Group Structure
