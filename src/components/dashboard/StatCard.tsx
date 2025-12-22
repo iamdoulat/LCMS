@@ -21,7 +21,7 @@ export function StatCard({ title, value, icon, description, footer, className, v
         className // Pass solid background color classes here
       )}
     >
-      <CardContent className="relative z-10 p-6 flex justify-between items-center">
+      <CardContent className="relative z-10 p-6 flex justify-between items-center overflow-hidden">
         <div className="flex flex-col space-y-1">
           <p className="text-sm font-medium text-primary-foreground/90">{title}</p>
           <div className={cn("text-4xl font-bold", valueClassName)}>{value}</div>
@@ -30,7 +30,7 @@ export function StatCard({ title, value, icon, description, footer, className, v
         {icon && (
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/20">
             <div className="h-6 w-6 text-primary-foreground">
-                {icon}
+              {icon}
             </div>
           </div>
         )}

@@ -1149,7 +1149,7 @@ export default function AccountDetailsPage() {
   }
 
   return (
-    <div className="mx-[10px] mt-[10px] p-0 md:mx-0 md:mt-0 md:py-8 md:px-5 space-y-8">
+    <div className="mx-[10px] mt-[10px] p-0 md:mx-0 md:mt-0 md:py-8 md:px-5 space-y-8 max-w-[calc(100vw-20px)] md:max-w-full overflow-x-hidden">
       <Form {...form}>
         <Card className="shadow-xl">
           <CardHeader>
@@ -1196,8 +1196,8 @@ export default function AccountDetailsPage() {
 
             <form onSubmit={form.handleSubmit(onSubmitProfile)} className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-x-8 gap-y-6 items-center">
-                <div className="lg:col-span-1 flex items-center gap-4">
-                  <Avatar className="h-24 w-24 border-2 border-primary shadow-md">
+                <div className="lg:col-span-1 flex flex-col sm:flex-row items-center gap-4">
+                  <Avatar className="h-24 w-24 border-2 border-primary shadow-md flex-shrink-0">
                     <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User Avatar"} />
                     <AvatarFallback className="text-3xl">
                       {getInitials(user.displayName || user.email || "U")}
@@ -1328,7 +1328,7 @@ export default function AccountDetailsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <StatCard title="Total Present" value={monthlyStats.present} icon={<UserCheck />} description="Days present this month" className="bg-green-500" />
               <StatCard title="Total Absent" value={monthlyStats.absent} icon={<UserX />} description="Days absent this month" className="bg-red-500" />
               <StatCard title="Total Delayed" value={monthlyStats.delayed} icon={<Clock />} description="Late arrivals this month" className="bg-yellow-500" />
@@ -1459,7 +1459,7 @@ export default function AccountDetailsPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 p-3 border rounded-md bg-green-50 dark:bg-green-950">
                       <MapPin className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      <span className="text-sm text-green-700 dark:text-green-300 flex-1">
+                      <span className="text-sm text-green-700 dark:text-green-300 flex-1 break-words">
                         {currentLocation.address || `${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}`}
                       </span>
                       <Button
@@ -1652,7 +1652,7 @@ export default function AccountDetailsPage() {
                 ) : displayedAttendance.length === 0 ? (
                   <p className="text-muted-foreground text-center">No attendance data found for the selected day.</p>
                 ) : (
-                  <div className="rounded-md border">
+                  <div className="overflow-x-auto w-full max-w-full">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -1829,12 +1829,14 @@ export default function AccountDetailsPage() {
             <Button asChild><Link href="/dashboard/hr/payroll/advance-salary/add"><PlusCircle className="mr-2 h-4 w-4" />Apply</Link></Button>
           </CardHeader>
           <CardContent>
-            <Table><TableHeader><TableRow><TableHead>Apply Date</TableHead><TableHead>Amount</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {userAdvanceSalary.length > 0 ? userAdvanceSalary.slice(0, 3).map(req => (
-                  <TableRow key={req.id}><TableCell>{formatDisplayDate(req.applyDate)}</TableCell><TableCell>{formatCurrency(req.advanceAmount)}</TableCell><TableCell>{req.reason}</TableCell><TableCell><Badge variant={req.status === 'Approved' ? 'default' : 'secondary'}>{req.status}</Badge></TableCell></TableRow>
-                )) : <TableRow><TableCell colSpan={4} className="text-center">No advance salary requests found.</TableCell></TableRow>}
-              </TableBody></Table>
+            <div className="overflow-x-auto w-full">
+              <Table><TableHeader><TableRow><TableHead>Apply Date</TableHead><TableHead>Amount</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {userAdvanceSalary.length > 0 ? userAdvanceSalary.slice(0, 3).map(req => (
+                    <TableRow key={req.id}><TableCell>{formatDisplayDate(req.applyDate)}</TableCell><TableCell>{formatCurrency(req.advanceAmount)}</TableCell><TableCell>{req.reason}</TableCell><TableCell><Badge variant={req.status === 'Approved' ? 'default' : 'secondary'}>{req.status}</Badge></TableCell></TableRow>
+                  )) : <TableRow><TableCell colSpan={4} className="text-center">No advance salary requests found.</TableCell></TableRow>}
+                </TableBody></Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -1847,19 +1849,21 @@ export default function AccountDetailsPage() {
             <Button asChild><Link href="/dashboard/hr/leaves/add"><PlusCircle className="mr-2 h-4 w-4" />Apply</Link></Button>
           </CardHeader>
           <CardContent>
-            <Table><TableHeader><TableRow><TableHead>Type</TableHead><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Days</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {leaves.length > 0 ? leaves.slice(0, 3).map(leave => (
-                  <TableRow key={leave.id}>
-                    <TableCell>{leave.leaveType}</TableCell>
-                    <TableCell>{formatDisplayDate(leave.fromDate)}</TableCell>
-                    <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
-                    <TableCell>{differenceInCalendarDays(parseISO(leave.toDate), parseISO(leave.fromDate)) + 1}</TableCell>
-                    <TableCell>{leave.reason}</TableCell>
-                    <TableCell><Badge variant={leave.status === 'Approved' ? 'default' : 'secondary'}>{leave.status}</Badge></TableCell>
-                  </TableRow>
-                )) : <TableRow><TableCell colSpan={6} className="text-center">No leave applications found.</TableCell></TableRow>}
-              </TableBody></Table>
+            <div className="overflow-x-auto w-full">
+              <Table><TableHeader><TableRow><TableHead>Type</TableHead><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Days</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {leaves.length > 0 ? leaves.slice(0, 3).map(leave => (
+                    <TableRow key={leave.id}>
+                      <TableCell>{leave.leaveType}</TableCell>
+                      <TableCell>{formatDisplayDate(leave.fromDate)}</TableCell>
+                      <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
+                      <TableCell>{differenceInCalendarDays(parseISO(leave.toDate), parseISO(leave.fromDate)) + 1}</TableCell>
+                      <TableCell>{leave.reason}</TableCell>
+                      <TableCell><Badge variant={leave.status === 'Approved' ? 'default' : 'secondary'}>{leave.status}</Badge></TableCell>
+                    </TableRow>
+                  )) : <TableRow><TableCell colSpan={6} className="text-center">No leave applications found.</TableCell></TableRow>}
+                </TableBody></Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -1872,18 +1876,20 @@ export default function AccountDetailsPage() {
             <Button asChild><Link href="/dashboard/hr/visit-applications/add"><PlusCircle className="mr-2 h-4 w-4" />Apply</Link></Button>
           </CardHeader>
           <CardContent>
-            <Table><TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Days</TableHead><TableHead>Remarks</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {visits.length > 0 ? visits.slice(0, 3).map(visit => (
-                  <TableRow key={visit.id}>
-                    <TableCell>{formatDisplayDate(visit.fromDate)}</TableCell>
-                    <TableCell>{formatDisplayDate(visit.toDate)}</TableCell>
-                    <TableCell>{visit.day}</TableCell>
-                    <TableCell>{visit.remarks}</TableCell>
-                    <TableCell><Badge variant={visit.status === 'Approved' ? 'default' : 'secondary'}>{visit.status}</Badge></TableCell>
-                  </TableRow>
-                )) : <TableRow><TableCell colSpan={5} className="text-center">No visit applications found.</TableCell></TableRow>}
-              </TableBody></Table>
+            <div className="overflow-x-auto w-full">
+              <Table><TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Days</TableHead><TableHead>Remarks</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {visits.length > 0 ? visits.slice(0, 3).map(visit => (
+                    <TableRow key={visit.id}>
+                      <TableCell>{formatDisplayDate(visit.fromDate)}</TableCell>
+                      <TableCell>{formatDisplayDate(visit.toDate)}</TableCell>
+                      <TableCell>{visit.day}</TableCell>
+                      <TableCell>{visit.remarks}</TableCell>
+                      <TableCell><Badge variant={visit.status === 'Approved' ? 'default' : 'secondary'}>{visit.status}</Badge></TableCell>
+                    </TableRow>
+                  )) : <TableRow><TableCell colSpan={5} className="text-center">No visit applications found.</TableCell></TableRow>}
+                </TableBody></Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -1905,7 +1911,7 @@ export default function AccountDetailsPage() {
             ) : payslips.length === 0 ? (
               <p className="text-muted-foreground text-center">No payslip data found for this account.</p>
             ) : (
-              <div className="rounded-md border">
+              <div className="overflow-x-auto w-full">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1935,7 +1941,7 @@ export default function AccountDetailsPage() {
 
 
 
-        <div className="mt-8">
+        <div className="mt-8 w-full">
           <LeaveCalendar birthdays={birthdaysToday} />
         </div>
 
@@ -1950,31 +1956,31 @@ export default function AccountDetailsPage() {
                 <TabsList className="flex flex-wrap gap-2 mb-6 p-1 h-auto bg-transparent">
                   <TabsTrigger
                     value="personal"
-                    className="flex-1 min-w-[150px] rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:border-gray-200 hover:data-[state=inactive]:bg-gray-200 hover:data-[state=inactive]:border-gray-300 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700"
+                    className="flex-1 min-w-[120px] sm:min-w-[150px] rounded-xl px-4 py-3 text-xs font-bold transition-all duration-300 border-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:border-gray-200 hover:data-[state=inactive]:bg-gray-200 hover:data-[state=inactive]:border-gray-300 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700"
                   >
                     Personal Information
                   </TabsTrigger>
                   <TabsTrigger
                     value="professional"
-                    className="flex-1 min-w-[150px] rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:border-gray-200 hover:data-[state=inactive]:bg-gray-200 hover:data-[state=inactive]:border-gray-300 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700"
+                    className="flex-1 min-w-[120px] sm:min-w-[150px] rounded-xl px-4 py-3 text-xs font-bold transition-all duration-300 border-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:border-gray-200 hover:data-[state=inactive]:bg-gray-200 hover:data-[state=inactive]:border-gray-300 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700"
                   >
                     Professional Details
                   </TabsTrigger>
                   <TabsTrigger
                     value="education"
-                    className="flex-1 min-w-[150px] rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:border-gray-200 hover:data-[state=inactive]:bg-gray-200 hover:data-[state=inactive]:border-gray-300 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700"
+                    className="flex-1 min-w-[120px] sm:min-w-[150px] rounded-xl px-4 py-3 text-xs font-bold transition-all duration-300 border-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:border-gray-200 hover:data-[state=inactive]:bg-gray-200 hover:data-[state=inactive]:border-gray-300 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700"
                   >
                     Education Information
                   </TabsTrigger>
                   <TabsTrigger
                     value="bank"
-                    className="flex-1 min-w-[150px] rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:border-gray-200 hover:data-[state=inactive]:bg-gray-200 hover:data-[state=inactive]:border-gray-300 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700"
+                    className="flex-1 min-w-[120px] sm:min-w-[150px] rounded-xl px-4 py-3 text-xs font-bold transition-all duration-300 border-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:border-gray-200 hover:data-[state=inactive]:bg-gray-200 hover:data-[state=inactive]:border-gray-300 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700"
                   >
                     Bank Account Information
                   </TabsTrigger>
                   <TabsTrigger
                     value="salary"
-                    className="flex-1 min-w-[150px] rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-300 border-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:border-gray-200 hover:data-[state=inactive]:bg-gray-200 hover:data-[state=inactive]:border-gray-300 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700"
+                    className="flex-1 min-w-[120px] sm:min-w-[150px] rounded-xl px-4 py-3 text-xs font-bold transition-all duration-300 border-2 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-500 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-500/50 data-[state=inactive]:bg-gray-100 data-[state=inactive]:text-gray-600 data-[state=inactive]:border-gray-200 hover:data-[state=inactive]:bg-gray-200 hover:data-[state=inactive]:border-gray-300 dark:data-[state=inactive]:bg-gray-800 dark:data-[state=inactive]:text-gray-400 dark:data-[state=inactive]:border-gray-700"
                   >
                     Salary Information
                   </TabsTrigger>
@@ -2007,53 +2013,57 @@ export default function AccountDetailsPage() {
                 </TabsContent>
 
                 <TabsContent value="education" className="space-y-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Education</TableHead>
-                        <TableHead>Institute</TableHead>
-                        <TableHead>Year</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {employeeData.educationDetails && employeeData.educationDetails.length > 0 ? employeeData.educationDetails.map((edu, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>{edu.education}</TableCell>
-                          <TableCell>{edu.instituteName}</TableCell>
-                          <TableCell>{edu.passedYear}</TableCell>
+                  <div className="overflow-x-auto w-full">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Education</TableHead>
+                          <TableHead>Institute</TableHead>
+                          <TableHead>Year</TableHead>
                         </TableRow>
-                      )) : (
-                        <TableRow><TableCell colSpan={3} className="text-center">No education details found.</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {employeeData.educationDetails && employeeData.educationDetails.length > 0 ? employeeData.educationDetails.map((edu, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{edu.education}</TableCell>
+                            <TableCell>{edu.instituteName}</TableCell>
+                            <TableCell>{edu.passedYear}</TableCell>
+                          </TableRow>
+                        )) : (
+                          <TableRow><TableCell colSpan={3} className="text-center">No education details found.</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="bank" className="space-y-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Account Name</TableHead>
-                        <TableHead>Bank</TableHead>
-                        <TableHead>Account No.</TableHead>
-                        <TableHead>Routing No</TableHead>
-                        <TableHead>Branch Name</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {employeeData.bankDetails && employeeData.bankDetails.length > 0 ? employeeData.bankDetails.map((bank, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>{bank.accountName}</TableCell>
-                          <TableCell>{bank.bankName}</TableCell>
-                          <TableCell>{bank.accountNo}</TableCell>
-                          <TableCell>{bank.accountRoutingNo || 'N/A'}</TableCell>
-                          <TableCell>{bank.branchName || 'N/A'}</TableCell>
+                  <div className="overflow-x-auto w-full">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Account Name</TableHead>
+                          <TableHead>Bank</TableHead>
+                          <TableHead>Account No.</TableHead>
+                          <TableHead>Routing No</TableHead>
+                          <TableHead>Branch Name</TableHead>
                         </TableRow>
-                      )) : (
-                        <TableRow><TableCell colSpan={5} className="text-center">No bank details found.</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {employeeData.bankDetails && employeeData.bankDetails.length > 0 ? employeeData.bankDetails.map((bank, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{bank.accountName}</TableCell>
+                            <TableCell>{bank.bankName}</TableCell>
+                            <TableCell>{bank.accountNo}</TableCell>
+                            <TableCell>{bank.accountRoutingNo || 'N/A'}</TableCell>
+                            <TableCell>{bank.branchName || 'N/A'}</TableCell>
+                          </TableRow>
+                        )) : (
+                          <TableRow><TableCell colSpan={5} className="text-center">No bank details found.</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="salary" className="space-y-4">

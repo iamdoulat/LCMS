@@ -139,53 +139,55 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-7 gap-px bg-border rounded-lg border overflow-hidden">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-            <div key={day} className="text-center font-medium text-xs sm:text-sm py-2 bg-muted/50 text-muted-foreground">{day}</div>
-          ))}
-          {monthData.map(dayInfo => (
-            <div key={dayInfo.date.toString()} className="relative bg-card p-1.5 min-h-[100px] h-auto flex flex-col">
-              <time dateTime={format(dayInfo.date, 'yyyy-MM-dd')} className="text-xs font-semibold">{format(dayInfo.date, 'd')}</time>
-              <div className="flex-grow mt-1 space-y-1">
-                {dayInfo.birthdays.map(emp => (
-                  <TooltipProvider key={emp.id}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1.5 cursor-pointer bg-pink-100 dark:bg-pink-900/50 p-1 rounded">
-                          <Cake className="h-4 w-4 text-pink-500 flex-shrink-0" />
-                          <span className="hidden sm:inline text-xs truncate font-medium text-pink-700 dark:text-pink-300">{emp.fullName}</span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="font-semibold">{emp.fullName}'s Birthday!</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ))}
-                {dayInfo.leaves.map(leave => (
-                  <TooltipProvider key={leave.id}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1.5 cursor-pointer">
-                          <Avatar className="h-8 w-8 flex-shrink-0">
-                            <AvatarImage src={leave.employee?.photoURL} alt={leave.employee?.fullName} />
-                            <AvatarFallback className="text-xs font-semibold">{getInitials(leave.employee?.fullName)}</AvatarFallback>
-                          </Avatar>
-                          <span className="hidden sm:inline text-xs truncate text-muted-foreground">{leave.employee?.fullName}</span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="font-semibold">{leave.employee?.fullName}</p>
-                        <p>Type: {leave.leaveType}</p>
-                        <p>Reason: {leave.reason}</p>
-                        <p>Status: <span className={leave.status === 'Approved' ? 'text-green-500' : 'text-yellow-500'}>{leave.status}</span></p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ))}
+        <div className="overflow-x-auto w-full max-w-full">
+          <div className="grid grid-cols-7 gap-px bg-border rounded-lg border overflow-hidden min-w-[600px] sm:min-w-0">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+              <div key={day} className="text-center font-medium text-xs sm:text-sm py-2 bg-muted/50 text-muted-foreground">{day}</div>
+            ))}
+            {monthData.map(dayInfo => (
+              <div key={dayInfo.date.toString()} className="relative bg-card p-1.5 min-h-[100px] h-auto flex flex-col">
+                <time dateTime={format(dayInfo.date, 'yyyy-MM-dd')} className="text-xs font-semibold">{format(dayInfo.date, 'd')}</time>
+                <div className="flex-grow mt-1 space-y-1">
+                  {dayInfo.birthdays.map(emp => (
+                    <TooltipProvider key={emp.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1.5 cursor-pointer bg-pink-100 dark:bg-pink-900/50 p-1 rounded">
+                            <Cake className="h-4 w-4 text-pink-500 flex-shrink-0" />
+                            <span className="hidden sm:inline text-xs truncate font-medium text-pink-700 dark:text-pink-300">{emp.fullName}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="font-semibold">{emp.fullName}'s Birthday!</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ))}
+                  {dayInfo.leaves.map(leave => (
+                    <TooltipProvider key={leave.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1.5 cursor-pointer">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage src={leave.employee?.photoURL} alt={leave.employee?.fullName} />
+                              <AvatarFallback className="text-xs font-semibold">{getInitials(leave.employee?.fullName)}</AvatarFallback>
+                            </Avatar>
+                            <span className="hidden sm:inline text-xs truncate text-muted-foreground">{leave.employee?.fullName}</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="font-semibold">{leave.employee?.fullName}</p>
+                          <p>Type: {leave.leaveType}</p>
+                          <p>Reason: {leave.reason}</p>
+                          <p>Status: <span className={leave.status === 'Approved' ? 'text-green-500' : 'text-yellow-500'}>{leave.status}</span></p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
         <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-4">
           <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-green-500 mr-2"></span>Approved</div>
