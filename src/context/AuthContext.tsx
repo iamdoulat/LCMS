@@ -172,7 +172,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         title: "Login Successful",
         text: "Welcome back!",
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
     } catch (error: any) {
@@ -200,7 +200,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       Swal.fire({
         title: "Logged Out",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       router.push('/login');
@@ -305,7 +305,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         title: "Sign-in Successful",
         text: `Welcome!`,
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
       router.push('/dashboard');

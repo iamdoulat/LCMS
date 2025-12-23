@@ -48,7 +48,7 @@ export function EditDivisionForm({ initialData, onFormSubmit }: EditDivisionForm
       Swal.fire({
         title: "Division Updated!",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       onFormSubmit();

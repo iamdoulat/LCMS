@@ -137,7 +137,7 @@ export function AddQuoteItemForm() {
         title: "Quote Item Added!",
         text: `Quote Item "${data.modelNumber}" saved successfully with ID: ${docRef.id}.`,
         icon: "success",
-        timer: 2500,
+        timer: 1000,
         showConfirmButton: true,
       });
       form.reset({

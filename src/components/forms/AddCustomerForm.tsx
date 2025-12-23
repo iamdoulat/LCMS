@@ -78,7 +78,7 @@ export function AddCustomerForm() {
         title: "Applicant Profile Saved!",
         text: `Applicant data saved successfully to Firestore with ID: ${docRef.id}`,
         icon: "success",
-        timer: 3000,
+        timer: 1000,
         showConfirmButton: true,
       });
       form.reset();

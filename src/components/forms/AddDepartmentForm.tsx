@@ -44,7 +44,7 @@ export function AddDepartmentForm({ onFormSubmit }: AddDepartmentFormProps) {
       Swal.fire({
         title: "Department Created!",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       form.reset();

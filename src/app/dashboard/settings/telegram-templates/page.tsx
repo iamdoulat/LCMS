@@ -63,7 +63,7 @@ export default function TelegramTemplatesPage() {
                 title: 'Success',
                 text: `Template "${name}" has been ${statusText}`,
                 icon: 'success',
-                timer: 2000,
+                timer: 1000,
                 showConfirmButton: false
             });
         } catch (error) {

@@ -357,7 +357,7 @@ export function CreateInventoryOrderForm() {
         title: "Purchase Order Saved!",
         text: `Purchase Order successfully saved with ID: ${newId}. Navigating to preview...`,
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       }).then(() => {
         router.push(`/dashboard/inventory/inventory-orders/preview/${newId}`);

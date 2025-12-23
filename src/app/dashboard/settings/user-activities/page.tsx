@@ -56,7 +56,7 @@ export default function ActivityLogsPage() {
         title: 'Access Denied',
         text: 'You do not have permission to view system logs.',
         icon: 'error',
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       }).then(() => router.push('/dashboard'));
     } else if (!authLoading && isSuperAdminOrAdmin) {
@@ -103,7 +103,7 @@ export default function ActivityLogsPage() {
         title: 'Deleted!',
         text: 'All logs have been deleted successfully.',
         icon: 'success',
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false
       });
 

@@ -48,7 +48,7 @@ export function EditDepartmentForm({ initialData, onFormSubmit }: EditDepartment
       Swal.fire({
         title: "Department Updated!",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       onFormSubmit();

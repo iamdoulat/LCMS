@@ -62,7 +62,7 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
       Swal.fire({
         title: "Holiday Updated!",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       onFormSubmit(); // Callback to navigate after success

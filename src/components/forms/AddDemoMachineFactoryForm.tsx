@@ -77,7 +77,7 @@ export function AddDemoMachineFactoryForm() {
         title: "Factory Profile Saved!",
         text: `Demo Machine Factory data saved successfully with ID: ${docRef.id}`,
         icon: "success",
-        timer: 3000,
+        timer: 1000,
         showConfirmButton: true,
       });
       form.reset();

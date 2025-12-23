@@ -44,7 +44,7 @@ export function EditDesignationForm({ initialData, onFormSubmit }: EditDesignati
       Swal.fire({
         title: "Designation Updated!",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       onFormSubmit(); // Close the dialog

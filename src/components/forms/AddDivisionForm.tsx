@@ -44,7 +44,7 @@ export function AddDivisionForm({ onFormSubmit }: AddDivisionFormProps) {
       Swal.fire({
         title: "Division Created!",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       form.reset();

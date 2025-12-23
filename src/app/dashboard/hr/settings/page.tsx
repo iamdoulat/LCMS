@@ -42,6 +42,11 @@ import { AddUnitForm } from '@/components/forms/AddUnitForm';
 import { EditUnitForm } from '@/components/forms/EditUnitForm';
 import { AddDivisionForm } from '@/components/forms/AddDivisionForm';
 import { EditDivisionForm } from '@/components/forms/EditDivisionForm';
+import { AddLeaveTypeForm } from '@/components/forms/AddLeaveTypeForm';
+import { EditLeaveTypeForm } from '@/components/forms/EditLeaveTypeForm';
+import { AddLeaveGroupForm } from '@/components/forms/AddLeaveGroupForm';
+import { EditLeaveGroupForm } from '@/components/forms/EditLeaveGroupForm';
+import type { LeaveTypeDefinition, LeaveGroupDocument } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -94,6 +99,18 @@ export default function HrmSettingsPage() {
     const [editingDesignation, setEditingDesignation] = React.useState<DesignationDocument | null>(null);
     const [isEditDesignationDialogOpen, setIsEditDesignationDialogOpen] = React.useState(false);
 
+    // Leave Types State
+    const { data: leaveTypes, isLoading: isLoadingLeaveTypes } = useFirestoreQuery<LeaveTypeDefinition[]>(query(collection(firestore, 'hrm_settings', 'leave_types', 'items'), orderBy("name", "asc")), undefined, ['leave_types']);
+    const [isAddLeaveTypeDialogOpen, setIsAddLeaveTypeDialogOpen] = React.useState(false);
+    const [editingLeaveType, setEditingLeaveType] = React.useState<LeaveTypeDefinition | null>(null);
+    const [isEditLeaveTypeDialogOpen, setIsEditLeaveTypeDialogOpen] = React.useState(false);
+
+    // Leave Groups State
+    const { data: leaveGroups, isLoading: isLoadingLeaveGroups } = useFirestoreQuery<LeaveGroupDocument[]>(query(collection(firestore, 'hrm_settings', 'leave_groups', 'items'), orderBy("groupName", "asc")), undefined, ['leave_groups']);
+    const [isAddLeaveGroupDialogOpen, setIsAddLeaveGroupDialogOpen] = React.useState(false);
+    const [editingLeaveGroup, setEditingLeaveGroup] = React.useState<LeaveGroupDocument | null>(null);
+    const [isEditLeaveGroupDialogOpen, setIsEditLeaveGroupDialogOpen] = React.useState(false);
+
     // Attendance Reconciliation Configuration State
     const [reconConfig, setReconConfig] = React.useState<AttendanceReconciliationConfiguration>({
         limitType: 'days',
@@ -140,7 +157,13 @@ export default function HrmSettingsPage() {
                 updatedAt: serverTimestamp(),
             };
             await setDoc(doc(firestore, 'hrm_settings', 'multi_check_in_out'), dataToSave, { merge: true });
-            Swal.fire('Saved', 'Multiple Check In/Out Configuration updated.', 'success');
+            Swal.fire({
+                title: 'Saved',
+                text: 'Multiple Check In/Out Configuration updated.',
+                icon: 'success',
+                timer: 1000,
+                showConfirmButton: false
+            });
         } catch (error: any) {
             Swal.fire('Error', `Failed to save: ${error.message}`, 'error');
         } finally {
@@ -157,7 +180,13 @@ export default function HrmSettingsPage() {
                 updatedAt: serverTimestamp(),
             };
             await setDoc(doc(firestore, 'hrm_settings', 'attendance_reconciliation'), dataToSave, { merge: true });
-            Swal.fire('Saved', 'Attendance Reconciliation Configuration updated.', 'success');
+            Swal.fire({
+                title: 'Saved',
+                text: 'Attendance Reconciliation Configuration updated.',
+                icon: 'success',
+                timer: 1000,
+                showConfirmButton: false
+            });
         } catch (error: any) {
             Swal.fire('Error', `Failed to save: ${error.message}`, 'error');
         } finally {
@@ -184,12 +213,30 @@ export default function HrmSettingsPage() {
             if (result.isConfirmed) {
                 try {
                     await deleteDoc(doc(firestore, collectionName, docId));
-                    Swal.fire('Deleted!', `'${docName}' has been removed.`, 'success');
+                    Swal.fire({
+                        title: 'Deleted!',
+                        text: `'${docName}' has been removed.`,
+                        icon: 'success',
+                        timer: 1000,
+                        showConfirmButton: false
+                    });
                 } catch (error: any) {
                     Swal.fire('Error!', `Could not delete item: ${error.message}`, 'error');
                 }
             }
         });
+    };
+
+    const handleDeleteDesignation = async (id: string) => {
+        handleDelete('designations', id, 'Designation');
+    };
+
+    const handleDeleteLeaveType = async (id: string) => {
+        handleDelete('hrm_settings/leave_types/items', id, 'Leave Type');
+    };
+
+    const handleDeleteLeaveGroup = async (id: string) => {
+        handleDelete('hrm_settings/leave_groups/items', id, 'Leave Group');
     };
 
     const renderTableSection = (
@@ -299,16 +346,143 @@ export default function HrmSettingsPage() {
                         </DialogContent>
                     </Dialog>
 
-                    <Dialog open={isAddDesignationDialogOpen} onOpenChange={setIsAddDesignationDialogOpen}>
-                        {renderTableSection("Designations", "Manage employee job designations.", designations, isLoadingDesignations, () => setIsAddDesignationDialogOpen(true), (item) => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen), "designations")}
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Add New Designation</DialogTitle>
-                                <DialogDescription>Create a new job designation.</DialogDescription>
-                            </DialogHeader>
-                            <AddDesignationForm onFormSubmit={() => setIsAddDesignationDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
+                    {/* Designations Section */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Designations</CardTitle>
+                                <CardDescription>Manage employee job designations.</CardDescription>
+                            </div>
+                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddDesignationDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingDesignations ? <DataTableSkeleton /> :
+                                !designations || designations.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+                                    (
+                                        <div className="rounded-md border">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {designations.map(item => (
+                                                        <TableRow key={item.id}>
+                                                            <TableCell>{item.name}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem onClick={() => handleDeleteDesignation(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Leave Types Section */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Leave Types</CardTitle>
+                                <CardDescription>Manage types of leaves available</CardDescription>
+                            </div>
+                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddLeaveTypeDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingLeaveTypes ? <DataTableSkeleton /> :
+                                !leaveTypes || leaveTypes.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+                                    (
+                                        <div className="rounded-md border">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Name</TableHead>
+                                                        <TableHead>Code</TableHead>
+                                                        <TableHead>Active</TableHead>
+                                                        <TableHead className="text-right w-[50px]">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {leaveTypes.map(item => (
+                                                        <TableRow key={item.id}>
+                                                            <TableCell>{item.name}</TableCell>
+                                                            <TableCell>{item.code}</TableCell>
+                                                            <TableCell>{item.isActive ? 'Yes' : 'No'}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingLeaveType, setIsEditLeaveTypeDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem onClick={() => handleDeleteLeaveType(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Leave Groups Section */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Leave Groups</CardTitle>
+                                <CardDescription>Manage leave policies via groups</CardDescription>
+                            </div>
+                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddLeaveGroupDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingLeaveGroups ? <DataTableSkeleton /> :
+                                !leaveGroups || leaveGroups.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+                                    (
+                                        <div className="rounded-md border">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Group Name</TableHead>
+                                                        <TableHead>Policies Count</TableHead>
+                                                        <TableHead>Active</TableHead>
+                                                        <TableHead className="text-right w-[50px]">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {leaveGroups.map(item => (
+                                                        <TableRow key={item.id}>
+                                                            <TableCell>{item.groupName}</TableCell>
+                                                            <TableCell>{item.policies?.length || 0}</TableCell>
+                                                            <TableCell>{item.isActive ? 'Yes' : 'No'}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingLeaveGroup, setIsEditLeaveGroupDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem onClick={() => handleDeleteLeaveGroup(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                        </CardContent>
+                    </Card>
 
                     {/* Attendance Reconciliation Configuration Section */}
                     <Card className="md:col-span-2 shadow-lg border-2 border-primary/10">
@@ -568,20 +742,74 @@ export default function HrmSettingsPage() {
                 </Dialog>
             )}
 
+            {/* Designations Dialogs */}
+            <Dialog open={isAddDesignationDialogOpen} onOpenChange={setIsAddDesignationDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Add New Designation</DialogTitle>
+                        <DialogDescription>Create a new job designation.</DialogDescription>
+                    </DialogHeader>
+                    <AddDesignationForm onFormSubmit={() => setIsAddDesignationDialogOpen(false)} />
+                </DialogContent>
+            </Dialog>
+
             {editingDesignation && (
                 <Dialog open={isEditDesignationDialogOpen} onOpenChange={setIsEditDesignationDialogOpen}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Edit Designation</DialogTitle>
-                            <DialogDescription>Update the name for this designation.</DialogDescription>
+                            <DialogDescription>Update designation details</DialogDescription>
                         </DialogHeader>
-                        <EditDesignationForm
-                            initialData={editingDesignation}
-                            onFormSubmit={() => setIsEditDesignationDialogOpen(false)}
-                        />
+                        <EditDesignationForm initialData={editingDesignation} onFormSubmit={() => { setIsEditDesignationDialogOpen(false); setEditingDesignation(null); }} />
                     </DialogContent>
                 </Dialog>
             )}
+
+            {/* Leave Types Dialogs */}
+            <Dialog open={isAddLeaveTypeDialogOpen} onOpenChange={setIsAddLeaveTypeDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add Leave Type</DialogTitle>
+                        <DialogDescription>Create a new leave type definition</DialogDescription>
+                    </DialogHeader>
+                    <AddLeaveTypeForm onSuccess={() => setIsAddLeaveTypeDialogOpen(false)} />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isEditLeaveTypeDialogOpen} onOpenChange={setIsEditLeaveTypeDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Leave Type</DialogTitle>
+                        <DialogDescription>Update leave type details</DialogDescription>
+                    </DialogHeader>
+                    {editingLeaveType && (
+                        <EditLeaveTypeForm leaveType={editingLeaveType} onSuccess={() => { setIsEditLeaveTypeDialogOpen(false); setEditingLeaveType(null); }} />
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Leave Groups Dialogs */}
+            <Dialog open={isAddLeaveGroupDialogOpen} onOpenChange={setIsAddLeaveGroupDialogOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Add Leave Group</DialogTitle>
+                        <DialogDescription>Create a new leave group with policies</DialogDescription>
+                    </DialogHeader>
+                    <AddLeaveGroupForm onSuccess={() => setIsAddLeaveGroupDialogOpen(false)} />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isEditLeaveGroupDialogOpen} onOpenChange={setIsEditLeaveGroupDialogOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit Leave Group</DialogTitle>
+                        <DialogDescription>Update leave group policies</DialogDescription>
+                    </DialogHeader>
+                    {editingLeaveGroup && (
+                        <EditLeaveGroupForm leaveGroup={editingLeaveGroup} onSuccess={() => { setIsEditLeaveGroupDialogOpen(false); setEditingLeaveGroup(null); }} />
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

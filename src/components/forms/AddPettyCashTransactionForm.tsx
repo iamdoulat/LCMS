@@ -167,7 +167,7 @@ export function AddPettyCashTransactionForm({ onFormSubmit }: AddPettyCashTransa
             title: "Transaction Saved!",
             text: "The transaction and account balance have been updated.",
             icon: "success",
-            timer: 1500,
+            timer: 1000,
             showConfirmButton: false,
         });
         form.reset();

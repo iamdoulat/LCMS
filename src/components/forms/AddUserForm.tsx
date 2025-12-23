@@ -49,7 +49,7 @@ export function AddUserForm() {
         title: "User Created!",
         text: `Account for ${data.displayName} created successfully.`,
         icon: "success",
-        timer: 2500,
+        timer: 1000,
         showConfirmButton: true,
       });
       form.reset();

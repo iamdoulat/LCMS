@@ -117,7 +117,7 @@ export function EditAdvanceSalaryForm({ initialData }: EditAdvanceSalaryFormProp
         title: "Record Updated!",
         text: `Advance salary request for ${selectedEmployee?.label} has been updated.`,
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
     } catch (error: any) {

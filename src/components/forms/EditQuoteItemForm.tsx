@@ -144,7 +144,7 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
         title: "Quote Item Updated!",
         text: `Quote Item "${data.modelNumber}" has been successfully updated.`,
         icon: "success",
-        timer: 2500,
+        timer: 1000,
         showConfirmButton: true,
       });
       form.reset(data); // Re-initialize with saved data

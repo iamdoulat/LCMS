@@ -157,7 +157,7 @@ export function EditBeneficiaryForm({ initialData, beneficiaryId }: EditBenefici
         title: "Beneficiary Profile Updated!",
         text: `Beneficiary profile for ID: ${beneficiaryId} has been successfully updated.`,
         icon: "success",
-        timer: 2500,
+        timer: 1000,
         showConfirmButton: true,
       });
     } catch (error) {

@@ -41,7 +41,7 @@ export function EditItemVariationForm({ initialData, onFormSubmit }: EditItemVar
                 title: "Variation Updated!",
                 text: `"${data.name}" has been updated successfully.`,
                 icon: "success",
-                timer: 2000,
+                timer: 1000,
                 showConfirmButton: false,
             });
             onFormSubmit?.();

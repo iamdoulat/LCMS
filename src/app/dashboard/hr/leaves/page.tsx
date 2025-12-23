@@ -19,7 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { firestore } from '@/lib/firebase/config';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp, getDocs, where } from 'firebase/firestore';
 import type { LeaveApplicationDocument, LeaveStatus, LeaveType } from '@/types';
 import { leaveStatusOptions, leaveTypeOptions } from '@/types';
 import { format, parseISO, isValid, differenceInCalendarDays } from 'date-fns';
@@ -89,10 +89,31 @@ export default function LeaveManagementPage() {
     const [filterEmployeeName, setFilterEmployeeName] = React.useState('');
     const [filterLeaveType, setFilterLeaveType] = React.useState<LeaveType | ''>('');
     const [filterStatus, setFilterStatus] = React.useState<LeaveStatus | ''>('');
+    const [availableLeaveTypes, setAvailableLeaveTypes] = React.useState<string[]>([]);
 
 
     const canApprove = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
 
+    // Fetch leave types from HRM settings
+    React.useEffect(() => {
+        const fetchLeaveTypes = async () => {
+            try {
+                const q = query(
+                    collection(firestore, 'hrm_settings', 'leave_types', 'items'),
+                    where('isActive', '==', true)
+                );
+                const snapshot = await getDocs(q);
+                const types = snapshot.docs.map(doc => doc.data().name as string);
+                types.sort((a, b) => a.localeCompare(b)); // Client-side sorting
+                setAvailableLeaveTypes(types);
+            } catch (error) {
+                console.error("Error fetching leave types:", error);
+                // Fallback to static options if fetch fails
+                setAvailableLeaveTypes([...leaveTypeOptions]);
+            }
+        };
+        fetchLeaveTypes();
+    }, []);
 
     React.useEffect(() => {
         setIsLoading(true);
@@ -289,7 +310,7 @@ export default function LeaveManagementPage() {
                                         <SelectTrigger id="leaveTypeFilter"><SelectValue placeholder="All Types" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value={ALL_LEAVE_TYPES_VALUE}>All Types</SelectItem>
-                                            {leaveTypeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                            {availableLeaveTypes.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>

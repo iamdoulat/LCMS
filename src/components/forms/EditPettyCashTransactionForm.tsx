@@ -183,7 +183,7 @@ export function EditPettyCashTransactionForm({ initialData, onFormSubmit }: Edit
             transaction.update(txDocRef, dataToUpdate);
         });
 
-        Swal.fire({ title: "Transaction Updated!", icon: "success", timer: 1500, showConfirmButton: false });
+        Swal.fire({ title: "Transaction Updated!", icon: "success", timer: 1000, showConfirmButton: false });
         onFormSubmit();
     } catch (error: any) {
         Swal.fire("Update Failed", `Failed to update transaction: ${error.message}`, "error");

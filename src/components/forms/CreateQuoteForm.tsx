@@ -360,7 +360,7 @@ export function CreateQuoteForm() {
         title: "Quote Saved!",
         text: `Quote successfully saved with ID: ${newId}. Navigating to preview...`,
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       }).then(() => {
         router.push(`/dashboard/quotations/preview/${newId}`);

@@ -81,7 +81,7 @@ export function EditPayslipForm({ initialData }: EditPayslipFormProps) {
       Swal.fire({
         title: "Payslip Updated!",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
     } catch (error: any) {

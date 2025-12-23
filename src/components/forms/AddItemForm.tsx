@@ -194,7 +194,7 @@ export function AddItemForm() {
         title: "Item Added!",
         text: `Item "${data.itemName}" saved successfully with ID: ${newItemRef.id}.`,
         icon: "success",
-        timer: 2500,
+        timer: 1000,
         showConfirmButton: true,
       });
 

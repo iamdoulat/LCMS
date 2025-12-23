@@ -22,7 +22,7 @@ export default function CompanySetupPage() {
         title: 'Access Denied',
         text: 'You are not permitted to view/edit company settings.',
         icon: 'error',
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       }).then(() => {
         router.push('/dashboard');

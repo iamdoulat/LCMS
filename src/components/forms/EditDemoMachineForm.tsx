@@ -165,7 +165,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         Swal.fire({
             title: "Image Updated",
             icon: "success",
-            timer: 2000,
+            timer: 1000,
             showConfirmButton: false,
         });
 
@@ -220,7 +220,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         title: "Demo Machine Updated!",
         text: `Demo Machine (ID: ${machineId}) has been successfully updated.`,
         icon: "success",
-        timer: 2500,
+        timer: 1000,
         showConfirmButton: true,
       });
 

@@ -368,7 +368,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(({ className, ...
       Swal.fire({
         title: "Signed out successfully.",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
     } catch (error: any) {

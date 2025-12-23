@@ -6,9 +6,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, addDoc, serverTimestamp, doc, getDoc, getDocs, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import type { EmployeeDocument, LeaveApplicationDocument } from '@/types';
+
+import type { EmployeeDocument, LeaveApplicationDocument, LeaveGroupDocument, LeaveTypeDefinition } from '@/types';
 import { Combobox } from '@/components/ui/combobox';
 import { DatePickerInput } from '@/components/ui/date-picker-input';
 import { Mailbox, ArrowLeft, Loader2, Save } from 'lucide-react';
@@ -18,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfYear, endOfYear, max, min, differenceInCalendarDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import type { ComboboxOption } from '@/components/ui/combobox';
@@ -29,7 +30,7 @@ import { leaveTypeOptions } from '@/types';
 
 const leaveApplicationSchema = z.object({
   employeeId: z.string().min(1, "Employee is required."),
-  leaveType: z.enum(leaveTypeOptions, { required_error: "Leave type is required." }),
+  leaveType: z.string().min(1, "Leave type is required."),
   fromDate: z.date({ required_error: "Start date is required." }),
   toDate: z.date({ required_error: "End date is required." }),
   reason: z.string().min(10, "Reason must be at least 10 characters long."),
@@ -59,10 +60,22 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
   const [isLoadingEmployees, setIsLoadingEmployees] = React.useState(true);
   const [isUserRestricted, setIsUserRestricted] = React.useState(false);
 
+  // Leave Policy State
+  const [leaveGroup, setLeaveGroup] = React.useState<LeaveGroupDocument | null>(null);
+  const [balanceInfo, setBalanceInfo] = React.useState<{ name: string; allowed: number; used: number; balance: number } | null>(null);
+  const [existingLeaves, setExistingLeaves] = React.useState<LeaveApplicationDocument[]>([]);
+
   const { data: employees } = useFirestoreQuery<EmployeeDocument[]>(
     query(collection(firestore, "employees"), orderBy("fullName")),
     undefined,
     ['employees_for_leave']
+  );
+
+  // Fetch all Leave Types (for fallback)
+  const { data: allLeaveTypes } = useFirestoreQuery<LeaveTypeDefinition[]>(
+    query(collection(firestore, "hrm_settings", "leave_types", "items"), where('isActive', '==', true)),
+    undefined,
+    ['all_leave_types']
   );
 
   const form = useForm<LeaveApplicationFormValues>({
@@ -114,6 +127,104 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
     }
   }, [employees, user, userRole, form]);
 
+  // Fetch Leave Group and Existing Leaves when Employee Changes
+  React.useEffect(() => {
+    const fetchPolicyData = async () => {
+      const employeeId = form.getValues('employeeId');
+      if (!employeeId || !employees) return;
+
+      const employee = employees.find(e => e.id === employeeId);
+      if (!employee?.leaveGroupId) {
+        setLeaveGroup(null);
+        setExistingLeaves([]);
+        return;
+      }
+
+      try {
+        // Fetch Leave Group
+        const groupRef = doc(firestore, 'hrm_settings', 'leave_groups', 'items', employee.leaveGroupId);
+        const groupSnap = await getDoc(groupRef);
+        if (groupSnap.exists()) {
+          setLeaveGroup({ id: groupSnap.id, ...groupSnap.data() } as LeaveGroupDocument);
+        }
+
+        // Fetch Approved Leaves for Balance Calculation
+        const leavesQuery = query(
+          collection(firestore, 'leave_applications'),
+          where('employeeId', '==', employeeId)
+          // Ideally filter by status 'Approved' here, but filtering client side is fine for now
+        );
+        const leavesSnap = await getDocs(leavesQuery);
+        setExistingLeaves(leavesSnap.docs.map(d => ({ id: d.id, ...d.data() } as LeaveApplicationDocument)));
+
+      } catch (error) {
+        console.error("Error fetching policy data:", error);
+      }
+    };
+
+    fetchPolicyData();
+    // Subscribe to employeeId changes
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'employeeId') {
+        fetchPolicyData();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, employees]);
+
+  // Calculate Balance when Type or Dates Change
+  React.useEffect(() => {
+    const calculateBalance = () => {
+      const { leaveType, fromDate, toDate } = form.getValues();
+      if (!leaveGroup || !leaveType) {
+        setBalanceInfo(null);
+        return;
+      }
+
+      const policy = leaveGroup.policies.find(p => p.leaveTypeName === leaveType);
+      if (!policy) {
+        setBalanceInfo(null);
+        return;
+      }
+
+      const currentYear = new Date().getFullYear();
+      const startOfCurrentYear = startOfYear(new Date());
+      const endOfCurrentYear = endOfYear(new Date());
+
+      let usedDays = 0;
+      existingLeaves.forEach(l => {
+        if (l.status === 'Approved' && l.leaveType === leaveType) {
+          const leaveStart = parseISO(l.fromDate);
+          const leaveEnd = parseISO(l.toDate);
+
+          const overlapStart = max([leaveStart, startOfCurrentYear]);
+          const overlapEnd = min([leaveEnd, endOfCurrentYear]);
+
+          if (overlapEnd >= overlapStart) {
+            usedDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
+          }
+        }
+      });
+
+      setBalanceInfo({
+        name: policy.leaveTypeName,
+        allowed: policy.allowedBalance,
+        used: usedDays,
+        balance: policy.allowedBalance - usedDays
+      });
+    };
+
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'leaveType' || name === 'fromDate' || name === 'toDate') {
+        calculateBalance();
+      }
+    });
+    // Initial calculation
+    calculateBalance();
+    return () => subscription.unsubscribe();
+  }, [form, leaveGroup, existingLeaves]);
+
+
 
   const onSubmit = async (data: LeaveApplicationFormValues) => {
     if (!user) {
@@ -123,6 +234,24 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
     setIsSubmitting(true);
 
     const selectedEmployee = employeeOptions.find(e => e.value === data.employeeId);
+
+    // Validate Balance
+    if (leaveGroup && balanceInfo) {
+      if (data.fromDate && data.toDate) {
+        const daysRequested = differenceInCalendarDays(data.toDate, data.fromDate) + 1;
+        const policy = leaveGroup.policies.find(p => p.leaveTypeName === data.leaveType);
+
+        if (policy && !policy.negativeBalance && daysRequested > balanceInfo.balance) {
+          Swal.fire({
+            title: "Insufficient Balance",
+            text: `You have ${balanceInfo.balance} days remaining for ${data.leaveType}, but you requested ${daysRequested} days.`,
+            icon: "error"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    }
 
     const dataToSave = {
       ...data,
@@ -156,7 +285,7 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
         title: "Application Submitted!",
         text: "Your leave application has been submitted for approval.",
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
       form.reset();
@@ -208,11 +337,24 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {leaveTypeOptions.map(option => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
-                    ))}
+                    {leaveGroup ? (
+                      leaveGroup.policies.map(policy => (
+                        <SelectItem key={policy.leaveTypeId} value={policy.leaveTypeName}>
+                          {policy.leaveTypeName}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      allLeaveTypes?.map(option => (
+                        <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
+                {balanceInfo && (
+                  <div className={cn("text-xs mt-1", balanceInfo.balance > 0 ? "text-green-600" : "text-red-500")}>
+                    Available Balance: {balanceInfo.balance} days
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
             )}

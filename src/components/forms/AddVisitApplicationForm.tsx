@@ -145,7 +145,7 @@ export function AddVisitApplicationForm({ onFormSubmit }: AddVisitApplicationFor
         title: "Application Submitted!",
         text: `Visit application for ${selectedEmployee?.label} has been submitted.`,
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
       form.reset();

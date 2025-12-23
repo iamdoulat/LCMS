@@ -156,7 +156,7 @@ export function AddDemoMachineForm() {
         title: "Demo Machine Saved!",
         text: `Demo Machine data saved successfully with ID: ${machineId}.`,
         icon: "success",
-        timer: 3000,
+        timer: 1000,
         showConfirmButton: true,
       });
 

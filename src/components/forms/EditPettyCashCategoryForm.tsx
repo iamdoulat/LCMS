@@ -42,7 +42,7 @@ export function EditPettyCashCategoryForm({ initialData, onFormSubmit }: EditPet
       Swal.fire({
         title: "Category Updated!",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       onFormSubmit(); // Close the dialog

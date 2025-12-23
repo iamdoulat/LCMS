@@ -41,7 +41,7 @@ export function EditItemCategoryForm({ initialData, onFormSubmit }: EditItemCate
                 title: "Category Updated!",
                 text: `"${data.name}" has been updated successfully.`,
                 icon: "success",
-                timer: 2000,
+                timer: 1000,
                 showConfirmButton: false,
             });
             onFormSubmit?.();

@@ -70,7 +70,7 @@ export default function UserListPage() {
           title: 'Access Denied',
           text: 'You are not permitted to view this page.',
           icon: 'error',
-          timer: 2000,
+          timer: 1000,
           showConfirmButton: false,
         }).then(() => {
           router.push('/dashboard');

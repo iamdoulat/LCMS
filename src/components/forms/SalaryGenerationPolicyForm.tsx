@@ -87,7 +87,7 @@ export function SalaryGenerationPolicyForm() {
         title: "Settings Saved!",
         text: "Salary Generation Policy has been updated.",
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
     } catch (error: any) {

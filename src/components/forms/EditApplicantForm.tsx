@@ -153,7 +153,7 @@ export function EditApplicantForm({ initialData, applicantId }: EditApplicantFor
         title: "Applicant Profile Updated!",
         text: `Applicant profile for ID: ${applicantId} has been successfully updated.`,
         icon: "success",
-        timer: 2500,
+        timer: 1000,
         showConfirmButton: true,
       });
     } catch (error) {

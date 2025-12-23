@@ -46,7 +46,7 @@ export default function AddNoticePage() {
         title: 'Access Denied',
         text: 'You do not have permission to add notices.',
         icon: 'error',
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       }).then(() => router.push('/dashboard'));
     }

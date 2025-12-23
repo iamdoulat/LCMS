@@ -73,7 +73,7 @@ export function AddSupplierForm() {
         title: "Beneficiary Profile Saved!",
         text: `Beneficiary data saved successfully to Firestore with ID: ${docRef.id}.`,
         icon: "success",
-        timer: 3000,
+        timer: 1000,
         showConfirmButton: true,
       });
       form.reset();

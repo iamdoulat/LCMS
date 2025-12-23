@@ -134,7 +134,7 @@ export function AddAdvanceSalaryForm({ onFormSubmit }: AddAdvanceSalaryFormProps
         title: "Request Submitted!",
         text: `Advance salary request for ${selectedEmployee?.label} has been submitted.`,
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
       form.reset();

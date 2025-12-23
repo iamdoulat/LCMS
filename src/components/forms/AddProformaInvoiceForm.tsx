@@ -320,7 +320,7 @@ export function AddProformaInvoiceForm() {
         title: "PI Saved!",
         text: "Proforma Invoice has been successfully saved.",
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
       form.reset({

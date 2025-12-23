@@ -537,7 +537,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         title: "L/C Entry Updated!",
         text: `L/C entry (ID: ${lcId}) has been successfully updated.`,
         icon: "success",
-        timer: 2500,
+        timer: 1000,
         showConfirmButton: true,
       });
     } catch (error: any) {

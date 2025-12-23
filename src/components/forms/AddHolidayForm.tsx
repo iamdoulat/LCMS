@@ -80,7 +80,7 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
         title: "Holiday Added!",
         text: "Announcement emails are being sent to all employees.",
         icon: "success",
-        timer: 3000,
+        timer: 1000,
         showConfirmButton: false,
       });
       form.reset();

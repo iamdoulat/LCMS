@@ -365,7 +365,7 @@ export function EditProformaInvoiceForm({ initialData, piId }: EditProformaInvoi
         title: "PI Updated!",
         text: `Proforma Invoice "${data.piNo}" has been successfully updated.`,
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
     } catch (error: any) {

@@ -42,7 +42,7 @@ export function AddItemSectionForm({ onFormSubmit }: AddItemSectionFormProps) {
                 title: "Section Added!",
                 text: `"${data.name}" has been created successfully.`,
                 icon: "success",
-                timer: 2000,
+                timer: 1000,
                 showConfirmButton: false,
             });
             form.reset();

@@ -22,7 +22,7 @@ export default function FinancialManagementSettingPage() {
         title: 'Access Denied',
         text: 'You do not have permission to view or edit these settings.',
         icon: 'error',
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       }).then(() => {
         router.push('/dashboard');

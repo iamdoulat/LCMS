@@ -96,7 +96,7 @@ export function EditDemoMachineFactoryForm({ initialData, factoryId }: EditDemoM
         title: "Factory Profile Updated!",
         text: `Demo Machine Factory profile for ID: ${factoryId} has been successfully updated.`,
         icon: "success",
-        timer: 2500,
+        timer: 1000,
         showConfirmButton: true,
       });
     } catch (error) {

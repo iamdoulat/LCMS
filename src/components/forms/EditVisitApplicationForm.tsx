@@ -126,7 +126,7 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
         title: "Application Updated!",
         text: `Visit application for ${selectedEmployee?.label} has been updated.`,
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
     } catch (error: any) {

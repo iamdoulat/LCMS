@@ -235,7 +235,7 @@ export function CompanySetupForm() {
             title: "Settings Saved!",
             text: "Company settings have been successfully updated.",
             icon: "success",
-            timer: 2500,
+            timer: 1000,
             showConfirmButton: true,
         });
 
@@ -279,7 +279,7 @@ export function CompanySetupForm() {
             title: "Logo Staged",
             text: "Your new logo is ready. Click 'Save Settings' to apply it.",
             icon: "success",
-            timer: 3000,
+            timer: 1000,
             showConfirmButton: false,
         });
     } catch (err: any) {

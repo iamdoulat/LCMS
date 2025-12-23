@@ -431,7 +431,7 @@ export function NewLCEntryForm() {
         title: "L/C Entry Saved!",
         text: `L/C entry has been successfully saved.`,
         icon: "success",
-        timer: 3000,
+        timer: 1000,
         showConfirmButton: true,
       });
       reset(defaultFormValues);

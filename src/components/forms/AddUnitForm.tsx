@@ -44,7 +44,7 @@ export function AddUnitForm({ onFormSubmit }: AddUnitFormProps) {
       Swal.fire({
         title: "Unit Created!",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       form.reset();

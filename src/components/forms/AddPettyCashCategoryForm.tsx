@@ -40,7 +40,7 @@ export function AddPettyCashCategoryForm({ onFormSubmit }: AddPettyCashCategoryF
       Swal.fire({
         title: "Category Created!",
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       form.reset();

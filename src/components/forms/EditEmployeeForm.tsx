@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, updateDoc, doc, query as firestoreQuery, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
+import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument, LeaveGroupDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -69,6 +69,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(firestoreQuery(collection(firestore, "departments"), orderBy("name")), undefined, ['departments']);
   const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(firestoreQuery(collection(firestore, "units"), orderBy("name")), undefined, ['units']);
   const { data: divisions, isLoading: isLoadingDivisions } = useFirestoreQuery<DivisionDocument[]>(firestoreQuery(collection(firestore, "divisions"), orderBy("name")), undefined, ['divisions']);
+  const { data: leaveGroups, isLoading: isLoadingLeaveGroups } = useFirestoreQuery<LeaveGroupDocument[]>(firestoreQuery(collection(firestore, 'hrm_settings', 'leave_groups', 'items'), orderBy("groupName", "asc")), undefined, ['leave_groups']);
 
   // Memoize the options to prevent re-computation on every render
   const designationOptions = React.useMemo(() => toComboboxOptions(designations || [], 'name'), [designations]);
@@ -76,6 +77,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const departmentOptions = React.useMemo(() => toComboboxOptions(departments || [], 'name'), [departments]);
   const unitOptions = React.useMemo(() => toComboboxOptions(units || [], 'name'), [units]);
   const divisionOptions = React.useMemo(() => toComboboxOptions(divisions || [], 'name'), [divisions]);
+  const leaveGroupOptions = React.useMemo(() => leaveGroups?.map(g => ({ value: g.id, label: g.groupName })) || [], [leaveGroups]);
 
   const isLoadingHrmOptions = isLoadingBranches || isLoadingDepts || isLoadingUnits || isLoadingDivisions;
 
@@ -83,6 +85,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     resolver: zodResolver(EmployeeSchema),
     defaultValues: {
       ...employee,
+      leaveGroupId: employee.leaveGroupId || '',
       firstName: employee.fullName?.split(' ')[0] || '',
       middleName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ')[1] : '',
       lastName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ').slice(2).join(' ') : (employee.fullName?.split(' ')[1] || ''),
@@ -270,11 +273,14 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
 
       const fullName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ');
 
+      const selectedLeaveGroup = leaveGroups?.find(lg => lg.id === data.leaveGroupId);
+
       // Prepare the base data object first (without serverTimestamp)
       const rawDataToSave = {
         id: employee.id, // Explicitly include the ID for consistency
         uid: employee.uid || user.uid, // Retain original UID or set current user's
         ...data,
+        leaveGroupName: selectedLeaveGroup?.groupName || employee.leaveGroupName || '',
         fullName: fullName,
         photoURL: photoDownloadURL,
         dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
@@ -315,7 +321,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         title: "Employee Updated!",
         text: `Employee ${fullName} has been successfully updated.`,
         icon: "success",
-        timer: 3000,
+        timer: 1000,
         showConfirmButton: true,
       });
 
@@ -467,6 +473,25 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <SelectContent>
                 {employeeStatusOptions.map(o => (
                   <SelectItem key={o} value={o}>{o}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )} />
+
+        <FormField control={control} name="leaveGroupId" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Leave Group (Policy)*</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder={isLoadingLeaveGroups ? "Loading..." : "Select Leave Group"} />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {leaveGroupOptions.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

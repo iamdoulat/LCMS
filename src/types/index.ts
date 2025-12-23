@@ -1520,6 +1520,8 @@ export const EmployeeSchema = z.object({
   bloodGroup: z.enum(bloodGroupOptions).optional(),
   photoURL: z.string().url("Must be a valid URL.").optional().or(z.literal('')),
   status: z.enum(employeeStatusOptions).default('Active'),
+  leaveGroupId: z.string().optional(),
+  leaveGroupName: z.string().optional(),
   // New Fields
   division: z.string().optional(),
   branch: z.string().optional(),
@@ -1569,6 +1571,8 @@ export interface Employee {
   bloodGroup?: (typeof bloodGroupOptions)[number];
   photoURL?: string;
   status?: EmployeeStatus;
+  leaveGroupId?: string;
+  leaveGroupName?: string;
   createdAt?: any;
   updatedAt?: any;
   // New Fields
@@ -1784,6 +1788,55 @@ export type AttendanceDocument = Attendance & { id: string };
 // --- Leave Types ---
 export const leaveTypeOptions = ['Annual', 'Sick', 'Paternity', 'Maternity', 'Unpaid'] as const;
 export const leaveStatusOptions = ['Pending', 'Approved', 'Rejected'] as const;
+
+export interface LeaveTypeDefinition {
+  id: string;
+  name: string; // e.g., Casual Leave
+  code: string; // e.g., CL
+  shortCode?: string; // e.g., C
+  isActive: boolean;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface LeavePolicyRule {
+  leaveTypeId: string;
+  leaveTypeName: string; // Denormalized
+  allowedBalance: number;
+  maxLeaveBalanceInYear?: number;
+  balanceForwarding: boolean;
+  maxForwardFromPreviousYear?: number;
+  leaveAllowBetweenMultipleYears?: boolean;
+  intervalDaysInSameLeave?: number;
+  negativeBalance: boolean;
+  maxLimitForPastLeave?: number;
+  continuousDaysAllow?: boolean;
+  continuousSanction?: number;
+  halfDay?: boolean;
+  maxBalanceForEncashment?: number;
+  isPrefixAllowed?: boolean;
+  isSuffixAllowed?: boolean;
+  doesRequiresLeaveAttachment?: boolean;
+  minDayCountForRequiringAttachment?: number;
+  allowEarnLeave?: boolean;
+  applyFutureLeaveAfterDays?: number;
+  maxSanctionInServiceLife?: number;
+}
+
+export interface LeaveGroup {
+  id: string;
+  groupName: string;
+  description?: string;
+  policies: LeavePolicyRule[];
+  employeeCount: number; // Denormalized count
+  isActive: boolean;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface LeaveGroupDocument extends LeaveGroup {
+  id: string;
+}
 
 export type LeaveType = (typeof leaveTypeOptions)[number];
 export type LeaveStatus = (typeof leaveStatusOptions)[number];

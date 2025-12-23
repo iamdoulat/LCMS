@@ -157,7 +157,7 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
         title: "Attendance Saved!",
         text: `Attendance record saved successfully.`,
         icon: "success",
-        timer: 1500,
+        timer: 1000,
         showConfirmButton: false,
       });
       reset();

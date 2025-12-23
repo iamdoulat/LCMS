@@ -28,10 +28,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
-import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag, AttendanceReconciliationConfiguration, MultipleCheckInOutConfiguration } from '@/types';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag, AttendanceReconciliationConfiguration, MultipleCheckInOutConfiguration, LeaveGroupDocument } from '@/types';
 import type { CheckInOutType, MultipleCheckInOutRecord } from '@/types/checkInOut';
 import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord, reverseGeocode, getCheckInOutRecords } from '@/lib/firebase/checkInOut';
-import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min, getDate, isSameMonth, subMonths } from 'date-fns';
+import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min, getDate, isSameMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
@@ -44,6 +44,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 
 import {
@@ -212,6 +214,60 @@ export default function AccountDetailsPage() {
   // Configuration for Multiple Check In / Out
   const [multiCheckConfig, setMultiCheckConfig] = useState<MultipleCheckInOutConfiguration | null>(null);
   const [lastRecord, setLastRecord] = useState<MultipleCheckInOutRecord | null>(null);
+
+  // Leave Group Policy
+  const [leaveGroup, setLeaveGroup] = useState<LeaveGroupDocument | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
+
+  useEffect(() => {
+    const fetchLeaveGroup = async () => {
+      if (employeeData?.leaveGroupId) {
+        try {
+          const docRef = doc(firestore, 'hrm_settings', 'leave_groups', 'items', employeeData.leaveGroupId);
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            setLeaveGroup({ id: snap.id, ...snap.data() } as LeaveGroupDocument);
+          }
+        } catch (e) { console.error("Error fetching leave group:", e); }
+      }
+    };
+    fetchLeaveGroup();
+  }, [employeeData?.leaveGroupId]);
+
+  const leaveBalances = useMemo(() => {
+    if (!leaveGroup) return [];
+
+    const today = new Date();
+    const startOfCurrentYear = startOfYear(today);
+    const endOfCurrentYear = endOfYear(today);
+
+    return leaveGroup.policies.map(policy => {
+      let usedDays = 0;
+
+      leaves.forEach(l => {
+        // Match leave type (assuming name match for now) and status
+        if (l.status === 'Approved' && l.leaveType === policy.leaveTypeName) {
+          const leaveStart = parseISO(l.fromDate);
+          const leaveEnd = parseISO(l.toDate);
+
+          // Calculate overlap with current year
+          const overlapStart = max([leaveStart, startOfCurrentYear]);
+          const overlapEnd = min([leaveEnd, endOfCurrentYear]);
+
+          if (overlapEnd >= overlapStart) {
+            usedDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
+          }
+        }
+      });
+
+      return {
+        name: policy.leaveTypeName,
+        allowed: policy.allowedBalance,
+        used: usedDays,
+        balance: policy.allowedBalance - usedDays
+      };
+    });
+  }, [leaveGroup, leaves]);
 
 
   // Fetch reconciliations when employee data is loaded
@@ -484,7 +540,7 @@ export default function AccountDetailsPage() {
         icon: "success",
         allowOutsideClick: true,
         allowEscapeKey: true,
-        timer: 3000,
+        timer: 1000,
         timerProgressBar: true,
         showConfirmButton: true,
       });
@@ -555,7 +611,7 @@ export default function AccountDetailsPage() {
 
           const leavesSnapshot = await getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id)));
           const allLeaves = leavesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
-          setLeaves(allLeaves);
+          // setLeaves(allLeaves); // Handled by real-time listener
 
           const visitsSnapshot = await getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', '==', employeeData.id)));
           const allVisits = visitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument));
@@ -668,6 +724,20 @@ export default function AccountDetailsPage() {
       setIsLoadingPayslips(false);
     }
   }, [user, employeeData, isEmployeeDataLoading]);
+
+  // Real-time listener for leave applications
+  useEffect(() => {
+    if (employeeData?.id) {
+      const q = query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const updatedLeaves = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
+        setLeaves(updatedLeaves);
+      }, (error) => {
+        console.error("Error listening to leave applications:", error);
+      });
+      return () => unsubscribe();
+    }
+  }, [employeeData?.id]);
 
   const fetchAttendanceForRange = useCallback(async () => {
     if (!user || !employeeData?.id || !dateRange?.from) {
@@ -1201,7 +1271,7 @@ export default function AccountDetailsPage() {
         title: 'URL Set',
         text: 'Click "Save Changes" to apply the new profile picture.',
         icon: 'success',
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false
       });
     }
@@ -1238,7 +1308,7 @@ export default function AccountDetailsPage() {
         title: "Profile Updated",
         text: "Your profile has been updated successfully.",
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
     } catch (err: any) {
@@ -1500,6 +1570,128 @@ export default function AccountDetailsPage() {
             </div>
           </CardContent>
         </Card>
+
+
+        {/* Current Leave Status Card */}
+        {leaveGroup && (
+          <Card className="shadow-xl">
+            <CardHeader>
+              <div className="flex flex-row justify-between items-center">
+                <div className="space-y-1.5">
+                  <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                    <Plane className="h-6 w-6 text-primary" />
+                    Current Leave Status
+                  </CardTitle>
+                  <CardDescription>
+                    Leave balances based on <strong>{leaveGroup.groupName}</strong> policy for {new Date().getFullYear()}.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="view-mode" className={cn("text-sm font-medium", viewMode === 'list' ? "text-primary" : "text-muted-foreground")}>List</Label>
+                  <Switch
+                    id="view-mode"
+                    checked={viewMode === 'graph'}
+                    onCheckedChange={(checked) => setViewMode(checked ? 'graph' : 'list')}
+                  />
+                  <Label htmlFor="view-mode" className={cn("text-sm font-medium", viewMode === 'graph' ? "text-primary" : "text-muted-foreground")}>Graph</Label>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {viewMode === 'list' ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Leave Type</TableHead>
+                        <TableHead className="text-center">Total Allowed</TableHead>
+                        <TableHead className="text-center">Used (Approved)</TableHead>
+                        <TableHead className="text-right">Balance</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leaveBalances.map((balance) => (
+                        <TableRow key={balance.name}>
+                          <TableCell className="font-medium">{balance.name}</TableCell>
+                          <TableCell className="text-center">{balance.allowed}</TableCell>
+                          <TableCell className="text-center">{balance.used}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={balance.balance > 0 ? "default" : "destructive"}>
+                              {balance.balance}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-4">
+                  {leaveBalances.map((balance, index) => {
+                    const data = [
+                      { name: 'Leave remaining', value: balance.balance, color: '#10b981' }, // emerald-500
+                      { name: 'Leave taken', value: balance.used, color: '#3b82f6' }, // blue-500
+                    ];
+                    // If purely empty (no balance, no used), don't show or show empty state? 
+                    // Assuming valid config, at least allowed > 0.
+
+                    return (
+                      <div key={balance.name} className="flex flex-col items-center justify-center p-4 bg-background rounded-xl border shadow-sm">
+                        <h4 className="text-lg font-semibold mb-2 text-center text-foreground">{balance.name}</h4>
+                        <div className="h-[200px] w-full relative">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={data}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={80}
+                                paddingAngle={0}
+                                dataKey="value"
+                                startAngle={90}
+                                endAngle={-270}
+                              >
+                                {data.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                ))}
+                              </Pie>
+                              <RechartsTooltip
+                                formatter={(value: any, name: any) => [value, name]}
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                          {/* Center Text Overlay */}
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-3xl font-bold text-blue-500">{balance.used}</span>
+                            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Takens</span>
+                          </div>
+                        </div>
+                        <div className="w-full mt-4 space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-blue-500" />
+                              <span className="text-muted-foreground">Leave taken</span>
+                            </div>
+                            <span className="font-bold text-blue-500">{balance.used}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                              <span className="text-muted-foreground">Leave remaining</span>
+                            </div>
+                            <span className="font-bold text-emerald-500">{balance.balance}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="shadow-xl">
           <CardHeader>

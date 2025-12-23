@@ -137,7 +137,7 @@ export default function AttendanceReconciliationPage() {
                 icon: "success",
                 allowOutsideClick: true,
                 allowEscapeKey: true,
-                timer: 3000,
+                timer: 1000,
                 timerProgressBar: true,
                 showConfirmButton: true,
             });
@@ -202,7 +202,7 @@ export default function AttendanceReconciliationPage() {
                 icon: "info",
                 allowOutsideClick: true,
                 allowEscapeKey: true,
-                timer: 3000,
+                timer: 1000,
                 timerProgressBar: true,
                 showConfirmButton: true,
             });
@@ -245,7 +245,7 @@ export default function AttendanceReconciliationPage() {
                         icon: 'success',
                         allowOutsideClick: true,
                         allowEscapeKey: true,
-                        timer: 3000,
+                        timer: 1000,
                         timerProgressBar: true,
                         showConfirmButton: true,
                     });
@@ -294,7 +294,7 @@ export default function AttendanceReconciliationPage() {
                 icon: 'success',
                 allowOutsideClick: true,
                 allowEscapeKey: true,
-                timer: 3000,
+                timer: 1000,
                 timerProgressBar: true,
                 showConfirmButton: true,
             });
@@ -330,7 +330,7 @@ export default function AttendanceReconciliationPage() {
                 icon: "success",
                 allowOutsideClick: true,
                 allowEscapeKey: true,
-                timer: 3000,
+                timer: 1000,
                 timerProgressBar: true,
                 showConfirmButton: true,
             });
@@ -383,7 +383,7 @@ export default function AttendanceReconciliationPage() {
                 icon: "success",
                 allowOutsideClick: true,
                 allowEscapeKey: true,
-                timer: 3000,
+                timer: 1000,
                 timerProgressBar: true,
                 showConfirmButton: true,
             });

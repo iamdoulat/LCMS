@@ -223,7 +223,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
         title: "Item Updated!",
         text: `Item "${data.itemName}" has been successfully updated.`,
         icon: "success",
-        timer: 2500,
+        timer: 1000,
         showConfirmButton: true,
       });
     } catch (error) {

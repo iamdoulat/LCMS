@@ -168,7 +168,7 @@ export default function PISettingsPage() {
         title: "Settings Saved!",
         text: "Your PI layout settings have been updated.",
         icon: "success",
-        timer: 2000,
+        timer: 1000,
         showConfirmButton: false,
       });
 
