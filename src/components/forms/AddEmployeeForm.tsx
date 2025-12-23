@@ -98,7 +98,6 @@ export function AddEmployeeForm() {
       nationalId: '',
       bloodGroup: undefined,
       photoURL: '',
-      photoURL: '',
       status: 'Active',
       leaveGroupId: '',
       division: 'Not Defined',
