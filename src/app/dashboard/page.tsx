@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NoticeBoardDialog } from '@/components/dashboard/NoticeBoardDialog';
 
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 
 const SupplierPieChart = dynamic(() => import('@/components/dashboard/SupplierPieChart'), {
@@ -572,7 +573,39 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>You have access to the <strong>{userRole.join(', ')}</strong> modules.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground mr-1">You have access to the</span>
+              {userRole.map((role, index) => {
+                const roleLinks: Record<string, string> = {
+                  'HR': '/dashboard/hr/dashboard',
+                  'Service': '/dashboard/warranty-management/search',
+                  'DemoManager': '/dashboard/demo/demo-machine-search',
+                  'Accounts': '/dashboard/petty-cash/dashboard',
+                  'Admin': '/dashboard',
+                  'Super Admin': '/dashboard',
+                  'Commercial': '/dashboard',
+                  'Inventory': '/dashboard/inventory',
+                };
+                const href = roleLinks[role] || '#';
+                return (
+                  <React.Fragment key={role}>
+                    <Link href={href}>
+                      <Button variant="default" size="sm" className="font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all">
+                        {role}
+                      </Button>
+                    </Link>
+                    {index < userRole.length - 1 && <span className="text-muted-foreground">,</span>}
+                  </React.Fragment>
+                );
+              })}
+              <span className="text-sm text-muted-foreground ml-1 mr-2">modules.</span>
+              <Separator orientation="vertical" className="h-4 hidden sm:block" />
+              <Link href="/dashboard/account-details">
+                <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all ml-1">
+                  My Dashboard
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

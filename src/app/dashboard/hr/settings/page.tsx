@@ -302,188 +302,6 @@ export default function HrmSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <Dialog open={isAddDivisionDialogOpen} onOpenChange={setIsAddDivisionDialogOpen}>
-                        {renderTableSection("Divisions", "Manage company divisions.", divisions, isLoadingDivisions, () => setIsAddDivisionDialogOpen(true), (item) => handleEdit(item, setEditingDivision, setIsEditDivisionDialogOpen), "divisions", "md:col-span-2")}
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Add New Division</DialogTitle>
-                                <DialogDescription>Create a new company division.</DialogDescription>
-                            </DialogHeader>
-                            <AddDivisionForm onFormSubmit={() => setIsAddDivisionDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
-
-                    <Dialog open={isAddBranchDialogOpen} onOpenChange={setIsAddBranchDialogOpen}>
-                        {renderTableSection("Branches", "Manage company branches.", branches, isLoadingBranches, () => setIsAddBranchDialogOpen(true), (item) => handleEdit(item, setEditingBranch, setIsEditBranchDialogOpen), "branches")}
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Add New Branch</DialogTitle>
-                                <DialogDescription>Create a new company branch.</DialogDescription>
-                            </DialogHeader>
-                            <AddBranchForm onFormSubmit={() => setIsAddBranchDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
-
-                    <Dialog open={isAddDepartmentDialogOpen} onOpenChange={setIsAddDepartmentDialogOpen}>
-                        {renderTableSection("Departments", "Manage company departments.", departments, isLoadingDepts, () => setIsAddDepartmentDialogOpen(true), (item) => handleEdit(item, setEditingDepartment, setIsEditDepartmentDialogOpen), "departments")}
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Add New Department</DialogTitle>
-                                <DialogDescription>Create a new company department.</DialogDescription>
-                            </DialogHeader>
-                            <AddDepartmentForm onFormSubmit={() => setIsAddDepartmentDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
-
-                    <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
-                        {renderTableSection("Units", "Manage organizational units.", units, isLoadingUnits, () => setIsAddUnitDialogOpen(true), (item) => handleEdit(item, setEditingUnit, setIsEditUnitDialogOpen), "units")}
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Add New Unit</DialogTitle>
-                                <DialogDescription>Create a new organizational unit.</DialogDescription>
-                            </DialogHeader>
-                            <AddUnitForm onFormSubmit={() => setIsAddUnitDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
-
-                    {/* Designations Section */}
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Designations</CardTitle>
-                                <CardDescription>Manage employee job designations.</CardDescription>
-                            </div>
-                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddDesignationDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
-                        </CardHeader>
-                        <CardContent>
-                            {isLoadingDesignations ? <DataTableSkeleton /> :
-                                !designations || designations.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
-                                    (
-                                        <div className="rounded-md border">
-                                            <Table>
-                                                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
-                                                <TableBody>
-                                                    {designations.map(item => (
-                                                        <TableRow key={item.id}>
-                                                            <TableCell>{item.name}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end">
-                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem onClick={() => handleDeleteDesignation(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Leave Types Section */}
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Leave Types</CardTitle>
-                                <CardDescription>Manage types of leaves available</CardDescription>
-                            </div>
-                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddLeaveTypeDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
-                        </CardHeader>
-                        <CardContent>
-                            {isLoadingLeaveTypes ? <DataTableSkeleton /> :
-                                !leaveTypes || leaveTypes.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
-                                    (
-                                        <div className="rounded-md border">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Name</TableHead>
-                                                        <TableHead>Code</TableHead>
-                                                        <TableHead>Active</TableHead>
-                                                        <TableHead className="text-right w-[50px]">Actions</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {leaveTypes.map(item => (
-                                                        <TableRow key={item.id}>
-                                                            <TableCell>{item.name}</TableCell>
-                                                            <TableCell>{item.code}</TableCell>
-                                                            <TableCell>{item.isActive ? 'Yes' : 'No'}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end">
-                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingLeaveType, setIsEditLeaveTypeDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem onClick={() => handleDeleteLeaveType(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Leave Groups Section */}
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Leave Groups</CardTitle>
-                                <CardDescription>Manage leave policies via groups</CardDescription>
-                            </div>
-                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddLeaveGroupDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
-                        </CardHeader>
-                        <CardContent>
-                            {isLoadingLeaveGroups ? <DataTableSkeleton /> :
-                                !leaveGroups || leaveGroups.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
-                                    (
-                                        <div className="rounded-md border">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Group Name</TableHead>
-                                                        <TableHead>Policies Count</TableHead>
-                                                        <TableHead>Active</TableHead>
-                                                        <TableHead className="text-right w-[50px]">Actions</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {leaveGroups.map(item => (
-                                                        <TableRow key={item.id}>
-                                                            <TableCell>{item.groupName}</TableCell>
-                                                            <TableCell>{item.policies?.length || 0}</TableCell>
-                                                            <TableCell>{item.isActive ? 'Yes' : 'No'}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="end">
-                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingLeaveGroup, setIsEditLeaveGroupDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem onClick={() => handleDeleteLeaveGroup(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
-                                    )}
-                        </CardContent>
-                    </Card>
-
                     {/* Attendance Reconciliation Configuration Section */}
                     <Card className="md:col-span-2 shadow-lg border-2 border-primary/10">
                         <CardHeader>
@@ -679,6 +497,188 @@ export default function HrmSettingsPage() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    <Dialog open={isAddBranchDialogOpen} onOpenChange={setIsAddBranchDialogOpen}>
+                        {renderTableSection("Branches", "Manage company branches.", branches, isLoadingBranches, () => setIsAddBranchDialogOpen(true), (item) => handleEdit(item, setEditingBranch, setIsEditBranchDialogOpen), "branches")}
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Add New Branch</DialogTitle>
+                                <DialogDescription>Create a new company branch.</DialogDescription>
+                            </DialogHeader>
+                            <AddBranchForm onFormSubmit={() => setIsAddBranchDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isAddDepartmentDialogOpen} onOpenChange={setIsAddDepartmentDialogOpen}>
+                        {renderTableSection("Departments", "Manage company departments.", departments, isLoadingDepts, () => setIsAddDepartmentDialogOpen(true), (item) => handleEdit(item, setEditingDepartment, setIsEditDepartmentDialogOpen), "departments")}
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Add New Department</DialogTitle>
+                                <DialogDescription>Create a new company department.</DialogDescription>
+                            </DialogHeader>
+                            <AddDepartmentForm onFormSubmit={() => setIsAddDepartmentDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Designations Section */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Designations</CardTitle>
+                                <CardDescription>Manage employee job designations.</CardDescription>
+                            </div>
+                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddDesignationDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingDesignations ? <DataTableSkeleton /> :
+                                !designations || designations.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+                                    (
+                                        <div className="rounded-md border">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {designations.map(item => (
+                                                        <TableRow key={item.id}>
+                                                            <TableCell>{item.name}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem onClick={() => handleDeleteDesignation(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Leave Types Section */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Leave Types</CardTitle>
+                                <CardDescription>Manage types of leaves available</CardDescription>
+                            </div>
+                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddLeaveTypeDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingLeaveTypes ? <DataTableSkeleton /> :
+                                !leaveTypes || leaveTypes.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+                                    (
+                                        <div className="rounded-md border">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Name</TableHead>
+                                                        <TableHead>Code</TableHead>
+                                                        <TableHead>Active</TableHead>
+                                                        <TableHead className="text-right w-[50px]">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {leaveTypes.map(item => (
+                                                        <TableRow key={item.id}>
+                                                            <TableCell>{item.name}</TableCell>
+                                                            <TableCell>{item.code}</TableCell>
+                                                            <TableCell>{item.isActive ? 'Yes' : 'No'}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingLeaveType, setIsEditLeaveTypeDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem onClick={() => handleDeleteLeaveType(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Leave Groups Section */}
+                    <Card className="md:col-span-2">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Leave Groups</CardTitle>
+                                <CardDescription>Manage leave policies via groups</CardDescription>
+                            </div>
+                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddLeaveGroupDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingLeaveGroups ? <DataTableSkeleton /> :
+                                !leaveGroups || leaveGroups.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+                                    (
+                                        <div className="rounded-md border">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Group Name</TableHead>
+                                                        <TableHead>Policies Count</TableHead>
+                                                        <TableHead>Active</TableHead>
+                                                        <TableHead className="text-right w-[50px]">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {leaveGroups.map(item => (
+                                                        <TableRow key={item.id}>
+                                                            <TableCell>{item.groupName}</TableCell>
+                                                            <TableCell>{item.policies?.length || 0}</TableCell>
+                                                            <TableCell>{item.isActive ? 'Yes' : 'No'}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingLeaveGroup, setIsEditLeaveGroupDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem onClick={() => handleDeleteLeaveGroup(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                        </CardContent>
+                    </Card>
+
+                    <Dialog open={isAddDivisionDialogOpen} onOpenChange={setIsAddDivisionDialogOpen}>
+                        {renderTableSection("Divisions", "Manage company divisions.", divisions, isLoadingDivisions, () => setIsAddDivisionDialogOpen(true), (item) => handleEdit(item, setEditingDivision, setIsEditDivisionDialogOpen), "divisions")}
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Add New Division</DialogTitle>
+                                <DialogDescription>Create a new company division.</DialogDescription>
+                            </DialogHeader>
+                            <AddDivisionForm onFormSubmit={() => setIsAddDivisionDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
+                        {renderTableSection("Units", "Manage organizational units.", units, isLoadingUnits, () => setIsAddUnitDialogOpen(true), (item) => handleEdit(item, setEditingUnit, setIsEditUnitDialogOpen), "units")}
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Add New Unit</DialogTitle>
+                                <DialogDescription>Create a new organizational unit.</DialogDescription>
+                            </DialogHeader>
+                            <AddUnitForm onFormSubmit={() => setIsAddUnitDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
                 </CardContent>
             </Card>
 

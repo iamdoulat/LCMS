@@ -379,6 +379,10 @@ export default function AccountDetailsPage() {
   }, []);
 
   const handleReconciliationClick = (attendance: AttendanceDocument) => {
+    if (employeeData?.status === 'Terminated') {
+      Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+      return;
+    }
     if (!attendance.date) return;
     const dateKey = attendance.date.split('T')[0];
     const existing = reconciliations.get(dateKey);
@@ -437,6 +441,11 @@ export default function AccountDetailsPage() {
 
   const handleReconciliationSubmit = async () => {
     if (!selectedAttendanceForReconciliation || !user || !employeeData) return;
+
+    if (employeeData.status === 'Terminated') {
+      Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+      return;
+    }
 
     // Use formatting from state immediately if form is empty or out of sync (though useEffect handles it)
     // Actually relying on useEffect is fine, but double check.
@@ -602,12 +611,21 @@ export default function AccountDetailsPage() {
           const fromDate = format(startOfCurrentMonth, "yyyy-MM-dd'T'00:00:00.000xxx");
           const toDate = format(endOfCurrentMonth, "yyyy-MM-dd'T'23:59:59.999xxx");
 
-          const holidaysSnapshot = await getDocs(query(collection(firestore, 'holidays')));
-          const allHolidays = holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument);
-          setHolidays(allHolidays);
+          let allHolidays: HolidayDocument[] = [];
+          try {
+            const holidaysSnapshot = await getDocs(query(collection(firestore, 'holidays')));
+            allHolidays = holidaysSnapshot.docs.map(doc => doc.data() as HolidayDocument);
+            setHolidays(allHolidays);
+          } catch (err) {
+            console.warn("Could not fetch holidays (possibly permission denied).", err);
+          }
 
-          const employeesSnapshot = await getDocs(collection(firestore, 'employees'));
-          setAllEmployees(employeesSnapshot.docs.map(doc => doc.data() as EmployeeDocument));
+          try {
+            const employeesSnapshot = await getDocs(collection(firestore, 'employees'));
+            setAllEmployees(employeesSnapshot.docs.map(doc => doc.data() as EmployeeDocument));
+          } catch (err) {
+            console.warn("Could not fetch all employees list (possibly permission denied).", err);
+          }
 
           const leavesSnapshot = await getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id)));
           const allLeaves = leavesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
@@ -620,8 +638,12 @@ export default function AccountDetailsPage() {
           const advanceSalarySnapshot = await getDocs(query(collection(firestore, 'advance_salary'), where('employeeId', '==', employeeData.id)));
           setUserAdvanceSalary(advanceSalarySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AdvanceSalaryDocument)));
 
-          const payslipsSnapshot = await getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id)));
-          setPayslips(payslipsSnapshot.docs.map(d => d.data() as Payslip));
+          try {
+            const payslipsSnapshot = await getDocs(query(collection(firestore, "payslips"), where("employeeId", "==", employeeData.id)));
+            setPayslips(payslipsSnapshot.docs.map(d => d.data() as Payslip));
+          } catch (err) {
+            console.warn("Could not fetch payslips.", err);
+          }
 
           const monthlyAttendanceSnapshot = await getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', fromDate), where('date', '<=', toDate)));
           const currentMonthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
@@ -957,6 +979,11 @@ export default function AccountDetailsPage() {
       return;
     }
 
+    if (employeeData.status === 'Terminated') {
+      Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+      return;
+    }
+
     setAttendanceLoading(true);
 
     if (!navigator.geolocation) {
@@ -1171,6 +1198,10 @@ export default function AccountDetailsPage() {
   };
 
   const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (employeeData?.status === 'Terminated') {
+      Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+      return;
+    }
     if (e.target.files && e.target.files.length > 0) {
       setCrop(undefined); // Reset crop state
       const file = e.target.files[0];
@@ -1246,6 +1277,10 @@ export default function AccountDetailsPage() {
   };
 
   const handlePasteURL = async () => {
+    if (employeeData?.status === 'Terminated') {
+      Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+      return;
+    }
     const result = await Swal.fire({
       title: 'Paste Profile Picture URL',
       input: 'url',
@@ -1280,6 +1315,11 @@ export default function AccountDetailsPage() {
   const onSubmitProfile = async (data: AccountDetailsFormValues) => {
     if (!auth.currentUser) {
       Swal.fire("Error", "No user logged in.", "error");
+      return;
+    }
+
+    if (employeeData?.status === 'Terminated') {
+      Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
       return;
     }
     setIsSubmitting(true);
@@ -1327,6 +1367,15 @@ export default function AccountDetailsPage() {
       </FormControl>
     </FormItem>
   );
+
+  const handleBlockedAction = (e: React.MouseEvent, href: string) => {
+    if (employeeData?.status === 'Terminated') {
+      e.preventDefault();
+      Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+    } else {
+      // Normal navigation will happen if not terminated and it's a Link
+    }
+  };
 
   const getAttendanceTitle = () => {
     if (employeeData?.status === 'Terminated') return 'Account Terminated';
@@ -1905,6 +1954,11 @@ export default function AccountDetailsPage() {
                     return;
                   }
 
+                  if (employeeData.status === 'Terminated') {
+                    Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+                    return;
+                  }
+
                   // Enrollment logic based on multiCheckConfig
                   if (multiCheckConfig) {
                     // 1. Mandatory Company Name
@@ -2235,7 +2289,11 @@ export default function AccountDetailsPage() {
               </CardTitle>
               <CardDescription>Your recent advance salary applications.</CardDescription>
             </div>
-            <Button asChild><Link href="/dashboard/hr/payroll/advance-salary/add"><PlusCircle className="mr-2 h-4 w-4" />Apply</Link></Button>
+            <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/payroll/advance-salary/add")}>
+              <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/payroll/advance-salary/add"}>
+                <PlusCircle className="mr-2 h-4 w-4" />Apply
+              </Link>
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto w-full">
@@ -2258,7 +2316,11 @@ export default function AccountDetailsPage() {
               </CardTitle>
               <CardDescription>Your recent leave applications.</CardDescription>
             </div>
-            <Button asChild><Link href="/dashboard/hr/leaves/add"><PlusCircle className="mr-2 h-4 w-4" />Apply</Link></Button>
+            <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/leaves/add")}>
+              <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/leaves/add"}>
+                <PlusCircle className="mr-2 h-4 w-4" />Apply
+              </Link>
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto w-full">
@@ -2288,7 +2350,11 @@ export default function AccountDetailsPage() {
               </CardTitle>
               <CardDescription>Your recent official visit applications.</CardDescription>
             </div>
-            <Button asChild><Link href="/dashboard/hr/visit-applications/add"><PlusCircle className="mr-2 h-4 w-4" />Apply</Link></Button>
+            <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/visit-applications/add")}>
+              <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/visit-applications/add"}>
+                <PlusCircle className="mr-2 h-4 w-4" />Apply
+              </Link>
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto w-full">
