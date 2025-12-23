@@ -64,7 +64,6 @@ export function AddEmployeeForm() {
   const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(firestoreQuery(collection(firestore, "branches"), orderBy("name")), undefined, ['branches']);
   const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(firestoreQuery(collection(firestore, "departments"), orderBy("name")), undefined, ['departments']);
   const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(firestoreQuery(collection(firestore, "units"), orderBy("name")), undefined, ['units']);
-  const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(firestoreQuery(collection(firestore, "units"), orderBy("name")), undefined, ['units']);
   const { data: divisions, isLoading: isLoadingDivisions } = useFirestoreQuery<DivisionDocument[]>(firestoreQuery(collection(firestore, "divisions"), orderBy("name")), undefined, ['divisions']);
   const { data: leaveGroups, isLoading: isLoadingLeaveGroups } = useFirestoreQuery<LeaveGroupDocument[]>(firestoreQuery(collection(firestore, 'hrm_settings', 'leave_groups', 'items'), orderBy("groupName", "asc")), undefined, ['leave_groups']);
 
@@ -72,7 +71,6 @@ export function AddEmployeeForm() {
   const designationOptions = React.useMemo(() => toComboboxOptions(designations || [], 'name'), [designations]);
   const branchOptions = React.useMemo(() => toComboboxOptions(branches || [], 'name'), [branches]);
   const departmentOptions = React.useMemo(() => toComboboxOptions(departments || [], 'name'), [departments]);
-  const unitOptions = React.useMemo(() => toComboboxOptions(units || [], 'name'), [units]);
   const unitOptions = React.useMemo(() => toComboboxOptions(units || [], 'name'), [units]);
   const divisionOptions = React.useMemo(() => toComboboxOptions(divisions || [], 'name'), [divisions]);
   const leaveGroupOptions = React.useMemo(() => leaveGroups?.map(g => ({ value: g.id, label: g.groupName })) || [], [leaveGroups]);
