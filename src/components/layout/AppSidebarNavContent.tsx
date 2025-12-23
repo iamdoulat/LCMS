@@ -210,6 +210,7 @@ const settingsNavItems: NavItem[] = [
   { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Invoice Header Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
   { href: '/dashboard/settings/smtp-settings', label: 'SMTP Setting', icon: Settings, iconColorClass: 'bg-icon-settings' },
   { href: "/dashboard/settings/whatsapp-templates", label: "WhatsApp Templates", icon: MessageSquareText, iconColorClass: 'bg-icon-list' },
+  { href: "/dashboard/settings/telegram-templates", label: "Telegram Templates", icon: FileCode, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/settings/email-templates', label: 'Email Template', icon: FileText, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/settings/whatsapp', label: 'WhatsApp Settings', icon: MessageSquare, iconColorClass: 'bg-icon-settings' },
   { href: '/dashboard/settings/telegram', label: 'Telegram Bot Settings', icon: Send, iconColorClass: 'bg-icon-settings' },

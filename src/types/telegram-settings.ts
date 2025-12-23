@@ -1,10 +1,11 @@
+import { Timestamp } from 'firebase/firestore';
 
-export interface TelegramConfiguration {
+export interface TelegramTemplate {
     id?: string;
     name: string;
-    botToken: string;
-    chatId: string;
+    slug: string;
+    body: string;
     isActive: boolean;
-    createdAt?: any;
-    updatedAt?: any;
+    createdAt?: Timestamp | any;
+    updatedAt?: Timestamp | any;
 }

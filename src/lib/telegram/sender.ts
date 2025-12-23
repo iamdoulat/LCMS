@@ -3,13 +3,82 @@ import { admin } from '@/lib/firebase/admin';
 import { logActivity } from '@/lib/logger';
 
 interface SendTelegramOptions {
-    message: string;
+    message?: string;
     photoUrl?: string;
+    templateSlug?: string;
+    data?: Record<string, any>;
 }
 
-export async function sendTelegram({ message, photoUrl }: SendTelegramOptions) {
+/**
+ * Fetches an active Telegram template by slug.
+ */
+export async function getTelegramTemplate(slug: string) {
     try {
-        // Fetch Active Telegram Config
+        const snapshot = await admin.firestore().collection('telegram_templates')
+            .where('slug', '==', slug)
+            .get();
+
+        if (snapshot.empty) return null;
+
+        const template = snapshot.docs[0].data();
+        if (template.isActive === false) return null;
+
+        return template;
+    } catch (error) {
+        console.error(`Error fetching telegram template ${slug}:`, error);
+        return null;
+    }
+}
+
+/**
+ * Replaces variables in template body with actual data.
+ */
+export const formatTelegramMessage = (body: string, data: Record<string, any>) => {
+    let formatted = body;
+    const allData: Record<string, any> = {
+        ...data,
+        company_name: process.env.NEXT_PUBLIC_APP_NAME || 'Smart Solution',
+        date: new Date().toLocaleDateString(),
+    };
+
+    Object.keys(allData).forEach(key => {
+        const regex = new RegExp(`{{${key}}}`, 'g');
+        formatted = formatted.replace(regex, String(allData[key]));
+    });
+
+    return formatted;
+};
+
+export async function sendTelegram({ message, photoUrl, templateSlug, data }: SendTelegramOptions) {
+    try {
+        // 1. Resolve Final Message
+        let finalMessage = message || '';
+
+        if (templateSlug) {
+            const template = await getTelegramTemplate(templateSlug);
+            if (!template) {
+                console.log(`[Telegram] Skipping/Falling back: Template '${templateSlug}' disabled or not found.`);
+                // If message was provided, we continue with it. If not, we skip.
+                if (!finalMessage) {
+                    await logActivity({
+                        type: 'telegram',
+                        action: 'send_message',
+                        status: 'warning',
+                        message: `Telegram notification skipped: Template '${templateSlug}' is disabled or not found.`,
+                        details: { templateSlug }
+                    });
+                    return { success: true, status: 'skipped' };
+                }
+            } else {
+                finalMessage = formatTelegramMessage(template.body, data || {});
+            }
+        }
+
+        if (!finalMessage) {
+            return { success: false, error: 'No message content provided' };
+        }
+
+        // 2. Fetch Active Telegram Config
         const snapshot = await admin.firestore().collection('telegram_settings')
             .where('isActive', '==', true)
             .limit(1)
@@ -28,8 +97,7 @@ export async function sendTelegram({ message, photoUrl }: SendTelegramOptions) {
             return { success: false, error: 'Incomplete configuration' };
         }
 
-        // Send via Telegram Bot API
-        // Use sendPhoto if photoUrl is provided, otherwise sendMessage
+        // 3. Send via Telegram Bot API
         const endpoint = photoUrl ? 'sendPhoto' : 'sendMessage';
         const body: any = {
             chat_id: chatId,
@@ -38,9 +106,9 @@ export async function sendTelegram({ message, photoUrl }: SendTelegramOptions) {
 
         if (photoUrl) {
             body.photo = photoUrl;
-            body.caption = message;
+            body.caption = finalMessage;
         } else {
-            body.text = message;
+            body.text = finalMessage;
         }
 
         const response = await fetch(`https://api.telegram.org/bot${botToken}/${endpoint}`, {

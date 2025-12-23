@@ -58,21 +58,63 @@ export async function POST(request: Request) {
         // Determine template slug based on type
         const templateSlug = `attendance_${type}`;
 
-        // Ensure we have a readable address (Server-side fallback)
+        // 1. Ensure we have a readable address (Server-side fallback)
         let finalAddress = location?.address || '';
         if (!finalAddress && location?.latitude && location?.longitude) {
             try {
-                console.log(`[ATTENDANCE NOTIFY] Attempting server-side reverse geocoding for ${location.latitude}, ${location.longitude}`);
                 finalAddress = await reverseGeocode(location.latitude, location.longitude);
             } catch (err) {
-                console.warn('[ATTENDANCE NOTIFY] Server-side reverse geocoding failed:', err);
                 finalAddress = `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
             }
         } else if (!finalAddress) {
             finalAddress = 'Location unavailable';
         }
 
-        // Prepare notification data
+        // 2. TRIGGER TELEGRAM NOTIFICATION (Template-driven with fallback)
+        try {
+            const address = finalAddress;
+            let fallbackMsg = '';
+
+            switch (type) {
+                case 'in_time':
+                    fallbackMsg = `🔵 <b>[IN TIME]</b> - ${employeeName} - ${employeeCode || 'N/A'}\n- <b>Time:</b> ${time}\n- <b>Date:</b> ${date || new Date().toLocaleDateString()}\n- <b>Location:</b> ${address}\n${remarks ? `- <b>Remarks:</b> ${remarks}` : ''}`;
+                    break;
+                case 'out_time':
+                    fallbackMsg = `⚪ <b>[OUT TIME]</b> - ${employeeName} - ${employeeCode || 'N/A'}\n- <b>Time:</b> ${time}\n- <b>Date:</b> ${date || new Date().toLocaleDateString()}\n- <b>Location:</b> ${address}\n${remarks ? `- <b>Remarks:</b> ${remarks}` : ''}`;
+                    break;
+                case 'check_in':
+                    fallbackMsg = `🔴 <b>[CHECK IN]</b> - ${employeeName} - ${employeeCode || 'N/A'}\n- <b>Time:</b> ${time}\n- <b>Date:</b> ${date || new Date().toLocaleDateString()}\n- <b>Location:</b> ${address}\n${companyName ? `- <b>Company:</b> ${companyName}\n` : ''}${remarks ? `- <b>Remarks:</b> ${remarks}` : ''}`;
+                    break;
+                case 'check_out':
+                    fallbackMsg = `🟢 <b>[CHECK OUT]</b> - ${employeeName} - ${employeeCode || 'N/A'}\n- <b>Time:</b> ${time}\n- <b>Date:</b> ${date || new Date().toLocaleDateString()}\n- <b>Location:</b> ${address}\n${companyName ? `- <b>Company:</b> ${companyName}\n` : ''}${remarks ? `- <b>Remarks:</b> ${remarks}` : ''}`;
+                    break;
+            }
+
+            // Prepare data for template
+            const templateData = {
+                employee_name: employeeName,
+                employee_code: employeeCode || 'N/A',
+                time: time,
+                date: date || new Date().toLocaleDateString(),
+                location: address,
+                location_company_name: companyName || '',
+                remarks: remarks || 'No remarks provided',
+                company_name: process.env.NEXT_PUBLIC_APP_NAME || 'Smart Solution'
+            };
+
+            // Fire and forget telegram
+            sendTelegram({
+                templateSlug,
+                data: templateData,
+                message: fallbackMsg, // Fallback if template is not found
+                photoUrl: (type === 'check_in' || type === 'check_out') ? photoUrl : undefined
+            }).catch(err => console.error('[ATTENDANCE NOTIFY] Telegram background error:', err));
+
+        } catch (teleError) {
+            console.error('[ATTENDANCE NOTIFY] Error preparing Telegram message:', teleError);
+        }
+
+        // 3. Prepare data for Email/WhatsApp templates
         const notificationData: Record<string, string> = {
             employee_name: employeeName,
             employee_code: employeeCode || 'N/A',
@@ -81,27 +123,15 @@ export async function POST(request: Request) {
             location: finalAddress,
         };
 
-        // Add type-specific data
-        if (type === 'in_time' && flag) {
-            notificationData.flag = flag;
-        }
+        if (type === 'in_time' && flag) notificationData.flag = flag;
+        if ((type === 'check_in' || type === 'check_out') && companyName) notificationData.location_company_name = companyName;
+        notificationData.remarks = remarks || 'No remarks provided';
 
-        if ((type === 'check_in' || type === 'check_out') && companyName) {
-            notificationData.location_company_name = companyName;
-        }
-
-        if (remarks) {
-            notificationData.remarks = remarks;
-        } else {
-            notificationData.remarks = 'No remarks provided';
-        }
-
-        // Get HR/Admin contacts
+        // 4. Get HR/Admin contacts
         const hrAdminEmails: string[] = [];
         const hrAdminPhones: string[] = [];
 
         try {
-            // Fetch HR/Admin emails
             const adminsSnapshot = await admin.firestore().collection('users')
                 .where('role', 'array-contains-any', ['Admin', 'HR', 'Super Admin'])
                 .get();
@@ -111,14 +141,12 @@ export async function POST(request: Request) {
                 if (email) hrAdminEmails.push(email);
             });
 
-            // Fetch HR/Admin phones
             const phones = await getPhonesByRole(['Admin', 'HR', 'Super Admin']);
             hrAdminPhones.push(...phones);
         } catch (error) {
             console.error('Error fetching HR/Admin contacts:', error);
         }
 
-        // Send notifications tracking
         const notifications: Record<string, { success: boolean; sent: boolean; skipped?: boolean }> = {
             employeeEmail: { success: false, sent: false, skipped: false },
             employeeWhatsApp: { success: false, sent: false, skipped: false },
@@ -126,141 +154,43 @@ export async function POST(request: Request) {
             hrWhatsApp: { success: false, sent: false, skipped: false }
         };
 
-        // 1. Send email to employee
+        // 5. Send Email/WhatsApp (Template Controlled)
+        // Employee Email
         if (employeeEmail) {
             try {
-                const result = await sendEmail({
-                    to: employeeEmail,
-                    templateSlug: templateSlug,
-                    data: notificationData
-                });
-                notifications.employeeEmail = {
-                    success: !!result?.success,
-                    sent: result?.status !== 'skipped',
-                    skipped: result?.status === 'skipped'
-                };
-            } catch (error: any) {
-                console.error('Error sending email to employee:', error);
-                notifications.employeeEmail = { success: false, sent: false };
-            }
+                const result = await sendEmail({ to: employeeEmail, templateSlug, data: notificationData });
+                notifications.employeeEmail = { success: !!result?.success, sent: result?.status !== 'skipped', skipped: result?.status === 'skipped' };
+            } catch (err) { console.error('Error sending email to employee:', err); }
         }
 
-        // 2. Send WhatsApp to employee
+        // Employee WhatsApp
         if (employeePhone) {
             try {
-                const result = await sendWhatsApp({
-                    to: employeePhone,
-                    templateSlug: templateSlug,
-                    data: notificationData
-                });
-                notifications.employeeWhatsApp = {
-                    success: !!result?.success,
-                    sent: result?.status !== 'skipped',
-                    skipped: result?.status === 'skipped'
-                };
-            } catch (error: any) {
-                console.error('Error sending WhatsApp to employee:', error);
-                notifications.employeeWhatsApp = { success: false, sent: false };
-            }
+                const result = await sendWhatsApp({ to: employeePhone, templateSlug, data: notificationData });
+                notifications.employeeWhatsApp = { success: !!result?.success, sent: result?.status !== 'skipped', skipped: result?.status === 'skipped' };
+            } catch (err) { console.error('Error sending WhatsApp to employee:', err); }
         }
 
-        // 3. Send email to HR/Admin
+        // HR/Admin Email
         if (hrAdminEmails.length > 0) {
             try {
-                const result = await sendEmail({
-                    to: hrAdminEmails,
-                    templateSlug: templateSlug,
-                    data: notificationData
-                });
-                notifications.hrEmail = {
-                    success: !!result?.success,
-                    sent: result?.status !== 'skipped',
-                    skipped: result?.status === 'skipped'
-                };
-            } catch (error: any) {
-                console.error('Error sending email to HR/Admin:', error);
-                notifications.hrEmail = { success: false, sent: false };
-            }
+                const result = await sendEmail({ to: hrAdminEmails, templateSlug, data: notificationData });
+                notifications.hrEmail = { success: !!result?.success, sent: result?.status !== 'skipped', skipped: result?.status === 'skipped' };
+            } catch (err) { console.error('Error sending email to HR/Admin:', err); }
         }
 
-        // 4. Send WhatsApp to HR/Admin
+        // HR/Admin WhatsApp
         if (hrAdminPhones.length > 0) {
             try {
                 let anySent = false;
                 let anySkipped = false;
                 for (const phone of hrAdminPhones) {
-                    const result = await sendWhatsApp({
-                        to: phone,
-                        templateSlug: templateSlug,
-                        data: notificationData
-                    });
+                    const result = await sendWhatsApp({ to: phone, templateSlug, data: notificationData });
                     if (result.success && result.status !== 'skipped') anySent = true;
                     if (result.status === 'skipped') anySkipped = true;
                 }
-                notifications.hrWhatsApp = {
-                    success: anySent || anySkipped,
-                    sent: anySent,
-                    skipped: !anySent && anySkipped
-                };
-            } catch (error: any) {
-                console.error('Error sending WhatsApp to HR/Admin:', error);
-                notifications.hrWhatsApp = { success: false, sent: false };
-            }
-        }
-
-        // Create Telegram notification
-        let telegramMsg = '';
-        const address = finalAddress;
-
-        switch (type) {
-            case 'in_time':
-                telegramMsg = `🔵 <b>[IN TIME]</b> - ${employeeName} - ${employeeCode}\n`;
-                telegramMsg += `- <b>Time:</b> ${time}\n`;
-                telegramMsg += `- <b>Date:</b> ${date}\n`;
-                telegramMsg += `- <b>Location:</b> ${address}\n`;
-                if (remarks) telegramMsg += `- <b>Remarks:</b> ${remarks}`;
-                break;
-            case 'out_time':
-                telegramMsg = `⚪ <b>[OUT TIME]</b> - ${employeeName} - ${employeeCode}\n`;
-                telegramMsg += `- <b>Time:</b> ${time}\n`;
-                telegramMsg += `- <b>Date:</b> ${date}\n`;
-                telegramMsg += `- <b>Location:</b> ${address}\n`;
-                if (remarks) telegramMsg += `- <b>Remarks:</b> ${remarks}`;
-                break;
-            case 'check_in':
-                telegramMsg = `🔴 <b>[CHECK IN]</b> - ${employeeName} - ${employeeCode}\n`;
-                telegramMsg += `- <b>Time:</b> ${time}\n`;
-                telegramMsg += `- <b>Date:</b> ${date}\n`;
-                telegramMsg += `- <b>Location:</b> ${address}\n`;
-                if (companyName) telegramMsg += `- <b>Company:</b> ${companyName}\n`;
-                if (remarks) telegramMsg += `- <b>Remarks:</b> ${remarks}`;
-                break;
-            case 'check_out':
-                telegramMsg = `🟢 <b>[CHECK OUT]</b> - ${employeeName} - ${employeeCode}\n`;
-                telegramMsg += `- <b>Time:</b> ${time}\n`;
-                telegramMsg += `- <b>Date:</b> ${date}\n`;
-                telegramMsg += `- <b>Location:</b> ${address}\n`;
-                if (companyName) telegramMsg += `- <b>Company:</b> ${companyName}\n`;
-                if (remarks) telegramMsg += `- <b>Remarks:</b> ${remarks}`;
-                break;
-        }
-
-        // Fire and forget telegram to not slow down the main response
-        if (telegramMsg) {
-            sendTelegram({
-                message: telegramMsg,
-                photoUrl: (type === 'check_in' || type === 'check_out') ? photoUrl : undefined
-            })
-                .then(res => {
-                    if (res.success) {
-                        console.log(`[ATTENDANCE NOTIFY] Telegram sent successfully for ${type}`);
-                    } else {
-                        console.error(`[ATTENDANCE NOTIFY] Telegram sending failed for ${type}:`, res.error);
-                    }
-                })
-                .catch(err => {
-                    console.error(`[ATTENDANCE NOTIFY] Telegram background error for ${type}:`, err);
-                });
+                notifications.hrWhatsApp = { success: anySent || anySkipped, sent: anySent, skipped: !anySent && anySkipped };
+            } catch (err) { console.error('Error sending WhatsApp to HR/Admin:', err); }
         }
 
         return NextResponse.json({
@@ -272,9 +202,6 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error('Error in attendance notification:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal server error' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
     }
 }

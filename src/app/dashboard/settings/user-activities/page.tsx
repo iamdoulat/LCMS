@@ -23,7 +23,8 @@ import {
   Search,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Send
 } from 'lucide-react';
 import { LogEntry, LogStatus, LogType } from '@/lib/logger';
 import { format } from 'date-fns';
@@ -121,6 +122,7 @@ export default function ActivityLogsPage() {
     total: logs.length,
     whatsapp: logs.filter(l => l.type === 'whatsapp').length,
     email: logs.filter(l => l.type === 'email').length,
+    telegram: logs.filter(l => l.type === 'telegram').length,
     errors: logs.filter(l => l.status === 'failed').length
   };
 
@@ -138,6 +140,7 @@ export default function ActivityLogsPage() {
     switch (type) {
       case 'whatsapp': return <MessageSquare className="h-4 w-4 text-green-500" />;
       case 'email': return <Mail className="h-4 w-4 text-blue-500" />;
+      case 'telegram': return <Send className="h-4 w-4 text-sky-500" />;
       case 'error': return <AlertCircle className="h-4 w-4 text-red-500" />;
       case 'user_activity': return <Activity className="h-4 w-4 text-orange-500" />;
       default: return <Activity className="h-4 w-4 text-gray-500" />;
@@ -161,7 +164,7 @@ export default function ActivityLogsPage() {
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">System Activity Logs</h1>
-          <p className="text-muted-foreground">Monitor WhatsApp, Email, and User activities.</p>
+          <p className="text-muted-foreground">Monitor WhatsApp, Email, Telegram, and User activities.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchLogs} disabled={loading}>
@@ -174,7 +177,7 @@ export default function ActivityLogsPage() {
       </div>
 
       {/* Analytics Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Logs</CardTitle>
@@ -195,6 +198,13 @@ export default function ActivityLogsPage() {
             <Mail className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent><div className="text-2xl font-bold">{stats.email}</div><p className="text-xs text-muted-foreground">Attempted emails</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Telegram Sent</CardTitle>
+            <Send className="h-4 w-4 text-sky-500" />
+          </CardHeader>
+          <CardContent><div className="text-2xl font-bold">{stats.telegram}</div><p className="text-xs text-muted-foreground">Sent notifications</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -224,6 +234,7 @@ export default function ActivityLogsPage() {
                 <Button variant={filterType === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('all')}>All</Button>
                 <Button variant={filterType === 'whatsapp' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('whatsapp')}><MessageSquare className="h-4 w-4 mr-1" /> WA</Button>
                 <Button variant={filterType === 'email' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('email')}><Mail className="h-4 w-4 mr-1" /> Email</Button>
+                <Button variant={filterType === 'telegram' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('telegram')}><Send className="h-4 w-4 mr-1" /> Telegram</Button>
               </div>
             </div>
           </div>
