@@ -9,3 +9,13 @@ export interface TelegramTemplate {
     createdAt?: Timestamp | any;
     updatedAt?: Timestamp | any;
 }
+
+export interface TelegramConfiguration {
+    id?: string;
+    name: string;
+    botToken: string;
+    chatId: string;
+    isActive: boolean;
+    createdAt?: Timestamp | any;
+    updatedAt?: Timestamp | any;
+}
