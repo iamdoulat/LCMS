@@ -91,6 +91,7 @@ import {
   MessageSquare,
   MessageSquareText,
   Smartphone,
+  Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -211,6 +212,7 @@ const settingsNavItems: NavItem[] = [
   { href: "/dashboard/settings/whatsapp-templates", label: "WhatsApp Templates", icon: MessageSquareText, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/settings/email-templates', label: 'Email Template', icon: FileText, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/settings/whatsapp', label: 'WhatsApp Settings', icon: MessageSquare, iconColorClass: 'bg-icon-settings' },
+  { href: '/dashboard/settings/telegram', label: 'Telegram Bot Settings', icon: Send, iconColorClass: 'bg-icon-settings' },
 ];
 
 // Define Group Structure

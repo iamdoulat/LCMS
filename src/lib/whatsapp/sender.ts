@@ -29,7 +29,7 @@ const getWhatsAppTemplate = async (slug: string) => {
             // Check if template is active (default true if not set)
             if (template.isActive === false) {
                 console.log(`WhatsApp template '${slug}' is disabled. Skipping send.`);
-                throw new Error(`WhatsApp template '${slug}' is currently disabled.`);
+                return null;
             }
 
             return template;
@@ -43,14 +43,14 @@ const getWhatsAppTemplate = async (slug: string) => {
             // Check if template is active (default true if not set)
             if (template.isActive === false) {
                 console.log(`WhatsApp template '${slug}' is disabled. Skipping send.`);
-                throw new Error(`WhatsApp template '${slug}' is currently disabled.`);
+                return null;
             }
 
             return template;
         }
     }
 
-    throw new Error(`WhatsApp template '${slug}' not found.`);
+    return null;
 };
 
 // Helper to fully format message from template
@@ -97,16 +97,21 @@ export async function sendWhatsApp({ to, templateSlug, data, message }: SendWhat
         if (templateSlug) {
             try {
                 const template = await getWhatsAppTemplate(templateSlug);
+                if (!template) {
+                    console.log(`[WhatsApp] Skipping send for slug: ${templateSlug} (Template disabled or not found)`);
+                    await logActivity({
+                        type: 'whatsapp',
+                        action: 'send_whatsapp',
+                        status: 'warning',
+                        message: `WhatsApp notification skipped: Template '${templateSlug}' is disabled or not found.`,
+                        recipient: Array.isArray(to) ? to.join(', ') : to,
+                        details: { template: templateSlug }
+                    });
+                    return { success: true, status: 'skipped' };
+                }
                 finalMessage = formatWhatsAppMessage(template, data || {});
             } catch (err: any) {
                 console.error(`Error loading template ${templateSlug}:`, err);
-                await logActivity({
-                    type: 'whatsapp',
-                    action: 'template_load_failed',
-                    status: 'failed',
-                    message: `Failed to load template: ${templateSlug}`,
-                    details: { error: err.message },
-                });
                 throw err;
             }
         }

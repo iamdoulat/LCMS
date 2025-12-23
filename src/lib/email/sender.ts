@@ -88,12 +88,12 @@ const getEmailTemplate = async (slug: string) => {
                 // Check if template is active (default true if not set)
                 if (template.isActive === false) {
                     console.log(`Email template '${slug}' is disabled. Skipping send.`);
-                    throw new Error(`Email template '${slug}' is currently disabled.`);
+                    return null; // Return null to indicate skipped
                 }
 
                 return template;
             } else {
-                throw new Error(`Email template '${slug}' not found in database.`);
+                return null; // Template not found, skip
             }
 
         } catch (e: any) {
@@ -128,17 +128,22 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
         if (templateSlug) {
             try {
                 const template = await getEmailTemplate(templateSlug);
+                if (!template) {
+                    console.log(`[Email] Skipping send for slug: ${templateSlug} (Template disabled or not found)`);
+                    await logActivity({
+                        type: 'email',
+                        action: 'send_email',
+                        status: 'warning',
+                        message: `Email notification skipped: Template '${templateSlug}' is disabled or not found.`,
+                        recipient: Array.isArray(to) ? to.join(', ') : to,
+                        details: { template: templateSlug }
+                    });
+                    return { success: true, status: 'skipped' };
+                }
                 subject = template.subject;
                 body = template.body;
             } catch (err: any) {
                 console.error(`Error loading email template ${templateSlug}:`, err);
-                await logActivity({
-                    type: 'email',
-                    action: 'template_load_failed',
-                    status: 'failed',
-                    message: `Failed to load email template: ${templateSlug}`,
-                    details: { error: err.message }
-                });
                 throw err;
             }
         } else if (!subject || !body) {

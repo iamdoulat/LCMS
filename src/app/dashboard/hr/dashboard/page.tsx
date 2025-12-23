@@ -413,7 +413,7 @@ export default function HrmDashboardPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-6 md:grid-cols-2 lg:grid-cols-4">
                         <StatCard
                             title="Today Present"
                             value={stats.todayPresent + stats.todayDelayed}

@@ -30,7 +30,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag } from '@/types';
 import type { CheckInOutType, MultipleCheckInOutRecord } from '@/types/checkInOut';
-import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
+import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord, reverseGeocode } from '@/lib/firebase/checkInOut';
 import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
@@ -853,7 +853,15 @@ export default function AccountDetailsPage() {
         }
 
         const { remarks, latitude: finalLatitude, longitude: finalLongitude } = result.value;
-        const locationData = { latitude: finalLatitude, longitude: finalLongitude };
+        const locationData: any = { latitude: finalLatitude, longitude: finalLongitude };
+
+        // Try to get address for notifications
+        try {
+          const address = await reverseGeocode(finalLatitude, finalLongitude);
+          locationData.address = address;
+        } catch (error) {
+          console.warn('Could not reverse geocode in handleAttendance:', error);
+        }
 
         const now = new Date();
         const formattedDate = format(now, 'yyyy-MM-dd');
@@ -1655,7 +1663,8 @@ export default function AccountDetailsPage() {
                         date: format(now, 'PPP'),
                         location: currentLocation,
                         companyName: companyName,
-                        remarks: checkInOutRemarks
+                        remarks: checkInOutRemarks,
+                        photoUrl: imageURL
                       })
                     }).catch(err => console.error('Notification error:', err));
 

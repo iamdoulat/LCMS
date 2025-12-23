@@ -99,6 +99,25 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
                 data.remarks
             );
 
+            // Send notifications (non-blocking)
+            const now = new Date();
+            // Try to get more employee details if we have them, otherwise just enough for the notification
+            fetch('/api/notify/attendance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: data.type === 'Check In' ? 'check_in' : 'check_out',
+                    employeeId: employeeId,
+                    employeeName: employeeName,
+                    time: new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).format(now),
+                    date: new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).format(now),
+                    location: location,
+                    companyName: data.companyName,
+                    remarks: data.remarks,
+                    photoUrl: imageURL
+                })
+            }).catch(err => console.error('Notification error:', err));
+
             Swal.fire('Success', `${data.type} recorded successfully!`, 'success');
             onSuccess?.();
         } catch (error) {

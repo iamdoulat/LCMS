@@ -2,7 +2,7 @@
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-export type LogType = 'whatsapp' | 'email' | 'user_activity' | 'system' | 'error';
+export type LogType = 'whatsapp' | 'email' | 'telegram' | 'user_activity' | 'system' | 'error';
 export type LogStatus = 'success' | 'failed' | 'pending' | 'warning';
 
 export interface LogEntry {
