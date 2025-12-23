@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Image as ImageIcon, Loader2, Clock, AlertCircle, Building2, User, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { MapPin, Image as ImageIcon, Loader2, Clock, AlertCircle, Building2, User, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Trash2 } from 'lucide-react';
 import { getCheckInOutRecords, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase/config';
+import { collection, query, where, getDocs, doc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
+import { firestore, storage } from '@/lib/firebase/config';
 import type { MultipleCheckInOutRecord, CheckInOutType } from '@/types/checkInOut';
-import type { EmployeeDocument } from '@/types';
+import type { EmployeeDocument, MultipleCheckInOutConfiguration } from '@/types';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -71,7 +72,7 @@ function formatDuration(milliseconds: number): string {
 
 export default function MultipleCheckInOutPage() {
     const searchParams = useSearchParams();
-    const { user } = useAuth();
+    const { user, userRole } = useAuth();
     const myRecordsOnly = searchParams.get('myRecords') === 'true';
 
     const [records, setRecords] = useState<MultipleCheckInOutRecord[]>([]);
@@ -82,6 +83,17 @@ export default function MultipleCheckInOutPage() {
     const [toDate, setToDate] = useState('');
     const [selectedRecord, setSelectedRecord] = useState<MultipleCheckInOutRecord | null>(null);
     const [showImageDialog, setShowImageDialog] = useState(false);
+    const [multiCheckConfig, setMultiCheckConfig] = useState<MultipleCheckInOutConfiguration | null>(null);
+
+    // Fetch multiple check in/out configuration
+    useEffect(() => {
+        const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'multi_check_in_out'), (docSnap) => {
+            if (docSnap.exists()) {
+                setMultiCheckConfig(docSnap.data() as MultipleCheckInOutConfiguration);
+            }
+        });
+        return () => unsub();
+    }, []);
 
     // Fetch current user's employee data
     useEffect(() => {
@@ -157,7 +169,7 @@ export default function MultipleCheckInOutPage() {
             const checkIns = allRecords.filter(r => r.type === 'Check In');
             const checkOuts = allRecords.filter(r => r.type === 'Check Out');
             const now = new Date().getTime();
-            const eightHoursInMs = 8 * 60 * 60 * 1000;
+            const maxHoursInMs = (multiCheckConfig?.maxHourLimitOfCheckOut || 8) * 60 * 60 * 1000;
 
             for (const checkIn of checkIns) {
                 // Check if there's already a checkout for this check-in
@@ -172,10 +184,10 @@ export default function MultipleCheckInOutPage() {
                     const checkInTime = new Date(checkIn.timestamp).getTime();
                     const timeSinceCheckIn = now - checkInTime;
 
-                    // If more than 8 hours have passed, auto-checkout
-                    if (timeSinceCheckIn > eightHoursInMs) {
-                        // Calculate checkout time as exactly 8 hours after check-in
-                        const autoCheckoutTime = new Date(checkInTime + eightHoursInMs);
+                    // If more than max hours have passed, auto-checkout
+                    if (timeSinceCheckIn > maxHoursInMs) {
+                        // Calculate checkout time as exactly max hours after check-in
+                        const autoCheckoutTime = new Date(checkInTime + maxHoursInMs);
 
                         await createCheckInOutRecord(
                             checkIn.employeeId,
@@ -184,7 +196,7 @@ export default function MultipleCheckInOutPage() {
                             'Check Out',
                             checkIn.location, // Use same location as check-in
                             '', // No image for auto-checkout
-                            `Auto check-out: Visit exceeded 8 hours. Automatically checked out at ${format(autoCheckoutTime, 'hh:mm a')}`
+                            `Auto check-out: Visit exceeded ${multiCheckConfig?.maxHourLimitOfCheckOut || 8} hours. Automatically checked out at ${format(autoCheckoutTime, 'hh:mm a')}`
                         );
 
                         console.log(`Auto checkout created for ${checkIn.employeeName} at ${checkIn.companyName}`);
@@ -201,8 +213,64 @@ export default function MultipleCheckInOutPage() {
         window.open(`https://www.google.com/maps?q=${latitude},${longitude}`, '_blank');
     };
 
+    const handleDeleteVisit = async (visit: GroupedVisit) => {
+        const result = await Swal.fire({
+            title: 'Delete Visit?',
+            text: `Are you sure you want to delete this visit for ${visit.employeeName} at ${visit.companyName}? This will remove both check-in and check-out records.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                // Delete images from storage if they exist
+                if (visit.checkIn.imageURL) {
+                    try {
+                        const imageRef = ref(storage, visit.checkIn.imageURL);
+                        await deleteObject(imageRef);
+                    } catch (err) {
+                        console.error('Error deleting check-in image:', err);
+                    }
+                }
+
+                if (visit.checkOut?.imageURL) {
+                    try {
+                        const imageRef = ref(storage, visit.checkOut.imageURL);
+                        await deleteObject(imageRef);
+                    } catch (err) {
+                        console.error('Error deleting check-out image:', err);
+                    }
+                }
+
+                // Delete check-in
+                await deleteDoc(doc(firestore, 'multiple_check_inout', visit.checkIn.id!));
+
+                // Delete check-out if exists
+                if (visit.checkOut) {
+                    await deleteDoc(doc(firestore, 'multiple_check_inout', visit.checkOut.id!));
+                }
+
+                Swal.fire('Deleted!', 'The visit records have been deleted.', 'success');
+
+                // Refresh records list
+                setRecords(prev => prev.filter(r =>
+                    r.id !== visit.checkIn.id &&
+                    (!visit.checkOut || r.id !== visit.checkOut.id)
+                ));
+            } catch (error: any) {
+                console.error('Error deleting visit:', error);
+                Swal.fire('Error', `Failed to delete: ${error.message}`, 'error');
+            }
+        }
+    };
+
     // Group records into visits
     const groupedVisits = useMemo(() => {
+        const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 8;
+        const maxHoursInMs = maxHours * 60 * 60 * 1000;
         const visits: GroupedVisit[] = [];
         const checkIns = records.filter(r => r.type === 'Check In');
         const checkOuts = records.filter(r => r.type === 'Check Out');
@@ -221,13 +289,13 @@ export default function MultipleCheckInOutPage() {
 
             if (matchingCheckOut) {
                 duration = new Date(matchingCheckOut.timestamp).getTime() - new Date(checkIn.timestamp).getTime();
-                exceedsEightHours = duration > 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+                exceedsEightHours = duration > maxHoursInMs; // Check against configured max hours
             } else {
-                // No checkout yet - check if it's been more than 8 hours since check-in
+                // No checkout yet - check if it's been more than max hours since check-in
                 const now = new Date().getTime();
                 const checkInTime = new Date(checkIn.timestamp).getTime();
                 const timeSinceCheckIn = now - checkInTime;
-                exceedsEightHours = timeSinceCheckIn > 8 * 60 * 60 * 1000;
+                exceedsEightHours = timeSinceCheckIn > maxHoursInMs;
             }
 
             visits.push({
@@ -243,7 +311,7 @@ export default function MultipleCheckInOutPage() {
         });
 
         return visits;
-    }, [records]);
+    }, [records, multiCheckConfig]);
 
     // Pagination Logic
     const [currentPage, setCurrentPage] = useState(1);
@@ -378,6 +446,18 @@ export default function MultipleCheckInOutPage() {
                                                         </Badge>
                                                     )}
                                                 </div>
+                                                {/* Delete Button for Admin/HR */}
+                                                {(userRole?.includes('Super Admin') || userRole?.includes('Admin') || userRole?.includes('HR')) && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="text-white hover:bg-white/20 hover:text-white transition-colors"
+                                                        onClick={() => handleDeleteVisit(visit)}
+                                                        title="Delete Visit"
+                                                    >
+                                                        <Trash2 className="h-5 w-5" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </div>
 

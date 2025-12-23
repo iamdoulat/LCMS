@@ -10,8 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CameraCapture } from '@/components/ui/CameraCapture';
-import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
-import type { CheckInOutType, MultipleCheckInOutLocation } from '@/types/checkInOut';
+import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord, getCheckInOutRecords } from '@/lib/firebase/checkInOut';
+import type { CheckInOutType, MultipleCheckInOutLocation, MultipleCheckInOutRecord } from '@/types/checkInOut';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase/config';
+import type { MultipleCheckInOutConfiguration } from '@/types';
 import Swal from 'sweetalert2';
 
 interface MultipleCheckInOutFormProps {
@@ -34,6 +37,31 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
     const [imagePreview, setImagePreview] = useState<string>('');
     const [location, setLocation] = useState<MultipleCheckInOutLocation | null>(null);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+    const [multiCheckConfig, setMultiCheckConfig] = useState<MultipleCheckInOutConfiguration | null>(null);
+    const [lastRecord, setLastRecord] = useState<MultipleCheckInOutRecord | null>(null);
+
+    // Fetch configuration
+    React.useEffect(() => {
+        const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'multi_check_in_out'), (docSnap) => {
+            if (docSnap.exists()) {
+                setMultiCheckConfig(docSnap.data() as MultipleCheckInOutConfiguration);
+            }
+        });
+        return () => unsub();
+    }, []);
+
+    // Fetch last record
+    React.useEffect(() => {
+        const fetchLast = async () => {
+            if (employeeId) {
+                const records = await getCheckInOutRecords({ employeeId });
+                if (records.length > 0) {
+                    setLastRecord(records[0]);
+                }
+            }
+        };
+        fetchLast();
+    }, [employeeId]);
 
     const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<FormData>({
         defaultValues: {
@@ -80,6 +108,53 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
         if (!location) {
             Swal.fire('Error', 'Location not available. Please try again.', 'error');
             return;
+        }
+
+        // Enrollment logic based on multiCheckConfig
+        if (multiCheckConfig) {
+            // 1. Mandatory Company Name (already handled by register but let's be double sure if settings changed)
+            if (multiCheckConfig.isCompanyNameMandatory && !data.companyName.trim()) {
+                Swal.fire('Validation Error', 'Visited company name is mandatory.', 'error');
+                return;
+            }
+
+            // 2. Mandatory Images
+            if (data.type === 'Check In' && multiCheckConfig.isCheckInImageMandatory && !capturedImage) {
+                Swal.fire('Validation Error', 'Check-in image is mandatory.', 'error');
+                return;
+            }
+            if (data.type === 'Check Out' && multiCheckConfig.isCheckOutImageMandatory && !capturedImage) {
+                Swal.fire('Validation Error', 'Check-out image is mandatory.', 'error');
+                return;
+            }
+
+            // 3. Logic: Multiple check-in without check-out
+            if (data.type === 'Check In' && !multiCheckConfig.isMultipleCheckInAllowedWithoutCheckOut) {
+                if (lastRecord && lastRecord.type === 'Check In') {
+                    Swal.fire('Access Denied', 'You have an active check-in. Please check out before marking a new check-in.', 'warning');
+                    return;
+                }
+            }
+
+            // 4. Logic: Multiple check-out against single check-in
+            if (data.type === 'Check Out' && !multiCheckConfig.isMultipleCheckOutAllowedAgainstSingleCheckIn) {
+                if (!lastRecord || lastRecord.type === 'Check Out') {
+                    Swal.fire('Access Denied', 'You must check-in before you can mark a check-out.', 'warning');
+                    return;
+                }
+            }
+
+            // 5. Max Hour Limit for Check Out
+            if (data.type === 'Check Out' && lastRecord && lastRecord.type === 'Check In') {
+                const checkInTime = new Date(lastRecord.timestamp).getTime();
+                const nowTime = new Date().getTime();
+                const diffHours = (nowTime - checkInTime) / (1000 * 60 * 60);
+
+                if (diffHours > multiCheckConfig.maxHourLimitOfCheckOut) {
+                    Swal.fire('Limit Exceeded', `Maximum allowed time between check-in and check-out is ${multiCheckConfig.maxHourLimitOfCheckOut} hours. Your current duration is ${diffHours.toFixed(1)} hours.`, 'error');
+                    return;
+                }
+            }
         }
 
         setIsSubmitting(true);

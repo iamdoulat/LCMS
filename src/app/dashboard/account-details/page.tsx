@@ -9,7 +9,7 @@ import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
-import { doc, updateDoc, serverTimestamp, getDocs, query, where, collection, getDoc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, getDocs, query, where, collection, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -28,10 +28,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
-import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag } from '@/types';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag, AttendanceReconciliationConfiguration, MultipleCheckInOutConfiguration } from '@/types';
 import type { CheckInOutType, MultipleCheckInOutRecord } from '@/types/checkInOut';
 import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord, reverseGeocode } from '@/lib/firebase/checkInOut';
-import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min } from 'date-fns';
+import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min, getDate, isSameMonth, subMonths } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
@@ -206,6 +206,12 @@ export default function AccountDetailsPage() {
   const [outTimeMinute, setOutTimeMinute] = useState('');
   const [outTimePeriod, setOutTimePeriod] = useState<'AM' | 'PM'>('PM');
 
+  // Configuration for reconciliation
+  const [reconConfig, setReconConfig] = useState<AttendanceReconciliationConfiguration | null>(null);
+
+  // Configuration for Multiple Check In / Out
+  const [multiCheckConfig, setMultiCheckConfig] = useState<MultipleCheckInOutConfiguration | null>(null);
+
 
   // Fetch reconciliations when employee data is loaded
   useEffect(() => {
@@ -226,6 +232,31 @@ export default function AccountDetailsPage() {
     };
     fetchReconciliations();
   }, [employeeData?.id]);
+
+  // Fetch reconciliation configuration
+  useEffect(() => {
+    const fetchReconConfig = async () => {
+      try {
+        const docSnap = await getDoc(doc(firestore, 'hrm_settings', 'attendance_reconciliation'));
+        if (docSnap.exists()) {
+          setReconConfig(docSnap.data() as AttendanceReconciliationConfiguration);
+        }
+      } catch (error) {
+        console.error("Error fetching reconciliation config:", error);
+      }
+    };
+    fetchReconConfig();
+  }, []);
+
+  // Fetch multiple check in/out configuration
+  useEffect(() => {
+    const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'multi_check_in_out'), (docSnap) => {
+      if (docSnap.exists()) {
+        setMultiCheckConfig(docSnap.data() as MultipleCheckInOutConfiguration);
+      }
+    });
+    return () => unsub();
+  }, []);
 
 
   // Sync In Time picker changes to form state
@@ -340,6 +371,48 @@ export default function AccountDetailsPage() {
     if (!finalInTime && !finalOutTime) {
       Swal.fire("Error", "Please provide at least an In Time or Out Time.", "error");
       return;
+    }
+
+    // Enforcement Logic based on reconConfig
+    if (reconConfig) {
+      const today = new Date();
+      const attendanceDate = new Date(selectedAttendanceForReconciliation.date!);
+
+      // 1. Date Range Check
+      if (reconConfig.limitType === 'days') {
+        const diffDays = differenceInCalendarDays(today, attendanceDate);
+        if (diffDays > reconConfig.maxDaysLimit) {
+          Swal.fire("Access Denied", `You can only request reconciliation for the previous ${reconConfig.maxDaysLimit} days.`, "warning");
+          return;
+        }
+      } else if (reconConfig.limitType === 'month') {
+        const isThisMonth = isSameMonth(today, attendanceDate);
+        const isPrevMonth = isSameMonth(subMonths(today, 1), attendanceDate);
+
+        if (!isThisMonth) {
+          if (isPrevMonth) {
+            const currentDayOfMonth = getDate(today);
+            if (currentDayOfMonth > reconConfig.maxDateOfCurrentMonth) {
+              Swal.fire("Access Denied", `Requests for the previous month must be submitted by the ${reconConfig.maxDateOfCurrentMonth}${reconConfig.maxDateOfCurrentMonth === 1 ? 'st' : reconConfig.maxDateOfCurrentMonth === 2 ? 'nd' : reconConfig.maxDateOfCurrentMonth === 3 ? 'rd' : 'th'} of the current month.`, "warning");
+              return;
+            }
+          } else {
+            Swal.fire("Access Denied", "You can only request reconciliation for the current or previous month within the allowed timeframe.", "warning");
+            return;
+          }
+        }
+      }
+
+      // 2. Monthly Quantity Check
+      if (reconConfig.maxMonthlyLimitPerEmployee) {
+        const sameMonthRequests = Array.from(reconciliations.values()).filter(r =>
+          isSameMonth(today, new Date(r.attendanceDate))
+        );
+        if (sameMonthRequests.length >= reconConfig.maxMonthlyLimitPerEmployee) {
+          Swal.fire("Monthly Limit Reached", `You have already submitted the maximum ${reconConfig.maxMonthlyLimitPerEmployee} reconciliation requests allowed for this month.`, "warning");
+          return;
+        }
+      }
     }
 
     setIsSubmittingReconciliation(true);
@@ -1450,7 +1523,7 @@ export default function AccountDetailsPage() {
 
               {/* Company Name */}
               <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name *</Label>
+                <Label htmlFor="companyName">Company Name {multiCheckConfig?.isCompanyNameMandatory && '*'}</Label>
                 <Input
                   id="companyName"
                   placeholder={checkInOutType === 'Check Out' ? "Auto-filled from Check In" : "Enter company name"}
@@ -1466,7 +1539,11 @@ export default function AccountDetailsPage() {
 
               {/* Camera Capture */}
               <div className="space-y-2">
-                <Label>Photo (Optional)</Label>
+                <Label>
+                  Photo {checkInOutType === 'Check In'
+                    ? (multiCheckConfig?.isCheckInImageMandatory ? '*' : '(Optional)')
+                    : (multiCheckConfig?.isCheckOutImageMandatory ? '*' : '(Optional)')}
+                </Label>
                 <div className="flex gap-2">
                   <input
                     ref={fileInputRef}
@@ -1612,20 +1689,56 @@ export default function AccountDetailsPage() {
                 type="button"
                 className="w-full"
                 onClick={async () => {
-                  // Validation
-                  if (!companyName.trim()) {
-                    Swal.fire('Validation Error', 'Please enter company name', 'error');
-                    return;
-                  }
-
-                  if (!checkInOutRemarks.trim()) {
-                    Swal.fire('Validation Error', 'Please enter remarks', 'error');
-                    return;
-                  }
-
                   if (!employeeData) {
                     Swal.fire('Error', 'Employee data not found', 'error');
                     return;
+                  }
+
+                  // Enrollment logic based on multiCheckConfig
+                  if (multiCheckConfig) {
+                    // 1. Mandatory Company Name
+                    if (multiCheckConfig.isCompanyNameMandatory && !companyName.trim()) {
+                      Swal.fire('Validation Error', 'Visited company name is mandatory.', 'error');
+                      return;
+                    }
+
+                    // 2. Mandatory Images
+                    if (checkInOutType === 'Check In' && multiCheckConfig.isCheckInImageMandatory && !capturedImage) {
+                      Swal.fire('Validation Error', 'Check-in image is mandatory.', 'error');
+                      return;
+                    }
+                    if (checkInOutType === 'Check Out' && multiCheckConfig.isCheckOutImageMandatory && !capturedImage) {
+                      Swal.fire('Validation Error', 'Check-out image is mandatory.', 'error');
+                      return;
+                    }
+
+                    // 3. Logic: Multiple check-in without check-out
+                    if (checkInOutType === 'Check In' && !multiCheckConfig.isMultipleCheckInAllowedWithoutCheckOut) {
+                      if (lastRecord && lastRecord.type === 'Check In') {
+                        Swal.fire('Access Denied', 'You have an active check-in. Please check out before marking a new check-in.', 'warning');
+                        return;
+                      }
+                    }
+
+                    // 4. Logic: Multiple check-out against single check-in
+                    if (checkInOutType === 'Check Out' && !multiCheckConfig.isMultipleCheckOutAllowedAgainstSingleCheckIn) {
+                      if (!lastRecord || lastRecord.type === 'Check Out') {
+                        Swal.fire('Access Denied', 'You must check-in before you can mark a check-out.', 'warning');
+                        return;
+                      }
+                    }
+
+                    // 5. Max Hour Limit for Check Out
+                    if (checkInOutType === 'Check Out' && lastRecord && lastRecord.type === 'Check In') {
+                      const checkInTime = new Date(lastRecord.timestamp).getTime();
+                      const nowTime = new Date().getTime();
+                      const diffHours = (nowTime - checkInTime) / (1000 * 60 * 60);
+
+                      if (diffHours > multiCheckConfig.maxHourLimitOfCheckOut) {
+                        Swal.fire('Limit Exceeded', `Maximum allowed time between check-in and check-out is ${multiCheckConfig.maxHourLimitOfCheckOut} hours. Your current duration is ${diffHours.toFixed(1)} hours.`, 'error');
+                        return;
+                      }
+                    }
                   }
 
                   setIsSubmittingCheckInOut(true);

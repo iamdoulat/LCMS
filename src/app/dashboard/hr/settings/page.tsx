@@ -1,29 +1,34 @@
 
 "use client";
 
-import * as React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
+    DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, orderBy, deleteDoc, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { AttendanceReconciliationSchema, type AttendanceReconciliationConfiguration, type MultipleCheckInOutConfiguration } from '@/types';
 import type { DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
@@ -76,7 +81,7 @@ export default function HrmSettingsPage() {
 
     const [editingDivision, setEditingDivision] = React.useState<DivisionDocument | null>(null);
     const [isEditDivisionDialogOpen, setIsEditDivisionDialogOpen] = React.useState(false);
-    
+
     const [editingBranch, setEditingBranch] = React.useState<BranchDocument | null>(null);
     const [isEditBranchDialogOpen, setIsEditBranchDialogOpen] = React.useState(false);
 
@@ -88,6 +93,77 @@ export default function HrmSettingsPage() {
 
     const [editingDesignation, setEditingDesignation] = React.useState<DesignationDocument | null>(null);
     const [isEditDesignationDialogOpen, setIsEditDesignationDialogOpen] = React.useState(false);
+
+    // Attendance Reconciliation Configuration State
+    const [reconConfig, setReconConfig] = React.useState<AttendanceReconciliationConfiguration>({
+        limitType: 'days',
+        maxDaysLimit: 30,
+        maxDateOfCurrentMonth: 2,
+    });
+    const [isSavingRecon, setIsSavingRecon] = React.useState(false);
+
+    useEffect(() => {
+        const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'attendance_reconciliation'), (docSnap) => {
+            if (docSnap.exists()) {
+                setReconConfig(docSnap.data() as AttendanceReconciliationConfiguration);
+            }
+        });
+        return () => unsub();
+    }, []);
+
+    // Multi Check In/Out Configuration State
+    const [multiCheckConfig, setMultiCheckConfig] = React.useState<MultipleCheckInOutConfiguration>({
+        isCompanyNameMandatory: true,
+        isCheckInImageMandatory: true,
+        isCheckOutImageMandatory: true,
+        isMultipleCheckInAllowedWithoutCheckOut: false,
+        isMultipleCheckOutAllowedAgainstSingleCheckIn: false,
+        maxHourLimitOfCheckOut: 24,
+    });
+    const [isSavingMultiCheck, setIsSavingMultiCheck] = React.useState(false);
+
+    useEffect(() => {
+        const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'multi_check_in_out'), (docSnap) => {
+            if (docSnap.exists()) {
+                setMultiCheckConfig(docSnap.data() as MultipleCheckInOutConfiguration);
+            }
+        });
+        return () => unsub();
+    }, []);
+
+    const handleSaveMultiCheck = async () => {
+        if (isReadOnly) return;
+        setIsSavingMultiCheck(true);
+        try {
+            const dataToSave = {
+                ...multiCheckConfig,
+                updatedAt: serverTimestamp(),
+            };
+            await setDoc(doc(firestore, 'hrm_settings', 'multi_check_in_out'), dataToSave, { merge: true });
+            Swal.fire('Saved', 'Multiple Check In/Out Configuration updated.', 'success');
+        } catch (error: any) {
+            Swal.fire('Error', `Failed to save: ${error.message}`, 'error');
+        } finally {
+            setIsSavingMultiCheck(false);
+        }
+    };
+
+    const handleSaveRecon = async () => {
+        if (isReadOnly) return;
+        setIsSavingRecon(true);
+        try {
+            const dataToSave = {
+                ...reconConfig,
+                updatedAt: serverTimestamp(),
+            };
+            await setDoc(doc(firestore, 'hrm_settings', 'attendance_reconciliation'), dataToSave, { merge: true });
+            Swal.fire('Saved', 'Attendance Reconciliation Configuration updated.', 'success');
+        } catch (error: any) {
+            Swal.fire('Error', `Failed to save: ${error.message}`, 'error');
+        } finally {
+            setIsSavingRecon(false);
+        }
+    };
 
 
     const handleEdit = (item: any, setEditingItem: React.Dispatch<any>, setIsEditDialogOpen: React.Dispatch<any>) => {
@@ -117,53 +193,53 @@ export default function HrmSettingsPage() {
     };
 
     const renderTableSection = (
-      title: string,
-      description: string,
-      data: any[] | undefined,
-      isLoading: boolean,
-      onAddClick: () => void,
-      onEditClick: (item: any) => void,
-      collectionName: string,
-      className?: string
+        title: string,
+        description: string,
+        data: any[] | undefined,
+        isLoading: boolean,
+        onAddClick: () => void,
+        onEditClick: (item: any) => void,
+        collectionName: string,
+        className?: string
     ) => (
-      <Card className={className}>
-          <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                  <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary"/>{title}</CardTitle>
-                  <CardDescription>{description}</CardDescription>
-              </div>
-              <Button size="sm" disabled={isReadOnly} onClick={onAddClick}><PlusCircle className="mr-2 h-4 w-4"/>Add New</Button>
-          </CardHeader>
-          <CardContent>
-              {isLoading ? <DataTableSkeleton /> :
-               !data || data.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
-              (
-                  <div className="rounded-md border">
-                      <Table>
-                          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
-                          <TableBody>
-                              {data.map(item => (
-                                  <TableRow key={item.id}>
-                                      <TableCell>{item.name}</TableCell>
-                                      <TableCell className="text-right">
-                                         <DropdownMenu>
-                                              <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                              <DropdownMenuContent align="end">
-                                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                  <DropdownMenuItem onClick={() => onEditClick(item)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
-                                                  <DropdownMenuSeparator />
-                                                  <DropdownMenuItem onClick={() => handleDelete(collectionName, item.id, item.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
-                                              </DropdownMenuContent>
-                                          </DropdownMenu>
-                                      </TableCell>
-                                  </TableRow>
-                              ))}
-                          </TableBody>
-                      </Table>
-                  </div>
-              )}
-          </CardContent>
-      </Card>
+        <Card className={className}>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
+                </div>
+                <Button size="sm" disabled={isReadOnly} onClick={onAddClick}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? <DataTableSkeleton /> :
+                    !data || data.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+                        (
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right w-[50px]">Actions</TableHead></TableRow></TableHeader>
+                                    <TableBody>
+                                        {data.map(item => (
+                                            <TableRow key={item.id}>
+                                                <TableCell>{item.name}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={() => onEditClick(item)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={() => handleDelete(collectionName, item.id, item.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
+            </CardContent>
+        </Card>
     );
 
     return (
@@ -189,7 +265,7 @@ export default function HrmSettingsPage() {
                             <AddDivisionForm onFormSubmit={() => setIsAddDivisionDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
-                    
+
                     <Dialog open={isAddBranchDialogOpen} onOpenChange={setIsAddBranchDialogOpen}>
                         {renderTableSection("Branches", "Manage company branches.", branches, isLoadingBranches, () => setIsAddBranchDialogOpen(true), (item) => handleEdit(item, setEditingBranch, setIsEditBranchDialogOpen), "branches")}
                         <DialogContent className="sm:max-w-md">
@@ -201,8 +277,8 @@ export default function HrmSettingsPage() {
                         </DialogContent>
                     </Dialog>
 
-                     <Dialog open={isAddDepartmentDialogOpen} onOpenChange={setIsAddDepartmentDialogOpen}>
-                         {renderTableSection("Departments", "Manage company departments.", departments, isLoadingDepts, () => setIsAddDepartmentDialogOpen(true), (item) => handleEdit(item, setEditingDepartment, setIsEditDepartmentDialogOpen), "departments")}
+                    <Dialog open={isAddDepartmentDialogOpen} onOpenChange={setIsAddDepartmentDialogOpen}>
+                        {renderTableSection("Departments", "Manage company departments.", departments, isLoadingDepts, () => setIsAddDepartmentDialogOpen(true), (item) => handleEdit(item, setEditingDepartment, setIsEditDepartmentDialogOpen), "departments")}
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New Department</DialogTitle>
@@ -211,8 +287,8 @@ export default function HrmSettingsPage() {
                             <AddDepartmentForm onFormSubmit={() => setIsAddDepartmentDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
-                    
-                     <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
+
+                    <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
                         {renderTableSection("Units", "Manage organizational units.", units, isLoadingUnits, () => setIsAddUnitDialogOpen(true), (item) => handleEdit(item, setEditingUnit, setIsEditUnitDialogOpen), "units")}
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
@@ -224,7 +300,7 @@ export default function HrmSettingsPage() {
                     </Dialog>
 
                     <Dialog open={isAddDesignationDialogOpen} onOpenChange={setIsAddDesignationDialogOpen}>
-                         {renderTableSection("Designations", "Manage employee job designations.", designations, isLoadingDesignations, () => setIsAddDesignationDialogOpen(true), (item) => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen), "designations")}
+                        {renderTableSection("Designations", "Manage employee job designations.", designations, isLoadingDesignations, () => setIsAddDesignationDialogOpen(true), (item) => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen), "designations")}
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New Designation</DialogTitle>
@@ -233,34 +309,230 @@ export default function HrmSettingsPage() {
                             <AddDesignationForm onFormSubmit={() => setIsAddDesignationDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
+
+                    {/* Attendance Reconciliation Configuration Section */}
+                    <Card className="md:col-span-2 shadow-lg border-2 border-primary/10">
+                        <CardHeader>
+                            <CardTitle className="text-xl font-bold flex items-center gap-2">
+                                <Settings className="h-5 w-5 text-primary" />
+                                Attendance Reconciliation Configuration
+                            </CardTitle>
+                            <CardDescription>
+                                Configure limits for attendance reconciliation requests.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <RadioGroup
+                                value={reconConfig.limitType}
+                                onValueChange={(val: 'days' | 'month') => setReconConfig(prev => ({ ...prev, limitType: val }))}
+                                className="flex gap-4"
+                                disabled={isReadOnly}
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="days" id="limit-days" />
+                                    <Label htmlFor="limit-days" className="cursor-pointer">Limit for previous days</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="month" id="limit-month" />
+                                    <Label htmlFor="limit-month" className="cursor-pointer">Limit for previous month</Label>
+                                </div>
+                            </RadioGroup>
+
+                            <div className="grid grid-cols-1 md:grid-cols-1 gap-6 pt-2">
+                                {reconConfig.limitType === 'days' ? (
+                                    <div className="space-y-2 group">
+                                        <Label className="text-sm font-semibold group-hover:text-primary transition-colors">Maximum Days Limit of Previous Attendance Reconciliation</Label>
+                                        <Input
+                                            type="number"
+                                            value={reconConfig.maxDaysLimit}
+                                            onChange={(e) => setReconConfig(prev => ({ ...prev, maxDaysLimit: parseInt(e.target.value) || 0 }))}
+                                            placeholder="e.g. 30"
+                                            disabled={isReadOnly}
+                                            className="focus:ring-2 focus:ring-primary/20"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2 group">
+                                        <Label className="text-sm font-semibold group-hover:text-primary transition-colors">Maximum date of current month to apply for previous month's reconciliation</Label>
+                                        <Input
+                                            type="number"
+                                            value={reconConfig.maxDateOfCurrentMonth}
+                                            onChange={(e) => setReconConfig(prev => ({ ...prev, maxDateOfCurrentMonth: parseInt(e.target.value) || 0 }))}
+                                            placeholder="e.g. 2"
+                                            disabled={isReadOnly}
+                                            className="focus:ring-2 focus:ring-primary/20"
+                                            min={1}
+                                            max={31}
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="space-y-2 group">
+                                    <Label className="text-sm font-semibold group-hover:text-primary transition-colors">Maximum Monthly Attendance Reconciliation Limit for an Employee</Label>
+                                    <Input
+                                        type="number"
+                                        value={reconConfig.maxMonthlyLimitPerEmployee || ''}
+                                        onChange={(e) => setReconConfig(prev => ({ ...prev, maxMonthlyLimitPerEmployee: e.target.value ? parseInt(e.target.value) : undefined }))}
+                                        placeholder="No limit"
+                                        disabled={isReadOnly}
+                                        className="focus:ring-2 focus:ring-primary/20"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end pt-4">
+                                <Button
+                                    onClick={handleSaveRecon}
+                                    disabled={isSavingRecon || isReadOnly}
+                                    className="px-8 shadow-md hover:shadow-lg active:scale-95 transition-all"
+                                >
+                                    {isSavingRecon ? (
+                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                                    ) : (
+                                        'Save'
+                                    )}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Multiple Check In / Check Out Configuration Section */}
+                    <Card className="md:col-span-2 shadow-lg border-2 border-primary/10">
+                        <CardHeader>
+                            <CardTitle className="text-xl font-bold flex items-center gap-2">
+                                <Settings className="h-5 w-5 text-primary" />
+                                Multiple Check In / Check Out Configuration
+                            </CardTitle>
+                            <CardDescription>
+                                Configure behavior and requirements for Multiple Check In/Out visits.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-3">
+                                        <Checkbox
+                                            id="isCompanyNameMandatory"
+                                            checked={multiCheckConfig.isCompanyNameMandatory}
+                                            onCheckedChange={(checked) => setMultiCheckConfig(prev => ({ ...prev, isCompanyNameMandatory: !!checked }))}
+                                            disabled={isReadOnly}
+                                        />
+                                        <Label htmlFor="isCompanyNameMandatory" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                            Is visited company name mandatory
+                                        </Label>
+                                    </div>
+
+                                    <div className="flex items-center space-x-3">
+                                        <Checkbox
+                                            id="isCheckInImageMandatory"
+                                            checked={multiCheckConfig.isCheckInImageMandatory}
+                                            onCheckedChange={(checked) => setMultiCheckConfig(prev => ({ ...prev, isCheckInImageMandatory: !!checked }))}
+                                            disabled={isReadOnly}
+                                        />
+                                        <Label htmlFor="isCheckInImageMandatory" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                            Is check in image mandatory
+                                        </Label>
+                                    </div>
+
+                                    <div className="flex items-center space-x-3">
+                                        <Checkbox
+                                            id="isMultipleCheckInAllowedWithoutCheckOut"
+                                            checked={multiCheckConfig.isMultipleCheckInAllowedWithoutCheckOut}
+                                            onCheckedChange={(checked) => setMultiCheckConfig(prev => ({ ...prev, isMultipleCheckInAllowedWithoutCheckOut: !!checked }))}
+                                            disabled={isReadOnly}
+                                        />
+                                        <Label htmlFor="isMultipleCheckInAllowedWithoutCheckOut" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                            Is multiple check in allowed without providing check out
+                                        </Label>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="w-[18px] h-[18px]" /> {/* Spacer to align with left col if needed, though they align fine */}
+                                    </div>
+
+                                    <div className="flex items-center space-x-3">
+                                        <Checkbox
+                                            id="isCheckOutImageMandatory"
+                                            checked={multiCheckConfig.isCheckOutImageMandatory}
+                                            onCheckedChange={(checked) => setMultiCheckConfig(prev => ({ ...prev, isCheckOutImageMandatory: !!checked }))}
+                                            disabled={isReadOnly}
+                                        />
+                                        <Label htmlFor="isCheckOutImageMandatory" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                            Is check out image mandatory
+                                        </Label>
+                                    </div>
+
+                                    <div className="flex items-center space-x-3">
+                                        <Checkbox
+                                            id="isMultipleCheckOutAllowedAgainstSingleCheckIn"
+                                            checked={multiCheckConfig.isMultipleCheckOutAllowedAgainstSingleCheckIn}
+                                            onCheckedChange={(checked) => setMultiCheckConfig(prev => ({ ...prev, isMultipleCheckOutAllowedAgainstSingleCheckIn: !!checked }))}
+                                            disabled={isReadOnly}
+                                        />
+                                        <Label htmlFor="isMultipleCheckOutAllowedAgainstSingleCheckIn" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                                            Is multiple check out allowed against single check in
+                                        </Label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 space-y-2 group">
+                                <Label className="text-sm font-semibold group-hover:text-primary transition-colors">Max Hour Limit of Check Out from Check In</Label>
+                                <Input
+                                    type="number"
+                                    value={multiCheckConfig.maxHourLimitOfCheckOut}
+                                    onChange={(e) => setMultiCheckConfig(prev => ({ ...prev, maxHourLimitOfCheckOut: parseInt(e.target.value) || 0 }))}
+                                    placeholder="e.g. 24"
+                                    disabled={isReadOnly}
+                                    className="focus:ring-2 focus:ring-primary/20 max-w-[200px]"
+                                />
+                            </div>
+
+                            <div className="flex justify-end pt-4">
+                                <Button
+                                    onClick={handleSaveMultiCheck}
+                                    disabled={isSavingMultiCheck || isReadOnly}
+                                    className="px-8 shadow-md hover:shadow-lg active:scale-95 transition-all"
+                                >
+                                    {isSavingMultiCheck ? (
+                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                                    ) : (
+                                        'Save'
+                                    )}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </CardContent>
             </Card>
 
             {editingDivision && (
                 <Dialog open={isEditDivisionDialogOpen} onOpenChange={setIsEditDivisionDialogOpen}>
-                     <DialogContent className="sm:max-w-md">
+                    <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Edit Division</DialogTitle>
                             <DialogDescription>Update the details for this division.</DialogDescription>
                         </DialogHeader>
-                        <EditDivisionForm 
-                          initialData={editingDivision} 
-                          onFormSubmit={() => setIsEditDivisionDialogOpen(false)} 
+                        <EditDivisionForm
+                            initialData={editingDivision}
+                            onFormSubmit={() => setIsEditDivisionDialogOpen(false)}
                         />
                     </DialogContent>
                 </Dialog>
             )}
-            
+
             {editingBranch && (
                 <Dialog open={isEditBranchDialogOpen} onOpenChange={setIsEditBranchDialogOpen}>
-                                          <DialogContent className="sm:max-w-md">
+                    <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Edit Branch</DialogTitle>
                             <DialogDescription>Update the details for this branch.</DialogDescription>
                         </DialogHeader>
-                        <EditBranchForm 
-                          initialData={editingBranch} 
-                          onFormSubmit={() => setIsEditBranchDialogOpen(false)} 
+                        <EditBranchForm
+                            initialData={editingBranch}
+                            onFormSubmit={() => setIsEditBranchDialogOpen(false)}
                         />
                     </DialogContent>
                 </Dialog>
@@ -268,44 +540,44 @@ export default function HrmSettingsPage() {
 
             {editingDepartment && (
                 <Dialog open={isEditDepartmentDialogOpen} onOpenChange={setIsEditDepartmentDialogOpen}>
-                     <DialogContent className="sm:max-w-md">
+                    <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Edit Department</DialogTitle>
                             <DialogDescription>Update the details for this department.</DialogDescription>
                         </DialogHeader>
-                        <EditDepartmentForm 
-                          initialData={editingDepartment} 
-                          onFormSubmit={() => setIsEditDepartmentDialogOpen(false)} 
-                        />
-                    </DialogContent>
-                </Dialog>
-            )}
-            
-            {editingUnit && (
-                <Dialog open={isEditUnitDialogOpen} onOpenChange={setIsEditUnitDialogOpen}>
-                     <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Edit Unit</DialogTitle>
-                            <DialogDescription>Update the details for this unit.</DialogDescription>
-                        </DialogHeader>
-                        <EditUnitForm 
-                          initialData={editingUnit} 
-                          onFormSubmit={() => setIsEditUnitDialogOpen(false)} 
+                        <EditDepartmentForm
+                            initialData={editingDepartment}
+                            onFormSubmit={() => setIsEditDepartmentDialogOpen(false)}
                         />
                     </DialogContent>
                 </Dialog>
             )}
 
-             {editingDesignation && (
+            {editingUnit && (
+                <Dialog open={isEditUnitDialogOpen} onOpenChange={setIsEditUnitDialogOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Edit Unit</DialogTitle>
+                            <DialogDescription>Update the details for this unit.</DialogDescription>
+                        </DialogHeader>
+                        <EditUnitForm
+                            initialData={editingUnit}
+                            onFormSubmit={() => setIsEditUnitDialogOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
+
+            {editingDesignation && (
                 <Dialog open={isEditDesignationDialogOpen} onOpenChange={setIsEditDesignationDialogOpen}>
-                     <DialogContent className="sm:max-w-md">
+                    <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Edit Designation</DialogTitle>
                             <DialogDescription>Update the name for this designation.</DialogDescription>
                         </DialogHeader>
                         <EditDesignationForm
-                          initialData={editingDesignation}
-                          onFormSubmit={() => setIsEditDesignationDialogOpen(false)}
+                            initialData={editingDesignation}
+                            onFormSubmit={() => setIsEditDesignationDialogOpen(false)}
                         />
                     </DialogContent>
                 </Dialog>

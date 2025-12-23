@@ -1888,3 +1888,24 @@ export interface VisitApplication {
 }
 export type VisitApplicationDocument = VisitApplication & { id: string };
 // --- END Visit Application Types ---
+// --- HRM Settings Types ---
+export const AttendanceReconciliationSchema = z.object({
+  limitType: z.enum(['days', 'month']).default('days'),
+  maxDaysLimit: z.number().int().min(1).default(30),
+  maxDateOfCurrentMonth: z.number().int().min(1).max(31).default(2),
+  maxMonthlyLimitPerEmployee: z.number().int().min(1).optional(),
+});
+
+export type AttendanceReconciliationConfiguration = z.infer<typeof AttendanceReconciliationSchema>;
+
+export const MultipleCheckInOutSchema = z.object({
+  isCompanyNameMandatory: z.boolean().default(true),
+  isCheckInImageMandatory: z.boolean().default(true),
+  isCheckOutImageMandatory: z.boolean().default(true),
+  isMultipleCheckInAllowedWithoutCheckOut: z.boolean().default(false),
+  isMultipleCheckOutAllowedAgainstSingleCheckIn: z.boolean().default(false),
+  maxHourLimitOfCheckOut: z.number().int().min(1).default(24),
+});
+
+export type MultipleCheckInOutConfiguration = z.infer<typeof MultipleCheckInOutSchema>;
+// --- END HRM Settings Types ---
