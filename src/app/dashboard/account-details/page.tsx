@@ -30,7 +30,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag, AttendanceReconciliationConfiguration, MultipleCheckInOutConfiguration } from '@/types';
 import type { CheckInOutType, MultipleCheckInOutRecord } from '@/types/checkInOut';
-import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord, reverseGeocode } from '@/lib/firebase/checkInOut';
+import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord, reverseGeocode, getCheckInOutRecords } from '@/lib/firebase/checkInOut';
 import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min, getDate, isSameMonth, subMonths } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
@@ -211,6 +211,7 @@ export default function AccountDetailsPage() {
 
   // Configuration for Multiple Check In / Out
   const [multiCheckConfig, setMultiCheckConfig] = useState<MultipleCheckInOutConfiguration | null>(null);
+  const [lastRecord, setLastRecord] = useState<MultipleCheckInOutRecord | null>(null);
 
 
   // Fetch reconciliations when employee data is loaded
@@ -257,6 +258,24 @@ export default function AccountDetailsPage() {
     });
     return () => unsub();
   }, []);
+
+  // Fetch last check-in/out record for the employee
+  useEffect(() => {
+    const fetchLastRecord = async () => {
+      if (employeeData?.id) {
+        try {
+          const records = await getCheckInOutRecords({ employeeId: employeeData.id });
+          if (records.length > 0) {
+            setLastRecord(records[0]);
+          }
+        } catch (error) {
+          console.error("Error fetching last record:", error);
+        }
+      }
+    };
+    fetchLastRecord();
+  }, [employeeData?.id, checkInOutType]); // Refetch when check-in/out type changes
+
 
 
   // Sync In Time picker changes to form state
