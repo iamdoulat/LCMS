@@ -65,7 +65,7 @@ export async function POST(request: Request) {
                 (authError.message && authError.message.includes('already in use'));
 
             if (isEmailInUse) {
-                console.log(`User ${email} already exists (Code: ${authError.code}). Fetching UID to sync Firestore.`);
+
                 try {
                     const existingUser = await admin.auth().getUserByEmail(email);
                     userRecord = existingUser;
@@ -120,9 +120,9 @@ export async function POST(request: Request) {
                     createdAt: timestamp,
                     updatedAt: timestamp,
                 });
-                console.log(`User document created for ${email}`);
+
             } else {
-                console.log(`User document already exists for ${email}, skipping overwrite.`);
+
             }
 
         } catch (dbError: any) {

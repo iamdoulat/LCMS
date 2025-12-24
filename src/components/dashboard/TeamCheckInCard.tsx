@@ -68,7 +68,6 @@ export function TeamCheckInCard({
                     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
                 );
 
-                console.log('Fetched team check-in records:', records.length);
                 setAllRecords(records);
             } catch (error) {
                 console.error('Error fetching team check-ins:', error);

@@ -54,9 +54,10 @@ const formatDisplayDate = (dateString?: string | Date) => {
   }
 };
 
-const formatCurrencyValue = (currency?: string, amount?: number) => {
-  if (typeof amount !== 'number' || isNaN(amount)) return `${currency || ''} N/A`;
-  return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrencyValue = (currency?: string | Currency, amount?: number) => {
+  const currencyCode = typeof currency === 'string' ? currency : (currency?.code || '');
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currencyCode} N/A`;
+  return `${currencyCode} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export default function LcExpireTrackerPage() {
@@ -71,7 +72,7 @@ export default function LcExpireTrackerPage() {
   const [filterApplicantId, setFilterApplicantId] = useState('');
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
   const [expiryFilter, setExpiryFilter] = useState<ExpiryFilterOption>("Upcoming (15 Days)");
-  
+
   const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
   const [isLoadingApplicants, setIsLoadingApplicants] = useState(true);
@@ -83,37 +84,37 @@ export default function LcExpireTrackerPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        
+
         const arrayQuery = query(lcEntriesRef, where("status", "array-contains", "Shipment Pending"));
         const stringQuery = query(lcEntriesRef, where("status", "==", "Shipment Pending"));
 
         const [arraySnapshot, stringSnapshot] = await Promise.all([
-            getDocs(arrayQuery),
-            getDocs(stringQuery),
+          getDocs(arrayQuery),
+          getDocs(stringQuery),
         ]);
-        
-        const expiringLCsMap = new Map<string, ExpiringLC>();
-        
-        const processSnapshot = (snapshot: typeof arraySnapshot) => {
-            snapshot.docs.forEach((doc) => {
-                if (expiringLCsMap.has(doc.id)) return;
 
-                const data = doc.data() as LCEntryDocument;
-                const expireDateObj = data.expireDate ? parseISO(data.expireDate as string) : new Date(0);
-                if (!isValid(expireDateObj)) return;
-                
-                const today = startOfDay(new Date());
-                const remainingDays = differenceInDays(expireDateObj, today);
-                
-                expiringLCsMap.set(doc.id, {
-                    ...data,
-                    id: doc.id,
-                    expireDateObj,
-                    remainingDays,
-                });
+        const expiringLCsMap = new Map<string, ExpiringLC>();
+
+        const processSnapshot = (snapshot: typeof arraySnapshot) => {
+          snapshot.docs.forEach((doc) => {
+            if (expiringLCsMap.has(doc.id)) return;
+
+            const data = doc.data() as LCEntryDocument;
+            const expireDateObj = data.expireDate ? parseISO(data.expireDate as string) : new Date(0);
+            if (!isValid(expireDateObj)) return;
+
+            const today = startOfDay(new Date());
+            const remainingDays = differenceInDays(expireDateObj, today);
+
+            expiringLCsMap.set(doc.id, {
+              ...data,
+              id: doc.id,
+              expireDateObj,
+              remainingDays,
             });
+          });
         };
-        
+
         processSnapshot(arraySnapshot);
         processSnapshot(stringSnapshot);
 
@@ -122,10 +123,10 @@ export default function LcExpireTrackerPage() {
       } catch (error: any) {
         console.error("Error fetching expiring L/Cs: ", error);
         let errorMessage = `Could not fetch L/C data. Ensure Firestore rules allow reads.`;
-         if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `A Firestore index is required for this query. Please check browser console for a link to create it. The query needs an index on 'status' (array-contains).`;
+        if (error.message?.toLowerCase().includes("index")) {
+          errorMessage = `A Firestore index is required for this query. Please check browser console for a link to create it. The query needs an index on 'status' (array-contains).`;
         } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+          errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
         Swal.fire({
@@ -137,26 +138,26 @@ export default function LcExpireTrackerPage() {
         setIsLoading(false);
       }
     };
-     const fetchFilterOptions = async () => {
-        setIsLoadingApplicants(true);
-        setIsLoadingBeneficiaries(true);
-        try {
-            const customersSnapshot = await getDocs(collection(firestore, "customers"));
-            setApplicantOptions(customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed' })));
-            const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
-            setBeneficiaryOptions(suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed' })));
-        } catch (error: any) {
-            Swal.fire("Error", `Could not load filter options: ${(error as Error).message}`, "error");
-        } finally {
-            setIsLoadingApplicants(false);
-            setIsLoadingBeneficiaries(false);
-        }
+    const fetchFilterOptions = async () => {
+      setIsLoadingApplicants(true);
+      setIsLoadingBeneficiaries(true);
+      try {
+        const customersSnapshot = await getDocs(collection(firestore, "customers"));
+        setApplicantOptions(customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed' })));
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        setBeneficiaryOptions(suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed' })));
+      } catch (error: any) {
+        Swal.fire("Error", `Could not load filter options: ${(error as Error).message}`, "error");
+      } finally {
+        setIsLoadingApplicants(false);
+        setIsLoadingBeneficiaries(false);
+      }
     };
 
     fetchExpiringLCs();
     fetchFilterOptions();
   }, []);
-  
+
   useEffect(() => {
     const today = startOfDay(new Date());
     let dateFilteredLcs: ExpiringLC[] = [];
@@ -164,27 +165,27 @@ export default function LcExpireTrackerPage() {
     if (expiryFilter.startsWith("Expired")) {
       const daysAgo = parseInt(expiryFilter.match(/\d+/)?.[0] || '30');
       const cutoffDate = subDays(today, daysAgo);
-      dateFilteredLcs = allExpiringLCs.filter(lc => 
+      dateFilteredLcs = allExpiringLCs.filter(lc =>
         isWithinInterval(lc.expireDateObj, { start: cutoffDate, end: today }) && !isFuture(lc.expireDateObj)
       );
     } else if (expiryFilter.startsWith("Upcoming")) {
-        const daysAhead = parseInt(expiryFilter.match(/\d+/)?.[0] || '15');
-        const futureCutoffDate = addDays(today, daysAhead);
-        dateFilteredLcs = allExpiringLCs.filter(lc => 
-            isWithinInterval(lc.expireDateObj, { start: today, end: futureCutoffDate })
-        );
+      const daysAhead = parseInt(expiryFilter.match(/\d+/)?.[0] || '15');
+      const futureCutoffDate = addDays(today, daysAhead);
+      dateFilteredLcs = allExpiringLCs.filter(lc =>
+        isWithinInterval(lc.expireDateObj, { start: today, end: futureCutoffDate })
+      );
     }
-    
+
     let filtered = [...dateFilteredLcs];
     if (filterLcNumber) filtered = filtered.filter(lc => lc.documentaryCreditNumber?.toLowerCase().includes(filterLcNumber.toLowerCase()));
     if (filterApplicantId) filtered = filtered.filter(lc => lc.applicantId === filterApplicantId);
     if (filterBeneficiaryId) filtered = filtered.filter(lc => lc.beneficiaryId === filterBeneficiaryId);
-    
+
     // Sort logic
     if (expiryFilter.startsWith("Expired")) {
-        filtered.sort((a, b) => b.expireDateObj.getTime() - a.expireDateObj.getTime()); // Most recently expired first
+      filtered.sort((a, b) => b.expireDateObj.getTime() - a.expireDateObj.getTime()); // Most recently expired first
     } else {
-        filtered.sort((a, b) => a.expireDateObj.getTime() - b.expireDateObj.getTime()); // Closest expiry first
+      filtered.sort((a, b) => a.expireDateObj.getTime() - b.expireDateObj.getTime()); // Closest expiry first
     }
 
     setDisplayedLCs(filtered);
@@ -198,12 +199,12 @@ export default function LcExpireTrackerPage() {
     setExpiryFilter("Upcoming (15 Days)");
     setCurrentPage(1);
   };
-  
+
   const totalPages = Math.ceil(displayedLCs.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentItems = displayedLCs.slice(indexOfFirstItem, indexOfLastItem);
-  
+
   const handlePageChange = (page: number) => setCurrentPage(page);
 
   return (
@@ -219,16 +220,16 @@ export default function LcExpireTrackerPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-           <Card className="mb-6 shadow-md p-4">
+          <Card className="mb-6 shadow-md p-4">
             <CardHeader className="p-2 pb-4"><CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle></CardHeader>
             <CardContent className="p-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                 <div><Label htmlFor="lcNoFilter">L/C Number</Label><Input id="lcNoFilter" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} /></div>
-                <div><Label htmlFor="applicantFilter" className="flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</Label>
-                  <Combobox options={applicantOptions} value={filterApplicantId || PLACEHOLDER_APPLICANT_VALUE} onValueChange={(v) => setFilterApplicantId(v === PLACEHOLDER_APPLICANT_VALUE ? '' : v)} placeholder="Search Applicant..." selectPlaceholder="All Applicants" disabled={isLoadingApplicants}/>
+                <div><Label htmlFor="applicantFilter" className="flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground" />Applicant</Label>
+                  <Combobox options={applicantOptions} value={filterApplicantId || PLACEHOLDER_APPLICANT_VALUE} onValueChange={(v) => setFilterApplicantId(v === PLACEHOLDER_APPLICANT_VALUE ? '' : v)} placeholder="Search Applicant..." selectPlaceholder="All Applicants" disabled={isLoadingApplicants} />
                 </div>
-                <div><Label htmlFor="beneficiaryFilter" className="flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
-                  <Combobox options={beneficiaryOptions} value={filterBeneficiaryId || PLACEHOLDER_BENEFICIARY_VALUE} onValueChange={(v) => setFilterBeneficiaryId(v === PLACEHOLDER_BENEFICIARY_VALUE ? '' : v)} placeholder="Search Beneficiary..." selectPlaceholder="All Beneficiaries" disabled={isLoadingBeneficiaries}/>
+                <div><Label htmlFor="beneficiaryFilter" className="flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground" />Beneficiary</Label>
+                  <Combobox options={beneficiaryOptions} value={filterBeneficiaryId || PLACEHOLDER_BENEFICIARY_VALUE} onValueChange={(v) => setFilterBeneficiaryId(v === PLACEHOLDER_BENEFICIARY_VALUE ? '' : v)} placeholder="Search Beneficiary..." selectPlaceholder="All Beneficiaries" disabled={isLoadingBeneficiaries} />
                 </div>
                 <div>
                   <Label htmlFor="expiryFilter">Expiry Filter</Label>
@@ -258,16 +259,16 @@ export default function LcExpireTrackerPage() {
           ) : (
             <div className="rounded-md border overflow-x-auto">
               <Table>
-                 <TableHeader><TableRow>
-                    <TableHead>LC No.</TableHead>
-                    <TableHead>Applicant</TableHead>
-                    <TableHead>Beneficiary</TableHead>
-                    <TableHead>L/C Value</TableHead>
-                    <TableHead>Expire Date</TableHead>
-                    <TableHead>Latest Shipment Date</TableHead>
-                    <TableHead>Remaining</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                <TableHeader><TableRow>
+                  <TableHead>LC No.</TableHead>
+                  <TableHead>Applicant</TableHead>
+                  <TableHead>Beneficiary</TableHead>
+                  <TableHead>L/C Value</TableHead>
+                  <TableHead>Expire Date</TableHead>
+                  <TableHead>Latest Shipment Date</TableHead>
+                  <TableHead>Remaining</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow></TableHeader>
                 <TableBody>
                   {currentItems.map((lc) => (
@@ -283,26 +284,26 @@ export default function LcExpireTrackerPage() {
                           {lc.remainingDays >= 0 ? `${lc.remainingDays} days` : `${Math.abs(lc.remainingDays)} days ago`}
                         </Badge>
                       </TableCell>
-                       <TableCell>
-                          <Badge variant={lc.remainingDays >= 0 ? "outline" : "destructive"}>
-                              {lc.remainingDays >= 0 ? "Upcoming" : "Expired"}
-                          </Badge>
+                      <TableCell>
+                        <Badge variant={lc.remainingDays >= 0 ? "outline" : "destructive"}>
+                          {lc.remainingDays >= 0 ? "Upcoming" : "Expired"}
+                        </Badge>
                       </TableCell>
-                       <TableCell className="text-right">
-                          <Button asChild variant="outline" size="sm">
-                            <Link href={`/dashboard/total-lc/${lc.id}/edit`}>
-                              <ExternalLink className="h-4 w-4" />
-                            </Link>
-                          </Button>
+                      <TableCell className="text-right">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/dashboard/total-lc/${lc.id}/edit`}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
-                 <TableCaption>A list of expiring or expired L/Cs.</TableCaption>
+                <TableCaption>A list of expiring or expired L/Cs.</TableCaption>
               </Table>
             </div>
           )}
-           {totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4 mt-4">
               <Button variant="outline" size="sm" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Prev</Button>
               <span className="text-sm">Page {currentPage} of {totalPages}</span>

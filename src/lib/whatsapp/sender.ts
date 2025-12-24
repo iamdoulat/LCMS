@@ -1,4 +1,5 @@
 
+/* eslint-disable no-console */
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { WhatsAppTemplate } from '@/types/whatsapp-settings';
@@ -28,7 +29,7 @@ const getWhatsAppTemplate = async (slug: string) => {
 
             // Check if template is active (default true if not set)
             if (template.isActive === false) {
-                console.log(`WhatsApp template '${slug}' is disabled. Skipping send.`);
+
                 return null;
             }
 
@@ -42,7 +43,7 @@ const getWhatsAppTemplate = async (slug: string) => {
 
             // Check if template is active (default true if not set)
             if (template.isActive === false) {
-                console.log(`WhatsApp template '${slug}' is disabled. Skipping send.`);
+
                 return null;
             }
 
@@ -98,7 +99,7 @@ export async function sendWhatsApp({ to, templateSlug, data, message }: SendWhat
             try {
                 const template = await getWhatsAppTemplate(templateSlug);
                 if (!template) {
-                    console.log(`[WhatsApp] Skipping send for slug: ${templateSlug} (Template disabled or not found)`);
+
                     await logActivity({
                         type: 'whatsapp',
                         action: 'send_whatsapp',

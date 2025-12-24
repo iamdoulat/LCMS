@@ -87,7 +87,7 @@ const getEmailTemplate = async (slug: string) => {
 
                 // Check if template is active (default true if not set)
                 if (template.isActive === false) {
-                    console.log(`Email template '${slug}' is disabled. Skipping send.`);
+
                     return null; // Return null to indicate skipped
                 }
 
@@ -129,7 +129,7 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
             try {
                 const template = await getEmailTemplate(templateSlug);
                 if (!template) {
-                    console.log(`[Email] Skipping send for slug: ${templateSlug} (Template disabled or not found)`);
+
                     await logActivity({
                         type: 'email',
                         action: 'send_email',

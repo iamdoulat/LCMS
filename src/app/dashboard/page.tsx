@@ -140,9 +140,10 @@ const getStatusBadgeVariant = (status: LCStatus): "default" | "secondary" | "out
   }
 };
 
-const formatCurrencyValue = (currency?: string, amount?: number) => {
-  if (typeof amount !== 'number' || isNaN(amount)) return `${currency || ''} N/A`;
-  return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrencyValue = (currency?: string | Currency, amount?: number) => {
+  const currencyCode = typeof currency === 'string' ? currency : (currency?.code || '');
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currencyCode} N/A`;
+  return `${currencyCode} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const formatDisplayDate = (dateString?: string | Date): string => {

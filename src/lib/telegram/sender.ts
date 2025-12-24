@@ -1,4 +1,5 @@
 
+/* eslint-disable no-console */
 import { admin } from '@/lib/firebase/admin';
 import { logActivity } from '@/lib/logger';
 
@@ -57,7 +58,7 @@ export async function sendTelegram({ message, photoUrl, templateSlug, data }: Se
         if (templateSlug) {
             const template = await getTelegramTemplate(templateSlug);
             if (!template) {
-                console.log(`[Telegram] Skipping/Falling back: Template '${templateSlug}' disabled or not found.`);
+
                 // If message was provided, we continue with it. If not, we skip.
                 if (!finalMessage) {
                     await logActivity({
@@ -85,7 +86,7 @@ export async function sendTelegram({ message, photoUrl, templateSlug, data }: Se
             .get();
 
         if (snapshot.empty) {
-            console.log('No active Telegram bot configuration found.');
+
             return { success: false, error: 'No active configuration' };
         }
 

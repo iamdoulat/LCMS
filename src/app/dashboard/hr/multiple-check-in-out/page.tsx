@@ -236,7 +236,7 @@ export default function MultipleCheckInOutPage() {
                             `Auto check-out: Visit exceeded ${multiCheckConfig?.maxHourLimitOfCheckOut || 8} hours. Automatically checked out at ${format(autoCheckoutTime, 'hh:mm a')}`
                         );
 
-                        console.log(`Auto checkout created for ${checkIn.employeeName} at ${checkIn.companyName}`);
+
                     }
                 }
             }

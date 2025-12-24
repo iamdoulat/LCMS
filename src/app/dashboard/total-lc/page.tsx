@@ -62,8 +62,9 @@ const formatDisplayDate = (dateString?: string) => {
 };
 
 const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
-  if (typeof amount !== 'number' || isNaN(amount)) return `${currency || ''} N/A`;
-  return `${currency || ''} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const currencyCode = typeof currency === 'string' ? currency : (currency?.code || '');
+  if (typeof amount !== 'number' || isNaN(amount)) return `${currencyCode} N/A`;
+  return `${currencyCode} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 interface DropdownOption {

@@ -13,11 +13,6 @@ const hasCredentials =
 if (!admin.apps.length && hasCredentials) {
   try {
     const privateKey = (process.env.FIREBASE_ADMIN_PRIVATE_KEY || '').replace(/\\n/g, '\n');
-    console.log("Admin SDK: Attempting to initialize...");
-    console.log("Admin SDK: Project ID present?", !!process.env.FIREBASE_ADMIN_PROJECT_ID);
-    console.log("Admin SDK: Client Email present?", !!process.env.FIREBASE_ADMIN_CLIENT_EMAIL);
-    console.log("Admin SDK: Private Key length:", privateKey.length);
-    console.log("Admin SDK: Private Key starts with:", privateKey.substring(0, 20));
 
     admin.initializeApp({
       credential: admin.credential.cert({
@@ -26,7 +21,6 @@ if (!admin.apps.length && hasCredentials) {
         privateKey: privateKey,
       }),
     });
-    console.log("Admin SDK: Initialization successful.");
   } catch (error) {
     console.error('Firebase Admin SDK Initialization Error:', error);
   }

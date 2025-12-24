@@ -147,16 +147,9 @@ export function SupervisorManagementModal({ isOpen, onClose, employee, allEmploy
                                 </SelectTrigger>
                                 <SelectContent>
                                     {(() => {
-                                        console.log('All Employees in modal:', allEmployees);
-                                        console.log('All Employees length:', allEmployees?.length);
-                                        console.log('Current employee ID:', employee?.id);
-
                                         const filtered = allEmployees
                                             ?.filter(e => e.id !== employee?.id)
                                             ?.filter(e => !localSupervisors.some(s => s.supervisorId === e.id));
-
-                                        console.log('Filtered employees:', filtered);
-                                        console.log('Filtered length:', filtered?.length);
 
                                         if (!filtered || filtered.length === 0) {
                                             return <div className="py-6 text-center text-sm text-muted-foreground">No employees available</div>;

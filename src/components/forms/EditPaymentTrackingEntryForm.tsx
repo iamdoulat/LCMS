@@ -109,22 +109,22 @@ export function EditPaymentTrackingEntryForm({ initialData }: EditPaymentTrackin
     };
     fetchLcDetails();
   }, [watchedLcId]);
-  
+
   React.useEffect(() => {
     if (watchedShipmentDate && selectedLcDetails?.termsOfPay?.startsWith('Deferred')) {
-        const deferredDaysMatch = selectedLcDetails.termsOfPay.match(/\d+/);
-        if (deferredDaysMatch) {
-            const days = parseInt(deferredDaysMatch[0], 10);
-            const newMaturityDate = addDays(new Date(watchedShipmentDate), days);
-            setValue('maturityDate', newMaturityDate, { shouldValidate: true });
-        }
+      const deferredDaysMatch = selectedLcDetails.termsOfPay.match(/\d+/);
+      if (deferredDaysMatch) {
+        const days = parseInt(deferredDaysMatch[0], 10);
+        const newMaturityDate = addDays(new Date(watchedShipmentDate), days);
+        setValue('maturityDate', newMaturityDate, { shouldValidate: true });
+      }
     }
   }, [watchedShipmentDate, selectedLcDetails, setValue]);
 
   React.useEffect(() => {
     if (watchedMaturityDate) {
       const today = new Date();
-      today.setHours(0, 0, 0, 0); 
+      today.setHours(0, 0, 0, 0);
       const maturity = new Date(watchedMaturityDate);
       maturity.setHours(0, 0, 0, 0); // Normalize maturity date
       if (isValid(maturity)) {
@@ -138,9 +138,9 @@ export function EditPaymentTrackingEntryForm({ initialData }: EditPaymentTrackin
   async function onSubmit(data: PaymentTrackingFormValues) {
     setIsSubmitting(true);
     if (!initialData.id) {
-        Swal.fire("Error", "No record ID found. Cannot update.", "error");
-        setIsSubmitting(false);
-        return;
+      Swal.fire("Error", "No record ID found. Cannot update.", "error");
+      setIsSubmitting(false);
+      return;
     }
 
     try {
@@ -151,10 +151,10 @@ export function EditPaymentTrackingEntryForm({ initialData }: EditPaymentTrackin
         remainingDays: remainingDays,
         updatedAt: serverTimestamp(),
       };
-      
+
       const docRef = doc(firestore, "deferred_payment_tracker", initialData.id);
       await updateDoc(docRef, dataToUpdate);
-      
+
       Swal.fire("Success", "Payment tracking entry updated successfully!", "success");
     } catch (error: any) {
       Swal.fire("Error", `Failed to update tracking entry: ${error.message}`, "error");
@@ -187,81 +187,81 @@ export function EditPaymentTrackingEntryForm({ initialData }: EditPaymentTrackin
           />
           {selectedLcDetails && (
             <div className="grid grid-cols-2 gap-4 text-sm p-4 border rounded-md bg-muted/50">
-                <p><strong className="text-muted-foreground">Applicant:</strong><br /> {selectedLcDetails.applicantName}</p>
-                <p><strong className="text-muted-foreground">Beneficiary:</strong><br /> {selectedLcDetails.beneficiaryName}</p>
-                <p><strong className="text-muted-foreground">L/C Value:</strong><br /> {selectedLcDetails.amount?.toLocaleString() || 'N/A'} {selectedLcDetails.currency}</p>
-                <p><strong className="text-muted-foreground">Deferred Period:</strong><br /> {selectedLcDetails.termsOfPay}</p>
+              <p><strong className="text-muted-foreground">Applicant:</strong><br /> {selectedLcDetails.applicantName}</p>
+              <p><strong className="text-muted-foreground">Beneficiary:</strong><br /> {selectedLcDetails.beneficiaryName}</p>
+              <p><strong className="text-muted-foreground">L/C Value:</strong><br /> {selectedLcDetails.amount?.toLocaleString() || 'N/A'} {typeof selectedLcDetails.currency === 'string' ? selectedLcDetails.currency : selectedLcDetails.currency?.code}</p>
+              <p><strong className="text-muted-foreground">Deferred Period:</strong><br /> {selectedLcDetails.termsOfPay}</p>
             </div>
           )}
         </div>
-        <Separator/>
+        <Separator />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-            <FormField control={control} name="shipmentValue" render={({ field }) => (<FormItem><FormLabel>Shipment Value*</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>)}/>
-            <div className="flex items-center space-x-4 pt-6">
-              <FormField control={control} name="isFirstShipment" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><Label>1st Shipment</Label></FormItem>)} />
-              <FormField control={control} name="isSecondShipment" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><Label>2nd Shipment</Label></FormItem>)} />
-              <FormField control={control} name="isThirdShipment" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><Label>3rd Shipment</Label></FormItem>)} />
-            </div>
+          <FormField control={control} name="shipmentValue" render={({ field }) => (<FormItem><FormLabel>Shipment Value*</FormLabel><FormControl><Input type="number" step="0.01" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>)} />
+          <div className="flex items-center space-x-4 pt-6">
+            <FormField control={control} name="isFirstShipment" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><Label>1st Shipment</Label></FormItem>)} />
+            <FormField control={control} name="isSecondShipment" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><Label>2nd Shipment</Label></FormItem>)} />
+            <FormField control={control} name="isThirdShipment" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><Label>3rd Shipment</Label></FormItem>)} />
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-             <FormField control={control} name="shipmentDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Shipment Date*</FormLabel><DatePickerField field={field} /></FormItem>)}/>
-             <FormField control={control} name="maturityDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Maturity Date*</FormLabel><DatePickerField field={field} /></FormItem>)}/>
-             <FormItem><FormLabel>Remaining Days</FormLabel><Input value={remainingDays !== null ? `${remainingDays} days` : 'N/A'} readOnly disabled className="bg-muted/50 cursor-not-allowed"/></FormItem>
+          <FormField control={control} name="shipmentDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Shipment Date*</FormLabel><DatePickerField field={field} /></FormItem>)} />
+          <FormField control={control} name="maturityDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Maturity Date*</FormLabel><DatePickerField field={field} /></FormItem>)} />
+          <FormItem><FormLabel>Remaining Days</FormLabel><Input value={remainingDays !== null ? `${remainingDays} days` : 'N/A'} readOnly disabled className="bg-muted/50 cursor-not-allowed" /></FormItem>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-            <FormField control={control} name="shipmentMode" render={({ field }) => (
-                <FormItem className="space-y-3">
-                    <FormLabel>Shipment Mode*</FormLabel>
-                    <FormControl>
-                    <RadioGroup
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                    >
-                        {shipmentModeOptions.map((option) => (
-                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                            <FormControl><RadioGroupItem value={option} /></FormControl>
-                            <FormLabel className="font-normal text-sm">
-                                {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
-                                {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
-                                {option}
-                            </FormLabel>
-                        </FormItem>
-                        ))}
-                    </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-            )}/>
-             <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Status*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        <SelectItem value="Payment Pending">Payment Pending</SelectItem>
-                        <SelectItem value="Payment Done">Payment Done</SelectItem>
-                    </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+          <FormField control={control} name="shipmentMode" render={({ field }) => (
+            <FormItem className="space-y-3">
+              <FormLabel>Shipment Mode*</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                >
+                  {shipmentModeOptions.map((option) => (
+                    <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                      <FormControl><RadioGroupItem value={option} /></FormControl>
+                      <FormLabel className="font-normal text-sm">
+                        {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
+                        {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
+                        {option}
+                      </FormLabel>
+                    </FormItem>
+                  ))}
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField
+            control={form.control}
+            name="status"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Status*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Payment Pending">Payment Pending</SelectItem>
+                    <SelectItem value="Payment Done">Payment Done</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
-        <Separator/>
-        <FormField control={control} name="goodsDescription" render={({ field }) => (<FormItem><FormLabel>Goods Description</FormLabel><FormControl><Textarea placeholder="Description of goods in this shipment..." {...field} /></FormControl><FormMessage /></FormItem>)}/>
-        
+        <Separator />
+        <FormField control={control} name="goodsDescription" render={({ field }) => (<FormItem><FormLabel>Goods Description</FormLabel><FormControl><Textarea placeholder="Description of goods in this shipment..." {...field} /></FormControl><FormMessage /></FormItem>)} />
+
         <div className="flex justify-end">
-            <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : <><Save className="mr-2 h-4 w-4"/>Save Changes</>}
-            </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Changes</>}
+          </Button>
         </div>
       </form>
     </Form>

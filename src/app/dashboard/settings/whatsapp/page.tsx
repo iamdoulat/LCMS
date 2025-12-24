@@ -50,7 +50,6 @@ export default function WhatsAppSettingsPage() {
                 id: doc.id,
                 ...doc.data()
             })) as WhatsAppGatewayConfig[];
-            console.log("Fetched WhatsApp Configs:", data);
             setConfigs(data);
             setLoading(false);
         }, (error) => {
