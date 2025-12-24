@@ -35,8 +35,6 @@ import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { AddDesignationForm } from '@/components/forms/AddDesignationForm';
 import { EditDesignationForm } from '@/components/forms/EditDesignationForm';
-import { AddBranchForm } from '@/components/forms/AddBranchForm';
-import { EditBranchForm } from '@/components/forms/EditBranchForm';
 import { AddDepartmentForm } from '@/components/forms/AddDepartmentForm';
 import { EditDepartmentForm } from '@/components/forms/EditDepartmentForm';
 import { AddUnitForm } from '@/components/forms/AddUnitForm';
@@ -50,6 +48,7 @@ import { EditLeaveGroupForm } from '@/components/forms/EditLeaveGroupForm';
 import type { LeaveTypeDefinition, LeaveGroupDocument } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Skeleton } from '@/components/ui/skeleton';
+import { BranchListTable } from '@/components/dashboard/hr/BranchListTable';
 
 
 const DataTableSkeleton = () => (
@@ -80,16 +79,12 @@ export default function HrmSettingsPage() {
     const { data: divisions, isLoading: isLoadingDivisions } = useFirestoreQuery<DivisionDocument[]>(query(collection(firestore, 'divisions'), orderBy("name", "asc")), undefined, ['divisions']);
 
     const [isAddDivisionDialogOpen, setIsAddDivisionDialogOpen] = React.useState(false);
-    const [isAddBranchDialogOpen, setIsAddBranchDialogOpen] = React.useState(false);
     const [isAddDepartmentDialogOpen, setIsAddDepartmentDialogOpen] = React.useState(false);
     const [isAddUnitDialogOpen, setIsAddUnitDialogOpen] = React.useState(false);
     const [isAddDesignationDialogOpen, setIsAddDesignationDialogOpen] = React.useState(false);
 
     const [editingDivision, setEditingDivision] = React.useState<DivisionDocument | null>(null);
     const [isEditDivisionDialogOpen, setIsEditDivisionDialogOpen] = React.useState(false);
-
-    const [editingBranch, setEditingBranch] = React.useState<BranchDocument | null>(null);
-    const [isEditBranchDialogOpen, setIsEditBranchDialogOpen] = React.useState(false);
 
     const [editingDepartment, setEditingDepartment] = React.useState<DepartmentDocument | null>(null);
     const [isEditDepartmentDialogOpen, setIsEditDepartmentDialogOpen] = React.useState(false);
@@ -499,16 +494,40 @@ export default function HrmSettingsPage() {
                         </CardContent>
                     </Card>
 
-                    <Dialog open={isAddBranchDialogOpen} onOpenChange={setIsAddBranchDialogOpen}>
-                        {renderTableSection("Branches", "Manage company branches.", branches, isLoadingBranches, () => setIsAddBranchDialogOpen(true), (item) => handleEdit(item, setEditingBranch, setIsEditBranchDialogOpen), "branches")}
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Add New Branch</DialogTitle>
-                                <DialogDescription>Create a new company branch.</DialogDescription>
-                            </DialogHeader>
-                            <AddBranchForm onFormSubmit={() => setIsAddBranchDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
+                    {/* Branches Section */}
+                    <Card className="md:col-span-2 shadow-lg border-t-4 border-t-primary">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Branches</CardTitle>
+                            <CardDescription>Manage your company branches and office locations.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <BranchListTable
+                                data={branches || []}
+                                isLoading={isLoadingBranches}
+                                onDelete={(id: string, name: string) => handleDelete('branches', id, name)}
+                                userRole={userRole?.[0]}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    {/* Hotspot Setup Section */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                <Building className="h-4 w-4 text-muted-foreground" />
+                                Hotspot Setup
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex justify-between items-center">
+                                <div className="text-2xl font-bold">Manage</div>
+                                <Button asChild size="sm" variant="outline">
+                                    <Link href="/dashboard/hr/settings/hotspots">Open</Link>
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">Configure geofenced hotspots</p>
+                        </CardContent>
+                    </Card>
 
                     <Dialog open={isAddDepartmentDialogOpen} onOpenChange={setIsAddDepartmentDialogOpen}>
                         {renderTableSection("Departments", "Manage company departments.", departments, isLoadingDepts, () => setIsAddDepartmentDialogOpen(true), (item) => handleEdit(item, setEditingDepartment, setIsEditDepartmentDialogOpen), "departments")}
@@ -717,20 +736,7 @@ export default function HrmSettingsPage() {
                 </Dialog>
             )}
 
-            {editingBranch && (
-                <Dialog open={isEditBranchDialogOpen} onOpenChange={setIsEditBranchDialogOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Edit Branch</DialogTitle>
-                            <DialogDescription>Update the details for this branch.</DialogDescription>
-                        </DialogHeader>
-                        <EditBranchForm
-                            initialData={editingBranch}
-                            onFormSubmit={() => setIsEditBranchDialogOpen(false)}
-                        />
-                    </DialogContent>
-                </Dialog>
-            )}
+
 
             {editingDepartment && (
                 <Dialog open={isEditDepartmentDialogOpen} onOpenChange={setIsEditDepartmentDialogOpen}>

@@ -26,10 +26,10 @@ import { useAuth } from '@/context/AuthContext';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
-import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag, AttendanceReconciliationConfiguration, MultipleCheckInOutConfiguration, LeaveGroupDocument } from '@/types';
-import type { CheckInOutType, MultipleCheckInOutRecord } from '@/types/checkInOut';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag, AttendanceReconciliationConfiguration, MultipleCheckInOutConfiguration, LeaveGroupDocument, HotspotDocument } from '@/types';
+import type { CheckInOutType, MultipleCheckInOutRecord, MultipleCheckInOutLocation } from '@/types/checkInOut';
 import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord, reverseGeocode, getCheckInOutRecords } from '@/lib/firebase/checkInOut';
 import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min, getDate, isSameMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -38,6 +38,14 @@ import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { EmployeeSupervisionCard } from '@/components/dashboard/EmployeeSupervisionCard';
 import { TeamCheckInCard } from '@/components/dashboard/TeamCheckInCard';
+import dynamic from 'next/dynamic';
+import type { BranchDocument } from '@/types';
+
+// Dynamically import GeofenceMap
+const GeofenceMap = dynamic(() => import('@/components/ui/GeofenceMap'), {
+  ssr: false,
+  loading: () => <div className="h-[250px] w-full bg-muted animate-pulse rounded-md flex items-center justify-center">Loading Map...</div>
+});
 import { TeamAttendanceCard } from '@/components/dashboard/TeamAttendanceCard';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
@@ -49,6 +57,7 @@ import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
 
@@ -223,6 +232,63 @@ export default function AccountDetailsPage() {
   // Leave Group Policy
   const [leaveGroup, setLeaveGroup] = useState<LeaveGroupDocument | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
+  const [employeeBranch, setEmployeeBranch] = useState<BranchDocument | null>(null);
+  const [branchHotspots, setBranchHotspots] = useState<HotspotDocument[]>([]);
+
+  // Location View Modal State
+  const [viewLocation, setViewLocation] = useState<{ lat: number; lng: number, address?: string } | null>(null);
+  const [isViewLocationOpen, setIsViewLocationOpen] = useState(false);
+
+  // Daily Attendance Dialog State
+  const [isDailyAttendanceOpen, setIsDailyAttendanceOpen] = useState(false);
+  const [dailyAttendanceType, setDailyAttendanceType] = useState<'in' | 'out'>('in');
+  const [attendanceRemarks, setAttendanceRemarks] = useState('');
+  const [attendanceLocation, setAttendanceLocation] = useState<MultipleCheckInOutLocation | null>(null);
+
+  // Fetch Branch Data
+  useEffect(() => {
+    const fetchBranch = async () => {
+      try {
+        let branchDocId = "";
+
+        if (employeeData?.branchId) {
+          const branchDoc = await getDoc(doc(firestore, 'branches', employeeData.branchId));
+          if (branchDoc.exists()) {
+            setEmployeeBranch({ id: branchDoc.id, ...branchDoc.data() } as BranchDocument);
+            branchDocId = branchDoc.id;
+          }
+        }
+
+        // Fallback: Fetch by branch name if branchId is missing or document not found
+        if (!branchDocId && employeeData?.branch && employeeData.branch !== 'Not Defined') {
+          const q = query(collection(firestore, 'branches'), where('name', '==', employeeData.branch.trim()));
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const branchDoc = snapshot.docs[0];
+            setEmployeeBranch({ id: branchDoc.id, ...branchDoc.data() } as BranchDocument);
+            branchDocId = branchDoc.id;
+          }
+        }
+
+        // Fetch Hotspots for this branch
+        if (branchDocId) {
+          const hotspotsQ = query(
+            collection(firestore, 'hotspots'),
+            where('branchId', '==', branchDocId),
+            where('isActive', '==', true)
+          );
+          const hotspotsSnapshot = await getDocs(hotspotsQ);
+          const hotspotsData = hotspotsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HotspotDocument));
+          setBranchHotspots(hotspotsData);
+        } else {
+          setBranchHotspots([]);
+        }
+      } catch (error) {
+        console.error("Error fetching branch or hotspots:", error);
+      }
+    };
+    fetchBranch();
+  }, [employeeData?.branchId, employeeData?.branch]);
 
   useEffect(() => {
     const fetchLeaveGroup = async () => {
@@ -364,23 +430,43 @@ export default function AccountDetailsPage() {
     }
   }, [outTimeHour, outTimeMinute, outTimePeriod]);
 
+  const updateLocation = useCallback(async (showNotification = false, forceRefresh = false) => {
+    if (isLoadingLocation) return;
+    setIsLoadingLocation(true);
+    try {
+      const location = await getCurrentLocation({ forceRefresh });
+      setCurrentLocation(location);
+
+      // Start reverse geocoding without blocking
+      reverseGeocode(location.latitude, location.longitude).then(address => {
+        setCurrentLocation(prev => prev ? { ...prev, address } : null);
+        if (showNotification) {
+          Swal.fire({
+            title: 'Location Updated',
+            text: address,
+            icon: 'success',
+            toast: true,
+            position: 'top-end',
+            timer: 3000,
+            showConfirmButton: false
+          });
+        }
+      });
+      return location;
+    } catch (error: any) {
+      console.error('Error capturing location:', error);
+      if (showNotification) {
+        Swal.fire('Location Error', error.message || 'Could not get location', 'error');
+      }
+      return null;
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  }, [isLoadingLocation]);
+
   // Automatically capture location on component mount
   React.useEffect(() => {
-    const captureLocation = async () => {
-      if (!currentLocation && !isLoadingLocation) {
-        setIsLoadingLocation(true);
-        try {
-          const location = await getCurrentLocation();
-          setCurrentLocation(location);
-        } catch (error: any) {
-          console.error('Error capturing location:', error);
-          // Show error but don't block the form - user can retry manually
-        } finally {
-          setIsLoadingLocation(false);
-        }
-      }
-    };
-    captureLocation();
+    updateLocation(false);
   }, []);
 
   const handleReconciliationClick = (attendance: AttendanceDocument) => {
@@ -978,6 +1064,107 @@ export default function AccountDetailsPage() {
     }
   }, [user, form]);
 
+  const handleRefreshLocation = useCallback(async () => {
+    const loc = await updateLocation(true, true);
+    if (loc) setAttendanceLocation(loc);
+  }, [updateLocation]);
+
+  const submitDailyAttendance = async () => {
+    if (!user || !employeeData || !attendanceLocation) {
+      Swal.fire("Error", "Required data missing.", "error");
+      return;
+    }
+
+    setAttendanceLoading(true);
+    const now = new Date();
+    const formattedDate = format(now, 'yyyy-MM-dd');
+    const currentTime = format(now, 'hh:mm a');
+    const docId = `${employeeData.id}_${formattedDate}`;
+    const docRef = doc(firestore, 'attendance', docId);
+
+    try {
+      if (dailyAttendanceType === 'in') {
+        const flag = determineAttendanceFlag(currentTime);
+        const dataToSet = {
+          employeeId: employeeData.id,
+          employeeName: employeeData.fullName,
+          date: format(now, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          flag: flag,
+          inTime: currentTime,
+          inTimeRemarks: attendanceRemarks,
+          inTimeLocation: attendanceLocation,
+          updatedBy: user.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await setDoc(docRef, dataToSet, { merge: true });
+        setDailyAttendance(dataToSet as AttendanceDocument);
+
+        fetch('/api/notify/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'in_time',
+            employeeId: employeeData.id,
+            employeeName: employeeData.fullName,
+            employeeCode: employeeData.employeeCode,
+            employeeEmail: employeeData.email,
+            employeePhone: employeeData.phone,
+            time: currentTime,
+            date: format(now, 'PPP'),
+            flag: flag,
+            location: attendanceLocation,
+            remarks: attendanceRemarks
+          })
+        }).catch(err => console.error('Notification error:', err));
+
+        Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
+      } else {
+        const currentDoc = await getDoc(docRef);
+        if (!currentDoc.exists() || !currentDoc.data().inTime) {
+          Swal.fire("Cannot Clock Out", "You must clock in before you can clock out.", "warning");
+          setAttendanceLoading(false);
+          return;
+        }
+        const dataToSet = {
+          outTime: currentTime,
+          outTimeRemarks: attendanceRemarks,
+          outTimeLocation: attendanceLocation,
+          updatedAt: serverTimestamp(),
+        };
+        await updateDoc(docRef, dataToSet);
+        setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
+
+        fetch('/api/notify/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'out_time',
+            employeeId: employeeData.id,
+            employeeName: employeeData.fullName,
+            employeeCode: employeeData.employeeCode,
+            employeeEmail: employeeData.email,
+            employeePhone: employeeData.phone,
+            time: currentTime,
+            date: format(now, 'PPP'),
+            location: attendanceLocation,
+            remarks: attendanceRemarks
+          })
+        }).catch(err => console.error('Notification error:', err));
+
+        Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
+      }
+      fetchAttendanceForRange();
+      setIsDailyAttendanceOpen(false);
+      setAttendanceRemarks('');
+    } catch (error: any) {
+      console.error("Error updating attendance:", error);
+      Swal.fire("Error", `Failed to record attendance: ${error.message}`, "error");
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
   const handleAttendance = async (type: 'in' | 'out') => {
     if (!user || !employeeData) {
       Swal.fire("Error", "User or employee data not available.", "error");
@@ -990,201 +1177,26 @@ export default function AccountDetailsPage() {
     }
 
     setAttendanceLoading(true);
-
-    if (!navigator.geolocation) {
-      Swal.fire("Geolocation Not Supported", "Your browser does not support geolocation.", "error");
-      setAttendanceLoading(false);
-      return;
-    }
-
-    const showLocationSwal = (latitude: number, longitude: number) => {
-      const mapHtml = `
-          <iframe
-            id="swal-map-iframe"
-            width="100%"
-            height="250"
-            style="border:0; border-radius: 8px; margin-bottom: 1rem;"
-            loading="lazy"
-            allowfullscreen
-            src="https://maps.google.com/maps?q=${latitude},${longitude}&hl=es;z=14&amp;output=embed">
-          </iframe>
-        `;
-
-      Swal.fire({
-        title: `<div style="font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center;">Enter ${type === 'in' ? 'In Time' : 'Out Time'} Remarks (Optional)<button id="refresh-location-btn" class="swal2-confirm swal2-styled" style="font-size: 0.8rem; padding: 0.4rem 0.6rem; margin: 0; min-width: auto; background: hsl(var(--secondary)) !important; color: hsl(var(--secondary-foreground)) !important;">Refresh Location</button></div>`,
-        html: `${mapHtml}<textarea id="swal-textarea" class="swal2-textarea" placeholder="Type your remarks here..."></textarea>`,
-        showCancelButton: true,
-        confirmButtonText: 'Submit',
-        customClass: { htmlContainer: 'p-0', title: 'w-full' },
-        didOpen: () => {
-          document.getElementById('refresh-location-btn')?.addEventListener('click', () => {
-            Swal.showLoading();
-            navigator.geolocation.getCurrentPosition(
-              (newPosition) => {
-                Swal.close();
-                showLocationSwal(newPosition.coords.latitude, newPosition.coords.longitude);
-              },
-              (error) => {
-                console.error("Geolocation refresh error:", error);
-                Swal.fire("Location Error", `Could not refresh location. ${error.message}`, "error");
-              },
-              {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-              }
-            );
-          });
-        },
-        preConfirm: () => {
-          const textarea = document.getElementById('swal-textarea') as HTMLTextAreaElement;
-          return { remarks: textarea.value || '', latitude, longitude };
-        }
-      }).then(async (result) => {
-        if (!result.isConfirmed) {
-          setAttendanceLoading(false);
-          return;
-        }
-
-        const { remarks, latitude: finalLatitude, longitude: finalLongitude } = result.value;
-        const locationData: any = { latitude: finalLatitude, longitude: finalLongitude };
-
-        // Try to get address for notifications
-        try {
-          const address = await reverseGeocode(finalLatitude, finalLongitude);
-          locationData.address = address;
-        } catch (error) {
-          console.warn('Could not reverse geocode in handleAttendance:', error);
-        }
-
-        const now = new Date();
-        const formattedDate = format(now, 'yyyy-MM-dd');
-        const currentTime = format(now, 'hh:mm a');
-        const docId = `${employeeData.id}_${formattedDate}`;
-        const docRef = doc(firestore, 'attendance', docId);
-
-        try {
-          if (type === 'in') {
-            // Auto-determine flag based on in-time (P if ≤09:10 AM, D if >09:10 AM)
-            const flag = determineAttendanceFlag(currentTime);
-            const dataToSet = {
-              employeeId: employeeData.id,
-              employeeName: employeeData.fullName,
-              date: format(now, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-              flag: flag,
-              inTime: currentTime,
-              inTimeRemarks: remarks,
-              inTimeLocation: locationData,
-              updatedBy: user.uid,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            };
-            await setDoc(docRef, dataToSet, { merge: true });
-            setDailyAttendance(dataToSet as AttendanceDocument);
-            fetchAttendanceForRange();
-
-            // Send notifications (non-blocking)
-            fetch('/api/notify/attendance', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: 'in_time',
-                employeeId: employeeData.id,
-                employeeName: employeeData.fullName,
-                employeeCode: employeeData.employeeCode,
-                employeeEmail: employeeData.email,
-                employeePhone: employeeData.phone,
-                time: currentTime,
-                date: format(now, 'PPP'),
-                flag: flag,
-                location: locationData,
-                remarks: remarks
-              })
-            }).catch(err => console.error('Notification error:', err));
-
-            Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
-          } else {
-            const currentDoc = await getDoc(docRef);
-            if (!currentDoc.exists() || !currentDoc.data().inTime) {
-              Swal.fire("Cannot Clock Out", "You must clock in before you can clock out.", "warning");
-              setAttendanceLoading(false);
-              return;
-            }
-            const dataToSet = {
-              outTime: currentTime,
-              outTimeRemarks: remarks,
-              outTimeLocation: locationData,
-              updatedAt: serverTimestamp(),
-            };
-            await updateDoc(docRef, dataToSet);
-            setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
-            fetchAttendanceForRange();
-
-            // Send notifications (non-blocking)
-            fetch('/api/notify/attendance', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: 'out_time',
-                employeeId: employeeData.id,
-                employeeName: employeeData.fullName,
-                employeeCode: employeeData.employeeCode,
-                employeeEmail: employeeData.email,
-                employeePhone: employeeData.phone,
-                time: currentTime,
-                date: format(now, 'PPP'),
-                location: locationData,
-                remarks: remarks
-              })
-            }).catch(err => console.error('Notification error:', err));
-
-            Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
-          }
-        } catch (error: any) {
-          console.error("Error updating attendance:", error);
-          Swal.fire("Error", `Failed to record attendance: ${error.message}`, "error");
-        } finally {
-          setAttendanceLoading(false);
-        }
-      });
-    };
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        showLocationSwal(position.coords.latitude, position.coords.longitude);
-      },
-      (error) => {
-        console.error("Geolocation error:", error);
-        let errorMessage = "Could not get your location. ";
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage += "You denied the request for Geolocation.";
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage += "Location information is unavailable.";
-            break;
-          case error.TIMEOUT:
-            errorMessage += "The request to get user location timed out.";
-            break;
-          default:
-            errorMessage += `An unknown error occurred: ${error.message}`;
-            break;
-        }
-        Swal.fire("Location Error", errorMessage, "error");
-        setAttendanceLoading(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
+    try {
+      const location = await updateLocation(true, true);
+      if (location) {
+        setAttendanceLocation(location);
+        setDailyAttendanceType(type);
+        setAttendanceRemarks('');
+        setIsDailyAttendanceOpen(true);
       }
-    );
+    } catch (error: any) {
+      console.error("Geolocation error:", error);
+      // Extra safety as updateLocation already shows Swal if true is passed
+    } finally {
+      setAttendanceLoading(false);
+    }
   };
 
-  const handleViewLocation = (location: { latitude: number; longitude: number } | undefined | null) => {
+  const handleViewLocation = (location: { latitude: number; longitude: number; address?: string } | undefined | null) => {
     if (location) {
-      const url = `https://www.google.com/maps?q=${location.latitude},${location.longitude}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
+      setViewLocation({ lat: location.latitude, lng: location.longitude, address: location.address });
+      setIsViewLocationOpen(true);
     } else {
       Swal.fire('No Location', 'Location data is not available for this entry.', 'info');
     }
@@ -1454,6 +1466,38 @@ export default function AccountDetailsPage() {
                   <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
                     {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Set</>}
                   </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Location View Dialog */}
+            <Dialog open={isViewLocationOpen} onOpenChange={setIsViewLocationOpen}>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Location Details</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                  <GeofenceMap
+                    userLocation={viewLocation}
+                    branchLocation={employeeBranch ? {
+                      lat: Number(employeeBranch.latitude),
+                      lng: Number(employeeBranch.longitude),
+                      radius: Number(employeeBranch.allowRadius || 100),
+                      name: employeeBranch.name,
+                      address: employeeBranch.address
+                    } : null}
+                    hotspots={branchHotspots.map(h => ({
+                      lat: Number(h.latitude),
+                      lng: Number(h.longitude),
+                      radius: Number(h.allowRadius || 100),
+                      name: h.name,
+                      address: h.address
+                    }))}
+                  />
+                  {/* Info cards removed as they are now in map popups */}
+                </div>
+                <DialogFooter>
+                  <Button onClick={() => setIsViewLocationOpen(false)}>Close</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -1759,7 +1803,8 @@ export default function AccountDetailsPage() {
                 )}
               </div>
 
-              {/* Location */}
+              {/* Location captured section consolidated below */}
+
               <div className="space-y-2">
                 <Label>Location * (Auto-captured)</Label>
                 {isLoadingLocation ? (
@@ -1790,21 +1835,10 @@ export default function AccountDetailsPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={async () => {
-                        setIsLoadingLocation(true);
-                        try {
-                          const location = await getCurrentLocation();
-                          setCurrentLocation(location);
-                          Swal.fire('Location Updated', `New location: ${location.address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}`, 'success');
-                        } catch (error: any) {
-                          Swal.fire('Location Error', error.message || 'Could not get location', 'error');
-                        } finally {
-                          setIsLoadingLocation(false);
-                        }
-                      }}
-                      className="w-full"
+                      onClick={() => updateLocation(true, true)}
+                      className="w-full text-xs"
                     >
-                      <RefreshCw className="mr-2 h-4 w-4" />
+                      <RefreshCw className="mr-2 h-3 w-3" />
                       Refresh Location
                     </Button>
                   </div>
@@ -1816,19 +1850,9 @@ export default function AccountDetailsPage() {
                     </div>
                     <Button
                       type="button"
-                      variant="outline"
-                      onClick={async () => {
-                        setIsLoadingLocation(true);
-                        try {
-                          const location = await getCurrentLocation();
-                          setCurrentLocation(location);
-                          Swal.fire('Location Captured', `Location: ${location.address || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}`, 'success');
-                        } catch (error: any) {
-                          Swal.fire('Location Error', error.message || 'Could not get location', 'error');
-                        } finally {
-                          setIsLoadingLocation(false);
-                        }
-                      }}
+                      variant="default"
+                      size="sm"
+                      onClick={() => updateLocation(true, true)}
                       className="w-full"
                     >
                       <MapPin className="mr-2 h-4 w-4" />
@@ -1913,10 +1937,51 @@ export default function AccountDetailsPage() {
 
                   setIsSubmittingCheckInOut(true);
                   try {
+                    // Force capture location if missing or stale
+                    let submissionLocation = currentLocation;
+                    if (!submissionLocation) {
+                      submissionLocation = await updateLocation(true);
+                      if (!submissionLocation) {
+                        setIsSubmittingCheckInOut(false);
+                        return; // updateLocation already showed the error
+                      }
+                    }
+
                     // Upload image
                     let imageURL = '';
                     if (capturedImage) {
                       imageURL = await uploadCheckInOutImage(capturedImage, employeeData.id, checkInOutType);
+                    }
+
+                    // Geofence Validation Logic
+                    let status: 'Approved' | 'Pending' | 'Rejected' = 'Approved';
+                    let distanceFromBranch = 0;
+                    let isInsideGeofence = true;
+
+                    if (employeeBranch && employeeBranch.latitude && employeeBranch.longitude) {
+                      const R = 6371e3; // metres
+                      const lat1 = submissionLocation?.latitude || 0;
+                      const lon1 = submissionLocation?.longitude || 0;
+                      const lat2 = employeeBranch.latitude;
+                      const lon2 = employeeBranch.longitude;
+
+                      const φ1 = lat1 * Math.PI / 180;
+                      const φ2 = lat2 * Math.PI / 180;
+                      const Δφ = (lat2 - lat1) * Math.PI / 180;
+                      const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+                      const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                        Math.cos(φ1) * Math.cos(φ2) *
+                        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                      distanceFromBranch = R * c;
+
+                      const radius = employeeBranch.allowRadius || 50;
+                      isInsideGeofence = distanceFromBranch <= radius;
+
+                      if (!isInsideGeofence) {
+                        status = 'Pending';
+                      }
                     }
 
                     // Create record
@@ -1925,9 +1990,14 @@ export default function AccountDetailsPage() {
                       employeeData.fullName,
                       companyName,
                       checkInOutType,
-                      currentLocation || { latitude: 0, longitude: 0, address: 'Location unavailable' },
+                      submissionLocation || { latitude: 0, longitude: 0, address: 'Location unavailable' },
                       imageURL,
-                      checkInOutRemarks
+                      checkInOutRemarks,
+                      {
+                        status,
+                        distanceFromBranch,
+                        isInsideGeofence
+                      }
                     );
 
                     // Send notifications (non-blocking)
@@ -1951,7 +2021,11 @@ export default function AccountDetailsPage() {
                       })
                     }).catch(err => console.error('Notification error:', err));
 
-                    Swal.fire('Success', `${checkInOutType} recorded successfully!`, 'success');
+                    if (status === 'Pending') {
+                      Swal.fire('Attendance Forwarded', 'You are outside the allowed radius. Your attendance has been forwarded to your Supervisor for review.', 'warning');
+                    } else {
+                      Swal.fire('Success', `${checkInOutType} recorded successfully!`, 'success');
+                    }
 
                     // Reset form
                     setCompanyName('');
@@ -2762,6 +2836,61 @@ export default function AccountDetailsPage() {
           </div>
           <DialogFooter>
             <Button onClick={() => setIsNoticeDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Daily Attendance Dialog */}
+      <Dialog open={isDailyAttendanceOpen} onOpenChange={setIsDailyAttendanceOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Enter {dailyAttendanceType === 'in' ? 'In Time' : 'Out Time'} Remarks (Optional)</DialogTitle>
+            <DialogDescription>
+              Confirm your location and add any relevant notes for your attendance.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="relative">
+              <GeofenceMap
+                userLocation={attendanceLocation ? { lat: attendanceLocation.latitude, lng: attendanceLocation.longitude, address: attendanceLocation.address } : null}
+                branchLocation={employeeBranch ? {
+                  lat: Number(employeeBranch.latitude),
+                  lng: Number(employeeBranch.longitude),
+                  radius: Number(employeeBranch.allowRadius || 100),
+                  name: employeeBranch.name,
+                  address: employeeBranch.address
+                } : null}
+                hotspots={branchHotspots.map(h => ({
+                  lat: Number(h.latitude),
+                  lng: Number(h.longitude),
+                  radius: Number(h.allowRadius || 100),
+                  name: h.name,
+                  address: h.address
+                }))}
+                onRefresh={handleRefreshLocation}
+                isLoading={isLoadingLocation}
+              />
+              {/* Manual legend and branch address overlay removed */}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="daily-remarks">Remarks</Label>
+              <Textarea
+                id="daily-remarks"
+                placeholder="Type your remarks here..."
+                value={attendanceRemarks}
+                onChange={(e) => setAttendanceRemarks(e.target.value)}
+                className="min-h-[80px]"
+              />
+              {/* Captured location text removed */}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDailyAttendanceOpen(false)}>Cancel</Button>
+            <Button onClick={submitDailyAttendance} disabled={attendanceLoading}>
+              {attendanceLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Submit
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

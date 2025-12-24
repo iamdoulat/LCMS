@@ -9,6 +9,7 @@ export interface MultipleCheckInOutLocation {
     latitude: number;
     longitude: number;
     address?: string;
+    accuracy?: number;
 }
 
 export interface MultipleCheckInOutRecord {
@@ -21,6 +22,9 @@ export interface MultipleCheckInOutRecord {
     location: MultipleCheckInOutLocation;
     imageURL: string; // Firebase Storage URL
     remarks: string;
+    status?: 'Approved' | 'Pending' | 'Rejected';
+    distanceFromBranch?: number; // Optional: Store distance for audit
+    isInsideGeofence?: boolean; // Optional: Store validation result
     createdAt: Timestamp;
     updatedAt: Timestamp;
 }

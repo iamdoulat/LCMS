@@ -1654,13 +1654,68 @@ export type EmployeeDocument = Employee;
 
 export const BranchSchema = z.object({
   name: z.string().min(2, "Branch name must be at least 2 characters long."),
+  currency: z.string(),
+  timezone: z.string(),
+  isHeadOffice: z.boolean(),
+  remoteAttendanceAllowed: z.boolean(),
+  requireRemoteAttendanceApproval: z.boolean().optional(),
+  allowRadius: z.number().optional(),
+  address: z.string().optional(),
+  willNotifySupervisor: z.boolean().optional(),
+  notifyAllRemoteAttendances: z.boolean().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 export type BranchFormValues = z.infer<typeof BranchSchema>;
 export interface BranchDocument {
   id: string;
   name: string;
+  currency: string;
+  timezone: string;
+  isHeadOffice: boolean;
+  remoteAttendanceAllowed: boolean;
+  requireRemoteAttendanceApproval?: boolean;
+  allowRadius?: number;
+  address?: string;
+  willNotifySupervisor?: boolean;
+  notifyAllRemoteAttendances?: boolean;
+  latitude?: number;
+  longitude?: number;
   createdAt: any;
 }
+
+// --- Hotspot Types ---
+export const HotspotSchema = z.object({
+  name: z.string().min(1, "Hotspot Name is required."),
+  branchId: z.string().min(1, "Branch is required."),
+  allowRadius: z.preprocess(
+    (val) => (String(val).trim() === "" ? 0 : Number(String(val).trim())),
+    z.number().positive("Radius must be a positive number.")
+  ),
+  address: z.string().optional(),
+  latitude: z.number({ required_error: "Location is required." }),
+  longitude: z.number({ required_error: "Location is required." }),
+  isActive: z.boolean().default(true),
+  requireRemoteAttendanceApproval: z.boolean().optional().default(false),
+});
+
+export type HotspotFormValues = z.infer<typeof HotspotSchema>;
+
+export interface HotspotDocument {
+  id: string;
+  name: string;
+  branchId: string;
+  branchName: string; // Denormalized
+  allowRadius: number;
+  address?: string;
+  latitude: number;
+  longitude: number;
+  isActive: boolean;
+  requireRemoteAttendanceApproval?: boolean;
+  createdAt: any;
+  updatedAt: any;
+}
+// --- END Hotspot Types ---
 
 export const DepartmentSchema = z.object({
   name: z.string().min(2, "Department name must be at least 2 characters long."),

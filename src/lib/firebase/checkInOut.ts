@@ -8,40 +8,64 @@ import type { MultipleCheckInOutRecord, CheckInOutType, MultipleCheckInOutLocati
 /**
  * Get current geolocation
  */
-export const getCurrentLocation = (): Promise<MultipleCheckInOutLocation> => {
-    return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) {
-            reject(new Error('Geolocation is not supported by your browser'));
-            return;
-        }
+export const getCurrentLocation = (options?: PositionOptions & { forceRefresh?: boolean }): Promise<MultipleCheckInOutLocation> => {
+    const defaultOptions: PositionOptions = {
+        enableHighAccuracy: true,
+        timeout: 20000, // 20 seconds for first try
+        maximumAge: options?.forceRefresh ? 0 : 60000, // 60 seconds cache unless forced
+        ...options
+    };
 
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
+    const fetchLocation = (): Promise<MultipleCheckInOutLocation> => {
+        return new Promise((resolve, reject) => {
+            if (typeof window !== 'undefined' && !navigator.geolocation) {
+                reject(new Error('Geolocation is not supported by your browser'));
+                return;
+            }
+
+            const success = (position: GeolocationPosition) => {
                 const location: MultipleCheckInOutLocation = {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
                 };
-
-                // Try to get address from coordinates
-                try {
-                    const address = await reverseGeocode(location.latitude, location.longitude);
-                    location.address = address;
-                } catch (error) {
-                    console.warn('Could not get address from coordinates:', error);
-                }
-
                 resolve(location);
-            },
-            (error) => {
-                reject(new Error(`Geolocation error: ${error.message}`));
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0,
-            }
-        );
+            };
+
+            const errorCallback = (error: GeolocationPositionError) => {
+                // If high accuracy failed, try once with low accuracy (faster)
+                if (defaultOptions.enableHighAccuracy &&
+                    (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE)) {
+                    console.warn('High accuracy geolocation failed, retrying with low accuracy...');
+                    navigator.geolocation.getCurrentPosition(
+                        success,
+                        (err) => {
+                            let msg = err.message;
+                            if (err.code === err.PERMISSION_DENIED) msg = "Location permission denied. Please allow location access in your browser settings.";
+                            if (err.code === err.TIMEOUT) msg = "Location request timed out. High-rise buildings or weak signal can cause this. Please try again.";
+                            if (err.code === err.POSITION_UNAVAILABLE) msg = "Location information is unavailable on this device right now.";
+                            reject(new Error(msg));
+                        },
+                        { ...defaultOptions, enableHighAccuracy: false, timeout: 15000 }
+                    );
+                } else {
+                    let msg = error.message;
+                    if (error.code === error.PERMISSION_DENIED) msg = "Location permission denied. Please allow location access in your browser settings.";
+                    reject(new Error(msg));
+                }
+            };
+
+            navigator.geolocation.getCurrentPosition(success, errorCallback, defaultOptions);
+        });
+    };
+
+    // Safety timeout to prevent indefinite hanging
+    const safetyTimeout = new Promise<never>((_, reject) => {
+        const timeoutMs = (defaultOptions.timeout || 25000) + 20000; // Total allowable time
+        setTimeout(() => reject(new Error('Location request timed out. Please ensure GPS is on and try again.')), timeoutMs);
     });
+
+    return Promise.race([fetchLocation(), safetyTimeout]);
 };
 
 /**
@@ -87,7 +111,12 @@ export const createCheckInOutRecord = async (
     type: CheckInOutType,
     location: MultipleCheckInOutLocation,
     imageURL: string,
-    remarks: string
+    remarks: string,
+    additionalData?: {
+        status?: 'Approved' | 'Pending' | 'Rejected';
+        distanceFromBranch?: number;
+        isInsideGeofence?: boolean;
+    }
 ): Promise<string> => {
     const now = Timestamp.now();
     const record: Omit<MultipleCheckInOutRecord, 'id'> = {
@@ -99,6 +128,7 @@ export const createCheckInOutRecord = async (
         location,
         imageURL,
         remarks,
+        ...additionalData,
         createdAt: now,
         updatedAt: now,
     };
