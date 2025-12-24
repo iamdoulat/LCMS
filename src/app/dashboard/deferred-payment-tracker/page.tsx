@@ -38,7 +38,7 @@ interface DeferredPaymentRecord {
   beneficiaryId?: string;
   beneficiaryName?: string;
   lcValue?: number;
-  lcCurrency?: Currency;
+  lcCurrency?: Currency | string;
   shipmentValue?: number;
   termsOfPay?: string;
   isFirstShipment?: boolean;

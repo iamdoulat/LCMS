@@ -133,7 +133,7 @@ export function NewLCEntryForm() {
   const [totalCalculatedPartialQty, setTotalCalculatedPartialQty] = React.useState<number>(0);
   const [totalCalculatedPartialAmount, setTotalCalculatedPartialAmount] = React.useState<number>(0);
   const prevPartialShipmentAllowedRef = React.useRef<PartialShipmentAllowed | undefined | null>();
-  
+
 
   const form = useForm<NewLCFormValues>({
     resolver: zodResolver(lcEntrySchema),
@@ -172,7 +172,7 @@ export function NewLCEntryForm() {
             contactPersonName: data.contactPerson,
             email: data.email,
             phone: data.phone,
-           } as ApplicantOption;
+          } as ApplicantOption;
         });
         setApplicantOptions(fetchedApplicants);
 
@@ -218,7 +218,7 @@ export function NewLCEntryForm() {
     viaLabel = "Courier Name";
   }
 
-  const amountLabel = currencyOptions.includes(watchedCurrency as Currency) ? `${watchedCurrency} Amount*` : "Amount*";
+  const amountLabel = currencyOptions.includes(watchedCurrency as any) ? `${watchedCurrency} Amount*` : "Amount*";
 
   const isDeferredPayment = watchedTermsOfPay && watchedTermsOfPay.startsWith("Deferred");
 
@@ -233,7 +233,7 @@ export function NewLCEntryForm() {
 
   const watchedPartialValues = watch(partialFieldsToWatch);
 
- React.useEffect(() => {
+  React.useEffect(() => {
     if (watchedPartialShipmentAllowed === "Yes" && watchedPartialShipmentAllowed !== prevPartialShipmentAllowedRef.current) {
       const fieldsToInitializeZero = [
         "firstPartialQty", "secondPartialQty", "thirdPartialQty",
@@ -275,39 +275,39 @@ export function NewLCEntryForm() {
     if (totalCalculatedPartialAmount !== newTotalAmount) {
       setTotalCalculatedPartialAmount(newTotalAmount);
     }
-    
+
     if (watchedPartialShipmentAllowed === "Yes") {
-        const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
-        const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
-        const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
-        const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
-        if(Number(getValues("totalPackageQty") || 0) !== newTotalPkgs){
-             setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
-        }
+      const firstPartialPkgs = Number(getValues("firstPartialPkgs") || 0);
+      const secondPartialPkgs = Number(getValues("secondPartialPkgs") || 0);
+      const thirdPartialPkgs = Number(getValues("thirdPartialPkgs") || 0);
+      const newTotalPkgs = firstPartialPkgs + secondPartialPkgs + thirdPartialPkgs;
+      if (Number(getValues("totalPackageQty") || 0) !== newTotalPkgs) {
+        setValue("totalPackageQty", newTotalPkgs, { shouldValidate: true, shouldDirty: true });
+      }
 
-        const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
-        const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
-        const thirdPartialNetW = Number(getValues("thirdPartialNetWeight") || 0);
-        const newTotalNetW = firstPartialNetW + secondPartialNetW + thirdPartialNetW;
-        if(Number(getValues("totalNetWeight") || 0) !== newTotalNetW){
-             setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
-        }
+      const firstPartialNetW = Number(getValues("firstPartialNetWeight") || 0);
+      const secondPartialNetW = Number(getValues("secondPartialNetWeight") || 0);
+      const thirdPartialNetW = Number(getValues("thirdPartialNetWeight") || 0);
+      const newTotalNetW = firstPartialNetW + secondPartialNetW + thirdPartialNetW;
+      if (Number(getValues("totalNetWeight") || 0) !== newTotalNetW) {
+        setValue("totalNetWeight", newTotalNetW, { shouldValidate: true, shouldDirty: true });
+      }
 
-        const firstPartialGrossW = Number(getValues("firstPartialGrossWeight") || 0);
-        const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
-        const thirdPartialGrossW = Number(getValues("thirdPartialGrossWeight") || 0);
-        const newTotalGrossW = firstPartialGrossW + secondPartialGrossW + thirdPartialGrossW;
-        if(Number(getValues("totalGrossWeight") || 0) !== newTotalGrossW){
-             setValue("totalGrossWeight", newTotalGrossW, { shouldValidate: true, shouldDirty: true });
-        }
-        
-        const firstPartialCbm = Number(getValues("firstPartialCbm") || 0);
-        const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
-        const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
-        const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
-        if(Number(getValues("totalCbm") || 0) !== newTotalCbm){
-            setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
-        }
+      const firstPartialGrossW = Number(getValues("firstPartialGrossWeight") || 0);
+      const secondPartialGrossW = Number(getValues("secondPartialGrossWeight") || 0);
+      const thirdPartialGrossW = Number(getValues("thirdPartialGrossWeight") || 0);
+      const newTotalGrossW = firstPartialGrossW + secondPartialGrossW + thirdPartialGrossW;
+      if (Number(getValues("totalGrossWeight") || 0) !== newTotalGrossW) {
+        setValue("totalGrossWeight", newTotalGrossW, { shouldValidate: true, shouldDirty: true });
+      }
+
+      const firstPartialCbm = Number(getValues("firstPartialCbm") || 0);
+      const secondPartialCbm = Number(getValues("secondPartialCbm") || 0);
+      const thirdPartialCbm = Number(getValues("thirdPartialCbm") || 0);
+      const newTotalCbm = firstPartialCbm + secondPartialCbm + thirdPartialCbm;
+      if (Number(getValues("totalCbm") || 0) !== newTotalCbm) {
+        setValue("totalCbm", newTotalCbm, { shouldValidate: true, shouldDirty: true });
+      }
     }
   }, [watchedPartialShipmentAllowed, ...watchedPartialValues, getValues, setValue, totalCalculatedPartialQty, totalCalculatedPartialAmount]);
 
@@ -487,7 +487,7 @@ export function NewLCEntryForm() {
   const handleTrackVessel = () => {
     const imoNumber = getValues("vesselImoNumber");
     if (!imoNumber || String(imoNumber).trim() === "") {
-       Swal.fire({
+      Swal.fire({
         title: "IMO Number Missing",
         text: "Please enter a Vessel IMO number to track.",
         icon: "info",
@@ -534,25 +534,25 @@ export function NewLCEntryForm() {
 
     // Handle mutually exclusive pairs
     const pairs: [LCStatus, LCStatus][] = [
-        ['Shipment Pending', 'Shipment Done'],
-        ['Payment Pending', 'Payment Done'],
+      ['Shipment Pending', 'Shipment Done'],
+      ['Payment Pending', 'Payment Done'],
     ];
 
     pairs.forEach(([pending, done]) => {
-        if (toggledStatus === pending) currentStatusSet.delete(done);
-        if (toggledStatus === done) currentStatusSet.delete(pending);
+      if (toggledStatus === pending) currentStatusSet.delete(done);
+      if (toggledStatus === done) currentStatusSet.delete(pending);
     });
 
     // Add or remove the toggled status
     if (currentStatusSet.has(toggledStatus)) {
-        currentStatusSet.delete(toggledStatus);
+      currentStatusSet.delete(toggledStatus);
     } else {
-        currentStatusSet.add(toggledStatus);
+      currentStatusSet.add(toggledStatus);
     }
 
     // Ensure 'Draft' is added if no other status is selected
     if (currentStatusSet.size === 0) {
-        currentStatusSet.add('Draft');
+      currentStatusSet.add('Draft');
     }
 
     setValue('status', Array.from(currentStatusSet), { shouldValidate: true });
@@ -562,7 +562,7 @@ export function NewLCEntryForm() {
   if (isLoadingApplicants || isLoadingBeneficiaries) {
     return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /> <span className="ml-2">Loading form options...</span></div>;
   }
-  
+
 
   return (
     <Form {...form}>
@@ -580,7 +580,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Users className="mr-2 h-4 w-4 text-muted-foreground" />Applicant Name*</FormLabel>
-                 <Combobox
+                <Combobox
                   options={applicantOptions}
                   value={field.value || PLACEHOLDER_APPLICANT_VALUE}
                   onValueChange={(value) => field.onChange(value === PLACEHOLDER_APPLICANT_VALUE ? '' : value)}
@@ -600,7 +600,7 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary Name*</FormLabel>
-                 <Combobox
+                <Combobox
                   options={beneficiaryOptions}
                   value={field.value || PLACEHOLDER_BENEFICIARY_VALUE}
                   onValueChange={(value) => field.onChange(value === PLACEHOLDER_BENEFICIARY_VALUE ? '' : value)}
@@ -615,16 +615,16 @@ export function NewLCEntryForm() {
             )}
           />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-           <FormField
+          <FormField
             control={form.control}
             name="currency"
             render={({ field }) => (
               <FormItem className="space-y-3 pb-4">
                 <FormLabel>Currency*</FormLabel>
                 <FormControl>
-                   <RadioGroup
+                  <RadioGroup
                     onValueChange={field.onChange}
                     value={field.value}
                     className="flex flex-wrap items-center gap-x-6 gap-y-2"
@@ -661,26 +661,26 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>Documentary Credit Number*</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter Documentary Credit Number" {...field} value={field.value ?? ''}/>
+                  <Input placeholder="Enter Documentary Credit Number" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-                    <FormField
+          <FormField
             control={control}
             name="proformaInvoiceNumber"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Proforma Invoice Number</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter PI number" {...field} value={field.value ?? ''}/>
+                  <Input placeholder="Enter PI number" {...field} value={field.value ?? ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-           <FormField
+          <FormField
             control={control}
             name="invoiceDate"
             render={({ field }) => (
@@ -704,7 +704,7 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
-           <FormField
+          <FormField
             control={form.control}
             name="numberOfAmendments"
             render={({ field }) => (
@@ -717,7 +717,7 @@ export function NewLCEntryForm() {
               </FormItem>
             )}
           />
-           <FormField
+          <FormField
             control={form.control}
             name="commercialInvoiceNumber"
             render={({ field }) => (
@@ -744,7 +744,7 @@ export function NewLCEntryForm() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start pt-4">
-            <FormField
+          <FormField
             control={control}
             name="termsOfPay"
             render={({ field }) => (
@@ -788,103 +788,103 @@ export function NewLCEntryForm() {
             />
           )}
           <FormField
-              control={control}
-              name="status"
-              render={() => (
-                <FormItem>
-                  <div className="mb-2">
-                    <FormLabel className="flex items-center font-semibold"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
-                    <FormDescription>Toggle the applicable statuses for this L/C entry.</FormDescription>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6">
-                    {lcStatusOptions.map((item) => (
-                      <FormField
-                        key={item}
-                        control={control}
-                        name="status"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                            <FormLabel className="text-sm font-medium">{item}</FormLabel>
-                            <FormControl>
-                              <Switch
-                                checked={field.value?.includes(item)}
-                                onCheckedChange={() => handleStatusToggle(item)}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            control={control}
+            name="status"
+            render={() => (
+              <FormItem>
+                <div className="mb-2">
+                  <FormLabel className="flex items-center font-semibold"><CheckSquare className="mr-2 h-4 w-4 text-muted-foreground" />L/C Status*</FormLabel>
+                  <FormDescription>Toggle the applicable statuses for this L/C entry.</FormDescription>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6">
+                  {lcStatusOptions.map((item) => (
+                    <FormField
+                      key={item}
+                      control={control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                          <FormLabel className="text-sm font-medium">{item}</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value?.includes(item)}
+                              onCheckedChange={() => handleStatusToggle(item)}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <FormField
-                control={control}
-                name="partialShipments"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>43P: Partial Shipments Rule</FormLabel>
-                    <FormControl>
-                    <Input placeholder="e.g., Allowed / Not Allowed" {...field} value={field.value ?? ''}/>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={control}
-                name="portOfLoading"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>44E: Port of Loading</FormLabel>
-                    <FormControl>
-                    <Input placeholder="Enter port name" {...field} value={field.value ?? ''}/>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-             <FormField
-                control={control}
-                name="portOfDischarge"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>44F: Port of Discharge</FormLabel>
-                    <FormControl>
-                    <Input placeholder="Enter port name" {...field} value={field.value ?? ''}/>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-              control={form.control}
-              name="shipmentTerms"
-              render={({ field }) => (
-                  <FormItem className="space-y-3">
-                      <FormLabel>Shipment Terms*</FormLabel>
-                      <FormControl>
-                          <RadioGroup
-                              onValueChange={field.onChange}
-                              value={field.value}
-                              className="flex flex-wrap items-center gap-x-4 gap-y-2"
-                          >
-                              {shipmentTermsOptions.map((option) => (
-                                  <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                                      <FormControl><RadioGroupItem value={option} /></FormControl>
-                                      <FormLabel className="font-normal text-sm">{option}</FormLabel>
-                                  </FormItem>
-                              ))}
-                          </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                  </FormItem>
-              )}
-            />
+          <FormField
+            control={control}
+            name="partialShipments"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>43P: Partial Shipments Rule</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Allowed / Not Allowed" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="portOfLoading"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>44E: Port of Loading</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter port name" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="portOfDischarge"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>44F: Port of Discharge</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter port name" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="shipmentTerms"
+            render={({ field }) => (
+              <FormItem className="space-y-3">
+                <FormLabel>Shipment Terms*</FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="flex flex-wrap items-center gap-x-4 gap-y-2"
+                  >
+                    {shipmentTermsOptions.map((option) => (
+                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                        <FormControl><RadioGroupItem value={option} /></FormControl>
+                        <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                      </FormItem>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <FormField
           control={form.control}
@@ -904,54 +904,54 @@ export function NewLCEntryForm() {
           )}
         />
         <Separator />
-        
+
         {/* Section: Important Dates & Partial Shipment Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
-            <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-            Important Dates & Partial Shipment Details
+          <CalendarDays className="mr-2 h-5 w-5 text-primary" />
+          Important Dates & Partial Shipment Details
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FormField
-                control={control}
-                name="lcIssueDate"
-                render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>T/T or L/C Issue Date{watchedStatus?.includes('Draft') ? '' : '*'}</FormLabel>
-                    <DatePickerField field={field} placeholder="Select date" />
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={control}
-                name="expireDate"
-                render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>Expire Date{watchedStatus?.includes('Draft') || watchedTermsOfPay === "T/T In Advance" ? '' : '*'}</FormLabel>
-                    <DatePickerField 
-                        field={field} 
-                        placeholder="Select date" 
-                        disabled={watchedTermsOfPay === "T/T In Advance"}
-                    />
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={control}
-                name="latestShipmentDate"
-                render={({ field }) => (
-                <FormItem className="flex flex-col">
-                    <FormLabel>Latest Shipment Date{watchedStatus?.includes('Draft') || watchedTermsOfPay === "T/T In Advance" ? '' : '*'}</FormLabel>
-                     <DatePickerField 
-                        field={field} 
-                        placeholder="Select date" 
-                        disabled={watchedTermsOfPay === "T/T In Advance"}
-                    />
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+          <FormField
+            control={control}
+            name="lcIssueDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>T/T or L/C Issue Date{watchedStatus?.includes('Draft') ? '' : '*'}</FormLabel>
+                <DatePickerField field={field} placeholder="Select date" />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="expireDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Expire Date{watchedStatus?.includes('Draft') || watchedTermsOfPay === "T/T In Advance" ? '' : '*'}</FormLabel>
+                <DatePickerField
+                  field={field}
+                  placeholder="Select date"
+                  disabled={watchedTermsOfPay === "T/T In Advance"}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="latestShipmentDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Latest Shipment Date{watchedStatus?.includes('Draft') || watchedTermsOfPay === "T/T In Advance" ? '' : '*'}</FormLabel>
+                <DatePickerField
+                  field={field}
+                  placeholder="Select date"
+                  disabled={watchedTermsOfPay === "T/T In Advance"}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <FormField
           control={control}
@@ -980,8 +980,8 @@ export function NewLCEntryForm() {
         {watchedPartialShipmentAllowed === "Yes" && (
           <div className="p-4 mt-4 border border-dashed rounded-md shadow-sm bg-muted/20">
             <h4 className="text-md font-medium text-foreground flex items-center mb-4 border-b pb-2">
-                <Package className="mr-2 h-5 w-5 text-muted-foreground" />
-                Partial Shipment Breakdown
+              <Package className="mr-2 h-5 w-5 text-muted-foreground" />
+              Partial Shipment Breakdown
             </h4>
             <div className="space-y-6">
               {/* 1st Partial Shipment */}
@@ -1016,126 +1016,126 @@ export function NewLCEntryForm() {
             </div>
           </div>
         )}
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-6 mt-4 items-end">
-            <FormField
-                control={form.control}
-                name="totalPackageQty"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-muted-foreground" />Total Package Qty</FormLabel>
-                    <FormControl>
-                    <Input type="number" placeholder="0" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'} />
-                    </FormControl>
-                     <FormDescription className="text-xs">
-                        {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated.' : 'Enter if no partials.'}
-                    </FormDescription>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="totalNetWeight"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="flex items-center"><Weight className="mr-2 h-4 w-4 text-muted-foreground" />Total Net Weight (KGS)</FormLabel>
-                    <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
-                    </FormControl>
-                     <FormDescription className="text-xs">
-                        {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated.' : 'Enter if no partials.'}
-                    </FormDescription>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="totalGrossWeight"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="flex items-center"><Scale className="mr-2 h-4 w-4 text-muted-foreground" />Total Gross Weight (KGS)</FormLabel>
-                    <FormControl>
-                    <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
-                    </FormControl>
-                     <FormDescription className="text-xs">
-                        {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated.' : 'Enter if no partials.'}
-                    </FormDescription>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="totalCbm"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-muted-foreground" />Total CBM</FormLabel>
-                    <FormControl>
-                    <Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'}/>
-                    </FormControl>
-                     <FormDescription className="text-xs">
-                        {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated.' : 'Enter if no partials.'}
-                    </FormDescription>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            {watchedPartialShipmentAllowed === "Yes" && (
-                <>
-                    <FormItem>
-                        <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground"/>Total Machine Qty</FormLabel>
-                        <FormControl>
-                        <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
-                        </FormControl>
-                    </FormItem>
-                    <FormItem>
-                        <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground"/>Total Partial Amount ({watchedCurrency})</FormLabel>
-                        <FormControl>
-                        <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
-                        </FormControl>
-                    </FormItem>
-                </>
+          <FormField
+            control={form.control}
+            name="totalPackageQty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-muted-foreground" />Total Package Qty</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="0" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'} />
+                </FormControl>
+                <FormDescription className="text-xs">
+                  {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated.' : 'Enter if no partials.'}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
             )}
+          />
+          <FormField
+            control={form.control}
+            name="totalNetWeight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Weight className="mr-2 h-4 w-4 text-muted-foreground" />Total Net Weight (KGS)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'} />
+                </FormControl>
+                <FormDescription className="text-xs">
+                  {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated.' : 'Enter if no partials.'}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalGrossWeight"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Scale className="mr-2 h-4 w-4 text-muted-foreground" />Total Gross Weight (KGS)</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'} />
+                </FormControl>
+                <FormDescription className="text-xs">
+                  {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated.' : 'Enter if no partials.'}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalCbm"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center"><Box className="mr-2 h-4 w-4 text-muted-foreground" />Total CBM</FormLabel>
+                <FormControl>
+                  <Input type="number" step="0.001" placeholder="0.000" {...field} value={field.value ?? ''} disabled={watchedPartialShipmentAllowed === 'Yes'} />
+                </FormControl>
+                <FormDescription className="text-xs">
+                  {watchedPartialShipmentAllowed === 'Yes' ? 'Auto-calculated.' : 'Enter if no partials.'}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {watchedPartialShipmentAllowed === "Yes" && (
+            <>
+              <FormItem>
+                <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Total Machine Qty</FormLabel>
+                <FormControl>
+                  <Input type="text" value={totalCalculatedPartialQty} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+                </FormControl>
+              </FormItem>
+              <FormItem>
+                <FormLabel className="flex items-center"><DollarSign className="mr-2 h-4 w-4 text-muted-foreground" />Total Partial Amount ({watchedCurrency})</FormLabel>
+                <FormControl>
+                  <Input type="text" value={totalCalculatedPartialAmount.toFixed(2)} readOnly disabled className="bg-muted/50 cursor-not-allowed font-semibold" />
+                </FormControl>
+              </FormItem>
+            </>
+          )}
         </div>
         <Separator />
-        
+
         {/* Section: Shipping Information */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <Ship className="mr-2 h-5 w-5 text-primary" />
           Shipping Information
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-           <FormField
-              control={control}
-              name="shipmentMode"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Shipment Mode*</FormLabel>
-                   <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                    >
-                      {shipmentModeOptions.map((option) => (
-                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                          <FormControl><RadioGroupItem value={option} /></FormControl>
-                          <FormLabel className="font-normal text-sm">
-                              {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
-                              {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
-                              {option === 'By Courier' && <FileText className="mr-1 h-4 w-4 inline-block" />}
-                              {option}
-                          </FormLabel>
-                        </FormItem>
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FormField
+            control={control}
+            name="shipmentMode"
+            render={({ field }) => (
+              <FormItem className="space-y-3">
+                <FormLabel>Shipment Mode*</FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                  >
+                    {shipmentModeOptions.map((option) => (
+                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                        <FormControl><RadioGroupItem value={option} /></FormControl>
+                        <FormLabel className="font-normal text-sm">
+                          {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
+                          {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
+                          {option === 'By Courier' && <FileText className="mr-1 h-4 w-4 inline-block" />}
+                          {option}
+                        </FormLabel>
+                      </FormItem>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={control}
             name="vesselOrFlightName"
@@ -1212,36 +1212,36 @@ export function NewLCEntryForm() {
             </Button>
           </div>
         )}
-        
+
         <div className="mt-6">
           <h4 className="text-base font-medium text-foreground flex items-center mb-2">
             <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
-             <FormField
-                control={control}
-                name="trackingCourier"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-1 space-y-3">
-                    <FormLabel>Courier By</FormLabel>
-                    <FormControl>
-                       <RadioGroup
-                          onValueChange={field.onChange}
-                          value={field.value ?? ""}
-                          className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                        >
-                          {trackingCourierOptions.map((courier) => (
-                            <FormItem key={courier} className="flex items-center space-x-2 space-y-0">
-                              <FormControl><RadioGroupItem value={courier} /></FormControl>
-                              <FormLabel className="font-normal text-sm">{courier}</FormLabel>
-                            </FormItem>
-                          ))}
-                        </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={control}
+              name="trackingCourier"
+              render={({ field }) => (
+                <FormItem className="md:col-span-1 space-y-3">
+                  <FormLabel>Courier By</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value ?? ""}
+                      className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                    >
+                      {trackingCourierOptions.map((courier) => (
+                        <FormItem key={courier} className="flex items-center space-x-2 space-y-0">
+                          <FormControl><RadioGroupItem value={courier} /></FormControl>
+                          <FormLabel className="font-normal text-sm">{courier}</FormLabel>
+                        </FormItem>
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={control}
               name="trackingNumber"
@@ -1269,7 +1269,7 @@ export function NewLCEntryForm() {
           </div>
         </div>
 
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
           <FormField
             control={form.control}
             name="isFirstShipment"
@@ -1405,13 +1405,13 @@ export function NewLCEntryForm() {
           )}
         />
         <Separator />
-        
+
         {/* Section: Notify Details */}
         <h3 className={cn(sectionHeadingClass, "flex items-center")}>
           <BellRing className="mr-2 h-5 w-5 text-primary" />
           Notify Details
         </h3>
-         <FormField
+        <FormField
           control={form.control}
           name="notifyPartyNameAndAddress"
           render={({ field }) => (
@@ -1472,20 +1472,20 @@ export function NewLCEntryForm() {
         <Separator />
 
         {/* Section: 46A: Documents Required */}
-         <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
+        <Accordion type="single" collapsible className="w-full" value={activeSection46A} onValueChange={setActiveSection46A}>
           <AccordionItem value="section46A" className="border-none">
             <AccordionTrigger
               className={cn(
                 "flex w-full items-center justify-between py-3 text-foreground hover:no-underline",
-                sectionHeadingClass, "border-b-0 mb-0" 
+                sectionHeadingClass, "border-b-0 mb-0"
               )}
             >
               <div className="flex items-center gap-2">
                 <FileSignature className="mr-2 h-5 w-5 text-primary" />
                 46A: Documents Required
               </div>
-               {activeSection46A === "section46A" ? 
-                <Minus className="h-5 w-5 text-primary" /> : 
+              {activeSection46A === "section46A" ?
+                <Minus className="h-5 w-5 text-primary" /> :
                 <Plus className="h-5 w-5 text-primary" />}
             </AccordionTrigger>
             <AccordionContent className="pt-4 space-y-6">
@@ -1501,7 +1501,7 @@ export function NewLCEntryForm() {
                 <FormField control={control} name="beneficiaryWarrantyCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary's Warranty Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="beneficiaryComplianceCertificateQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Beneficiary's Compliance Certificate Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={control} name="shipmentAdviceQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Shipment Advice Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
-                 <FormField control={control} name="billOfExchangeQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Bill of Exchange Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={control} name="billOfExchangeQty" render={({ field }) => (<FormItem><FormLabel className="flex items-center"><FileIcon className="mr-2 h-4 w-4 text-muted-foreground" />Bill of Exchange Qty</FormLabel><FormControl><Input type="number" placeholder="0" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>)} />
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -1513,7 +1513,7 @@ export function NewLCEntryForm() {
           <Edit3 className="mr-2 h-5 w-5 text-primary" />
           47A: Additional Conditions
         </h3>
-         <FormField
+        <FormField
           control={form.control}
           name="certificateOfOrigin"
           render={() => (
@@ -1638,20 +1638,20 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Final LC URL</FormLabel>
-                 <div className="flex items-center gap-2">
-                    <FormControl className="flex-grow">
-                        <Input type="url" placeholder="https://example.com/final-lc.pdf" {...field} value={field.value ?? ""} />
-                    </FormControl>
-                     <Button
-                        type="button"
-                        variant="default"
-                        size="icon"
-                        onClick={() => handleViewUrl(field.value)}
-                        disabled={!field.value}
-                        title="View Final LC"
-                    >
-                        <ExternalLink className="h-4 w-4" />
-                    </Button>
+                <div className="flex items-center gap-2">
+                  <FormControl className="flex-grow">
+                    <Input type="url" placeholder="https://example.com/final-lc.pdf" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="icon"
+                    onClick={() => handleViewUrl(field.value)}
+                    disabled={!field.value}
+                    title="View Final LC"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
                 </div>
                 <FormMessage />
               </FormItem>
@@ -1663,26 +1663,26 @@ export function NewLCEntryForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center"><LinkIcon className="mr-2 h-4 w-4 text-muted-foreground" />Shipping Documents URL</FormLabel>
-                 <div className="flex items-center gap-2">
-                    <FormControl className="flex-grow">
+                <div className="flex items-center gap-2">
+                  <FormControl className="flex-grow">
                     <Input type="url" placeholder="https://example.com/shipping-docs.pdf" {...field} value={field.value ?? ""} />
-                    </FormControl>
-                     <Button
-                        type="button"
-                        variant="default"
-                        size="icon"
-                        onClick={() => handleViewUrl(field.value)}
-                        disabled={!field.value}
-                        title="View Shipping Documents"
-                    >
-                        <ExternalLink className="h-4 w-4" />
-                    </Button>
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="icon"
+                    onClick={() => handleViewUrl(field.value)}
+                    disabled={!field.value}
+                    title="View Shipping Documents"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
                 </div>
                 <FormMessage />
               </FormItem>
             )}
           />
-           <FormField
+          <FormField
             control={control}
             name="packingListUrl"
             render={({ field }) => (

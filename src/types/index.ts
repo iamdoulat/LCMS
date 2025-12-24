@@ -66,7 +66,7 @@ export interface LCEntry {
   id?: string;
   applicantId: string;
   beneficiaryId: string;
-  currency: Currency;
+  currency: Currency | string;
   amount: number | undefined;
   termsOfPay?: TermsOfPay;
   paymentMaturityDate?: string; // New field
@@ -278,7 +278,7 @@ export interface LCEntryDocument {
   applicantName: string;
   beneficiaryId: string;
   beneficiaryName: string;
-  currency: Currency;
+  currency: Currency | string;
   amount: number;
   termsOfPay?: TermsOfPay;
   paymentMaturityDate?: string; // New field

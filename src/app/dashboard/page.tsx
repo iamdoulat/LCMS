@@ -78,7 +78,7 @@ interface UpcomingEtdShipment {
   beneficiaryName?: string;
   etdDate: Date;
   etaDate?: Date;
-  currency?: Currency;
+  currency?: Currency | string;
   amount?: number;
   isFirstShipment?: boolean;
   isSecondShipment?: boolean;
@@ -94,7 +94,7 @@ interface RecentlyCompletedLC {
   beneficiaryName?: string;
   applicantName?: string;
   status?: LCStatus[] | LCStatus;
-  currency?: Currency;
+  currency?: Currency | string;
   amount?: number;
   etd?: string;
   eta?: string;
@@ -108,7 +108,7 @@ interface DraftLC {
   applicantName?: string;
   createdAtDate: Date;
   status?: LCStatus[] | LCStatus;
-  currency?: Currency;
+  currency?: Currency | string;
   amount?: number;
 }
 
