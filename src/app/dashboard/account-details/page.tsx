@@ -433,8 +433,36 @@ export default function AccountDetailsPage() {
   const updateLocation = useCallback(async (showNotification = false, forceRefresh = false) => {
     if (isLoadingLocation) return;
     setIsLoadingLocation(true);
+
+    let progressToast: any = null;
+
     try {
-      const location = await getCurrentLocation({ forceRefresh });
+      const location = await getCurrentLocation({
+        forceRefresh,
+        onProgress: (msg) => {
+          if (showNotification) {
+            if (!progressToast) {
+              progressToast = Swal.fire({
+                title: 'Capturing Location',
+                text: msg,
+                icon: 'info',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                  Swal.showLoading();
+                }
+              });
+            } else {
+              Swal.update({
+                text: msg
+              });
+            }
+          }
+        }
+      });
+
+      if (progressToast) Swal.close();
+
       setCurrentLocation(location);
 
       // Start reverse geocoding without blocking
@@ -442,7 +470,7 @@ export default function AccountDetailsPage() {
         setCurrentLocation(prev => prev ? { ...prev, address } : null);
         if (showNotification) {
           Swal.fire({
-            title: 'Location Updated',
+            title: 'Location Captured',
             text: address,
             icon: 'success',
             toast: true,
@@ -454,6 +482,7 @@ export default function AccountDetailsPage() {
       });
       return location;
     } catch (error: any) {
+      if (progressToast) Swal.close();
       console.error('Error capturing location:', error);
       if (showNotification) {
         Swal.fire('Location Error', error.message || 'Could not get location', 'error');

@@ -6,66 +6,97 @@ import { firestore, storage } from './config';
 import type { MultipleCheckInOutRecord, CheckInOutType, MultipleCheckInOutLocation } from '@/types/checkInOut';
 
 /**
- * Get current geolocation
+ * Get current geolocation with a 3-stage robust fallback strategy:
+ * 1. High Accuracy (GPS) - 20s
+ * 2. Low Accuracy (Cellular/Wi-Fi) - 15s
+ * 3. Last Known Position (Cached) - 10s
  */
-export const getCurrentLocation = (options?: PositionOptions & { forceRefresh?: boolean }): Promise<MultipleCheckInOutLocation> => {
-    const defaultOptions: PositionOptions = {
+export const getCurrentLocation = async (options?: PositionOptions & {
+    forceRefresh?: boolean;
+    onProgress?: (msg: string) => void;
+}): Promise<MultipleCheckInOutLocation> => {
+    if (typeof window !== 'undefined' && !navigator.geolocation) {
+        throw new Error('Geolocation is not supported by your browser');
+    }
+
+    const stage1Options: PositionOptions = {
         enableHighAccuracy: true,
-        timeout: 20000, // 20 seconds for first try
-        maximumAge: options?.forceRefresh ? 0 : 60000, // 60 seconds cache unless forced
+        timeout: 20000,
+        maximumAge: options?.forceRefresh ? 0 : 30000,
         ...options
     };
 
-    const fetchLocation = (): Promise<MultipleCheckInOutLocation> => {
+    const stage2Options: PositionOptions = {
+        enableHighAccuracy: false,
+        timeout: 15000,
+        maximumAge: options?.forceRefresh ? 0 : 60000,
+        ...options
+    };
+
+    const stage3Options: PositionOptions = {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 600000, // 10 minutes old
+        ...options
+    };
+
+    const getPos = (opts: PositionOptions): Promise<GeolocationPosition> => {
         return new Promise((resolve, reject) => {
-            if (typeof window !== 'undefined' && !navigator.geolocation) {
-                reject(new Error('Geolocation is not supported by your browser'));
-                return;
-            }
-
-            const success = (position: GeolocationPosition) => {
-                const location: MultipleCheckInOutLocation = {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy
-                };
-                resolve(location);
-            };
-
-            const errorCallback = (error: GeolocationPositionError) => {
-                // If high accuracy failed, try once with low accuracy (faster)
-                if (defaultOptions.enableHighAccuracy &&
-                    (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE)) {
-                    console.warn('High accuracy geolocation failed, retrying with low accuracy...');
-                    navigator.geolocation.getCurrentPosition(
-                        success,
-                        (err) => {
-                            let msg = err.message;
-                            if (err.code === err.PERMISSION_DENIED) msg = "Location permission denied. Please allow location access in your browser settings.";
-                            if (err.code === err.TIMEOUT) msg = "Location request timed out. High-rise buildings or weak signal can cause this. Please try again.";
-                            if (err.code === err.POSITION_UNAVAILABLE) msg = "Location information is unavailable on this device right now.";
-                            reject(new Error(msg));
-                        },
-                        { ...defaultOptions, enableHighAccuracy: false, timeout: 15000 }
-                    );
-                } else {
-                    let msg = error.message;
-                    if (error.code === error.PERMISSION_DENIED) msg = "Location permission denied. Please allow location access in your browser settings.";
-                    reject(new Error(msg));
-                }
-            };
-
-            navigator.geolocation.getCurrentPosition(success, errorCallback, defaultOptions);
+            navigator.geolocation.getCurrentPosition(resolve, reject, opts);
+            // Add internal safety timeout for this promise as well
+            setTimeout(() => reject(new Error('Internal Timeout')), opts.timeout! + 2000);
         });
     };
 
-    // Safety timeout to prevent indefinite hanging
-    const safetyTimeout = new Promise<never>((_, reject) => {
-        const timeoutMs = (defaultOptions.timeout || 25000) + 20000; // Total allowable time
-        setTimeout(() => reject(new Error('Location request timed out. Please ensure GPS is on and try again.')), timeoutMs);
+    const mapPos = (pos: GeolocationPosition): MultipleCheckInOutLocation => ({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy
     });
 
-    return Promise.race([fetchLocation(), safetyTimeout]);
+    try {
+        // Stage 1: High Accuracy
+        options?.onProgress?.('Attempting precise GPS location (Stage 1)...');
+        console.log('Location Capture Stage 1: Attempting GPS...');
+        const pos1 = await getPos(stage1Options);
+        console.log('Location Capture: GPS Success');
+        return mapPos(pos1);
+    } catch (err1: any) {
+        if (err1.code === 1) { // PERMISSION_DENIED
+            throw new Error("Location permission denied. Please allow access in browser settings.");
+        }
+
+        console.warn('Location Capture Stage 1 failed, starting Stage 2 (Low Accuracy)...', err1.message);
+
+        try {
+            // Stage 2: Low Accuracy Fallback
+            options?.onProgress?.('GPS slow, trying Wi-Fi/Cellular (Stage 2)...');
+            const pos2 = await getPos(stage2Options);
+            console.log('Location Capture: Low Accuracy Success');
+            return mapPos(pos2);
+        } catch (err2: any) {
+            console.warn('Location Capture Stage 2 failed, starting Stage 3 (Cached)...', err2.message);
+
+            try {
+                // Stage 3: Last Known / Cached Position
+                options?.onProgress?.('Getting last known position (Stage 3)...');
+                const pos3 = await getPos(stage3Options);
+                console.log('Location Capture: Cached Position Success');
+                return mapPos(pos3);
+            } catch (err3: any) {
+                console.error('All location capture stages failed.');
+                let msg = "Could not capture location. ";
+                if (err1.code === 3 || err2.code === 3) { // TIMEOUT
+                    msg += "The request timed out. Please ensure GPS is enabled and you have a clear view of the sky.";
+                } else if (err1.code === 2 || err2.code === 2) { // POSITION_UNAVAILABLE
+                    msg += "Location provider not available. Check your device settings.";
+                } else {
+                    msg += "Please ensure GPS/Location service is enabled on your device.";
+                }
+                throw new Error(msg);
+            }
+        }
+    }
 };
 
 /**
