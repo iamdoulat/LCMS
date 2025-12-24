@@ -57,34 +57,26 @@ export const getCurrentLocation = async (options?: PositionOptions & {
     try {
         // Stage 1: High Accuracy
         options?.onProgress?.('Attempting precise GPS location (Stage 1)...');
-        console.log('Location Capture Stage 1: Attempting GPS...');
         const pos1 = await getPos(stage1Options);
-        console.log('Location Capture: GPS Success');
         return mapPos(pos1);
     } catch (err1: any) {
         if (err1.code === 1) { // PERMISSION_DENIED
             throw new Error("Location permission denied. Please allow access in browser settings.");
         }
 
-        console.warn('Location Capture Stage 1 failed, starting Stage 2 (Low Accuracy)...', err1.message);
-
         try {
             // Stage 2: Low Accuracy Fallback
             options?.onProgress?.('GPS slow, trying Wi-Fi/Cellular (Stage 2)...');
             const pos2 = await getPos(stage2Options);
-            console.log('Location Capture: Low Accuracy Success');
             return mapPos(pos2);
         } catch (err2: any) {
-            console.warn('Location Capture Stage 2 failed, starting Stage 3 (Cached)...', err2.message);
 
             try {
                 // Stage 3: Last Known / Cached Position
                 options?.onProgress?.('Getting last known position (Stage 3)...');
                 const pos3 = await getPos(stage3Options);
-                console.log('Location Capture: Cached Position Success');
                 return mapPos(pos3);
             } catch (err3: any) {
-                console.error('All location capture stages failed.');
                 let msg = "Could not capture location. ";
                 if (err1.code === 3 || err2.code === 3) { // TIMEOUT
                     msg += "The request timed out. Please ensure GPS is enabled and you have a clear view of the sky.";

@@ -1622,6 +1622,7 @@ export interface Employee {
   // New Fields
   division?: string;
   branch?: string;
+  branchId?: string;
   department?: string;
   unit?: string;
   shift?: string;
