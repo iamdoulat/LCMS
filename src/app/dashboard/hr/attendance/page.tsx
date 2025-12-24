@@ -30,7 +30,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { DatePickerField } from '@/components/forms/DatePickerField';
+import { useSearchParams } from 'next/navigation';
 
 
 const ALL_BRANCHES_VALUE = "__ALL_BRANCHES_ATTENDANCE__";
@@ -432,7 +434,11 @@ const EmployeeAttendanceRow = ({
 
 export default function DailyAttendancePage() {
 
-    const { user } = useAuth();
+    const searchParams = useSearchParams();
+    const viewTeam = searchParams.get('view') === 'team';
+    const { user, userRole } = useAuth();
+    const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const isHROrAdmin = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(
         query(collection(firestore, "employees"), orderBy("fullName")),
@@ -654,7 +660,20 @@ export default function DailyAttendancePage() {
 
     const filteredEmployees = React.useMemo(() => {
         if (!employees) return [];
-        return employees.filter(emp => {
+
+        // First filter by supervisor access
+        let accessFilteredEmployees = employees;
+        if ((!isHROrAdmin && isSupervisor) || (isHROrAdmin && isSupervisor && viewTeam)) {
+            // Supervisors see only their team (or HR/Admin forcing team view)
+            accessFilteredEmployees = employees.filter(emp =>
+                supervisedEmployeeIds.includes(emp.id)
+            );
+        } else if (!isHROrAdmin && !isSupervisor) {
+            // Regular employees see nothing
+            return [];
+        }
+
+        return accessFilteredEmployees.filter(emp => {
             const flagMatch = !filterFlag || filterFlag === ALL_FLAGS_VALUE || !dateRange?.from || !dateRange.to || (
                 eachDayOfInterval({ start: dateRange.from, end: dateRange.to }).some(day => {
                     const formattedDateKey = format(day, 'yyyy-MM-dd');
@@ -674,7 +693,7 @@ export default function DailyAttendancePage() {
                 flagMatch
             );
         });
-    }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept, filterFlag, dateRange]);
+    }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept, filterFlag, dateRange, isHROrAdmin, isSupervisor, supervisedEmployeeIds]);
 
     const attendanceByEmployee = React.useMemo(() => {
         const map = new Map<string, AttendanceDocument[]>();
@@ -740,6 +759,14 @@ export default function DailyAttendancePage() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    {!isHROrAdmin && isSupervisor && (
+                        <Alert className="mb-4">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>
+                                You are viewing attendance for your team members only ({supervisedEmployeeIds.length} employee{supervisedEmployeeIds.length !== 1 ? 's' : ''}).
+                            </AlertDescription>
+                        </Alert>
+                    )}
                     <Alert className="mb-6 border-blue-500/50 bg-blue-500/10 text-blue-800 dark:text-blue-200">
                         <AlertTriangle className="h-4 w-4 !text-blue-600" />
                         <AlertTitle className="font-semibold !text-blue-700 dark:!text-blue-300">Bulk Upload CSV Format</AlertTitle>

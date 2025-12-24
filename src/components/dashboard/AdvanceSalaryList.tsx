@@ -16,6 +16,9 @@ import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from '@/context/AuthContext';
+import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -25,22 +28,23 @@ const formatCurrency = (amount: number) => `BDT ${amount.toLocaleString()}`;
 export function AdvanceSalaryList() {
     const router = useRouter();
     const { user, userRole } = useAuth();
+    const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const isHROrAdmin = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
     const isReadOnly = userRole?.includes('Viewer');
 
     // Conditionally build the query based on the user's role
     const advancesQuery = React.useMemo(() => {
         if (!user) return null; // No query if user is not logged in
-        
-        const canViewAll = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+
         const baseQuery = collection(firestore, "advance_salary");
 
-        if (canViewAll) {
+        if (isHROrAdmin || isSupervisor) {
             return query(baseQuery, orderBy("applyDate", "desc"));
         } else {
             // Regular user can only see their own requests
             return query(baseQuery, where("employeeId", "==", user.uid), orderBy("applyDate", "desc"));
         }
-    }, [user, userRole]);
+    }, [user, userRole, isHROrAdmin, isSupervisor]);
 
     const { data: advances, isLoading, error, refetch } = useFirestoreQuery<AdvanceSalaryDocument[]>(
         advancesQuery!,
@@ -54,26 +58,34 @@ export function AdvanceSalaryList() {
 
     const filteredAdvances = React.useMemo(() => {
         if (!advances) return [];
-        return advances.filter(a =>
+
+        let accessFiltered = advances;
+        if (!isHROrAdmin && isSupervisor) {
+            accessFiltered = advances.filter(a =>
+                a.employeeId === user?.uid || supervisedEmployeeIds.includes(a.employeeId)
+            );
+        }
+
+        return accessFiltered.filter(a =>
             a.employeeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             a.employeeCode?.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [advances, searchTerm]);
-    
+    }, [advances, searchTerm, isHROrAdmin, isSupervisor, supervisedEmployeeIds, user?.uid]);
+
     const totalPages = Math.ceil(filteredAdvances.length / ITEMS_PER_PAGE);
     const paginatedAdvances = filteredAdvances.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
         currentPage * ITEMS_PER_PAGE
     );
-    
+
     const handleEdit = (id: string) => {
         router.push(`/dashboard/hr/payroll/advance-salary/edit/${id}`);
     };
-    
+
     const handleDelete = async (id: string, name: string) => {
-        if(isReadOnly) {
-             Swal.fire('Permission Denied', 'You do not have permission to delete records.', 'error');
-             return;
+        if (isReadOnly) {
+            Swal.fire('Permission Denied', 'You do not have permission to delete records.', 'error');
+            return;
         }
         Swal.fire({
             title: 'Are you sure?',
@@ -95,14 +107,22 @@ export function AdvanceSalaryList() {
         });
     };
 
-    if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>;
+    if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     if (error) return <div className="text-destructive-foreground bg-destructive/10 p-4 rounded-md text-center">Error: {error.message}</div>;
 
     return (
         <div>
+            {!isHROrAdmin && isSupervisor && (
+                <Alert className="mb-4">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                        You are viewing advance salary requests from your team members only.
+                    </AlertDescription>
+                </Alert>
+            )}
             <div className="flex justify-between items-center mb-4">
                 <div className="relative w-full max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"/>
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input placeholder="Search by Employee Name or Code..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 h-10 w-full" />
                 </div>
             </div>
@@ -138,7 +158,7 @@ export function AdvanceSalaryList() {
                                             <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                             <DropdownMenuItem onClick={() => handleEdit(advance.id)}>
                                                 <Edit className="mr-2 h-4 w-4" /> Edit/Approve
                                             </DropdownMenuItem>
@@ -153,7 +173,7 @@ export function AdvanceSalaryList() {
                             <TableRow><TableCell colSpan={9} className="h-24 text-center">No Data Found</TableCell></TableRow>
                         )}
                     </TableBody>
-                     <TableCaption>A list of all advance salary applications.</TableCaption>
+                    <TableCaption>A list of all advance salary applications.</TableCaption>
                 </Table>
             </div>
             {totalPages > 1 && (

@@ -66,6 +66,7 @@ export function AddEmployeeForm() {
   const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(firestoreQuery(collection(firestore, "units"), orderBy("name")), undefined, ['units']);
   const { data: divisions, isLoading: isLoadingDivisions } = useFirestoreQuery<DivisionDocument[]>(firestoreQuery(collection(firestore, "divisions"), orderBy("name")), undefined, ['divisions']);
   const { data: leaveGroups, isLoading: isLoadingLeaveGroups } = useFirestoreQuery<LeaveGroupDocument[]>(firestoreQuery(collection(firestore, 'hrm_settings', 'leave_groups', 'items'), orderBy("groupName", "asc")), undefined, ['leave_groups']);
+  const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(firestoreQuery(collection(firestore, "employees"), orderBy("employeeCode", "asc")), undefined, ['employees_list']);
 
   // ... (keeping existing memoized options) ...
   const designationOptions = React.useMemo(() => toComboboxOptions(designations || [], 'name'), [designations]);
@@ -74,6 +75,7 @@ export function AddEmployeeForm() {
   const unitOptions = React.useMemo(() => toComboboxOptions(units || [], 'name'), [units]);
   const divisionOptions = React.useMemo(() => toComboboxOptions(divisions || [], 'name'), [divisions]);
   const leaveGroupOptions = React.useMemo(() => leaveGroups?.map(g => ({ value: g.id, label: g.groupName })) || [], [leaveGroups]);
+  const supervisorOptions = React.useMemo(() => employees?.map(e => ({ value: e.id, label: `${e.fullName} (${e.employeeCode})` })) || [], [employees]);
 
   const isLoadingHrmOptions = isLoadingBranches || isLoadingDepts || isLoadingUnits || isLoadingDivisions;
 
@@ -99,6 +101,7 @@ export function AddEmployeeForm() {
       bloodGroup: undefined,
       photoURL: '',
       status: 'Active',
+      supervisorId: '',
       leaveGroupId: '',
       division: 'Not Defined',
       branch: 'Not Defined',
@@ -459,6 +462,28 @@ export function AddEmployeeForm() {
               <SelectContent>
                 {employeeStatusOptions.map(o => (
                   <SelectItem key={o} value={o}>{o}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )} />
+
+
+
+        <FormField control={control} name="supervisorId" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Direct Supervisor</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select Supervisor"} />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {supervisorOptions.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

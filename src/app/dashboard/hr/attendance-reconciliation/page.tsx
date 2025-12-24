@@ -18,9 +18,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useAuth } from '@/context/AuthContext';
+import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import Swal from 'sweetalert2';
-import { Loader2, Check, X, Search, Edit, Trash2, Save, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Check, X, Search, Edit, Trash2, Save, MoreHorizontal, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import {
     DropdownMenu,
@@ -45,7 +47,9 @@ const formatDisplayDate = (dateString?: string | null) => {
 };
 
 export default function AttendanceReconciliationPage() {
-    const { user } = useAuth();
+    const { user, userRole } = useAuth();
+    const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const isHROrAdmin = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
     const [reconciliations, setReconciliations] = useState<AttendanceReconciliation[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -403,11 +407,18 @@ export default function AttendanceReconciliationPage() {
         }
     };
 
-    // Filter by search term
-    const filteredReconciliations = reconciliations.filter(r =>
-        r.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.employeeCode.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filter by search term and supervisor status
+    const filteredReconciliations = reconciliations.filter(r => {
+        const matchesSearch = r.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            r.employeeCode.toLowerCase().includes(searchTerm.toLowerCase());
+
+        if (!matchesSearch) return false;
+
+        if (isHROrAdmin) return true;
+        if (isSupervisor) return supervisedEmployeeIds.includes(r.employeeId);
+
+        return false;
+    });
 
     // Pagination Logic
     const totalPages = Math.ceil(filteredReconciliations.length / itemsPerPage);
@@ -465,6 +476,15 @@ export default function AttendanceReconciliationPage() {
                     )}
                 </div>
             </div>
+
+            {!isHROrAdmin && isSupervisor && (
+                <Alert className="mb-4">
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                        You are viewing reconciliation requests from your team members only.
+                    </AlertDescription>
+                </Alert>
+            )}
 
             <Card>
                 <CardHeader className="pb-3">

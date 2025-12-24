@@ -447,6 +447,9 @@ export interface CompanyProfile {
   invoiceLogoUrl?: string;
   companyLogoUrl?: string;
   hideCompanyName?: boolean;
+  logoWidth?: number;
+  logoHeight?: number;
+  piHeaderTitle?: string;
   updatedAt?: any;
 }
 
@@ -1502,6 +1505,23 @@ const AddressSchema = z.object({
   zipCode: z.string().optional(),
 });
 
+
+export interface SupervisorConfig {
+  supervisorId: string;
+  isDirectSupervisor: boolean;
+  isSupervisor: boolean;
+  isLeaveApprover: boolean;
+  effectiveDate?: string; // ISO string
+}
+
+export const SupervisorConfigSchema = z.object({
+  supervisorId: z.string(),
+  isDirectSupervisor: z.boolean().default(false),
+  isSupervisor: z.boolean().default(false),
+  isLeaveApprover: z.boolean().default(false),
+  effectiveDate: z.string().optional(),
+});
+
 export const EmployeeSchema = z.object({
   employeeCode: z.string().min(1, "Employee Code is required."),
   firstName: z.string().min(1, "First Name is required."),
@@ -1528,6 +1548,9 @@ export const EmployeeSchema = z.object({
   department: z.string().optional(),
   unit: z.string().optional(),
   shift: z.string().optional(), // Added missing field
+  supervisorId: z.string().optional(),
+  leaveApproverId: z.string().optional(),
+  supervisors: z.array(SupervisorConfigSchema).optional(),
   remarksDivision: z.string().optional(),
   jobStatus: z.enum(jobStatusOptions).optional(),
   jobStatusEffectiveDate: z.date().optional(),
@@ -1552,6 +1575,7 @@ export const EmployeeSchema = z.object({
 });
 
 export type EmployeeFormValues = z.infer<typeof EmployeeSchema>;
+
 
 export interface Employee {
   id: string;
@@ -1581,6 +1605,9 @@ export interface Employee {
   department?: string;
   unit?: string;
   shift?: string;
+  supervisorId?: string; // ID of the direct supervisor (Legacy/Primary)
+  leaveApproverId?: string; // ID of the leave approver (Legacy/Primary)
+  supervisors?: SupervisorConfig[]; // New multiple supervisor configuration
   remarksDivision?: string;
   jobStatus?: (typeof jobStatusOptions)[number];
   jobStatusEffectiveDate?: string; // ISO string

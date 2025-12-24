@@ -21,6 +21,8 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
+import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Grouped visit type
 interface GroupedVisit {
@@ -73,6 +75,9 @@ function formatDuration(milliseconds: number): string {
 export default function MultipleCheckInOutPage() {
     const searchParams = useSearchParams();
     const { user, userRole } = useAuth();
+    const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const isHROrAdmin = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+    const viewTeam = searchParams.get('view') === 'team';
     const myRecordsOnly = searchParams.get('myRecords') === 'true';
 
     const [records, setRecords] = useState<MultipleCheckInOutRecord[]>([]);
@@ -123,6 +128,17 @@ export default function MultipleCheckInOutPage() {
         ['employees_for_checkinout']
     );
 
+    // Filter employees based on supervisor access
+    const filteredEmployees = React.useMemo(() => {
+        if (!employees) return [];
+        if (isHROrAdmin) return employees; // HR/Admin see all
+        if (isSupervisor) {
+            // Supervisors see only their team
+            return employees.filter(emp => supervisedEmployeeIds.includes(emp.id));
+        }
+        return []; // Regular users see nothing in the list
+    }, [employees, isHROrAdmin, isSupervisor, supervisedEmployeeIds]);
+
     useEffect(() => {
         const fetchRecords = async () => {
             setIsLoading(true);
@@ -131,6 +147,10 @@ export default function MultipleCheckInOutPage() {
 
                 if (selectedEmployee !== 'all') {
                     filters.employeeId = selectedEmployee;
+                } else if (!isHROrAdmin && isSupervisor && supervisedEmployeeIds.length > 0) {
+                    // For supervisors viewing 'all', fetch only their team's records
+                    // Note: getCheckInOutRecords might need to support filtering by employee IDs array
+                    // For now, we'll fetch all and filter client-side
                 }
 
                 if (selectedType !== 'all') {
@@ -147,12 +167,29 @@ export default function MultipleCheckInOutPage() {
 
                 const data = await getCheckInOutRecords(filters);
 
+                // Filter by supervisor access if needed
+                let accessFilteredData = data;
+                if (((!isHROrAdmin && isSupervisor) || (isHROrAdmin && isSupervisor && viewTeam)) && selectedEmployee === 'all') {
+                    accessFilteredData = data.filter(record =>
+                        supervisedEmployeeIds.includes(record.employeeId)
+                    );
+                }
+
                 // Auto-checkout logic for visits exceeding 8 hours
-                await handleAutoCheckout(data);
+                await handleAutoCheckout(accessFilteredData);
 
                 // Refetch after auto-checkout to get updated records
                 const updatedData = await getCheckInOutRecords(filters);
-                setRecords(updatedData);
+
+                // Apply same filtering after refetch
+                let finalData = updatedData;
+                if (((!isHROrAdmin && isSupervisor) || (isHROrAdmin && isSupervisor && viewTeam)) && selectedEmployee === 'all') {
+                    finalData = updatedData.filter(record =>
+                        supervisedEmployeeIds.includes(record.employeeId)
+                    );
+                }
+
+                setRecords(finalData);
             } catch (error) {
                 console.error('Error fetching records:', error);
             } finally {
@@ -161,7 +198,7 @@ export default function MultipleCheckInOutPage() {
         };
 
         fetchRecords();
-    }, [selectedEmployee, selectedType, fromDate, toDate]);
+    }, [selectedEmployee, selectedType, fromDate, toDate, isHROrAdmin, isSupervisor, supervisedEmployeeIds]);
 
     // Function to handle automatic checkout for visits exceeding 8 hours
     const handleAutoCheckout = async (allRecords: MultipleCheckInOutRecord[]) => {
@@ -343,6 +380,14 @@ export default function MultipleCheckInOutPage() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                    {!isHROrAdmin && isSupervisor && (
+                        <Alert className="mb-4">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                                You are viewing check-in/out records for your team members only ({supervisedEmployeeIds.length} employee{supervisedEmployeeIds.length !== 1 ? 's' : ''}).
+                            </AlertDescription>
+                        </Alert>
+                    )}
                     {/* Filters */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="space-y-2">
@@ -357,7 +402,7 @@ export default function MultipleCheckInOutPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {!myRecordsOnly && <SelectItem value="all">All Employees</SelectItem>}
-                                    {employees?.map(emp => (
+                                    {filteredEmployees?.map(emp => (
                                         <SelectItem key={emp.id} value={emp.id}>
                                             {emp.fullName}
                                         </SelectItem>

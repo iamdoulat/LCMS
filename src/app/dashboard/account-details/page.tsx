@@ -36,10 +36,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { EmployeeSupervisionCard } from '@/components/dashboard/EmployeeSupervisionCard';
+import { TeamCheckInCard } from '@/components/dashboard/TeamCheckInCard';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
 import { Badge } from '@/components/ui/badge';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -83,6 +86,7 @@ const formatCurrency = (value?: number) => {
 
 export default function AccountDetailsPage() {
   const { user, loading: authLoading, setUser: setAuthUser } = useAuth();
+  const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
   const [employeeData, setEmployeeData] = useState<EmployeeDocument | null>(null);
   const [isEmployeeDataLoading, setIsEmployeeDataLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1620,6 +1624,16 @@ export default function AccountDetailsPage() {
           </CardContent>
         </Card>
 
+        {/* Supervisor Cards - My Team and Check-In History */}
+        {employeeData && (isSupervisor || supervisedEmployeeIds.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <EmployeeSupervisionCard currentEmployeeId={employeeData.id} />
+            <TeamCheckInCard
+              isSupervisor={isSupervisor}
+              supervisedEmployeeIds={supervisedEmployeeIds}
+            />
+          </div>
+        )}
 
         {/* Current Leave Status Card */}
         {leaveGroup && (
@@ -1763,7 +1777,10 @@ export default function AccountDetailsPage() {
                     variant={checkInOutType === 'Check In' ? 'default' : 'outline'}
                     onClick={() => setCheckInOutType('Check In')}
                     disabled={lastCheckInOutRecord?.type === 'Check In'}
-                    className="flex-1"
+                    className={cn(
+                      "flex-1 transition-all duration-300",
+                      checkInOutType === 'Check In' && "bg-blue-600 hover:bg-blue-700 text-white shadow-md transform scale-105"
+                    )}
                   >
                     <Check className="mr-2 h-4 w-4" />
                     Check In
@@ -1773,7 +1790,10 @@ export default function AccountDetailsPage() {
                     variant={checkInOutType === 'Check Out' ? 'default' : 'outline'}
                     onClick={() => setCheckInOutType('Check Out')}
                     disabled={!lastCheckInOutRecord || lastCheckInOutRecord?.type === 'Check Out'}
-                    className="flex-1"
+                    className={cn(
+                      "flex-1 transition-all duration-300",
+                      checkInOutType === 'Check Out' && "bg-blue-600 hover:bg-blue-700 text-white shadow-md transform scale-105"
+                    )}
                   >
                     <XCircle className="mr-2 h-4 w-4" />
                     Check Out
@@ -2084,6 +2104,7 @@ export default function AccountDetailsPage() {
           </CardContent>
         </Card>
 
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <Card className="shadow-xl h-full">
@@ -2192,11 +2213,9 @@ export default function AccountDetailsPage() {
             </Card>
           </div>
           <div className="lg:col-span-1">
-            <Card className="h-full relative overflow-hidden group">
-              {/* Animated gradient border effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-20 blur-xl group-hover:opacity-40 transition-opacity duration-500" />
+            <Card className="h-full">
 
-              <CardHeader className="relative z-10">
+              <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <div className="relative">
                     <Bell className="h-5 w-5 text-primary" />
@@ -2208,7 +2227,7 @@ export default function AccountDetailsPage() {
                 </CardTitle>
               </CardHeader>
 
-              <CardContent className="relative z-10">
+              <CardContent>
                 {isLoadingNotices ? (
                   <div className="flex items-center justify-center h-48">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />

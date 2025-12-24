@@ -18,9 +18,10 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
 import { collection, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp, getDocs, where } from 'firebase/firestore';
-import type { LeaveApplicationDocument, LeaveStatus, LeaveType } from '@/types';
+import type { LeaveApplicationDocument, LeaveStatus, LeaveType, EmployeeDocument } from '@/types';
 import { leaveStatusOptions, leaveTypeOptions } from '@/types';
 import { format, parseISO, isValid, differenceInCalendarDays } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,6 +32,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 
 const formatDisplayDate = (dateString: string): string => {
@@ -77,12 +79,19 @@ const ALL_LEAVE_TYPES_VALUE = "__ALL_LEAVE_TYPES__";
 const ALL_STATUSES_LEAVE_VALUE = "__ALL_STATUSES_LEAVE__";
 
 export default function LeaveManagementPage() {
-    const { userRole } = useAuth();
+    const searchParams = useSearchParams();
+    const viewTeam = searchParams.get('view') === 'team';
+    const { userRole, user } = useAuth();
     const router = useRouter();
     const [allLeaves, setAllLeaves] = React.useState<LeaveApplicationDocument[]>([]);
     const [displayedLeaves, setDisplayedLeaves] = React.useState<LeaveApplicationDocument[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [fetchError, setFetchError] = React.useState<string | null>(null);
+
+    // Supervisor filtering
+    const [currentEmployeeId, setCurrentEmployeeId] = React.useState<string | null>(null);
+    const [supervisedEmployeeIds, setSupervisedEmployeeIds] = React.useState<string[]>([]);
+    const [isSupervisor, setIsSupervisor] = React.useState(false);
 
     // Filter states
     const [filterEmployeeCode, setFilterEmployeeCode] = React.useState('');
@@ -92,7 +101,58 @@ export default function LeaveManagementPage() {
     const [availableLeaveTypes, setAvailableLeaveTypes] = React.useState<string[]>([]);
 
 
-    const canApprove = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+    const isHROrAdmin = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+    const canApprove = isHROrAdmin || isSupervisor;
+
+    // Fetch current employee ID and check if they are a supervisor
+    React.useEffect(() => {
+        const fetchCurrentEmployee = async () => {
+            if (!user?.email) return;
+
+            try {
+                const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
+                const snapshot = await getDocs(q);
+                if (!snapshot.empty) {
+                    const empDoc = snapshot.docs[0];
+                    const employeeId = empDoc.id;
+                    setCurrentEmployeeId(employeeId);
+
+                    // Check if this employee is a supervisor by querying for subordinates
+                    // Look for employees where supervisorId matches OR where they are in supervisors array
+                    const subordinatesQuery = query(
+                        collection(firestore, 'employees'),
+                        where('supervisorId', '==', employeeId)
+                    );
+                    const subordinatesSnapshot = await getDocs(subordinatesQuery);
+                    const subordinateIds = subordinatesSnapshot.docs.map(doc => doc.id);
+
+                    // Also check the new supervisors array structure
+                    const allEmployeesQuery = query(collection(firestore, 'employees'));
+                    const allEmployeesSnapshot = await getDocs(allEmployeesQuery);
+                    allEmployeesSnapshot.docs.forEach(doc => {
+                        const employee = doc.data() as EmployeeDocument;
+                        if (employee.supervisors) {
+                            const hasAsLeaveApprover = employee.supervisors.some(
+                                sup => sup.supervisorId === employeeId && sup.isLeaveApprover
+                            );
+                            if (hasAsLeaveApprover && !subordinateIds.includes(doc.id)) {
+                                subordinateIds.push(doc.id);
+                            }
+                        }
+                    });
+
+                    if (subordinateIds.length > 0) {
+                        setIsSupervisor(true);
+                        setSupervisedEmployeeIds(subordinateIds);
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching current employee:", error);
+            }
+        };
+
+        fetchCurrentEmployee();
+    }, [user]);
 
     // Fetch leave types from HRM settings
     React.useEffect(() => {
@@ -117,13 +177,51 @@ export default function LeaveManagementPage() {
 
     React.useEffect(() => {
         setIsLoading(true);
-        const leavesQuery = query(collection(firestore, "leave_applications"), orderBy("createdAt", "desc"));
+
+        // Build query based on role
+        let leavesQuery;
+        if (isHROrAdmin && (!viewTeam || !isSupervisor)) {
+            // HR/Admin sees all leave applications (unless forcing team view)
+            leavesQuery = query(collection(firestore, "leave_applications"), orderBy("createdAt", "desc"));
+        } else if (isSupervisor && supervisedEmployeeIds.length > 0) {
+            // Supervisors see only their team's leave applications
+            // Firestore 'in' operator supports up to 10 values
+            const chunkSize = 10;
+            const chunks = [];
+            for (let i = 0; i < supervisedEmployeeIds.length; i += chunkSize) {
+                chunks.push(supervisedEmployeeIds.slice(i, i + chunkSize));
+            }
+
+            if (chunks.length === 1) {
+                leavesQuery = query(
+                    collection(firestore, "leave_applications"),
+                    where("employeeId", "in", chunks[0]),
+                    orderBy("createdAt", "desc")
+                );
+            } else {
+                // If more than 10 subordinates, we'll fetch all and filter client-side
+                leavesQuery = query(collection(firestore, "leave_applications"), orderBy("createdAt", "desc"));
+            }
+        } else {
+            // Not HR/Admin and not a supervisor (or no subordinates found), show nothing
+            setIsLoading(false);
+            setAllLeaves([]);
+            return;
+        }
 
         const unsubscribe = onSnapshot(leavesQuery, (snapshot) => {
-            const fetchedLeaves = snapshot.docs.map(doc => ({
+            let fetchedLeaves = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             } as LeaveApplicationDocument));
+
+            // Client-side filter if supervisor has more than 10 subordinates
+            if (((!isHROrAdmin && isSupervisor) || (isHROrAdmin && isSupervisor && viewTeam)) && supervisedEmployeeIds.length > 10) {
+                fetchedLeaves = fetchedLeaves.filter(leave =>
+                    supervisedEmployeeIds.includes(leave.employeeId)
+                );
+            }
+
             setAllLeaves(fetchedLeaves);
             setIsLoading(false);
             setFetchError(null);
@@ -134,7 +232,7 @@ export default function LeaveManagementPage() {
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [isHROrAdmin, isSupervisor, supervisedEmployeeIds]);
 
     const getEmployeeDetails = (employeeName: string) => {
         if (!employeeName) return { name: 'N/A', code: 'N/A' };
@@ -290,6 +388,14 @@ export default function LeaveManagementPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
+                    {!isHROrAdmin && isSupervisor && (
+                        <Alert className="mb-4">
+                            <Info className="h-4 w-4" />
+                            <AlertDescription>
+                                You are viewing leave applications from your team members only ({supervisedEmployeeIds.length} employee{supervisedEmployeeIds.length !== 1 ? 's' : ''}).
+                            </AlertDescription>
+                        </Alert>
+                    )}
                     <Card className="mb-6 shadow-md p-4">
                         <CardHeader className="p-2 pb-4">
                             <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>

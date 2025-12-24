@@ -70,6 +70,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const { data: units, isLoading: isLoadingUnits } = useFirestoreQuery<UnitDocument[]>(firestoreQuery(collection(firestore, "units"), orderBy("name")), undefined, ['units']);
   const { data: divisions, isLoading: isLoadingDivisions } = useFirestoreQuery<DivisionDocument[]>(firestoreQuery(collection(firestore, "divisions"), orderBy("name")), undefined, ['divisions']);
   const { data: leaveGroups, isLoading: isLoadingLeaveGroups } = useFirestoreQuery<LeaveGroupDocument[]>(firestoreQuery(collection(firestore, 'hrm_settings', 'leave_groups', 'items'), orderBy("groupName", "asc")), undefined, ['leave_groups']);
+  const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(firestoreQuery(collection(firestore, "employees"), orderBy("employeeCode", "asc")), undefined, ['employees_list']);
 
   // Memoize the options to prevent re-computation on every render
   const designationOptions = React.useMemo(() => toComboboxOptions(designations || [], 'name'), [designations]);
@@ -78,6 +79,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const unitOptions = React.useMemo(() => toComboboxOptions(units || [], 'name'), [units]);
   const divisionOptions = React.useMemo(() => toComboboxOptions(divisions || [], 'name'), [divisions]);
   const leaveGroupOptions = React.useMemo(() => leaveGroups?.map(g => ({ value: g.id, label: g.groupName })) || [], [leaveGroups]);
+  const supervisorOptions = React.useMemo(() => employees?.filter(e => e.id !== employee.id).map(e => ({ value: e.id, label: `${e.fullName} (${e.employeeCode})` })) || [], [employees, employee.id]);
 
   const isLoadingHrmOptions = isLoadingBranches || isLoadingDepts || isLoadingUnits || isLoadingDivisions;
 
@@ -301,6 +303,10 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         } : null,
       };
 
+      if (rawDataToSave.supervisorId === 'unassigned') {
+        delete rawDataToSave.supervisorId;
+      }
+
       delete (rawDataToSave as any).firstName;
       delete (rawDataToSave as any).middleName;
       delete (rawDataToSave as any).lastName;
@@ -473,6 +479,28 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <SelectContent>
                 {employeeStatusOptions.map(o => (
                   <SelectItem key={o} value={o}>{o}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        )} />
+
+
+
+        <FormField control={control} name="supervisorId" render={({ field }) => (
+          <FormItem>
+            <FormLabel>Direct Supervisor</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value || 'unassigned'}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select Supervisor"} />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {supervisorOptions.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

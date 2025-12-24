@@ -32,6 +32,9 @@ interface FinancialSettingsProfile {
   cellNumber?: string;
   invoiceLogoUrl?: string;
   hideCompanyName?: boolean;
+  logoWidth?: number;
+  logoHeight?: number;
+  piHeaderTitle?: string;
 }
 
 const formatDisplayDate = (dateString?: string) => {
@@ -210,17 +213,22 @@ export default function PrintSaleInvoicePage() {
         <div className="print-header">
           <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
-              {displayCompanyLogo && (
-                <Image
-                  src={displayCompanyLogo}
-                  alt={`${displayCompanyName} Logo`}
-                  width={297}
-                  height={44}
-                  className="object-contain mb-2"
-                  priority
-                  data-ai-hint="company logo"
-                />
-              )}
+              <div className="flex items-center gap-3 mb-2">
+                {displayCompanyLogo && (
+                  <Image
+                    src={displayCompanyLogo}
+                    alt={`${displayCompanyName} Logo`}
+                    width={financialSettings?.logoWidth || 396}
+                    height={financialSettings?.logoHeight || 58}
+                    className="object-contain"
+                    priority
+                    data-ai-hint="company logo"
+                  />
+                )}
+                {financialSettings?.piHeaderTitle && (
+                  <span className="text-xl font-bold text-gray-900 leading-tight">{financialSettings.piHeaderTitle}</span>
+                )}
+              </div>
               {!hideCompanyName && (
                 <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
               )}

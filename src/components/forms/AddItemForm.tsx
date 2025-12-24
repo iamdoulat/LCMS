@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin, Building, Layers, Trash2, Crop as CropIcon, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { CheckboxCombobox } from "@/components/ui/checkbox-combobox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import Image from 'next/image';
 
@@ -294,18 +295,13 @@ export function AddItemForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Category*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingCategories ? "Loading..." : "Select category"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories?.map((category) => (
-                          <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <CheckboxCombobox
+                      options={categories?.map(c => ({ value: c.name, label: c.name })) || []}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={isLoadingCategories ? "Loading..." : "Select category"}
+                      searchPlaceholder="Search categories..."
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -316,18 +312,13 @@ export function AddItemForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Item Section*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingItemSections ? "Loading..." : "Select item section"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {itemSections?.map((section) => (
-                          <SelectItem key={section.id} value={section.name}>{section.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <CheckboxCombobox
+                      options={itemSections?.map(s => ({ value: s.name, label: s.name })) || []}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={isLoadingItemSections ? "Loading..." : "Select item section"}
+                      searchPlaceholder="Search item sections..."
+                    />
                     <FormMessage />
                   </FormItem>
                 )}

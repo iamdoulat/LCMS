@@ -37,6 +37,8 @@ const piSettingsSchema = z.object({
   phone: z.string().optional(),
   piLogoUrl: z.string().url("Invalid URL format").optional().or(z.literal('')),
   hidePiHeaderLogo: z.boolean().optional().default(false),
+  logoWidth: z.number().min(16).max(512).optional().default(64),
+  logoHeight: z.number().min(16).max(512).optional().default(64),
 });
 
 type PiSettingsFormValues = z.infer<typeof piSettingsSchema>;
@@ -65,6 +67,8 @@ export default function PISettingsPage() {
       phone: '',
       piLogoUrl: '',
       hidePiHeaderLogo: false,
+      logoWidth: 64,
+      logoHeight: 64,
     },
   });
 
@@ -112,7 +116,9 @@ export default function PISettingsPage() {
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
-    const aspect = 1; // 1:1 aspect ratio for 32x32px
+    const logoWidth = form.getValues('logoWidth') || 64;
+    const logoHeight = form.getValues('logoHeight') || 64;
+    const aspect = logoWidth / logoHeight;
     const crop = centerCrop(
       makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height),
       width, height
@@ -228,15 +234,15 @@ export default function PISettingsPage() {
 
               <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
                 <DialogContent className="max-w-xl">
-                  <DialogHeader><DialogTitle>Crop PI Logo (64x64px)</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Crop PI Logo ({form.watch('logoWidth') || 64}x{form.watch('logoHeight') || 64}px)</DialogTitle></DialogHeader>
                   {imgSrc && (
                     <ReactCrop
                       crop={crop}
                       onChange={(_, percentCrop) => setCrop(percentCrop)}
 
                       onComplete={(c) => setCompletedCrop(c)}
-                      aspect={1}
-                      minWidth={64}
+                      aspect={(form.watch('logoWidth') || 64) / (form.watch('logoHeight') || 64)}
+                      minWidth={form.watch('logoWidth') || 64}
                     >
                       <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }} />
                     </ReactCrop>
@@ -297,27 +303,75 @@ export default function PISettingsPage() {
                     )}
                   />
                 </div>
-                <FormItem>
-                  <Label>PI Header Logo</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-32 h-32 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                      {piLogoPreviewUrl ? (
-                        <Image
-                          src={piLogoPreviewUrl}
-                          alt="PI logo preview"
-                          width={64}
-                          height={64}
-                          className="object-contain"
-                          data-ai-hint="company logo"
-                        />
-                      ) : (
-                        <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="logoWidth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Logo Width (px)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="16"
+                              max="512"
+                              placeholder="64"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 64)}
+                              value={field.value || 64}
+                              disabled={isReadOnly}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                    </div>
-                    <Input id="pi-logo-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" disabled={isReadOnly} />
+                    />
+                    <FormField
+                      control={form.control}
+                      name="logoHeight"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Logo Height (px)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="16"
+                              max="512"
+                              placeholder="64"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 64)}
+                              value={field.value || 64}
+                              disabled={isReadOnly}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                  <FormDescription>Upload a 64x64 pixels logo for the PI header.</FormDescription>
-                </FormItem>
+                  <FormItem>
+                    <Label>PI Header Logo</Label>
+                    <div className="flex items-center gap-4">
+                      <div className="w-32 h-32 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                        {piLogoPreviewUrl ? (
+                          <Image
+                            src={piLogoPreviewUrl}
+                            alt="PI logo preview"
+                            width={form.watch('logoWidth') || 64}
+                            height={form.watch('logoHeight') || 64}
+                            className="object-contain"
+                            data-ai-hint="company logo"
+                          />
+                        ) : (
+                          <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                        )}
+                      </div>
+                      <Input id="pi-logo-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" disabled={isReadOnly} />
+                    </div>
+                    <FormDescription>Upload a {form.watch('logoWidth') || 64}x{form.watch('logoHeight') || 64} pixels logo for the PI header.</FormDescription>
+                  </FormItem>
+                </div>
               </div>
 
 

@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin, Building, Layers, Trash2, Crop as CropIcon, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
+import { CheckboxCombobox } from "@/components/ui/checkbox-combobox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import Image from 'next/image';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
@@ -310,54 +311,48 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
               <FormField
                 control={form.control}
                 name="itemSection"
-                render={({ field }) => (
-                  <FormItem className="col-span-1">
-                    <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Item Section*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingItemSections ? "Loading..." : "Select item section"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {/* Ensure the current value is always an option */}
-                        {field.value && !itemSections?.some(s => s.name === field.value) && (
-                          <SelectItem key={`initial-section-${field.value}`} value={field.value}>{field.value} (Legacy)</SelectItem>
-                        )}
-                        {itemSections?.map((section) => (
-                          <SelectItem key={section.id} value={section.name}>{section.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const options = itemSections?.map(s => ({ value: s.name, label: s.name })) || [];
+                  if (field.value && !options.some(o => o.value === field.value)) {
+                    options.unshift({ value: field.value, label: `${field.value} (Legacy)` });
+                  }
+                  return (
+                    <FormItem className="col-span-1">
+                      <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Item Section*</FormLabel>
+                      <CheckboxCombobox
+                        options={options}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder={isLoadingItemSections ? "Loading..." : "Select item section"}
+                        searchPlaceholder="Search item sections..."
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={form.control}
                 name="category"
-                render={({ field }) => (
-                  <FormItem className="col-span-1">
-                    <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Category*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingCategories ? "Loading..." : "Select category"} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {/* Ensure the current value is always an option */}
-                        {field.value && !categories?.some(c => c.name === field.value) && (
-                          <SelectItem key={`initial-category-${field.value}`} value={field.value}>{field.value} (Legacy)</SelectItem>
-                        )}
-                        {categories?.map((category) => (
-                          <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const options = categories?.map(c => ({ value: c.name, label: c.name })) || [];
+                  if (field.value && !options.some(o => o.value === field.value)) {
+                    options.unshift({ value: field.value, label: `${field.value} (Legacy)` });
+                  }
+                  return (
+                    <FormItem className="col-span-1">
+                      <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Category*</FormLabel>
+                      <CheckboxCombobox
+                        options={options}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder={isLoadingCategories ? "Loading..." : "Select category"}
+                        searchPlaceholder="Search categories..."
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={form.control}
@@ -511,101 +506,102 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
             </div>
 
 
-            <Separator />
-
-            <h3 className={cn(sectionHeadingClass)}>
-              <Warehouse className="h-5 w-5" /> Inventory Management
-            </h3>
-            <FormField
-              control={form.control}
-              name="manageStock"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel className="hover:cursor-pointer">
-                      Manage inventory stock levels for this item
-                    </FormLabel>
-                    <FormDescription>
-                      Enable to track current quantity, ideal levels, and warning thresholds.
-                    </FormDescription>
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            {watchManageStock && (
-              <Card className="bg-muted/30 p-6">
-                <CardContent className="space-y-4 pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="currentQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Current Quantity*</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Location</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Warehouse A, Shelf B-3" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="idealQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ideal Quantity</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="warningQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center"><AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />Warning Quantity</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} />
-                          </FormControl>
-                          <FormDescription>
-                            Receive alerts when stock reaches this level.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
+
+        <Separator />
+
+        <h3 className={cn(sectionHeadingClass)}>
+          <Warehouse className="h-5 w-5" /> Inventory Management
+        </h3>
+        <FormField
+          control={form.control}
+          name="manageStock"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel className="hover:cursor-pointer">
+                  Manage inventory stock levels for this item
+                </FormLabel>
+                <FormDescription>
+                  Enable to track current quantity, ideal levels, and warning thresholds.
+                </FormDescription>
+              </div>
+            </FormItem>
+          )}
+        />
+
+        {watchManageStock && (
+          <Card className="bg-muted/30 p-6">
+            <CardContent className="space-y-4 pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="currentQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Quantity*</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Warehouse A, Shelf B-3" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="idealQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ideal Quantity</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="warningQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />Warning Quantity</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormDescription>
+                        Receive alerts when stock reaches this level.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
 
 

@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, Loader2, AlertTriangle, Info, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -22,14 +22,16 @@ import type { VisitApplicationDocument, VisitStatus } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
+import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRouter } from 'next/navigation';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 const formatDisplayDate = (dateString: string): string => {
@@ -51,7 +53,9 @@ const getStatusBadgeVariant = (status: VisitStatus) => {
 };
 
 export default function VisitApplicationListPage() {
-    const { userRole } = useAuth();
+    const { user, userRole } = useAuth();
+    const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const isHROrAdmin = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
     const router = useRouter();
     const [applications, setApplications] = React.useState<VisitApplicationDocument[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
@@ -61,7 +65,7 @@ export default function VisitApplicationListPage() {
 
     React.useEffect(() => {
         const applicationsQuery = query(collection(firestore, "visit_applications"), orderBy("createdAt", "desc"));
-        
+
         const unsubscribe = onSnapshot(applicationsQuery, (snapshot) => {
             const fetchedApplications = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -78,6 +82,14 @@ export default function VisitApplicationListPage() {
 
         return () => unsubscribe();
     }, []);
+
+    const filteredApplications = React.useMemo(() => {
+        if (isHROrAdmin) return applications;
+        if (isSupervisor) {
+            return applications.filter(app => supervisedEmployeeIds.includes(app.employeeId));
+        }
+        return [];
+    }, [applications, isHROrAdmin, isSupervisor, supervisedEmployeeIds]);
 
     const handleDelete = async (id: string, employeeName: string) => {
         if (isReadOnly) return;
@@ -117,22 +129,30 @@ export default function VisitApplicationListPage() {
                         </div>
                         <Button asChild disabled={isReadOnly}>
                             <Link href="/dashboard/hr/visit-applications/add">
-                                <PlusCircle className="mr-2 h-4 w-4"/>
+                                <PlusCircle className="mr-2 h-4 w-4" />
                                 Apply for Visit
                             </Link>
                         </Button>
                     </div>
                 </CardHeader>
                 <CardContent>
+                    {!isHROrAdmin && isSupervisor && (
+                        <Alert className="mb-4">
+                            <Info className="h-4 w-4" />
+                            <AlertDescription>
+                                You are viewing visit applications from your team members only.
+                            </AlertDescription>
+                        </Alert>
+                    )}
                     {isLoading ? (
-                        <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>
+                        <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
                     ) : fetchError ? (
                         <div className="text-destructive-foreground bg-destructive/10 p-4 rounded-md text-center">
                             <AlertTriangle className="mx-auto mb-2 h-8 w-8" />
                             <p className="font-semibold">Error Loading Applications</p>
                             <p className="text-sm">{fetchError}</p>
                         </div>
-                    ) : applications.length === 0 ? (
+                    ) : filteredApplications.length === 0 ? (
                         <div className="text-muted-foreground text-center py-10">
                             <Info className="mx-auto mb-2 h-10 w-10" />
                             <p className="font-semibold">No Visit Applications Found</p>
@@ -155,7 +175,7 @@ export default function VisitApplicationListPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {applications.map((app, index) => (
+                                    {filteredApplications.map((app, index) => (
                                         <TableRow key={app.id}>
                                             <TableCell>{index + 1}</TableCell>
                                             <TableCell className="font-medium">{app.employeeName}</TableCell>

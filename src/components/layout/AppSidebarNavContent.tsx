@@ -133,6 +133,7 @@ const inventoryNavItems: NavItem[] = [
   { href: '/dashboard/inventory/refunds-returns', label: 'Refunds & Returns', icon: Undo2, iconColorClass: 'bg-icon-return' },
   { href: '/dashboard/petty-cash/reports', label: 'Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/petty-cash/settings', label: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
+  { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Invoice Header Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
 ];
 
 const financialNavItems: NavItem[] = [
@@ -206,8 +207,8 @@ const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/manage-notices', label: 'Manage Notices', icon: Bell, iconColorClass: 'bg-icon-notifications' },
   { href: '/dashboard/settings/company-setup', label: 'Company Setup', icon: Building, iconColorClass: 'bg-icon-company' },
   { href: '/dashboard/settings/users', label: 'User Management', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
+
   { href: '/dashboard/settings/user-activities', label: 'User Activities', icon: History, iconColorClass: 'bg-icon-logs' },
-  { href: '/dashboard/financial-management/invoicing-sales/setting', label: 'Invoice Header Settings', icon: LayoutGrid, iconColorClass: 'bg-icon-settings' },
   { href: '/dashboard/settings/smtp-settings', label: 'SMTP Setting', icon: Settings, iconColorClass: 'bg-icon-settings' },
   { href: "/dashboard/settings/whatsapp-templates", label: "WhatsApp Templates", icon: MessageSquareText, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/settings/telegram-templates", label: "Telegram Templates", icon: FileCode, iconColorClass: 'bg-icon-list' },

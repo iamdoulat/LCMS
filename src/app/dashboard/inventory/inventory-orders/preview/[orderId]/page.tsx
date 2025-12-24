@@ -206,6 +206,9 @@ export default function PrintOrderPage() {
   const displayCompanyEmail = settings?.emailId || DEFAULT_EMAIL;
   const displayCompanyPhone = settings?.cellNumber || 'N/A';
   const hideCompanyName = settings?.hideCompanyName ?? false;
+  const displayLogoWidth = settings?.logoWidth || 396;
+  const displayLogoHeight = settings?.logoHeight || 58;
+  const displayHeaderTitle = settings?.piHeaderTitle || '';
 
   const showItemCodeColumn = orderData.showItemCodeColumn ?? false;
   const showDiscountColumn = orderData.showDiscountColumn ?? false;
@@ -221,19 +224,24 @@ export default function PrintOrderPage() {
         <div className="print-header">
           <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
-              {displayCompanyLogo && (
-                <Image
-                  src={displayCompanyLogo}
-                  alt={`${displayCompanyName} Logo`}
-                  width={297 * 0.85}
-                  height={44 * 0.85}
-                  className="object-contain mb-2"
-                  priority
-                  data-ai-hint="company logo"
-                />
-              )}
+              <div className="flex items-center gap-4 mb-2">
+                {displayCompanyLogo && (
+                  <Image
+                    src={displayCompanyLogo}
+                    alt={`${displayCompanyName} Logo`}
+                    width={displayLogoWidth}
+                    height={displayLogoHeight}
+                    className="object-contain"
+                    priority
+                    data-ai-hint="company logo"
+                  />
+                )}
+                {displayHeaderTitle && (
+                  <h1 className="text-2xl font-bold uppercase text-gray-900 leading-tight">{displayHeaderTitle}</h1>
+                )}
+              </div>
               {!hideCompanyName && (
-                <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+                <h2 className="text-xl font-bold text-gray-900">{displayCompanyName}</h2>
               )}
               <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
               <div className="flex items-center gap-4 text-xs text-gray-600">

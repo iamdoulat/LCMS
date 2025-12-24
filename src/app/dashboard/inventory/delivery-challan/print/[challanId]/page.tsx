@@ -152,10 +152,13 @@ export default function PrintDeliveryChallanPage() {
     );
   }
 
-  const { companyName, address, invoiceLogoUrl, hideCompanyName, emailId, cellNumber } = companySettings || {};
+  const { companyName, address, invoiceLogoUrl, hideCompanyName, emailId, cellNumber, logoWidth, logoHeight, piHeaderTitle } = companySettings || {};
   const displayCompanyName = companyName || 'Your Company Name';
   const displayCompanyLogo = invoiceLogoUrl || 'https://placehold.co/400x100.png';
   const displayCompanyAddress = address || 'Your Company Address';
+  const displayLogoWidth = logoWidth || 396;
+  const displayLogoHeight = logoHeight || 58;
+  const displayHeaderTitle = piHeaderTitle || '';
 
   return (
     <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
@@ -163,19 +166,24 @@ export default function PrintDeliveryChallanPage() {
         <div className="print-header">
           <div className="flex justify-between items-start mb-2">
             <div className="w-2/3 pr-8">
-              {displayCompanyLogo && (
-                <Image
-                  src={displayCompanyLogo}
-                  alt={`${displayCompanyName} Logo`}
-                  width={297}
-                  height={44}
-                  className="object-contain mb-2"
-                  priority
-                  data-ai-hint="company logo"
-                />
-              )}
+              <div className="flex items-center gap-4 mb-2">
+                {displayCompanyLogo && (
+                  <Image
+                    src={displayCompanyLogo}
+                    alt={`${displayCompanyName} Logo`}
+                    width={displayLogoWidth}
+                    height={displayLogoHeight}
+                    className="object-contain"
+                    priority
+                    data-ai-hint="company logo"
+                  />
+                )}
+                {displayHeaderTitle && (
+                  <h1 className="text-2xl font-bold uppercase text-gray-900 leading-tight">{displayHeaderTitle}</h1>
+                )}
+              </div>
               {!hideCompanyName && (
-                <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
+                <h2 className="text-xl font-bold text-gray-900">{displayCompanyName}</h2>
               )}
               <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
               {emailId && <p className="text-xs text-gray-600">Email: {emailId}</p>}
