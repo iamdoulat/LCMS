@@ -38,6 +38,7 @@ import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { EmployeeSupervisionCard } from '@/components/dashboard/EmployeeSupervisionCard';
 import { TeamCheckInCard } from '@/components/dashboard/TeamCheckInCard';
+import { TeamAttendanceCard } from '@/components/dashboard/TeamAttendanceCard';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
 import { Badge } from '@/components/ui/badge';
@@ -1635,126 +1636,10 @@ export default function AccountDetailsPage() {
           </div>
         )}
 
-        {/* Current Leave Status Card */}
-        {leaveGroup && (
-          <Card className="shadow-xl">
-            <CardHeader>
-              <div className="flex flex-row justify-between items-center">
-                <div className="space-y-1.5">
-                  <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                    <Plane className="h-6 w-6 text-primary" />
-                    Current Leave Status
-                  </CardTitle>
-                  <CardDescription>
-                    Leave balances based on <strong>{leaveGroup.groupName}</strong> policy for {new Date().getFullYear()}.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="view-mode" className={cn("text-sm font-medium", viewMode === 'list' ? "text-primary" : "text-muted-foreground")}>List</Label>
-                  <Switch
-                    id="view-mode"
-                    checked={viewMode === 'graph'}
-                    onCheckedChange={(checked) => setViewMode(checked ? 'graph' : 'list')}
-                  />
-                  <Label htmlFor="view-mode" className={cn("text-sm font-medium", viewMode === 'graph' ? "text-primary" : "text-muted-foreground")}>Graph</Label>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {viewMode === 'list' ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Leave Type</TableHead>
-                        <TableHead className="text-center">Total Allowed</TableHead>
-                        <TableHead className="text-center">Used (Approved)</TableHead>
-                        <TableHead className="text-right">Balance</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {leaveBalances.map((balance) => (
-                        <TableRow key={balance.name}>
-                          <TableCell className="font-medium">{balance.name}</TableCell>
-                          <TableCell className="text-center">{balance.allowed}</TableCell>
-                          <TableCell className="text-center">{balance.used}</TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant={balance.balance > 0 ? "default" : "destructive"}>
-                              {balance.balance}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-4">
-                  {leaveBalances.map((balance, index) => {
-                    const data = [
-                      { name: 'Leave remaining', value: balance.balance, color: '#10b981' }, // emerald-500
-                      { name: 'Leave taken', value: balance.used, color: '#3b82f6' }, // blue-500
-                    ];
-                    // If purely empty (no balance, no used), don't show or show empty state? 
-                    // Assuming valid config, at least allowed > 0.
-
-                    return (
-                      <div key={balance.name} className="flex flex-col items-center justify-center p-4 bg-background rounded-xl border shadow-sm">
-                        <h4 className="text-lg font-semibold mb-2 text-center text-foreground">{balance.name}</h4>
-                        <div className="h-[200px] w-full relative">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={data}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={80}
-                                paddingAngle={0}
-                                dataKey="value"
-                                startAngle={90}
-                                endAngle={-270}
-                              >
-                                {data.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                                ))}
-                              </Pie>
-                              <RechartsTooltip
-                                formatter={(value: any, name: any) => [value, name]}
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                          {/* Center Text Overlay */}
-                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-3xl font-bold text-blue-500">{balance.used}</span>
-                            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Takens</span>
-                          </div>
-                        </div>
-                        <div className="w-full mt-4 space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-blue-500" />
-                              <span className="text-muted-foreground">Leave taken</span>
-                            </div>
-                            <span className="font-bold text-blue-500">{balance.used}</span>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                              <span className="text-muted-foreground">Leave remaining</span>
-                            </div>
-                            <span className="font-bold text-emerald-500">{balance.balance}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {employeeData && (isSupervisor || supervisedEmployeeIds.length > 0) && (
+          <TeamAttendanceCard supervisedEmployeeIds={supervisedEmployeeIds} />
         )}
+
 
         <Card className="shadow-xl">
           <CardHeader>
@@ -2299,32 +2184,126 @@ export default function AccountDetailsPage() {
           </div>
         </div>
 
-        <Card className="shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <Wallet className="h-6 w-6 text-primary" />
-                Advance Salary Requests
-              </CardTitle>
-              <CardDescription>Your recent advance salary applications.</CardDescription>
-            </div>
-            <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/payroll/advance-salary/add")}>
-              <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/payroll/advance-salary/add"}>
-                <PlusCircle className="mr-2 h-4 w-4" />Apply
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto w-full">
-              <Table><TableHeader><TableRow><TableHead>Apply Date</TableHead><TableHead>Amount</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {userAdvanceSalary.length > 0 ? userAdvanceSalary.slice(0, 3).map(req => (
-                    <TableRow key={req.id}><TableCell>{formatDisplayDate(req.applyDate)}</TableCell><TableCell>{formatCurrency(req.advanceAmount)}</TableCell><TableCell>{req.reason}</TableCell><TableCell><Badge variant={req.status === 'Approved' ? 'default' : 'secondary'}>{req.status}</Badge></TableCell></TableRow>
-                  )) : <TableRow><TableCell colSpan={4} className="text-center">No advance salary requests found.</TableCell></TableRow>}
-                </TableBody></Table>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Current Leave Status Card */}
+        {leaveGroup && (
+          <Card className="shadow-xl">
+            <CardHeader>
+              <div className="flex flex-row justify-between items-center">
+                <div className="space-y-1.5">
+                  <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                    <Plane className="h-6 w-6 text-primary" />
+                    Current Leave Status
+                  </CardTitle>
+                  <CardDescription>
+                    Leave balances based on <strong>{leaveGroup.groupName}</strong> policy for {new Date().getFullYear()}.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="view-mode" className={cn("text-sm font-medium", viewMode === 'list' ? "text-primary" : "text-muted-foreground")}>List</Label>
+                  <Switch
+                    id="view-mode"
+                    checked={viewMode === 'graph'}
+                    onCheckedChange={(checked) => setViewMode(checked ? 'graph' : 'list')}
+                  />
+                  <Label htmlFor="view-mode" className={cn("text-sm font-medium", viewMode === 'graph' ? "text-primary" : "text-muted-foreground")}>Graph</Label>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {viewMode === 'list' ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Leave Type</TableHead>
+                        <TableHead className="text-center">Total Allowed</TableHead>
+                        <TableHead className="text-center">Used (Approved)</TableHead>
+                        <TableHead className="text-right">Balance</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {leaveBalances.map((balance) => (
+                        <TableRow key={balance.name}>
+                          <TableCell className="font-medium">{balance.name}</TableCell>
+                          <TableCell className="text-center">{balance.allowed}</TableCell>
+                          <TableCell className="text-center">{balance.used}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={balance.balance > 0 ? "default" : "destructive"}>
+                              {balance.balance}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-4">
+                  {leaveBalances.map((balance, index) => {
+                    const data = [
+                      { name: 'Leave remaining', value: balance.balance, color: '#10b981' }, // emerald-500
+                      { name: 'Leave taken', value: balance.used, color: '#3b82f6' }, // blue-500
+                    ];
+                    // If purely empty (no balance, no used), don't show or show empty state? 
+                    // Assuming valid config, at least allowed > 0.
+
+                    return (
+                      <div key={balance.name} className="flex flex-col items-center justify-center p-4 bg-background rounded-xl border shadow-sm">
+                        <h4 className="text-lg font-semibold mb-2 text-center text-foreground">{balance.name}</h4>
+                        <div className="h-[200px] w-full relative">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={data}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={80}
+                                paddingAngle={0}
+                                dataKey="value"
+                                startAngle={90}
+                                endAngle={-270}
+                              >
+                                {data.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                ))}
+                              </Pie>
+                              <RechartsTooltip
+                                formatter={(value: any, name: any) => [value, name]}
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                          {/* Center Text Overlay */}
+                          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span className="text-3xl font-bold text-blue-500">{balance.used}</span>
+                            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Takens</span>
+                          </div>
+                        </div>
+                        <div className="w-full mt-4 space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-blue-500" />
+                              <span className="text-muted-foreground">Leave taken</span>
+                            </div>
+                            <span className="font-bold text-blue-500">{balance.used}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                              <span className="text-muted-foreground">Leave remaining</span>
+                            </div>
+                            <span className="font-bold text-emerald-500">{balance.balance}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -2388,6 +2367,33 @@ export default function AccountDetailsPage() {
                       <TableCell><Badge variant={visit.status === 'Approved' ? 'default' : 'secondary'}>{visit.status}</Badge></TableCell>
                     </TableRow>
                   )) : <TableRow><TableCell colSpan={5} className="text-center">No visit applications found.</TableCell></TableRow>}
+                </TableBody></Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Wallet className="h-6 w-6 text-primary" />
+                Advance Salary Requests
+              </CardTitle>
+              <CardDescription>Your recent advance salary applications.</CardDescription>
+            </div>
+            <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/payroll/advance-salary/add")}>
+              <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/payroll/advance-salary/add"}>
+                <PlusCircle className="mr-2 h-4 w-4" />Apply
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto w-full">
+              <Table><TableHeader><TableRow><TableHead>Apply Date</TableHead><TableHead>Amount</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {userAdvanceSalary.length > 0 ? userAdvanceSalary.slice(0, 3).map(req => (
+                    <TableRow key={req.id}><TableCell>{formatDisplayDate(req.applyDate)}</TableCell><TableCell>{formatCurrency(req.advanceAmount)}</TableCell><TableCell>{req.reason}</TableCell><TableCell><Badge variant={req.status === 'Approved' ? 'default' : 'secondary'}>{req.status}</Badge></TableCell></TableRow>
+                  )) : <TableRow><TableCell colSpan={4} className="text-center">No advance salary requests found.</TableCell></TableRow>}
                 </TableBody></Table>
             </div>
           </CardContent>
