@@ -194,7 +194,7 @@ export default function AccountDetailsPage() {
   const [checkInOutRemarks, setCheckInOutRemarks] = React.useState('');
   const [capturedImage, setCapturedImage] = React.useState<File | null>(null);
   const [imagePreview, setImagePreview] = React.useState<string>('');
-  const [currentLocation, setCurrentLocation] = React.useState<{ latitude: number; longitude: number; address?: string } | null>(null);
+  const [currentLocation, setCurrentLocation] = React.useState<MultipleCheckInOutLocation | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = React.useState(false);
   const [isSubmittingCheckInOut, setIsSubmittingCheckInOut] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -431,7 +431,7 @@ export default function AccountDetailsPage() {
   }, [outTimeHour, outTimeMinute, outTimePeriod]);
 
   const updateLocation = useCallback(async (showNotification = false, forceRefresh = false) => {
-    if (isLoadingLocation) return;
+    if (isLoadingLocation) return null;
     setIsLoadingLocation(true);
 
     let progressToast: any = null;
