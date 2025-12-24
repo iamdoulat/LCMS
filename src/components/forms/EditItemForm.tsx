@@ -255,45 +255,57 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
 
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Image Upload Section */}
-          <div className="w-full md:w-1/4 flex flex-col gap-4">
-            <div className="aspect-square w-full rounded-md border-2 border-dashed flex items-center justify-center bg-muted/50 overflow-hidden relative">
-              <Image
-                src={photoPreview && !selectedFile ? externalUrl || photoPreview : photoPreview || externalUrl || "https://placehold.co/400x400/e2e8f0/e2e8f0?text=Item+Image"}
-                width={400}
-                height={400}
-                alt="Item image placeholder"
-                className="object-cover w-full h-full"
-              />
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Input type="file" accept="image/*" onChange={onFileSelect} className="flex-1" />
-                <Button type="button" onClick={() => { setSelectedFile(null); setPhotoPreview(null); setExternalUrl(''); }} variant="outline" size="icon" title="Clear Image">
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs font-medium text-muted-foreground ml-1">Or External URL:</span>
-                <Input
-                  placeholder="https://example.com/image.jpg"
-                  value={externalUrl}
-                  onChange={(e) => {
-                    setExternalUrl(e.target.value);
-                  }}
-                  className="h-8 text-sm"
+        {/* Main Details Section */}
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Image Upload Column */}
+          <div className="w-full lg:w-1/4">
+            <div className="sticky top-6 space-y-4">
+              <div className="aspect-square w-full rounded-xl border-2 border-dashed border-primary/20 flex items-center justify-center bg-muted/30 overflow-hidden relative shadow-inner group">
+                <Image
+                  src={photoPreview || externalUrl || "https://placehold.co/400x400/f1f5f9/94a3b8?text=Product+Image"}
+                  width={400}
+                  height={400}
+                  alt="Product preview"
+                  className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
                 />
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Input type="file" accept="image/*" onChange={onFileSelect} className="flex-1 h-10" />
+                  <Button type="button" onClick={() => { setSelectedFile(null); setPhotoPreview(null); setExternalUrl(''); }} variant="outline" size="icon" className="shrink-0 hover:bg-destructive/10 hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Update Image URL</label>
+                  <Input
+                    placeholder="https://example.com/image.jpg"
+                    value={externalUrl}
+                    onChange={(e) => {
+                      setExternalUrl(e.target.value);
+                      if (e.target.value) setPhotoPreview(e.target.value);
+                    }}
+                    className="h-10 text-sm bg-muted/30"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="flex-1 space-y-6">
-            <h3 className={cn(sectionHeadingClass, "mt-0")}>
-              <Package className="h-5 w-5" /> Item Details
-            </h3>
+          {/* Form Fields Column */}
+          <div className="flex-1 space-y-8">
+            <div className="flex items-center gap-3 border-b pb-4 mb-2">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Package className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Product Information</h3>
+                <p className="text-sm text-muted-foreground">Manage and edit your product details</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <FormField
                 control={form.control}
@@ -302,7 +314,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                   <FormItem className="col-span-1 md:col-span-2">
                     <FormLabel>Item Name*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter item name" {...field} />
+                      <Input placeholder="Enter product name" {...field} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -315,7 +327,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                   <FormItem className="col-span-1">
                     <FormLabel>Model Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter model number" {...field} value={field.value ?? ''} />
+                      <Input placeholder="Model #" {...field} value={field.value ?? ''} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -323,27 +335,18 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
               />
               <FormField
                 control={form.control}
-                name="itemSection"
-                render={({ field }) => {
-                  const options = itemSections?.map(s => ({ value: s.name, label: s.name })) || [];
-                  if (field.value && !options.some(o => o.value === field.value)) {
-                    options.unshift({ value: field.value, label: `${field.value} (Legacy)` });
-                  }
-                  return (
-                    <FormItem className="col-span-1">
-                      <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Item Section*</FormLabel>
-                      <CheckboxCombobox
-                        options={options}
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        placeholder={isLoadingItemSections ? "Loading..." : "Select item section"}
-                        searchPlaceholder="Search item sections..."
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
+                name="itemCode"
+                render={({ field }) => (
+                  <FormItem className="col-span-1">
+                    <FormLabel>SKU / Item Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Unique code" {...field} value={field.value ?? ''} className="h-11" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
+
               <FormField
                 control={form.control}
                 name="category"
@@ -361,6 +364,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                         onValueChange={field.onChange}
                         placeholder={isLoadingCategories ? "Loading..." : "Select category"}
                         searchPlaceholder="Search categories..."
+                        className="h-11"
                       />
                       <FormMessage />
                     </FormItem>
@@ -369,14 +373,39 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
               />
               <FormField
                 control={form.control}
+                name="itemSection"
+                render={({ field }) => {
+                  const options = itemSections?.map(s => ({ value: s.name, label: s.name })) || [];
+                  if (field.value && !options.some(o => o.value === field.value)) {
+                    options.unshift({ value: field.value, label: `${field.value} (Legacy)` });
+                  }
+                  return (
+                    <FormItem className="col-span-1">
+                      <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Section*</FormLabel>
+                      <CheckboxCombobox
+                        options={options}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder={isLoadingItemSections ? "Loading..." : "Select section"}
+                        searchPlaceholder="Search sections..."
+                        className="h-11"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+
+              <FormField
+                control={form.control}
                 name="itemType"
                 render={({ field }) => (
                   <FormItem className="col-span-1">
                     <FormLabel>Item Type*</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select item type" />
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -390,50 +419,17 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="supplierId"
-                render={({ field }) => (
-                  <FormItem className="col-span-1 md:col-span-2">
-                    <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier Name</FormLabel>
-                    <Combobox
-                      options={supplierOptions}
-                      value={field.value || PLACEHOLDER_SUPPLIER_VALUE}
-                      onValueChange={(value) => field.onChange(value === PLACEHOLDER_SUPPLIER_VALUE ? '' : value)}
-                      placeholder="Search Supplier..."
-                      selectPlaceholder={isLoadingSuppliers ? "Loading Suppliers..." : "Select Supplier (Optional)"}
-                      emptyStateMessage="No supplier found."
-                      disabled={isLoadingSuppliers}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="itemCode"
-                render={({ field }) => (
-                  <FormItem className="col-span-1">
-                    <FormLabel>Item Code/SKU</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter item code or SKU" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {watchItemType === 'Variant' ? (
+              {watchItemType === 'Variant' && (
                 <FormField
                   control={form.control}
                   name="itemVariation"
                   render={({ field }) => (
                     <FormItem className="col-span-1">
-                      <FormLabel>Item Variation</FormLabel>
+                      <FormLabel>Variation</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={isLoadingItemVariations ? "Loading..." : "Select variation"} />
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder={isLoadingItemVariations ? "..." : "Variation"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -446,17 +442,34 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                     </FormItem>
                   )}
                 />
-              ) : <div className="hidden lg:block col-span-1"></div>}
+              )}
 
-
+              <FormField
+                control={form.control}
+                name="supplierId"
+                render={({ field }) => (
+                  <FormItem className="col-span-1 md:col-span-2">
+                    <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier</FormLabel>
+                    <Combobox
+                      options={supplierOptions}
+                      value={field.value || PLACEHOLDER_SUPPLIER_VALUE}
+                      onValueChange={(value) => field.onChange(value === PLACEHOLDER_SUPPLIER_VALUE ? '' : value)}
+                      placeholder="Search..."
+                      selectPlaceholder={isLoadingSuppliers ? "Loading..." : "Select Supplier"}
+                      className="h-11"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="brandName"
                 render={({ field }) => (
                   <FormItem className="col-span-1">
-                    <FormLabel className="flex items-center"><Tag className="h-4 w-4 mr-1 text-muted-foreground" />Brand Name</FormLabel>
+                    <FormLabel className="flex items-center"><Tag className="h-4 w-4 mr-1 text-muted-foreground" />Brand</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter brand name" {...field} value={field.value ?? ''} />
+                      <Input placeholder="Brand Name" {...field} value={field.value ?? ''} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -469,7 +482,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                   <FormItem className="col-span-1">
                     <FormLabel>Unit</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., pcs, kg, m" {...field} value={field.value ?? ''} />
+                      <Input placeholder="pcs, kg, etc" {...field} value={field.value ?? ''} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -481,10 +494,10 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem className="col-span-full">
+                <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Enter item description" {...field} rows={3} value={field.value ?? ''} className="resize-none" />
+                    <Textarea placeholder="Detailed product description..." {...field} rows={4} className="bg-muted/10 resize-none focus:bg-background transition-colors" value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -493,174 +506,187 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
           </div>
         </div>
 
-        <Separator className="my-8" />
-
-        <div className="space-y-8">
-          <Card className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="pt-6">
-              <div className={sectionHeadingClass}><DollarSign className="w-5 h-5" /> Pricing Configuration</div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4">
-                <FormField
-                  control={form.control}
-                  name="currency"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Currency</FormLabel>
-                      <Combobox
-                        options={[{ value: 'BDT', label: 'BDT - Bangladeshi Taka (৳)' }, ...currencyOptions.filter(c => c.value !== 'BDT')]}
-                        value={field.value}
-                        onSelect={field.onChange}
-                        placeholder="Select currency"
-                        searchPlaceholder="Search currency..."
-                        className="w-full"
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="salesPrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sales Price</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="absolute left-3 top-2.5 text-muted-foreground font-medium">
-                            {watchCurrency === 'BDT' ? '৳' : currencies?.find(c => c.code === watchCurrency)?.symbol || '$'}
-                          </span>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-8 h-11" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="purchasePrice"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Purchase Price</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="absolute left-3 top-2.5 text-muted-foreground font-medium">
-                            {watchCurrency === 'BDT' ? '৳' : currencies?.find(c => c.code === watchCurrency)?.symbol || '$'}
-                          </span>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-8 h-11" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        {/* Pricing Section */}
+        <Card className="border-l-4 border-l-green-500 overflow-hidden shadow-md hover:shadow-lg transition-all duration-300">
+          <CardContent className="p-0">
+            <div className="bg-green-50/50 dark:bg-green-950/20 px-6 py-4 border-b">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-bold">
+                <DollarSign className="w-5 h-5" />
+                <span className="uppercase tracking-wider text-sm">Pricing Details</span>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="pt-6">
-              <div className={sectionHeadingClass}><Warehouse className="h-5 w-5" /> Inventory Management</div>
-              <div className="mt-4 space-y-6">
-                <FormField
-                  control={form.control}
-                  name="manageStock"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 bg-muted/20">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="hover:cursor-pointer font-medium text-foreground">
-                          Manage inventory stock levels for this item
-                        </FormLabel>
-                        <FormDescription>
-                          Enable to track current quantity, ideal levels, and warning thresholds.
-                        </FormDescription>
+            </div>
+            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Currency</FormLabel>
+                    <Combobox
+                      options={[{ value: 'BDT', label: 'BDT - Bangladeshi Taka (৳)' }, ...currencyOptions.filter(c => c.value !== 'BDT')]}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Currency"
+                      selectPlaceholder="Select Currency"
+                      className="h-11"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="salesPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Selling Price</FormLabel>
+                    <FormControl>
+                      <div className="relative group">
+                        <span className="absolute left-3.5 top-2.5 text-muted-foreground font-semibold group-focus-within:text-green-600 transition-colors">
+                          {watchCurrency === 'BDT' ? '৳' : currencies?.find(c => c.code === watchCurrency)?.symbol || '$'}
+                        </span>
+                        <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-10 h-11 text-lg font-medium" />
                       </div>
-                    </FormItem>
-                  )}
-                />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="purchasePrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cost Price</FormLabel>
+                    <FormControl>
+                      <div className="relative group">
+                        <span className="absolute left-3.5 top-2.5 text-muted-foreground font-semibold group-focus-within:text-green-600 transition-colors">
+                          {watchCurrency === 'BDT' ? '৳' : currencies?.find(c => c.code === watchCurrency)?.symbol || '$'}
+                        </span>
+                        <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-10 h-11 text-lg font-medium" />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-                {watchManageStock && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
-                    <FormField
-                      control={form.control}
-                      name="currentQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Current Quantity*</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="0" {...field} value={field.value ?? ''} className="h-11" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Location</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Warehouse A" {...field} value={field.value ?? ''} className="h-11" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="idealQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Ideal Quantity</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="100" {...field} value={field.value ?? ''} className="h-11" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="warningQuantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="flex items-center"><AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />Warning Level</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="10" {...field} value={field.value ?? ''} className="h-11 border-amber-200 focus-visible:ring-amber-500" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+        {/* Inventory Section */}
+        <Card className="border-l-4 border-l-blue-500 overflow-hidden shadow-md hover:shadow-lg transition-all duration-300">
+          <CardContent className="p-0">
+            <div className="bg-blue-50/50 dark:bg-blue-950/20 px-6 py-4 border-b flex justify-between items-center">
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold">
+                <Warehouse className="w-5 h-5" />
+                <span className="uppercase tracking-wider text-sm">Inventory Management</span>
+              </div>
+              <FormField
+                control={form.control}
+                name="manageStock"
+                render={({ field }) => (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-muted-foreground mr-1">Track Stock</span>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="h-5 w-5 border-blue-400 data-[state=checked]:bg-blue-500"
                     />
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              />
+            </div>
 
-        <div className="flex justify-end gap-4 pt-4">
-          <Button type="submit" className="w-full md:w-auto h-12 px-10 text-lg font-semibold shadow-lg hover:shadow-xl transition-all" disabled={isSubmitting || isLoadingSuppliers}>
+            <div className={cn("p-8 transition-all duration-500", !watchManageStock && "opacity-40 grayscale-[0.5] pointer-events-none")}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <FormField
+                  control={form.control}
+                  name="currentQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>In Stock Balance*</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} className="h-11 font-bold" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Storage Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Warehouse/Shelf" {...field} value={field.value ?? ''} className="h-11" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="idealQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Target Level</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="100" {...field} value={field.value ?? ''} className="h-11" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="warningQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center text-amber-600 dark:text-amber-400">
+                        <AlertTriangle className="h-4 w-4 mr-1" />
+                        Warning Level
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="10"
+                          {...field}
+                          value={field.value ?? ''}
+                          className="h-11 border-amber-200 focus-visible:ring-amber-500 font-bold"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Action Bar */}
+        <div className="flex flex-col sm:flex-row justify-end items-center gap-4 pt-6">
+          <Button
+            type="submit"
+            className="w-full sm:w-auto h-14 px-12 text-lg font-bold shadow-xl hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            disabled={isSubmitting || isLoadingSuppliers}
+          >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Updating Item...
+                <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                Updating...
               </>
             ) : (
               <>
-                <Save className="mr-2 h-5 w-5" />
-                Save Changes
+                <Save className="mr-2 h-6 w-6" />
+                Update Product Details
               </>
             )}
           </Button>
         </div>
+
       </form>
 
       <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>

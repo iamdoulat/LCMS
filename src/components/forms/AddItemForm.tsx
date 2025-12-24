@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import type { ItemFormValues, Item, SupplierDocument, PettyCashCategoryDocument, ItemSectionDocument, ItemVariationDocument, CurrencyDocument } from '@/types';
 import { itemSchema, itemTypeOptions } from '@/types';
