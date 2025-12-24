@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
+import { useSearchParams } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { Loader2, Check, X, Search, Edit, Trash2, Save, MoreHorizontal, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -49,6 +50,8 @@ const formatDisplayDate = (dateString?: string | null) => {
 export default function AttendanceReconciliationPage() {
     const { user, userRole } = useAuth();
     const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const searchParams = useSearchParams();
+    const isTeamView = searchParams.get('view') === 'team';
     const isHROrAdmin = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
     const [reconciliations, setReconciliations] = useState<AttendanceReconciliation[]>([]);
     const [loading, setLoading] = useState(true);
@@ -414,6 +417,11 @@ export default function AttendanceReconciliationPage() {
 
         if (!matchesSearch) return false;
 
+        // If explicitly requested team view, filter by team even for HROrAdmin
+        if (isTeamView && isSupervisor) {
+            return supervisedEmployeeIds.includes(r.employeeId);
+        }
+
         if (isHROrAdmin) return true;
         if (isSupervisor) return supervisedEmployeeIds.includes(r.employeeId);
 
@@ -477,11 +485,13 @@ export default function AttendanceReconciliationPage() {
                 </div>
             </div>
 
-            {!isHROrAdmin && isSupervisor && (
+            {(isTeamView || (!isHROrAdmin && isSupervisor)) && (
                 <Alert className="mb-4">
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                        You are viewing reconciliation requests from your team members only.
+                        {isTeamView
+                            ? "You are viewing reconciliation requests from your team members only (Team View)."
+                            : "You are viewing reconciliation requests from your team members only."}
                     </AlertDescription>
                 </Alert>
             )}

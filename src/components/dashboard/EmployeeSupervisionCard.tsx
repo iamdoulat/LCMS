@@ -93,9 +93,9 @@ export function EmployeeSupervisionCard({ currentEmployeeId }: EmployeeSupervisi
                 </div>
 
                 <div className="mt-4 pt-4 border-t flex gap-2">
-                    <Link href="/dashboard/hr/attendance?view=team" className="w-full">
+                    <Link href="/dashboard/hr/attendance-reconciliation?view=team" className="w-full">
                         <Button variant="outline" size="sm" className="w-full text-xs h-8">
-                            View Team Attendance
+                            View Attendance Reconciliation
                         </Button>
                     </Link>
                     <Link href="/dashboard/hr/leaves?view=team" className="w-full">
