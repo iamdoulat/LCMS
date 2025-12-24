@@ -18,7 +18,7 @@ export const shipmentModeOptions = ["Sea", "Air", "By Courier"] as const;
 export type ShipmentMode = typeof shipmentModeOptions[number];
 
 export const currencyOptions = ["USD", "EURO"] as const;
-export type Currency = typeof currencyOptions[number];
+// export type Currency = typeof currencyOptions[number];
 
 export const trackingCourierOptions = ["DHL", "FedEx", "UPS"] as const;
 export type TrackingCourier = (typeof trackingCourierOptions)[number] | "";
@@ -751,6 +751,23 @@ export interface DemoMachineApplicationDocument {
 // --- END Demo Machine Application Types ---
 // --- END Demo Machine Types ---
 
+// --- Currency Types ---
+export interface Currency {
+  id?: string;
+  name: string;
+  code: string;
+  symbol: string;
+}
+export type CurrencyDocument = Currency & { id: string, createdAt: any };
+
+export const currencySchema = z.object({
+  name: z.string().min(1, "Currency Name is required."),
+  code: z.string().min(1, "Currency Code is required."),
+  symbol: z.string().min(1, "Currency Symbol is required."),
+});
+
+export type CurrencyFormValues = z.infer<typeof currencySchema>;
+
 // --- Item (Inventory) Types ---
 export const itemTypeOptions = ["Single", "Variant"] as const;
 export type ItemType = typeof itemTypeOptions[number];
@@ -768,6 +785,7 @@ export interface Item {
   countryOfOrigin?: string; // Added field
   supplierId?: string; // New field
   supplierName?: string; // New field (denormalized for display)
+  currency: string; // Added field
   description?: string;
   unit?: string; // e.g., pcs, kg, m
   salesPrice?: number;
@@ -793,7 +811,9 @@ export const itemSchema = z.object({
   itemVariation: z.string().optional(),
   itemCode: z.string().optional(),
   brandName: z.string().optional(),
+  countryOfOrigin: z.string().optional(),
   supplierId: z.string().optional(),
+  currency: z.string().default("BDT"),
   description: z.string().optional(),
   unit: z.string().optional(),
   salesPrice: z.preprocess(

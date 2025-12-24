@@ -63,6 +63,10 @@ const formatCurrency = (value?: number) => {
 };
 
 
+import { AddCurrencyForm } from '@/components/forms/AddCurrencyForm';
+import { EditCurrencyForm } from '@/components/forms/EditCurrencyForm';
+import type { CurrencyDocument } from '@/types';
+
 export default function PettyCashSettingsPage() {
     const { userRole } = useAuth();
     const isReadOnly = userRole?.includes('Viewer');
@@ -72,6 +76,7 @@ export default function PettyCashSettingsPage() {
     const { data: itemCategories, isLoading: isLoadingItemCategories } = useFirestoreQuery<ItemCategoryDocument[]>(query(collection(firestore, 'item_categories'), orderBy("createdAt", "desc")), undefined, ['item_categories']);
     const { data: itemVariations, isLoading: isLoadingItemVariations } = useFirestoreQuery<ItemVariationDocument[]>(query(collection(firestore, 'item_variations'), orderBy("createdAt", "desc")), undefined, ['item_variations']);
     const { data: itemSections, isLoading: isLoadingItemSections } = useFirestoreQuery<ItemSectionDocument[]>(query(collection(firestore, 'item_sections'), orderBy("createdAt", "desc")), undefined, ['item_sections']);
+    const { data: currencies, isLoading: isLoadingCurrencies } = useFirestoreQuery<CurrencyDocument[]>(query(collection(firestore, 'currencies'), orderBy("createdAt", "desc")), undefined, ['currencies']);
 
 
     const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = React.useState(false);
@@ -79,6 +84,7 @@ export default function PettyCashSettingsPage() {
     const [isAddItemCategoryDialogOpen, setIsAddItemCategoryDialogOpen] = React.useState(false);
     const [isAddItemVariationDialogOpen, setIsAddItemVariationDialogOpen] = React.useState(false);
     const [isAddItemSectionDialogOpen, setIsAddItemSectionDialogOpen] = React.useState(false);
+    const [isAddCurrencyDialogOpen, setIsAddCurrencyDialogOpen] = React.useState(false);
 
     const [editingAccount, setEditingAccount] = React.useState<PettyCashAccountDocument | null>(null);
     const [isEditAccountDialogOpen, setIsEditAccountDialogOpen] = React.useState(false);
@@ -92,7 +98,8 @@ export default function PettyCashSettingsPage() {
     const [editingItemVariation, setEditingItemVariation] = React.useState<ItemVariationDocument | null>(null);
     const [isEditItemVariationDialogOpen, setIsEditItemVariationDialogOpen] = React.useState(false);
 
-
+    const [editingCurrency, setEditingCurrency] = React.useState<CurrencyDocument | null>(null);
+    const [isEditCurrencyDialogOpen, setIsEditCurrencyDialogOpen] = React.useState(false);
 
 
     const handleEdit = (item: any, setEditingItem: React.Dispatch<any>, setIsEditDialogOpen: React.Dispatch<any>) => {
@@ -149,7 +156,10 @@ export default function PettyCashSettingsPage() {
                                     <TableBody>
                                         {data.map(item => (
                                             <TableRow key={item.id}>
-                                                <TableCell>{item.name}</TableCell>
+                                                <TableCell>
+                                                    {item.name}
+                                                    {collectionName === 'currencies' && <span className="text-xs text-muted-foreground ml-2">({item.code} - {item.symbol})</span>}
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -184,6 +194,28 @@ export default function PettyCashSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Currency Configuration */}
+                    <Dialog open={isAddCurrencyDialogOpen} onOpenChange={setIsAddCurrencyDialogOpen}>
+                        {renderTableSection(
+                            "Currency Configuration",
+                            "Manage currencies (e.g., USD, BDT).",
+                            currencies,
+                            isLoadingCurrencies,
+                            () => setIsAddCurrencyDialogOpen(true),
+                            (item) => handleEdit(item, setEditingCurrency, setIsEditCurrencyDialogOpen),
+                            'currencies',
+                            // @ts-ignore
+                            List
+                        )}
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Add New Currency</DialogTitle>
+                                <DialogDescription>Add a new currency for use in the application.</DialogDescription>
+                            </DialogHeader>
+                            <AddCurrencyForm onFormSubmit={() => setIsAddCurrencyDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+
                     <Dialog open={isAddCategoryDialogOpen} onOpenChange={setIsAddCategoryDialogOpen}>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
@@ -344,6 +376,21 @@ export default function PettyCashSettingsPage() {
                     </Dialog>
                 </CardContent>
             </Card>
+
+            {editingCurrency && (
+                <Dialog open={isEditCurrencyDialogOpen} onOpenChange={setIsEditCurrencyDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Edit Currency</DialogTitle>
+                            <DialogDescription>Update currency details.</DialogDescription>
+                        </DialogHeader>
+                        <EditCurrencyForm
+                            initialData={editingCurrency}
+                            onFormSubmit={() => setIsEditCurrencyDialogOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
 
             {editingAccount && (
                 <Dialog open={isEditAccountDialogOpen} onOpenChange={setIsEditAccountDialogOpen}>

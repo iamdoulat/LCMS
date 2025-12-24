@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { ItemFormValues, ItemDocument, SupplierDocument, ItemCategoryDocument, ItemSectionDocument, ItemVariationDocument, PettyCashCategoryDocument } from '@/types';
+import type { ItemFormValues, ItemDocument, SupplierDocument, ItemCategoryDocument, ItemSectionDocument, ItemVariationDocument, PettyCashCategoryDocument, CurrencyDocument } from '@/types';
 import { itemSchema, itemTypeOptions } from '@/types';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -55,6 +55,9 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
   const { data: categories, isLoading: isLoadingCategories } = useFirestoreQuery<ItemCategoryDocument[]>(query(collection(firestore, 'item_categories')), undefined, ['item_categories']);
   const { data: itemSections, isLoading: isLoadingItemSections } = useFirestoreQuery<ItemSectionDocument[]>(query(collection(firestore, 'item_sections')), undefined, ['item_sections']);
   const { data: itemVariations, isLoading: isLoadingItemVariations } = useFirestoreQuery<ItemVariationDocument[]>(query(collection(firestore, 'item_variations')), undefined, ['item_variations']);
+  const { data: currencies } = useFirestoreQuery<CurrencyDocument[]>(query(collection(firestore, 'currencies'), orderBy("name", "asc")), undefined, ['currencies']);
+
+  const [currencyOptions, setCurrencyOptions] = React.useState<ComboboxOption[]>([]);
 
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
@@ -68,6 +71,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
       itemCode: '',
       brandName: '',
       supplierId: '',
+      currency: 'BDT', // Default Currency
       description: '',
       unit: 'pcs',
       salesPrice: undefined,
@@ -79,6 +83,12 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
       warningQuantity: undefined,
     },
   });
+
+  React.useEffect(() => {
+    if (currencies) {
+      setCurrencyOptions(currencies.map(c => ({ value: c.code, label: `${c.code} - ${c.name} (${c.symbol})` })));
+    }
+  }, [currencies]);
 
   React.useEffect(() => {
     const fetchSuppliers = async () => {
@@ -112,6 +122,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
         itemCode: initialData.itemCode || '',
         brandName: initialData.brandName || '',
         supplierId: initialData.supplierId || '',
+        currency: initialData.currency || 'BDT',
         description: initialData.description || '',
         unit: initialData.unit || 'pcs',
         salesPrice: initialData.salesPrice,
@@ -132,6 +143,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
 
   const watchManageStock = form.watch("manageStock");
   const watchItemType = form.watch("itemType");
+  const watchCurrency = form.watch("currency");
 
   const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -199,6 +211,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
         brandName: data.brandName || undefined,
         supplierId: data.supplierId || undefined,
         supplierName: selectedSupplier?.label || undefined,
+        currency: data.currency,
         description: data.description || undefined,
         unit: data.unit || undefined,
         salesPrice: data.salesPrice,
@@ -462,93 +475,62 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="salesPrice"
-                render={({ field }) => (
-                  <FormItem className="col-span-1 md:col-span-2">
-                    <FormLabel className="flex items-center"><DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />Sales Price</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="purchasePrice"
-                render={({ field }) => (
-                  <FormItem className="col-span-1 md:col-span-2">
-                    <FormLabel className="flex items-center"><DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />Purchase Price</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem className="col-span-1 md:col-span-2 lg:col-span-4">
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter item description" {...field} rows={3} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
-
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem className="col-span-full">
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Enter item description" {...field} rows={3} value={field.value ?? ''} className="resize-none" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         </div>
 
-        <Separator />
+        <Separator className="my-8" />
 
-        <h3 className={cn(sectionHeadingClass)}>
-          <Warehouse className="h-5 w-5" /> Inventory Management
-        </h3>
-        <FormField
-          control={form.control}
-          name="manageStock"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel className="hover:cursor-pointer">
-                  Manage inventory stock levels for this item
-                </FormLabel>
-                <FormDescription>
-                  Enable to track current quantity, ideal levels, and warning thresholds.
-                </FormDescription>
-              </div>
-            </FormItem>
-          )}
-        />
-
-        {watchManageStock && (
-          <Card className="bg-muted/30 p-6">
-            <CardContent className="space-y-4 pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-8">
+          <Card className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="pt-6">
+              <div className={sectionHeadingClass}><DollarSign className="w-5 h-5" /> Pricing Configuration</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4">
                 <FormField
                   control={form.control}
-                  name="currentQuantity"
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Currency</FormLabel>
+                      <Combobox
+                        options={[{ value: 'BDT', label: 'BDT - Bangladeshi Taka (৳)' }, ...currencyOptions.filter(c => c.value !== 'BDT')]}
+                        value={field.value}
+                        onSelect={field.onChange}
+                        placeholder="Select currency"
+                        searchPlaceholder="Search currency..."
+                        className="w-full"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="salesPrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Current Quantity*</FormLabel>
+                      <FormLabel>Sales Price</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5 text-muted-foreground font-medium">
+                            {watchCurrency === 'BDT' ? '৳' : currencies?.find(c => c.code === watchCurrency)?.symbol || '$'}
+                          </span>
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-8 h-11" />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -556,44 +538,18 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                 />
                 <FormField
                   control={form.control}
-                  name="location"
+                  name="purchasePrice"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Location</FormLabel>
+                      <FormLabel>Purchase Price</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Warehouse A, Shelf B-3" {...field} value={field.value ?? ''} />
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5 text-muted-foreground font-medium">
+                            {watchCurrency === 'BDT' ? '৳' : currencies?.find(c => c.code === watchCurrency)?.symbol || '$'}
+                          </span>
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} className="pl-8 h-11" />
+                        </div>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="idealQuantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ideal Quantity</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="warningQuantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center"><AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />Warning Quantity</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormDescription>
-                        Receive alerts when stock reaches this level.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -601,23 +557,110 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
               </div>
             </CardContent>
           </Card>
-        )}
 
+          <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="pt-6">
+              <div className={sectionHeadingClass}><Warehouse className="h-5 w-5" /> Inventory Management</div>
+              <div className="mt-4 space-y-6">
+                <FormField
+                  control={form.control}
+                  name="manageStock"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 bg-muted/20">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="hover:cursor-pointer font-medium text-foreground">
+                          Manage inventory stock levels for this item
+                        </FormLabel>
+                        <FormDescription>
+                          Enable to track current quantity, ideal levels, and warning thresholds.
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
 
+                {watchManageStock && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
+                    <FormField
+                      control={form.control}
+                      name="currentQuantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Current Quantity*</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="0" {...field} value={field.value ?? ''} className="h-11" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Location</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Warehouse A" {...field} value={field.value ?? ''} className="h-11" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="idealQuantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ideal Quantity</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="100" {...field} value={field.value ?? ''} className="h-11" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="warningQuantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />Warning Level</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="10" {...field} value={field.value ?? ''} className="h-11 border-amber-200 focus-visible:ring-amber-500" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingSuppliers}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Changes...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </>
-          )}
-        </Button>
+        <div className="flex justify-end gap-4 pt-4">
+          <Button type="submit" className="w-full md:w-auto h-12 px-10 text-lg font-semibold shadow-lg hover:shadow-xl transition-all" disabled={isSubmitting || isLoadingSuppliers}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Updating Item...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-5 w-5" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </div>
       </form>
 
       <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from 'react';
@@ -6,9 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { ItemFormValues, Item, SupplierDocument, PettyCashCategoryDocument, ItemSectionDocument, ItemVariationDocument } from '@/types';
+import type { ItemFormValues, Item, SupplierDocument, PettyCashCategoryDocument, ItemSectionDocument, ItemVariationDocument, CurrencyDocument } from '@/types';
 import { itemSchema, itemTypeOptions } from '@/types';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -28,16 +27,16 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { CheckboxCombobox } from "@/components/ui/checkbox-combobox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 
 const sectionHeadingClass = "font-semibold text-lg text-primary flex items-center gap-2 mb-4";
 const PLACEHOLDER_SUPPLIER_VALUE = "__ADD_ITEM_SUPPLIER_PLACEHOLDER__";
-
-import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 
 export function AddItemForm() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [supplierOptions, setSupplierOptions] = React.useState<ComboboxOption[]>([]);
   const [isLoadingSuppliers, setIsLoadingSuppliers] = React.useState(true);
+  const [currencyOptions, setCurrencyOptions] = React.useState<ComboboxOption[]>([]);
 
   // Image Upload State
   const [imgSrc, setImgSrc] = React.useState('');
@@ -48,11 +47,11 @@ export function AddItemForm() {
   const imgRef = React.useRef<HTMLImageElement>(null);
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
   const [externalUrl, setExternalUrl] = React.useState('');
-  const [isUploading, setIsUploading] = React.useState(false);
 
   const { data: categories, isLoading: isLoadingCategories } = useFirestoreQuery<PettyCashCategoryDocument[]>(query(collection(firestore, 'item_categories'), orderBy("createdAt", "desc")), undefined, ['item_categories']);
   const { data: itemSections, isLoading: isLoadingItemSections } = useFirestoreQuery<ItemSectionDocument[]>(query(collection(firestore, 'item_sections'), orderBy("createdAt", "desc")), undefined, ['item_sections']);
   const { data: itemVariations, isLoading: isLoadingItemVariations } = useFirestoreQuery<ItemVariationDocument[]>(query(collection(firestore, 'item_variations'), orderBy("createdAt", "desc")), undefined, ['item_variations']);
+  const { data: currencies } = useFirestoreQuery<CurrencyDocument[]>(query(collection(firestore, 'currencies'), orderBy("name", "asc")), undefined, ['currencies']);
 
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
@@ -62,9 +61,11 @@ export function AddItemForm() {
       category: '',
       itemSection: '',
       itemType: 'Single',
+      itemVariation: '',
       itemCode: '',
       brandName: '',
       supplierId: '',
+      currency: 'BDT', // Default to BDT
       description: '',
       unit: 'pcs',
       salesPrice: undefined,
@@ -79,6 +80,13 @@ export function AddItemForm() {
 
   const watchManageStock = form.watch("manageStock");
   const watchItemType = form.watch("itemType");
+  const watchCurrency = form.watch("currency");
+
+  React.useEffect(() => {
+    if (currencies) {
+      setCurrencyOptions(currencies.map(c => ({ value: c.code, label: `${c.code} - ${c.name} (${c.symbol})` })));
+    }
+  }, [currencies]);
 
   React.useEffect(() => {
     const fetchSuppliers = async () => {
@@ -144,77 +152,106 @@ export function AddItemForm() {
     setIsSubmitting(true);
 
     const selectedSupplier = supplierOptions.find(opt => opt.value === data.supplierId);
-
-    // Generate a new document reference with an ID beforehand
-    const newItemRef = doc(collection(firestore, "items"));
-    let photoDownloadURL = '';
+    let photoDownloadURL = null;
 
     try {
       if (selectedFile) {
-        const storageRef = ref(storage, `itemImages/${newItemRef.id}/profile.jpg`);
+        // We need an ID for the image path, but we don't have the doc ID yet.
+        // We can create a ref first or use a temp path, but usually better to let Firestore generate the ID.
+        // For simplicity in Add, we might upload to a temp location or just use a timestamp based name if we don't have ID.
+        // However, standard practice here is to Add Doc first then update? Or just generate ID first.
+        // Let's generate a new doc ref to get an ID.
+        const newDocRef = doc(collection(firestore, "items"));
+        const storageRef = ref(storage, `itemImages/${newDocRef.id}/profile.jpg`);
         await uploadBytes(storageRef, selectedFile);
         photoDownloadURL = await getDownloadURL(storageRef);
+
+        // Then set the doc with that ID
+        const dataToSave = {
+          ...data,
+          modelNumber: data.modelNumber || undefined,
+          itemVariation: data.itemType === 'Variant' ? data.itemVariation : undefined,
+          itemCode: data.itemCode || undefined,
+          brandName: data.brandName || undefined,
+          supplierId: data.supplierId || undefined,
+          supplierName: selectedSupplier?.label || undefined,
+          currency: data.currency,
+          description: data.description || undefined,
+          unit: data.unit || undefined,
+          currentQuantity: data.manageStock ? data.currentQuantity : undefined,
+          location: data.manageStock ? (data.location || undefined) : undefined,
+          idealQuantity: data.manageStock ? data.idealQuantity : undefined,
+          warningQuantity: data.manageStock ? data.warningQuantity : undefined,
+          photoURL: photoDownloadURL,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+
+        // Remove undefined keys
+        Object.keys(dataToSave).forEach(key => dataToSave[key as keyof typeof dataToSave] === undefined && delete dataToSave[key as keyof typeof dataToSave]);
+
+        await setDoc(newDocRef, dataToSave);
+
       } else if (externalUrl) {
         photoDownloadURL = externalUrl;
+        await addDoc(collection(firestore, 'items'), {
+          ...data,
+          modelNumber: data.modelNumber || undefined,
+          itemVariation: data.itemType === 'Variant' ? data.itemVariation : undefined,
+          itemCode: data.itemCode || undefined,
+          brandName: data.brandName || undefined,
+          supplierId: data.supplierId || undefined,
+          supplierName: selectedSupplier?.label || undefined,
+          currency: data.currency,
+          description: data.description || undefined,
+          unit: data.unit || undefined,
+          currentQuantity: data.manageStock ? data.currentQuantity : undefined,
+          location: data.manageStock ? (data.location || undefined) : undefined,
+          idealQuantity: data.manageStock ? data.idealQuantity : undefined,
+          warningQuantity: data.manageStock ? data.warningQuantity : undefined,
+          photoURL: photoDownloadURL,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        await addDoc(collection(firestore, 'items'), {
+          ...data,
+          modelNumber: data.modelNumber || undefined,
+          itemVariation: data.itemType === 'Variant' ? data.itemVariation : undefined,
+          itemCode: data.itemCode || undefined,
+          brandName: data.brandName || undefined,
+          supplierId: data.supplierId || undefined,
+          supplierName: selectedSupplier?.label || undefined,
+          currency: data.currency,
+          description: data.description || undefined,
+          unit: data.unit || undefined,
+          currentQuantity: data.manageStock ? data.currentQuantity : undefined,
+          location: data.manageStock ? (data.location || undefined) : undefined,
+          idealQuantity: data.manageStock ? data.idealQuantity : undefined,
+          warningQuantity: data.manageStock ? data.warningQuantity : undefined,
+          photoURL: null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
       }
-
-      const dataToSave: Omit<Item, 'id' | 'createdAt' | 'updatedAt'> & { createdAt: any, updatedAt: any, photoURL?: string | null } = {
-        itemName: data.itemName,
-        modelNumber: data.modelNumber || undefined,
-        category: data.category,
-        itemSection: data.itemSection,
-        itemType: data.itemType,
-        itemVariation: data.itemType === 'Variant' ? data.itemVariation : undefined,
-        itemCode: data.itemCode || undefined,
-        brandName: data.brandName || undefined,
-        supplierId: data.supplierId || undefined,
-        supplierName: selectedSupplier?.label || undefined,
-        description: data.description || undefined,
-        unit: data.unit || undefined,
-        salesPrice: data.salesPrice,
-        purchasePrice: data.purchasePrice,
-        manageStock: data.manageStock,
-        currentQuantity: data.manageStock ? data.currentQuantity : undefined,
-        location: data.manageStock ? (data.location || undefined) : undefined,
-        idealQuantity: data.manageStock ? data.idealQuantity : undefined,
-        warningQuantity: data.manageStock ? data.warningQuantity : undefined,
-        photoURL: photoDownloadURL || null,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-
-      Object.keys(dataToSave).forEach(key => {
-        if (dataToSave[key as keyof typeof dataToSave] === undefined) {
-          delete dataToSave[key as keyof typeof dataToSave];
-        }
-      });
-
-      await setDoc(newItemRef, dataToSave);
 
       Swal.fire({
         title: "Item Added!",
-        text: `Item "${data.itemName}" saved successfully with ID: ${newItemRef.id}.`,
+        text: `Item "${data.itemName}" has been successfully added.`,
         icon: "success",
-        timer: 1000,
-        showConfirmButton: true,
+        timer: 1500,
+        showConfirmButton: false,
       });
 
-      form.reset({
-        itemName: '', modelNumber: '', category: '', itemType: 'Single', itemVariation: '', itemCode: '', brandName: '', supplierId: '', description: '', unit: 'pcs', salesPrice: undefined, purchasePrice: undefined,
-        manageStock: false, currentQuantity: 0, location: '', idealQuantity: undefined, warningQuantity: undefined,
-      });
-      setSelectedFile(null);
+      form.reset();
       setPhotoPreview(null);
       setExternalUrl('');
+      setSelectedFile(null);
+      setCrop(undefined);
 
-    } catch (error) {
-      console.error("Error adding item document: ", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      Swal.fire({
-        title: "Save Failed",
-        text: `Failed to save item: ${errorMessage}`,
-        icon: "error",
-      });
+    } catch (error: any) {
+      console.error("Error adding item: ", error);
+      Swal.fire("Error", `Failed to add item: ${error.message}`, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -222,46 +259,57 @@ export function AddItemForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
 
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Image Upload Section */}
-          <div className="w-full md:w-1/4 flex flex-col gap-4">
-            <div className="aspect-square w-full rounded-md border-2 border-dashed flex items-center justify-center bg-muted/50 overflow-hidden relative">
-              <Image
-                src={photoPreview && !selectedFile ? externalUrl || photoPreview : photoPreview || externalUrl || "https://placehold.co/400x400/e2e8f0/e2e8f0?text=Item+Image"}
-                width={400}
-                height={400}
-                alt="Item image placeholder"
-                className="object-cover w-full h-full"
-              />
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Input type="file" accept="image/*" onChange={onFileSelect} className="flex-1" />
-                <Button type="button" onClick={() => { setSelectedFile(null); setPhotoPreview(null); setExternalUrl(''); }} variant="outline" size="icon" title="Clear Image">
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs font-medium text-muted-foreground ml-1">Or External URL:</span>
-                <Input
-                  placeholder="https://example.com/image.jpg"
-                  value={externalUrl}
-                  onChange={(e) => {
-                    setExternalUrl(e.target.value);
-                  }}
-                  className="h-8 text-sm"
+        {/* Main Details Section */}
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Image Upload Column */}
+          <div className="w-full lg:w-1/4">
+            <div className="sticky top-6 space-y-4">
+              <div className="aspect-square w-full rounded-xl border-2 border-dashed border-muted-foreground/20 flex items-center justify-center bg-muted/30 overflow-hidden relative shadow-inner group">
+                <Image
+                  src={photoPreview || externalUrl || "https://placehold.co/400x400/f1f5f9/94a3b8?text=Product+Image"}
+                  width={400}
+                  height={400}
+                  alt="Product preview"
+                  className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
                 />
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Input type="file" accept="image/*" onChange={onFileSelect} className="flex-1 h-10" />
+                  <Button type="button" onClick={() => { setSelectedFile(null); setPhotoPreview(null); setExternalUrl(''); }} variant="outline" size="icon" className="shrink-0 hover:bg-destructive/10 hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Or Image URL</label>
+                  <Input
+                    placeholder="https://example.com/image.jpg"
+                    value={externalUrl}
+                    onChange={(e) => {
+                      setExternalUrl(e.target.value);
+                      if (e.target.value) setPhotoPreview(e.target.value);
+                    }}
+                    className="h-10 text-sm bg-muted/30"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Main Form Fields */}
-          <div className="flex-1 space-y-6">
-            <h3 className={cn(sectionHeadingClass, "mt-0")}>
-              <Package className="h-5 w-5" /> Item Details
-            </h3>
+          {/* Form Fields Column */}
+          <div className="flex-1 space-y-8">
+            <div className="flex items-center gap-3 border-b pb-4 mb-2">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Package className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">General Information</h3>
+                <p className="text-sm text-muted-foreground">Basic details about your product</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <FormField
                 control={form.control}
@@ -270,7 +318,7 @@ export function AddItemForm() {
                   <FormItem className="col-span-1 md:col-span-2">
                     <FormLabel>Item Name*</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter item name" {...field} />
+                      <Input placeholder="Enter product name" {...field} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -280,10 +328,10 @@ export function AddItemForm() {
                 control={form.control}
                 name="modelNumber"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="col-span-1">
                     <FormLabel>Model Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter model number" {...field} value={field.value ?? ''} />
+                      <Input placeholder="Model #" {...field} value={field.value ?? ''} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -291,9 +339,23 @@ export function AddItemForm() {
               />
               <FormField
                 control={form.control}
+                name="itemCode"
+                render={({ field }) => (
+                  <FormItem className="col-span-1">
+                    <FormLabel>SKU / Item Code</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Unique code" {...field} value={field.value ?? ''} className="h-11" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="category"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="col-span-1">
                     <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Category*</FormLabel>
                     <CheckboxCombobox
                       options={categories?.map(c => ({ value: c.name, label: c.name })) || []}
@@ -301,6 +363,7 @@ export function AddItemForm() {
                       onValueChange={field.onChange}
                       placeholder={isLoadingCategories ? "Loading..." : "Select category"}
                       searchPlaceholder="Search categories..."
+                      className="h-11"
                     />
                     <FormMessage />
                   </FormItem>
@@ -310,29 +373,31 @@ export function AddItemForm() {
                 control={form.control}
                 name="itemSection"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Item Section*</FormLabel>
+                  <FormItem className="col-span-1">
+                    <FormLabel className="flex items-center"><Layers className="mr-2 h-4 w-4 text-muted-foreground" />Section*</FormLabel>
                     <CheckboxCombobox
                       options={itemSections?.map(s => ({ value: s.name, label: s.name })) || []}
                       value={field.value}
                       onValueChange={field.onChange}
-                      placeholder={isLoadingItemSections ? "Loading..." : "Select item section"}
-                      searchPlaceholder="Search item sections..."
+                      placeholder={isLoadingItemSections ? "Loading..." : "Select section"}
+                      searchPlaceholder="Search sections..."
+                      className="h-11"
                     />
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="itemType"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="col-span-1">
                     <FormLabel>Item Type*</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select item type" />
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -346,53 +411,17 @@ export function AddItemForm() {
                 )}
               />
 
-              {/* Supplier Field with increased width */}
-              <FormField
-                control={form.control}
-                name="supplierId"
-                render={({ field }) => (
-                  <FormItem className="col-span-1 md:col-span-2">
-                    <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier Name</FormLabel>
-                    <Combobox
-                      options={supplierOptions}
-                      value={field.value || PLACEHOLDER_SUPPLIER_VALUE}
-                      onValueChange={(value) => field.onChange(value === PLACEHOLDER_SUPPLIER_VALUE ? '' : value)}
-                      placeholder="Search Supplier..."
-                      selectPlaceholder={isLoadingSuppliers ? "Loading Suppliers..." : "Select Supplier (Optional)"}
-                      emptyStateMessage="No supplier found."
-                      disabled={isLoadingSuppliers}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <FormField
-                control={form.control}
-                name="itemCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Item Code/SKU</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter item code or SKU" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               {watchItemType === 'Variant' && (
                 <FormField
                   control={form.control}
                   name="itemVariation"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Item Variation</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                    <FormItem className="col-span-1">
+                      <FormLabel>Variation</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={isLoadingItemVariations ? "Loading..." : "Select variation"} />
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder={isLoadingItemVariations ? "..." : "Variation"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -406,14 +435,33 @@ export function AddItemForm() {
                   )}
                 />
               )}
+
+              <FormField
+                control={form.control}
+                name="supplierId"
+                render={({ field }) => (
+                  <FormItem className="col-span-1 md:col-span-2">
+                    <FormLabel className="flex items-center"><Building className="mr-2 h-4 w-4 text-muted-foreground" />Supplier</FormLabel>
+                    <Combobox
+                      options={supplierOptions}
+                      value={field.value || PLACEHOLDER_SUPPLIER_VALUE}
+                      onValueChange={(value) => field.onChange(value === PLACEHOLDER_SUPPLIER_VALUE ? '' : value)}
+                      placeholder="Search..."
+                      selectPlaceholder={isLoadingSuppliers ? "Loading..." : "Select Supplier"}
+                      className="h-11"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="brandName"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><Tag className="h-4 w-4 mr-1 text-muted-foreground" />Brand Name</FormLabel>
+                  <FormItem className="col-span-1">
+                    <FormLabel className="flex items-center"><Tag className="h-4 w-4 mr-1 text-muted-foreground" />Brand</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter brand name" {...field} value={field.value ?? ''} />
+                      <Input placeholder="Brand Name" {...field} value={field.value ?? ''} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -423,39 +471,10 @@ export function AddItemForm() {
                 control={form.control}
                 name="unit"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="col-span-1">
                     <FormLabel>Unit</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., pcs, kg, m" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <FormField
-                control={form.control}
-                name="salesPrice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />Sales Price</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="purchasePrice"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center"><DollarSign className="h-4 w-4 mr-1 text-muted-foreground" />Purchase Price</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
+                      <Input placeholder="pcs, kg, etc" {...field} value={field.value ?? ''} className="h-11" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -470,7 +489,7 @@ export function AddItemForm() {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Enter item description" {...field} rows={3} value={field.value ?? ''} />
+                    <Textarea placeholder="Detailed product description..." {...field} rows={4} className="bg-muted/10 resize-none focus:bg-background transition-colors" value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -479,47 +498,109 @@ export function AddItemForm() {
           </div>
         </div>
 
-
-        <Separator />
-
-        <h3 className={cn(sectionHeadingClass)}>
-          <Warehouse className="h-5 w-5" /> Inventory Management
-        </h3>
-        <FormField
-          control={form.control}
-          name="manageStock"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel className="hover:cursor-pointer">
-                  Manage inventory stock levels for this item
-                </FormLabel>
-                <FormDescription>
-                  Enable to track current quantity, ideal levels, and warning thresholds.
-                </FormDescription>
+        {/* Pricing Section */}
+        <Card className="border-l-4 border-l-green-500 overflow-hidden shadow-md hover:shadow-lg transition-all duration-300">
+          <CardContent className="p-0">
+            <div className="bg-green-50/50 dark:bg-green-950/20 px-6 py-4 border-b">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-bold">
+                <DollarSign className="w-5 h-5" />
+                <span className="uppercase tracking-wider text-sm">Pricing Strategy</span>
               </div>
-            </FormItem>
-          )}
-        />
+            </div>
+            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Price Component</FormLabel>
+                    <Combobox
+                      options={[{ value: 'BDT', label: 'BDT - Bangladeshi Taka (৳)' }, ...currencyOptions.filter(c => c.value !== 'BDT')]}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Currency"
+                      selectPlaceholder="Select Currency"
+                      className="h-11"
+                    />
+                    <FormDescription className="text-[10px]">Select base currency</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="salesPrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Selling Price</FormLabel>
+                    <FormControl>
+                      <div className="relative group">
+                        <span className="absolute left-3.5 top-2.5 text-muted-foreground font-semibold group-focus-within:text-green-600 transition-colors">
+                          {watchCurrency === 'BDT' ? '৳' : currencies?.find(c => c.code === watchCurrency)?.symbol || '$'}
+                        </span>
+                        <Input type="number" step="0.01" placeholder="0.00" {...field} className="pl-10 h-11 text-lg font-medium" />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="purchasePrice"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cost Price</FormLabel>
+                    <FormControl>
+                      <div className="relative group">
+                        <span className="absolute left-3.5 top-2.5 text-muted-foreground font-semibold group-focus-within:text-green-600 transition-colors">
+                          {watchCurrency === 'BDT' ? '৳' : currencies?.find(c => c.code === watchCurrency)?.symbol || '$'}
+                        </span>
+                        <Input type="number" step="0.01" placeholder="0.00" {...field} className="pl-10 h-11 text-lg font-medium" />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-        {watchManageStock && (
-          <Card className="bg-muted/30 p-6">
-            <CardContent className="space-y-4 pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Inventory Section */}
+        <Card className="border-l-4 border-l-blue-500 overflow-hidden shadow-md hover:shadow-lg transition-all duration-300">
+          <CardContent className="p-0">
+            <div className="bg-blue-50/50 dark:bg-blue-950/20 px-6 py-4 border-b flex justify-between items-center">
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold">
+                <Warehouse className="w-5 h-5" />
+                <span className="uppercase tracking-wider text-sm">Inventory & Stock</span>
+              </div>
+              <FormField
+                control={form.control}
+                name="manageStock"
+                render={({ field }) => (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-muted-foreground mr-1">Enable Management</span>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="h-5 w-5 border-blue-400 data-[state=checked]:bg-blue-500"
+                    />
+                  </div>
+                )}
+              />
+            </div>
+
+            <div className={cn("p-8 transition-all duration-500", !watchManageStock && "opacity-40 grayscale-[0.5] pointer-events-none")}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 <FormField
                   control={form.control}
                   name="currentQuantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Current Quantity*</FormLabel>
+                      <FormLabel>Current Balance*</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} />
+                        <Input type="number" placeholder="0" {...field} value={field.value ?? ''} className="h-11 font-bold" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -530,9 +611,9 @@ export function AddItemForm() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Location</FormLabel>
+                      <FormLabel className="flex items-center"><MapPin className="h-4 w-4 mr-1 text-muted-foreground" />Storage Location</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Warehouse A, Shelf B-3" {...field} value={field.value ?? ''} />
+                        <Input placeholder="Warehouse/Shelf" {...field} value={field.value ?? ''} className="h-11" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -543,9 +624,9 @@ export function AddItemForm() {
                   name="idealQuantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ideal Quantity</FormLabel>
+                      <FormLabel>Target Stock</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 100" {...field} value={field.value ?? ''} />
+                        <Input type="number" placeholder="100" {...field} value={field.value ?? ''} className="h-11" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -556,35 +637,53 @@ export function AddItemForm() {
                   name="warningQuantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center"><AlertTriangle className="h-4 w-4 mr-1 text-amber-500" />Warning Quantity</FormLabel>
+                      <FormLabel className="flex items-center text-amber-600 dark:text-amber-400">
+                        <AlertTriangle className="h-4 w-4 mr-1" />
+                        Low Stock Alert
+                      </FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g., 10" {...field} value={field.value ?? ''} />
+                        <Input
+                          type="number"
+                          placeholder="10"
+                          {...field}
+                          value={field.value ?? ''}
+                          className="h-11 border-amber-200 focus-visible:ring-amber-500 font-bold"
+                        />
                       </FormControl>
-                      <FormDescription>
-                        Receive alerts when stock reaches this level.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
 
-        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingSuppliers}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving Item...
-            </>
-          ) : (
-            <>
-              <Save className="mr-2 h-4 w-4" />
-              Save Item
-            </>
-          )}
-        </Button>
+        {/* Action Bar */}
+        <div className="flex flex-col sm:flex-row justify-end items-center gap-4 bg-muted/20 p-6 rounded-2xl border-2 border-dashed">
+          <div className="text-right hidden sm:block">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Ready to Submit?</p>
+            <p className="text-[10px] text-muted-foreground italic">Review all fields before saving</p>
+          </div>
+          <Button
+            type="submit"
+            className="w-full sm:w-auto h-14 px-12 text-lg font-bold shadow-xl hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            disabled={isSubmitting || isLoadingSuppliers}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-6 w-6" />
+                Add Product to Inventory
+              </>
+            )}
+          </Button>
+        </div>
+
       </form>
 
       <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
@@ -620,6 +719,6 @@ export function AddItemForm() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Form >
+    </Form>
   );
 }
