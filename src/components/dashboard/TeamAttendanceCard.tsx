@@ -14,7 +14,10 @@ import {
     MoreHorizontal,
     Loader2,
     UserCheck,
-    Clock
+    Clock,
+    Check,
+    X,
+    AlertTriangle
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -24,11 +27,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, doc, updateDoc, orderBy } from 'firebase/firestore';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import type { EmployeeDocument, AttendanceDocument } from '@/types';
+import { determineAttendanceFlag } from '@/lib/firebase/utils';
+import type { EmployeeDocument, AttendanceDocument, BranchDocument } from '@/types';
 
 interface TeamAttendanceCardProps {
     supervisedEmployeeIds: string[];
@@ -43,9 +47,10 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
     const router = useRouter();
     const [employees, setEmployees] = useState<EmployeeDocument[]>([]);
     const [attendance, setAttendance] = useState<AttendanceDocument[]>([]);
+    const [branches, setBranches] = useState<BranchDocument[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'All' | 'P' | 'A' | 'D'>('All');
+    const [statusFilter, setStatusFilter] = useState<'All' | 'P' | 'A' | 'D' | 'Pending'>('All');
 
     // Fetch supervised employees
     useEffect(() => {
@@ -74,6 +79,90 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
 
         fetchEmployees();
     }, [supervisedEmployeeIds]);
+
+    // Fetch Branches for Radius Validation
+    useEffect(() => {
+        const fetchBranches = async () => {
+            try {
+                const q = query(collection(firestore, 'branches'));
+                const snapshot = await getDocs(q);
+                const branchData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BranchDocument));
+                setBranches(branchData);
+            } catch (error) {
+                console.error("Error fetching branches:", error);
+            }
+        };
+        fetchBranches();
+    }, []);
+
+    // Helper: Calculate Distance (Haversine Formula)
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371e3; // metres
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c; // in metres
+    };
+
+    // Helper: Handle Approval
+    const handleApprove = async (attendanceId: string, inTime: string | undefined) => {
+        try {
+            const newFlag = determineAttendanceFlag(inTime);
+            const ref = doc(firestore, 'attendance', attendanceId);
+            await updateDoc(ref, {
+                flag: newFlag,
+                approvalStatus: 'Approved'
+            });
+            Swal.fire({
+                icon: 'success',
+                title: 'Approved',
+                text: 'Attendance approved successfully.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } catch (error) {
+            console.error("Error approving attendance:", error);
+            Swal.fire('Error', 'Failed to approve attendance.', 'error');
+        }
+    };
+
+    // Helper: Handle Rejection
+    const handleReject = async (attendanceId: string) => {
+        try {
+            const result = await Swal.fire({
+                title: 'Are you sure?',
+                text: "This will mark the attendance as Absent.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, reject it!'
+            });
+
+            if (result.isConfirmed) {
+                const ref = doc(firestore, 'attendance', attendanceId);
+                await updateDoc(ref, {
+                    flag: 'A',
+                    approvalStatus: 'Rejected'
+                });
+                Swal.fire(
+                    'Rejected!',
+                    'Attendance has been marked as Absent.',
+                    'success'
+                );
+            }
+        } catch (error) {
+            console.error("Error rejecting attendance:", error);
+            Swal.fire('Error', 'Failed to reject attendance.', 'error');
+        }
+    };
 
     // Sub to today's attendance for team
     useEffect(() => {
@@ -112,11 +201,40 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
         let list = employees.map(emp => {
             const att = attendanceMap.get(emp.id);
             let status: 'Present' | 'Delayed' | 'Absent' | 'On Leave' = 'Absent';
+            let approvalRequired = false;
+            let currentApprovalStatus = att?.approvalStatus;
+
             if (att) {
+                // Determine raw status from flag
                 if (att.flag === 'P') status = 'Present';
                 else if (att.flag === 'D') status = 'Delayed';
                 else if (att.flag === 'L') status = 'On Leave';
+
+                // Check for Radius Violation if approval not yet decided
+                if (!currentApprovalStatus && att.inTimeLocation) {
+                    // Try to find branch
+                    let branch = branches.find(b => b.id === emp.branchId);
+                    // Fallback to name matching if branchId invalid / missing but branch name exists
+                    if (!branch && emp.branch) {
+                        branch = branches.find(b => b.name === emp.branch);
+                    }
+
+                    if (branch && branch.latitude && branch.longitude && branch.allowRadius) {
+                        const dist = calculateDistance(
+                            att.inTimeLocation.latitude,
+                            att.inTimeLocation.longitude,
+                            branch.latitude,
+                            branch.longitude
+                        );
+                        if (dist > branch.allowRadius) {
+                            approvalRequired = true;
+                            // Virtual status for UI
+                            currentApprovalStatus = 'Pending';
+                        }
+                    }
+                }
             }
+
             return {
                 ...emp,
                 inTime: att?.inTime || '-',
@@ -124,6 +242,8 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                 inTimeLocation: att?.inTimeLocation,
                 outTimeLocation: att?.outTimeLocation,
                 status: status,
+                attendanceId: att?.id,
+                approvalStatus: currentApprovalStatus
             };
         });
 
@@ -137,24 +257,65 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
 
         if (statusFilter !== 'All') {
             list = list.filter(emp => {
-                if (statusFilter === 'P') return emp.status === 'Present';
-                if (statusFilter === 'A') return emp.status === 'Absent' || emp.status === 'On Leave';
-                if (statusFilter === 'D') return emp.status === 'Delayed';
+                if (statusFilter === 'Pending') return emp.approvalStatus === 'Pending';
+                if (statusFilter === 'P') return emp.status === 'Present' && emp.approvalStatus !== 'Pending';
+                if (statusFilter === 'A') return (emp.status === 'Absent' || emp.status === 'On Leave') && emp.approvalStatus !== 'Pending';
+                if (statusFilter === 'D') return emp.status === 'Delayed' && emp.approvalStatus !== 'Pending';
                 return true;
             });
         }
 
         return list;
-    }, [employees, attendance, searchTerm, statusFilter]);
+    }, [employees, attendance, searchTerm, statusFilter, branches]);
 
     const stats = useMemo(() => {
-        return {
-            total: employees.length,
-            present: attendance.filter(a => a.flag === 'P').length,
-            delayed: attendance.filter(a => a.flag === 'D').length,
-            absent: employees.length - attendance.filter(a => ['P', 'D', 'L'].includes(a.flag)).length
-        };
-    }, [employees, attendance]);
+        // We need to re-calculate "pending" based on the same logic as above or simple check
+        // But since combinedTeamData already processes it, we can use it if we weren't filtering it.
+        // However, combinedTeamData is filtered by search/status.
+        // So we should replicate logic or do a pre-pass.
+
+        // Let's do a quick pass on data
+        let total = employees.length;
+        let present = 0;
+        let delayed = 0;
+        let absent = 0;
+        let pending = 0;
+
+        const attendanceMap = new Map(attendance.map(a => [a.employeeId, a]));
+
+        employees.forEach(emp => {
+            const att = attendanceMap.get(emp.id);
+            let isPending = false;
+
+            if (att) {
+                if (att.approvalStatus === 'Pending') isPending = true;
+                else if (!att.approvalStatus && att.inTimeLocation) {
+                    let branch = branches.find(b => b.id === emp.branchId);
+                    if (!branch && emp.branch) branch = branches.find(b => b.name === emp.branch);
+
+                    if (branch && branch.latitude && branch.longitude && branch.allowRadius) {
+                        const dist = calculateDistance(att.inTimeLocation.latitude, att.inTimeLocation.longitude, branch.latitude, branch.longitude);
+                        if (dist > branch.allowRadius) isPending = true;
+                    }
+                }
+            }
+
+            if (isPending) {
+                pending++;
+            } else if (att) {
+                if (att.flag === 'P' && att.approvalStatus !== 'Rejected') present++;
+                else if (att.flag === 'D' && att.approvalStatus !== 'Rejected') delayed++;
+                else if (['A', 'L'].includes(att.flag) || att.approvalStatus === 'Rejected') absent++; // Treat rejected as absent or whatever logic
+            } else {
+                absent++;
+            }
+        });
+
+        // Correction: if rejected, it might be flag 'A' now, so it counts as absent. 
+        // Logic above is approximate but sufficient for badges.
+
+        return { total, present, delayed, absent, pending };
+    }, [employees, attendance, branches]);
 
     const handleViewLocation = (location: { latitude: number; longitude: number } | undefined | null, type: string) => {
         if (location) {
@@ -181,11 +342,11 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                         <CardTitle className="text-xl font-bold">My Team Attendance</CardTitle>
                         <CardDescription>Today's attendance at a glance for your team.</CardDescription>
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <div className="relative w-full sm:w-64">
+                    <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                        <div className="relative w-full sm:w-48">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search team member..."
+                                placeholder="Search..."
                                 className="pl-9 h-9 w-full text-xs"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -198,6 +359,15 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                             className="relative h-9 text-xs"
                         >
                             All <Badge className="ml-1 bg-blue-500 text-white text-[10px] px-1">{stats.total}</Badge>
+                        </Button>
+                        <Button
+                            variant={statusFilter === 'Pending' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setStatusFilter('Pending')}
+                            className={cn("relative h-9 text-xs", statusFilter === 'Pending' ? "bg-orange-500 hover:bg-orange-600" : "")}
+                        >
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            <Badge className="bg-orange-600 text-[10px] px-1">{stats.pending}</Badge>
                         </Button>
                         <Button
                             variant={statusFilter === 'A' ? 'destructive' : 'outline'}
@@ -236,13 +406,14 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                                 <TableHead className="text-xs whitespace-nowrap">In Time</TableHead>
                                 <TableHead className="text-xs whitespace-nowrap">Out Time</TableHead>
                                 <TableHead className="text-xs whitespace-nowrap">Status</TableHead>
+                                <TableHead className="text-center text-xs whitespace-nowrap">Approval</TableHead>
                                 <TableHead className="text-right text-xs whitespace-nowrap">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {combinedTeamData.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                         No team members found.
                                     </TableCell>
                                 </TableRow>
@@ -293,16 +464,52 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge
-                                                variant={emp.status === 'Present' || emp.status === 'Delayed' ? 'default' : 'destructive'}
-                                                className={cn(
-                                                    "text-[10px] h-5 px-1.5",
-                                                    emp.status === 'Present' && 'bg-green-500 hover:bg-green-600',
-                                                    emp.status === 'Delayed' && 'bg-yellow-500 hover:bg-yellow-600 text-black'
-                                                )}
-                                            >
-                                                {emp.status}
-                                            </Badge>
+                                            {emp.approvalStatus === 'Pending' ? (
+                                                <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-orange-500 text-orange-500">
+                                                    Pending
+                                                </Badge>
+                                            ) : (
+                                                <Badge
+                                                    variant={emp.status === 'Present' || emp.status === 'Delayed' ? 'default' : 'destructive'}
+                                                    className={cn(
+                                                        "text-[10px] h-5 px-1.5",
+                                                        emp.status === 'Present' && 'bg-green-500 hover:bg-green-600',
+                                                        emp.status === 'Delayed' && 'bg-yellow-500 hover:bg-yellow-600 text-black',
+                                                        emp.status === 'Absent' && 'bg-red-500'
+                                                    )}
+                                                >
+                                                    {emp.status}
+                                                </Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            {emp.approvalStatus === 'Pending' && emp.attendanceId && (
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-6 w-6 p-0 bg-green-500 hover:bg-green-600 rounded-full"
+                                                        onClick={() => handleApprove(emp.attendanceId!, emp.inTime)}
+                                                        title="Approve"
+                                                    >
+                                                        <Check className="h-3 w-3 text-white" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        className="h-6 w-6 p-0 rounded-full"
+                                                        onClick={() => handleReject(emp.attendanceId!)}
+                                                        title="Reject"
+                                                    >
+                                                        <X className="h-3 w-3 text-white" />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                            {emp.approvalStatus === 'Approved' && (
+                                                <span className="text-[10px] text-green-600 font-medium">Approved</span>
+                                            )}
+                                            {emp.approvalStatus === 'Rejected' && (
+                                                <span className="text-[10px] text-red-600 font-medium">Rejected</span>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
@@ -312,9 +519,6 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="text-xs">
-                                                    <DropdownMenuItem onClick={() => router.push(`/dashboard/hr/employees/edit/${emp.id}`)}>
-                                                        View Profile
-                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => router.push(`/dashboard/hr/attendance-reconciliation?view=team`)}>
                                                         View Team Reconciliation
                                                     </DropdownMenuItem>
