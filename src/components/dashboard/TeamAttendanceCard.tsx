@@ -227,16 +227,16 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                 </div>
             </CardHeader>
             <CardContent className="p-0">
-                <ScrollArea className="h-[350px]">
-                    <Table>
+                <div className="overflow-auto h-[350px] w-full">
+                    <Table className="min-w-full">
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="text-xs">Name</TableHead>
-                                <TableHead className="text-xs">Designation</TableHead>
-                                <TableHead className="text-xs">In Time</TableHead>
-                                <TableHead className="text-xs">Out Time</TableHead>
-                                <TableHead className="text-xs">Status</TableHead>
-                                <TableHead className="text-right text-xs">Action</TableHead>
+                                <TableHead className="text-xs whitespace-nowrap">Name</TableHead>
+                                <TableHead className="text-xs whitespace-nowrap">Designation</TableHead>
+                                <TableHead className="text-xs whitespace-nowrap">In Time</TableHead>
+                                <TableHead className="text-xs whitespace-nowrap">Out Time</TableHead>
+                                <TableHead className="text-xs whitespace-nowrap">Status</TableHead>
+                                <TableHead className="text-right text-xs whitespace-nowrap">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -326,8 +326,8 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                             )}
                         </TableBody>
                     </Table>
-                </ScrollArea>
+                </div>
             </CardContent>
-        </Card>
+        </Card >
     );
 }
