@@ -195,7 +195,6 @@ const hrNavItems: NavItem[] = [
   { href: "/dashboard/hr/visit-applications", label: "Visit Application", icon: Plane, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/multiple-check-in-out", label: "Multiple Check In/Out", icon: MapPin, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/attendance-reconciliation", label: "Attendance Reconciliation", icon: UserCheck, iconColorClass: 'bg-icon-list' },
-  { href: "/dashboard/hr/device-change-requests", label: "Device Change Requests", icon: Smartphone, iconColorClass: 'bg-icon-reports' },
   { href: "/dashboard/hr/holidays", label: "Holidays", icon: CalendarPlus, iconColorClass: 'bg-icon-upcoming' },
   { href: "/dashboard/hr/attendance/reports", label: "Attendance Reports", icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: "/dashboard/hr/notice", label: "Manage Notice Board", icon: Bell, iconColorClass: 'bg-icon-notifications' },

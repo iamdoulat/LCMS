@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Loader2, Users } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Loader2, Users, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -556,6 +556,25 @@ export default function HrmSettingsPage() {
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">Assign supervisors to employees</p>
+                        </CardContent>
+                    </Card>
+
+                    {/* Device Change Requests Section */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                <Smartphone className="h-4 w-4 text-muted-foreground" />
+                                Device Change Requests
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex justify-between items-center">
+                                <div className="text-2xl font-bold">Manage</div>
+                                <Button asChild size="sm" variant="outline">
+                                    <Link href="/dashboard/hr/device-change-requests">Open</Link>
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">Review and approve employee device changes</p>
                         </CardContent>
                     </Card>
 

@@ -88,6 +88,12 @@ export default function DeviceChangeRequestsPage() {
             const newDevice: AllowedDevice = {
                 deviceId: request.deviceId,
                 deviceName: request.deviceName,
+                browser: request.browser,
+                os: request.os,
+                deviceType: request.deviceType,
+                brand: request.brand,
+                model: request.model,
+                userAgent: request.userAgent,
                 registeredAt: Timestamp.now()
             };
 
@@ -160,18 +166,17 @@ export default function DeviceChangeRequestsPage() {
     };
 
     const filteredRequests = requests.filter(req =>
-        req.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        req.userEmail.toLowerCase().includes(searchTerm.toLowerCase())
+        (req.userName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (req.userEmail || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     // Pagination could be added here, but for now we'll show all
 
     // Formatting helper
     const getDeviceString = (device: AllowedDevice) => {
-        // Example: "276b6... (ANDROID)"
-        // shorten ID
-        const shortId = device.deviceId.substring(0, 8);
-        return `${shortId}... (${device.deviceName})`; // rough approximation of screenshot style
+        const details = [device.browser, device.os].filter(Boolean).join(' on ');
+        const type = device.deviceType ? `(${device.deviceType})` : '';
+        return `${details} ${type}`.trim() || device.deviceName || 'Unknown Device';
     };
 
     return (
@@ -231,15 +236,18 @@ export default function DeviceChangeRequestsPage() {
                                                         <span className="text-xs text-muted-foreground">{req.userEmail}</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="max-w-[200px] truncate" title={currentDeviceStr}>
+                                                <TableCell className="max-w-[200px]">
                                                     {devices.length > 0 ? (
                                                         <div className="flex flex-col space-y-1">
                                                             {devices.map((d, idx) => (
-                                                                <span key={idx} className="text-xs">{d.deviceId.substring(0, 12)} ({d.deviceName})</span>
+                                                                <div key={idx} className="flex flex-col text-xs border-b last:border-0 pb-1 last:pb-0">
+                                                                    <span className="font-semibold">{getDeviceString(d)}</span>
+                                                                    <span className="text-muted-foreground text-[10px]">ID: {d.deviceId.substring(0, 8)}...</span>
+                                                                </div>
                                                             ))}
                                                         </div>
                                                     ) : (
-                                                        <span className="text-muted-foreground">N/A (N/A)</span>
+                                                        <span className="text-muted-foreground">None</span>
                                                     )}
                                                 </TableCell>
                                                 <TableCell>

@@ -77,7 +77,6 @@ import {
   Users2,
   Wallet,
   Workflow,
-  Smartphone,
 } from "lucide-react"
 import Link from 'next/link';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -285,12 +284,6 @@ export const dashboardConfig = {
           href: "/dashboard/hr/attendance-reconciliation",
           icon: UserCheck,
           description: "Review attendance corrections.",
-        },
-        {
-          title: "Device Change Requests",
-          href: "/dashboard/hr/device-change-requests",
-          icon: Smartphone,
-          description: "Approve or reject device change requests.",
         },
         {
           title: "Payroll",

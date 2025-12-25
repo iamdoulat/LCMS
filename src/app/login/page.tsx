@@ -116,8 +116,17 @@ export default function LoginPage() {
 
       const userData = userSnap.data() as UserDocumentForAdmin;
       const allowedDevices = userData.allowedDevices || [];
+      const userRoles = userData.role || [];
 
       console.log("Current allowed devices:", allowedDevices);
+      console.log("User roles:", userRoles);
+
+      // Exempt Super Admin and Admin from device verification
+      if (userRoles.includes('Super Admin') || userRoles.includes('Admin')) {
+        console.log("User is Super Admin or Admin - skipping device verification");
+        router.push('/dashboard');
+        return;
+      }
 
       // Case 1: No allowed devices (First login ever for this feature/user)
       if (allowedDevices.length === 0) {
