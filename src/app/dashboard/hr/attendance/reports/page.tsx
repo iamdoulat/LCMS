@@ -142,9 +142,7 @@ export default function AttendanceReportPage() {
       const holidaysQuery = query(collection(firestore, "holidays"));
       const breaksQuery = query(
         collection(firestore, "break_time"),
-        where("employeeId", "==", data.employeeId),
-        where("date", ">=", format(data.dateRange.from, "yyyy-MM-dd")),
-        where("date", "<=", format(data.dateRange.to, "yyyy-MM-dd"))
+        where("employeeId", "==", data.employeeId)
       );
 
       const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, breaksSnapshot] = await Promise.all([
@@ -163,7 +161,9 @@ export default function AttendanceReportPage() {
         attendance: attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument),
         leaves: leavesSnapshot.docs.map(d => d.data() as LeaveApplicationDocument),
         holidays: holidaysSnapshot.docs.map(d => d.data() as HolidayDocument),
-        breaks: breaksSnapshot.docs.map(d => d.data() as any),
+        breaks: breaksSnapshot.docs
+          .map(d => d.data() as any)
+          .filter((b: any) => b.date >= format(data.dateRange.from, "yyyy-MM-dd") && b.date <= format(data.dateRange.to, "yyyy-MM-dd")),
       };
 
       localStorage.setItem('jobCardReportData', JSON.stringify(reportData));
@@ -194,9 +194,7 @@ export default function AttendanceReportPage() {
       const holidaysQuery = query(collection(firestore, "holidays"));
       const breaksQuery = query(
         collection(firestore, "break_time"),
-        where("employeeId", "==", data.employeeId),
-        where("date", ">=", format(data.dateRange.from, "yyyy-MM-dd")),
-        where("date", "<=", format(data.dateRange.to, "yyyy-MM-dd"))
+        where("employeeId", "==", data.employeeId)
       );
 
       const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, breaksSnapshot] = await Promise.all([
@@ -210,7 +208,9 @@ export default function AttendanceReportPage() {
       const attendance = attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument);
       const leaves = leavesSnapshot.docs.map(d => d.data() as LeaveApplicationDocument);
       const holidays = holidaysSnapshot.docs.map(d => d.data() as HolidayDocument);
-      const breaks = breaksSnapshot.docs.map(d => d.data() as any);
+      const breaks = breaksSnapshot.docs
+        .map(d => d.data() as any)
+        .filter((b: any) => b.date >= format(data.dateRange.from, "yyyy-MM-dd") && b.date <= format(data.dateRange.to, "yyyy-MM-dd"));
 
       const days = eachDayOfInterval({ start: data.dateRange.from, end: data.dateRange.to });
 
@@ -291,9 +291,9 @@ export default function AttendanceReportPage() {
               // Fetch actual break for this day
               const dayBreaks = breaks.filter((b: any) => b.date === formattedDate);
               const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
-
-              // Deduct actual break minutes from total duration
-              actualDutyMinutes = Math.max(0, totalMins - actualBreakMins);
+              // Deduct only break time exceeding 60 minutes from total duration
+              const excessBreakMins = Math.max(0, actualBreakMins - 60);
+              actualDutyMinutes = Math.max(0, totalMins - excessBreakMins);
               totalActualDutyMinutes += actualDutyMinutes;
             }
           }

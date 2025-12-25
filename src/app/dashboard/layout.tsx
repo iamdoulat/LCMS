@@ -17,23 +17,19 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
     <SidebarProvider>
-      <div className="relative flex min-h-screen flex-col bg-background">
-        <div className="flex flex-1">
-          <Sidebar>
-            <AppSidebarNav />
-          </Sidebar>
-          <SidebarInset>
-            <div className="flex flex-col min-h-screen">
-              <AppHeader />
-              <ErrorBoundary>
-                <main className="w-full flex-1">
-                  {children}
-                </main>
-              </ErrorBoundary>
-              <AppFooter />
-            </div>
-          </SidebarInset>
-        </div>
+      <div className="flex min-h-screen w-full">
+        <Sidebar>
+          <AppSidebarNav />
+        </Sidebar>
+        <SidebarInset className="flex flex-col w-full max-w-none">
+          <AppHeader />
+          <ErrorBoundary>
+            <main className="flex-1 w-full max-w-none">
+              {children}
+            </main>
+          </ErrorBoundary>
+          <AppFooter />
+        </SidebarInset>
         <BottomNavBar />
       </div>
     </SidebarProvider>

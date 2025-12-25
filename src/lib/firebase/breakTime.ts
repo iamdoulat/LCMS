@@ -48,11 +48,7 @@ export const startBreak = async (
         const autoBreakStart = set(now, { hours: 13, minutes: 0, seconds: 0, milliseconds: 0 });
         const autoBreakEnd = set(now, { hours: 14, minutes: 0, seconds: 0, milliseconds: 0 });
 
-        // Constraint: Check cumulative daily duration
-        const prevMinutes = await getDailyBreakMinutes(employeeData.id, todayDate);
-        const isWithinLimit = prevMinutes < 60;
-
-        const isAutoApproved = isWithinInterval(now, { start: autoBreakStart, end: autoBreakEnd }) && isWithinLimit;
+        const isAutoApproved = isWithinInterval(now, { start: autoBreakStart, end: autoBreakEnd });
         const status: BreakStatus = isAutoApproved ? 'auto-approved' : 'pending';
 
         const record: Omit<BreakTimeRecord, 'id'> = {
@@ -92,7 +88,6 @@ export const stopBreak = async (
 
         const startTime = new Date(breakDoc.data().startTime);
         const durationMinutes = Math.round((now.getTime() - startTime.getTime()) / 60000);
-        const breakData = breakDoc.data() as BreakTimeRecord;
 
         const updates: any = {
             endTime: now.toISOString(),
@@ -101,17 +96,6 @@ export const stopBreak = async (
             ...(location && { locationEnd: location }),
             updatedAt: serverTimestamp()
         };
-
-        // Recalculate daily total including this break
-        const prevMinutes = await getDailyBreakMinutes(breakData.employeeId, breakData.date || format(now, 'yyyy-MM-dd'));
-        const totalDailyMinutes = prevMinutes + durationMinutes;
-
-        // Constraint: If total daily duration exceeds 60 minutes, require approval
-        if (totalDailyMinutes > 60 && breakData.status === 'auto-approved') {
-            updates.status = 'pending';
-            updates.isAutoApproved = false;
-            updates.remarks = `Approval required: Total daily break time (${totalDailyMinutes} mins) exceeds the 60-minute limit.`;
-        }
 
         await updateDoc(breakRef, updates);
     } catch (error) {

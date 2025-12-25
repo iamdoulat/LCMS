@@ -11,7 +11,7 @@ export function AppFooter() {
   return (
     <footer className="mt-auto hidden md:block noprint">
       <Separator />
-      <div className="container mx-auto py-4 text-center text-sm text-muted-foreground">
+      <div className="w-full px-5 py-4 text-center text-sm text-muted-foreground">
         <p>
           &copy; {currentYear} - Designed and Developed by{" "}
           <Link

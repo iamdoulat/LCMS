@@ -40,9 +40,10 @@ const getDemoMachineStatusBadgeVariant = (status?: DemoMachineStatusOption): "de
 };
 
 const DemoSearchSkeleton = () => (
-  <div className="space-y-8">
-    <Card className="shadow-xl max-w-6xl mx-auto"><CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
-    <Card className="shadow-xl max-w-6xl mx-auto">
+  <div className="max-w-none mx-[25px] py-8 space-y-8 px-0">
+    <Card className="shadow-xl mx-auto">
+      <CardContent className="pt-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+    <Card className="shadow-xl mx-auto">
       <CardHeader><Skeleton className="h-8 w-1/3" /><Skeleton className="h-4 w-1/2 mt-2" /></CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -188,9 +189,9 @@ export default function DemoMachineSearchPage() {
   }
 
   return (
-    <div className="m-[10px] p-0 md:container md:mx-auto md:py-8 md:px-5 space-y-8">
+    <div className="max-w-none mx-[25px] py-8 space-y-8 px-0">
       <Card
-        className="shadow-xl max-w-6xl mx-auto relative overflow-hidden"
+        className="shadow-xl mx-auto relative overflow-hidden"
       >
         <div className="relative z-10 bg-card/90 dark:bg-card/80 rounded-lg">
           <CardHeader className="text-center">
@@ -315,7 +316,7 @@ export default function DemoMachineSearchPage() {
       </Card>
 
       <Card
-        className="shadow-xl max-w-6xl mx-auto"
+        className="shadow-xl mx-auto"
       >
         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div className="flex-1 text-center sm:text-left">

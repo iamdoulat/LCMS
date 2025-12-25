@@ -547,9 +547,9 @@ export default function DashboardPage() {
 
   if (userRole && !userRole.some(r => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(r))) {
     return (
-      <div className="flex flex-col gap-8 mx-[10px]">
+      <div className="flex flex-col gap-8 max-w-none mx-[25px] px-0">
         {notice && <NoticeBoardDialog notice={notice} />}
-        <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
+        <div className="flex flex-row justify-between items-start gap-4 sm:items-center w-full">
           <div>
             {greeting && authUser && (
               <h2 className="text-base font-semibold text-foreground mb-1 mt-[5px]">
@@ -643,9 +643,9 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="flex flex-col gap-8 mx-[10px]">
+    <div className="flex flex-col gap-8 max-w-none mx-[25px] px-0">
       {notice && <NoticeBoardDialog notice={notice} />}
-      <div className="flex flex-row justify-between items-start gap-4 sm:items-center md:px-5">
+      <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
         <div>
           {greeting && authUser && (
             <h2 className="text-base font-semibold text-foreground mb-1 mt-[5px]">
@@ -681,7 +681,7 @@ export default function DashboardPage() {
         <DashboardSkeleton />
       ) : (
         <>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 w-full">
             <StatCard
               title={`Total L/Cs Opened (${selectedYear})`}
               value={dashboardStats.totalLCs.toLocaleString()}
@@ -726,8 +726,8 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="lg:col-span-1 shadow-xl hover:shadow-2xl transition-shadow duration-300">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+            <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
               <CardHeader>
                 <CardTitle className="font-bold text-xl lg:text-2xl flex items-center gap-2 bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
                   <PieChartIcon className="h-6 w-6 text-primary" />
@@ -829,7 +829,7 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
             <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
               <CardHeader>
                 <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -888,7 +888,7 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
             <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>

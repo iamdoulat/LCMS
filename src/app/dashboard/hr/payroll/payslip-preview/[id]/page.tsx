@@ -144,6 +144,7 @@ export default function PayslipPreviewPage() {
 
     const deductions = [
         { name: 'Absent Deduction', value: payslip.absentDeduction },
+        { name: 'Break Deduction', value: payslip.breakDeduction },
         { name: 'Advance Deduction', value: payslip.advanceDeduction },
         { name: 'Tax Deduction', value: payslip.taxDeduction },
         { name: 'Provident Fund', value: payslip.providentFund },

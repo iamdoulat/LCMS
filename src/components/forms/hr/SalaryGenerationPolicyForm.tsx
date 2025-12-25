@@ -70,8 +70,8 @@ export function SalaryGenerationPolicyForm() {
 
   async function onSubmit(data: SalaryGenerationPolicyType) {
     if (isReadOnly) {
-        Swal.fire("Permission Denied", "You have read-only access and cannot change settings.", "error");
-        return;
+      Swal.fire("Permission Denied", "You have read-only access and cannot change settings.", "error");
+      return;
     }
     setIsSubmitting(true);
     const dataToSave = {
@@ -99,9 +99,9 @@ export function SalaryGenerationPolicyForm() {
 
   if (isLoadingData) {
     return (
-        <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
@@ -137,6 +137,21 @@ export function SalaryGenerationPolicyForm() {
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="breakDeductionThreshold"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Break Time Deduction Threshold (Minutes)</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="e.g., 60" {...field} disabled={isReadOnly} />
+                </FormControl>
+                <FormDescription>Total daily break time (minutes) allowed before salary deduction applies.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           {watchDayConsideration === 'Fixed Days' && (
             <FormField
               control={form.control}
@@ -155,10 +170,10 @@ export function SalaryGenerationPolicyForm() {
           )}
 
           <div className="space-y-4">
-              <Label>Holidays to Include in Salary</Label>
-              <FormField control={form.control} name="includeWeeklyHoliday" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isReadOnly} /></FormControl><Label className="font-normal">Weekly Holiday</Label></FormItem>)}/>
-              <FormField control={form.control} name="includeGovtHoliday" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isReadOnly} /></FormControl><Label className="font-normal">Govt. Holiday</Label></FormItem>)}/>
-              <FormField control={form.control} name="includeFestivalHoliday" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isReadOnly} /></FormControl><Label className="font-normal">Festival Holiday</Label></FormItem>)}/>
+            <Label>Holidays to Include in Salary</Label>
+            <FormField control={form.control} name="includeWeeklyHoliday" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isReadOnly} /></FormControl><Label className="font-normal">Weekly Holiday</Label></FormItem>)} />
+            <FormField control={form.control} name="includeGovtHoliday" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isReadOnly} /></FormControl><Label className="font-normal">Govt. Holiday</Label></FormItem>)} />
+            <FormField control={form.control} name="includeFestivalHoliday" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isReadOnly} /></FormControl><Label className="font-normal">Festival Holiday</Label></FormItem>)} />
           </div>
 
           <FormField
@@ -168,13 +183,13 @@ export function SalaryGenerationPolicyForm() {
               <FormItem className="flex items-center space-x-2 rounded-md border p-4 shadow-sm bg-background">
                 <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isReadOnly} /></FormControl>
                 <div className="space-y-1 leading-none">
-                    <FormLabel>Consider Joining Date</FormLabel>
-                    <FormDescription>If checked, salary will be calculated from the joining date for the first month.</FormDescription>
+                  <FormLabel>Consider Joining Date</FormLabel>
+                  <FormDescription>If checked, salary will be calculated from the joining date for the first month.</FormDescription>
                 </div>
               </FormItem>
             )}
           />
-           <FormField
+          <FormField
             control={form.control}
             name="salaryRounding"
             render={({ field }) => (
@@ -199,11 +214,11 @@ export function SalaryGenerationPolicyForm() {
           />
         </div>
         {!isReadOnly && (
-            <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving Policy...</> ) : ( <><Save className="mr-2 h-4 w-4" /> Save Policy</> )}
-                </Button>
-            </div>
+          <div className="flex justify-end pt-4">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving Policy...</>) : (<><Save className="mr-2 h-4 w-4" /> Save Policy</>)}
+            </Button>
+          </div>
         )}
       </form>
     </Form>

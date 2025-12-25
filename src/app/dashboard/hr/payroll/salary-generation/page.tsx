@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, where, getDocs, writeBatch, doc, serverTimestamp, getDoc, documentId } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
+import { getDailyBreakMinutes } from '@/lib/firebase/breakTime';
 import type { BranchDocument, DepartmentDocument, UnitDocument, EmployeeDocument, Payslip, AttendanceDocument, LeaveApplicationDocument, HolidayDocument, SalaryGenerationPolicy } from '@/types';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Swal from 'sweetalert2';
@@ -201,12 +202,34 @@ export default function SalaryGenerationPage() {
                     }
                 });
 
+                // --- Break Time Deduction Logic ---
+                let totalExcessBreakMinutes = 0;
+                const threshold = salaryPolicy?.breakDeductionThreshold ?? 60;
+
+                // We need to fetch break records for EACH day of the month for this employee
+                // This might be slow if there are many employees. 
+                // However, the current logic is already doing a loop over daysInterval for attendance.
+                // To optimize, we could fetch ALL break records for the month once, but let's stick to the daily calculation for accuracy first.
+
+                for (const day of daysInterval) {
+                    const breakMinutes = await getDailyBreakMinutes(employee.id, format(day, 'yyyy-MM-dd'));
+                    if (breakMinutes > threshold) {
+                        totalExcessBreakMinutes += (breakMinutes - threshold);
+                    }
+                }
+
                 const fullGrossSalary = employee.salaryStructure.grossSalary;
                 const perDaySalary = fullGrossSalary / daysInMonth;
                 const deductionForAbsence = absentDays * perDaySalary;
 
+                // Break deduction calculation: (Excess Minutes / 60) * (Daily Rate / 8) assuming 8 hour workday
+                const hourlyRate = perDaySalary / 8;
+                const breakDeduction = (totalExcessBreakMinutes / 60) * hourlyRate;
+
+                const totalEmployeeDeductions = deductionForAbsence + breakDeduction;
+
                 totalGrossSalary += fullGrossSalary;
-                totalDeductions += deductionForAbsence;
+                totalDeductions += totalEmployeeDeductions;
                 processedCount++;
 
                 const payslipId = `PAYSLIP-${data.year}-${data.month.toUpperCase()}-${employee.id}`;
@@ -216,10 +239,12 @@ export default function SalaryGenerationPage() {
                     designation: employee.designation, payPeriod,
                     grossSalary: employee.salaryStructure.grossSalary,
                     salaryBreakup: employee.salaryStructure.salaryBreakup,
-                    totalDeductions: deductionForAbsence,
-                    netSalary: fullGrossSalary - deductionForAbsence,
+                    totalDeductions: totalEmployeeDeductions,
+                    netSalary: fullGrossSalary - totalEmployeeDeductions,
                     absentDeduction: deductionForAbsence,
                     absentDays: absentDays,
+                    breakDeduction: breakDeduction,
+                    excessBreakMinutes: totalExcessBreakMinutes,
                     createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 };
                 batch.set(payslipDocRef, payslipData);

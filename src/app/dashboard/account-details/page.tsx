@@ -513,21 +513,6 @@ export default function AccountDetailsPage() {
           showConfirmButton: false
         });
       } else {
-        // Constraint: Check if already taken a break today
-        const today = format(new Date(), 'yyyy-MM-dd');
-        const q = query(
-          collection(firestore, 'break_time'),
-          where('employeeId', '==', employeeData.id),
-          where('date', '==', today)
-        );
-        const snapshot = await getDocs(q);
-
-        if (!snapshot.empty) {
-          Swal.fire("Action Blocked", "You have already taken your break for today. Only one break is allowed per day.", "error");
-          setBreakLoading(false);
-          return;
-        }
-
         const location = await updateLocation(true, true);
         // Start break
         await startBreak({
@@ -996,14 +981,14 @@ export default function AccountDetailsPage() {
           const toDateStr = format(endOfCurrentMonth, 'yyyy-MM-dd');
           const breaksSnapshot = await getDocs(query(
             collection(firestore, 'break_time'),
-            where('employeeId', '==', employeeData.id),
-            where('date', '>=', fromDateStr),
-            where('date', '<=', toDateStr)
+            where('employeeId', '==', employeeData.id)
           ));
-          const monthlyBreakMinutes = breaksSnapshot.docs.reduce((sum, doc) => {
-            const data = doc.data() as BreakTimeRecord;
-            return sum + (data.durationMinutes || 0);
-          }, 0);
+          const monthlyBreakMinutes = breaksSnapshot.docs
+            .map(doc => doc.data() as BreakTimeRecord)
+            .filter(data => data.date >= fromDateStr && data.date <= toDateStr)
+            .reduce((sum, data) => {
+              return sum + (data.durationMinutes || 0);
+            }, 0);
 
           setMonthlyStats({
             present: present,
@@ -1087,11 +1072,11 @@ export default function AccountDetailsPage() {
       const toStr = format(effectiveEndDate, 'yyyy-MM-dd');
       const breaksSnap = await getDocs(query(
         collection(firestore, 'break_time'),
-        where('employeeId', '==', employeeData.id),
-        where('date', '>=', fromStr),
-        where('date', '<=', toStr)
+        where('employeeId', '==', employeeData.id)
       ));
-      const breakRecords = breaksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BreakTimeRecord));
+      const breakRecords = breaksSnap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as BreakTimeRecord))
+        .filter(rec => rec.date >= fromStr && rec.date <= toStr);
 
       setRangeAttendance(attendanceRecords);
       setRangeBreaks(breakRecords);

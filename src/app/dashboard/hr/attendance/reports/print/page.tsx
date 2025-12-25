@@ -215,9 +215,9 @@ export default function PrintJobCardPage() {
                     // Fetch actual break for this day
                     const dayBreaks = breaks?.filter((b: any) => b.date === formattedDate) || [];
                     const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
-
-                    // Deduct actual break minutes from total duration
-                    actualDutyMinutes = Math.max(0, totalMins - actualBreakMins);
+                    // Deduct only break time exceeding 60 minutes from total duration
+                    const excessBreakMins = Math.max(0, actualBreakMins - 60);
+                    actualDutyMinutes = Math.max(0, totalMins - excessBreakMins);
                     totalActualDutyMinutes += actualDutyMinutes;
                 }
             }

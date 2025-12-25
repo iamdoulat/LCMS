@@ -1853,6 +1853,10 @@ export const SalaryGenerationPolicySchema = z.object({
   includeFestivalHoliday: z.boolean().default(false),
   considerJoiningDate: z.boolean().default(false),
   salaryRounding: z.enum(['No Rounding', 'Round to Nearest', 'Round Up', 'Round Down']).default('No Rounding'),
+  breakDeductionThreshold: z.preprocess(
+    (val) => (val === "" || val === undefined || val === null ? 60 : Number(String(val).trim())),
+    z.number().int().min(0, "Threshold must be at least 0 minutes.").default(60)
+  ).optional().default(60),
 });
 export type SalaryGenerationPolicy = z.infer<typeof SalaryGenerationPolicySchema>;
 
@@ -1888,6 +1892,8 @@ export interface Payslip {
   // ... other deductions
   totalDeductions: number;
   netSalary: number;
+  breakDeduction?: number;
+  excessBreakMinutes?: number;
   createdAt?: any; // Timestamp
   updatedAt?: any; // Timestamp
   paymentDate?: any; // Timestamp
