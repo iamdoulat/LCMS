@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Search, Filter, XCircle, MoreHorizontal, ListChecks } from 'lucide-react';
+import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Search, Filter, XCircle, MoreHorizontal, ListChecks, Download, Upload, FileJson } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -18,13 +18,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Swal from 'sweetalert2';
-import type { SupplierDocument, ProformaInvoiceDocument } from '@/types';
+import type { Supplier, SupplierDocument, ProformaInvoiceDocument } from '@/types';
 import { collection, getDocs, deleteDoc, doc, orderBy, query as firestoreQuery } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { addDoc, serverTimestamp } from 'firebase/firestore';
+
+const escapeCsvCell = (value: any) => {
+  if (value === null || value === undefined) return '""';
+  const stringValue = String(value);
+  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  }
+  return stringValue;
+};
 
 const ITEMS_PER_PAGE = 10;
 
@@ -34,18 +45,18 @@ const formatCurrency = (value?: number) => {
 };
 
 const SupplierListSkeleton = () => (
-    <>
-        {Array.from({ length: 5 }).map((_, i) => (
-            <TableRow key={i}>
-                <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
-            </TableRow>
-        ))}
-    </>
+  <>
+    {Array.from({ length: 5 }).map((_, i) => (
+      <TableRow key={i}>
+        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+      </TableRow>
+    ))}
+  </>
 );
 
 export default function BeneficiariesListPage() {
@@ -53,7 +64,7 @@ export default function BeneficiariesListPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   // Filter states
   const [filterBeneficiaryName, setFilterBeneficiaryName] = useState('');
   const [filterEmail, setFilterEmail] = useState('');
@@ -70,18 +81,18 @@ export default function BeneficiariesListPage() {
   const { data: supplierCommissionVals, isLoading: isLoadingCommissions } = useFirestoreQuery<{ [key: string]: number }>(
     collection(firestore, "proforma_invoices"),
     (snapshot) => {
-        const commissionsBySupplier: { [key: string]: number } = {};
-        snapshot.forEach(docSnap => {
-            const pi = docSnap.data() as ProformaInvoiceDocument;
-            if (pi.beneficiaryId && typeof pi.grandTotalCommissionUSD === 'number') {
-                commissionsBySupplier[pi.beneficiaryId] = (commissionsBySupplier[pi.beneficiaryId] || 0) + pi.grandTotalCommissionUSD;
-            }
-        });
-        return commissionsBySupplier;
+      const commissionsBySupplier: { [key: string]: number } = {};
+      snapshot.forEach(docSnap => {
+        const pi = docSnap.data() as ProformaInvoiceDocument;
+        if (pi.beneficiaryId && typeof pi.grandTotalCommissionUSD === 'number') {
+          commissionsBySupplier[pi.beneficiaryId] = (commissionsBySupplier[pi.beneficiaryId] || 0) + pi.grandTotalCommissionUSD;
+        }
+      });
+      return commissionsBySupplier;
     },
     ['commissions_by_supplier'] // Query key
   );
-  
+
   const isLoading = isLoadingBeneficiaries || isLoadingCommissions;
 
   const displayedBeneficiaries = useMemo(() => {
@@ -143,7 +154,7 @@ export default function BeneficiariesListPage() {
       }
     });
   };
-  
+
   const clearFilters = () => {
     setFilterBeneficiaryName('');
     setFilterEmail('');
@@ -193,6 +204,140 @@ export default function BeneficiariesListPage() {
     return pageNumbers;
   };
 
+  const handleExportCSV = () => {
+    if (!displayedBeneficiaries || displayedBeneficiaries.length === 0) {
+      Swal.fire("No Data", "There are no beneficiaries to export.", "info");
+      return;
+    }
+
+    const headers = ["Beneficiary Name", "Head Office Address", "Bank Information", "Contact Person", "Cell Number", "Email", "Website", "Brand Name"];
+    const csvRows = displayedBeneficiaries.map(b => [
+      escapeCsvCell(b.beneficiaryName),
+      escapeCsvCell(b.headOfficeAddress),
+      escapeCsvCell(b.bankInformation),
+      escapeCsvCell(b.contactPersonName),
+      escapeCsvCell(b.cellNumber),
+      escapeCsvCell(b.emailId),
+      escapeCsvCell(b.website),
+      escapeCsvCell(b.brandName)
+    ]);
+
+    const csvContent = [headers.join(","), ...csvRows.map(row => row.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `beneficiaries_export_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownloadSample = () => {
+    const headers = ["Beneficiary Name", "Head Office Address", "Bank Information", "Contact Person", "Cell Number", "Email", "Website", "Brand Name"];
+    const sampleData = [
+      "Example Supplier Ltd.",
+      "Singapore Office, Tower A",
+      "DBS Bank, Singapore. SWIFT: DBSSSG",
+      "Jane Smith",
+      "+6591234567",
+      "jane@supplier.com",
+      "www.supplier.com",
+      "ExampleBrand"
+    ];
+
+    const csvContent = headers.join(",") + "\n" + sampleData.map(escapeCsvCell).join(",");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "beneficiaries_sample.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const csvData = event.target?.result as string;
+      const rows = csvData.split(/\r?\n/).filter(row => row.trim() !== "");
+      if (rows.length < 2) {
+        Swal.fire("Invalid File", "The CSV file appears to be empty or missing data rows.", "error");
+        return;
+      }
+
+      const parseCSVLine = (line: string) => {
+        const result = [];
+        let cur = '';
+        let inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            if (inQuote && line[i + 1] === '"') {
+              cur += '"';
+              i++;
+            } else {
+              inQuote = !inQuote;
+            }
+          } else if (char === ',' && !inQuote) {
+            result.push(cur.trim());
+            cur = '';
+          } else {
+            cur += char;
+          }
+        }
+        result.push(cur.trim());
+        return result;
+      };
+
+      const items = rows.slice(1).map(row => parseCSVLine(row));
+
+      Swal.fire({
+        title: 'Importing...',
+        text: `Found ${items.length} records for Beneficiaries. Proceed?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, import'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            Swal.fire({ title: 'Processing...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            for (const item of items) {
+              if (item.length < 1 || !item[0]) continue; // Skip empty rows or missing name
+
+              const newBeneficiary: Omit<Supplier, 'id'> = {
+                beneficiaryName: item[0],
+                headOfficeAddress: item[1] || '',
+                bankInformation: item[2] || '',
+                contactPersonName: item[3] || '',
+                cellNumber: item[4] || '',
+                emailId: item[5] || '',
+                website: item[6] || '',
+                brandName: item[7] || '',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+              };
+
+              await addDoc(collection(firestore, "suppliers"), newBeneficiary);
+            }
+            Swal.fire("Success", "Beneficiaries imported successfully.", "success");
+            e.target.value = ''; // Reset input
+          } catch (error: any) {
+            console.error("Import error:", error);
+            Swal.fire("Error", `Failed to import: ${error.message}`, "error");
+          }
+        }
+      });
+    };
+    reader.readAsText(file);
+  };
+
 
   return (
     <div className="container mx-auto py-8 px-5">
@@ -208,12 +353,39 @@ export default function BeneficiariesListPage() {
                 View, search, and manage all beneficiary profiles from the database.
               </CardDescription>
             </div>
-            <Link href="/dashboard/suppliers/add" passHref>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Add New Beneficiary
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href="/dashboard/suppliers/add" passHref>
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Add New Beneficiary
+                </Button>
+              </Link>
+              <Button variant="outline" onClick={handleExportCSV} disabled={isLoading}>
+                <Download className="mr-2 h-4 w-4" /> Export CSV
               </Button>
-            </Link>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleImportCSV}
+                  className="hidden"
+                  id="suppliers-csv-import"
+                  disabled={isReadOnly || isLoading}
+                />
+                <Label
+                  htmlFor="suppliers-csv-import"
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 cursor-pointer",
+                    (isReadOnly || isLoading) && "opacity-50 pointer-events-none"
+                  )}
+                >
+                  <Upload className="mr-2 h-4 w-4" /> Import CSV
+                </Label>
+              </div>
+              <Button variant="ghost" onClick={handleDownloadSample} className="text-muted-foreground">
+                <FileJson className="mr-2 h-4 w-4" /> Sample
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -284,14 +456,14 @@ export default function BeneficiariesListPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                   <SupplierListSkeleton />
+                  <SupplierListSkeleton />
                 ) : fetchError ? (
-                   <TableRow>
+                  <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center text-destructive">
                       {fetchError.message}
                     </TableCell>
                   </TableRow>
-                ): currentItems.length > 0 ? (
+                ) : currentItems.length > 0 ? (
                   currentItems.map((beneficiary) => (
                     <TableRow key={beneficiary.id}>
                       <TableCell className="font-medium">{beneficiary.beneficiaryName || 'N/A'}</TableCell>
@@ -329,18 +501,18 @@ export default function BeneficiariesListPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center">
-                       No beneficiaries found matching your criteria.
+                      No beneficiaries found matching your criteria.
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
               <TableCaption className="py-4">
-                A list of your Beneficiaries from Database. 
+                A list of your Beneficiaries from Database.
                 Showing {displayedBeneficiaries.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, displayedBeneficiaries.length)} of {displayedBeneficiaries.length} entries.
               </TableCaption>
             </Table>
           </div>
-           {totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 py-4">
               <Button
                 variant="outline"

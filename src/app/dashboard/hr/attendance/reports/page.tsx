@@ -140,11 +140,18 @@ export default function AttendanceReportPage() {
         where("status", "==", "Approved")
       );
       const holidaysQuery = query(collection(firestore, "holidays"));
+      const breaksQuery = query(
+        collection(firestore, "break_time"),
+        where("employeeId", "==", data.employeeId),
+        where("date", ">=", format(data.dateRange.from, "yyyy-MM-dd")),
+        where("date", "<=", format(data.dateRange.to, "yyyy-MM-dd"))
+      );
 
-      const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot] = await Promise.all([
+      const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, breaksSnapshot] = await Promise.all([
         getDocs(attendanceQuery),
         getDocs(leavesQuery),
-        getDocs(holidaysQuery)
+        getDocs(holidaysQuery),
+        getDocs(breaksQuery)
       ]);
 
       const reportData = {
@@ -156,6 +163,7 @@ export default function AttendanceReportPage() {
         attendance: attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument),
         leaves: leavesSnapshot.docs.map(d => d.data() as LeaveApplicationDocument),
         holidays: holidaysSnapshot.docs.map(d => d.data() as HolidayDocument),
+        breaks: breaksSnapshot.docs.map(d => d.data() as any),
       };
 
       localStorage.setItem('jobCardReportData', JSON.stringify(reportData));
@@ -184,17 +192,25 @@ export default function AttendanceReportPage() {
         where("status", "==", "Approved")
       );
       const holidaysQuery = query(collection(firestore, "holidays"));
+      const breaksQuery = query(
+        collection(firestore, "break_time"),
+        where("employeeId", "==", data.employeeId),
+        where("date", ">=", format(data.dateRange.from, "yyyy-MM-dd")),
+        where("date", "<=", format(data.dateRange.to, "yyyy-MM-dd"))
+      );
 
-      const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot] = await Promise.all([
+      const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, breaksSnapshot] = await Promise.all([
         getDocs(attendanceQuery),
         getDocs(leavesQuery),
-        getDocs(holidaysQuery)
+        getDocs(holidaysQuery),
+        getDocs(breaksQuery)
       ]);
 
       const employee = employees?.find(e => e.id === data.employeeId);
       const attendance = attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument);
       const leaves = leavesSnapshot.docs.map(d => d.data() as LeaveApplicationDocument);
       const holidays = holidaysSnapshot.docs.map(d => d.data() as HolidayDocument);
+      const breaks = breaksSnapshot.docs.map(d => d.data() as any);
 
       const days = eachDayOfInterval({ start: data.dateRange.from, end: data.dateRange.to });
 
@@ -270,7 +286,14 @@ export default function AttendanceReportPage() {
             const inTimeDate = parse12HourTime(inTime, formattedDate);
             const outTimeDate = parse12HourTime(outTime, formattedDate);
             if (inTimeDate && outTimeDate && outTimeDate > inTimeDate) {
-              actualDutyMinutes = differenceInMinutes(outTimeDate, inTimeDate);
+              const totalMins = differenceInMinutes(outTimeDate, inTimeDate);
+
+              // Fetch actual break for this day
+              const dayBreaks = breaks.filter((b: any) => b.date === formattedDate);
+              const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
+
+              // Deduct actual break minutes from total duration
+              actualDutyMinutes = Math.max(0, totalMins - actualBreakMins);
               totalActualDutyMinutes += actualDutyMinutes;
             }
           }
@@ -280,13 +303,17 @@ export default function AttendanceReportPage() {
 
         const extraLessMinutes = actualDutyMinutes > 0 ? actualDutyMinutes - (expectedDutyHour * 60) : 0;
 
+        const dayBreaks = breaks.filter((b: any) => b.date === formattedDate);
+        const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
+        const breakTimeStr = formatDurationForExport(actualBreakMins);
+
         const row = [
           format(day, 'dd-MM-yyyy (EEE)'),
           status,
           (status === 'P' || status === 'D') ? formatDurationForExport(expectedDutyHour * 60) : '-',
           formatTimeForExport(inTime),
           formatTimeForExport(outTime),
-          '00:00',
+          (status === 'P' || status === 'D') ? breakTimeStr : '00:00',
           actualDutyMinutes > 0 ? formatDurationForExport(actualDutyMinutes) : '-',
           actualDutyMinutes > 0 ? formatDurationForExport(extraLessMinutes) : '-',
           remarks

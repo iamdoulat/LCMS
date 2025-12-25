@@ -4,7 +4,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Link2, Crop as CropIcon, Briefcase, Info, Clock, Check, MapPin, UserCheck, RefreshCw, XCircle, BarChart3, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle, Calendar as CalendarIcon, Camera } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Link2, Crop as CropIcon, Briefcase, Info, Clock, Check, MapPin, UserCheck, RefreshCw, XCircle, BarChart3, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle, Calendar as CalendarIcon, Camera, Coffee, Timer } from 'lucide-react';
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -31,6 +31,8 @@ import { getCroppedImg } from '@/lib/image-utils';
 import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag, AttendanceReconciliationConfiguration, MultipleCheckInOutConfiguration, LeaveGroupDocument, HotspotDocument } from '@/types';
 import type { CheckInOutType, MultipleCheckInOutRecord, MultipleCheckInOutLocation } from '@/types/checkInOut';
 import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord, reverseGeocode, getCheckInOutRecords } from '@/lib/firebase/checkInOut';
+import { startBreak, stopBreak } from '@/lib/firebase/breakTime';
+import type { BreakTimeRecord } from '@/types/breakTime';
 import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min, getDate, isSameMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
@@ -38,6 +40,7 @@ import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { EmployeeSupervisionCard } from '@/components/dashboard/EmployeeSupervisionCard';
 import { TeamCheckInCard } from '@/components/dashboard/TeamCheckInCard';
+import { TeamBreakTimeCard } from '@/components/dashboard/TeamBreakTimeCard';
 import dynamic from 'next/dynamic';
 import type { BranchDocument } from '@/types';
 
@@ -130,6 +133,7 @@ export default function AccountDetailsPage() {
     leave: 0,
     visit: 0,
     advanceSalary: 0,
+    totalBreakMinutes: 0,
   });
 
   const [payslips, setPayslips] = React.useState<Payslip[]>([]);
@@ -140,6 +144,7 @@ export default function AccountDetailsPage() {
     to: new Date()
   });
   const [rangeAttendance, setRangeAttendance] = React.useState<AttendanceDocument[]>([]);
+  const [rangeBreaks, setRangeBreaks] = React.useState<BreakTimeRecord[]>([]);
   const [isAttendanceLoading, setIsAttendanceLoading] = React.useState(true);
   const { data: notices, isLoading: isLoadingNotices } = useFirestoreQuery<(NoticeBoardSettings & { id: string })[]>(query(collection(firestore, "site_settings"), where("isEnabled", "==", true)), undefined, ['notices_hrm_dashboard']);
   const [selectedNotice, setSelectedNotice] = React.useState<(NoticeBoardSettings & { id: string }) | null>(null);
@@ -244,6 +249,13 @@ export default function AccountDetailsPage() {
   const [dailyAttendanceType, setDailyAttendanceType] = useState<'in' | 'out'>('in');
   const [attendanceRemarks, setAttendanceRemarks] = useState('');
   const [attendanceLocation, setAttendanceLocation] = useState<MultipleCheckInOutLocation | null>(null);
+
+  // Break Time State
+  const [isOnBreak, setIsOnBreak] = useState(false);
+  const [activeBreakId, setActiveBreakId] = useState<string | null>(null);
+  const [breakLoading, setBreakLoading] = useState(false);
+  const [activeBreakRecord, setActiveBreakRecord] = useState<BreakTimeRecord | null>(null);
+  const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
 
   // Fetch Branch Data
   useEffect(() => {
@@ -403,6 +415,142 @@ export default function AccountDetailsPage() {
     fetchLastRecord();
   }, [employeeData?.id, checkInOutType]); // Refetch when check-in/out type changes
 
+  // Timer effect for active break
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isOnBreak && activeBreakRecord?.startTime) {
+      const updateTimer = () => {
+        const start = new Date(activeBreakRecord.startTime);
+        const now = new Date();
+        const diff = Math.max(0, now.getTime() - start.getTime());
+
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        setBreakElapsedTime(
+          `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+        );
+      };
+
+      updateTimer();
+      interval = setInterval(updateTimer, 1000);
+    } else {
+      setBreakElapsedTime("00:00:00");
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isOnBreak, activeBreakRecord?.startTime]);
+
+  useEffect(() => {
+    if (employeeData?.id) {
+      const q = query(
+        collection(firestore, 'break_time'),
+        where('employeeId', '==', employeeData.id),
+        where('onBreak', '==', true)
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const doc = snapshot.docs[0];
+          setActiveBreakId(doc.id);
+          setActiveBreakRecord({ id: doc.id, ...doc.data() } as BreakTimeRecord);
+          setIsOnBreak(true);
+        } else {
+          setActiveBreakId(null);
+          setActiveBreakRecord(null);
+          setIsOnBreak(false);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [employeeData?.id]);
+
+  const handleToggleBreak = async () => {
+    if (!employeeData) return;
+
+    if (employeeData.status === 'Terminated') {
+      Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+      return;
+    }
+
+    if (!dailyAttendance?.inTime) {
+      Swal.fire("Action Required", "You must Check-In first before taking a break.", "warning");
+      return;
+    }
+
+    if (dailyAttendance?.outTime) {
+      Swal.fire("Action Blocked", "You have already Checked-Out for the day.", "warning");
+      return;
+    }
+
+    setBreakLoading(true);
+    try {
+      if (isOnBreak && activeBreakId) {
+        // Stop break with confirmation
+        const result = await Swal.fire({
+          title: 'Stop Break?',
+          text: "Are you sure you want to stop your break?",
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#d33',
+          cancelButtonColor: '#3085d6',
+          confirmButtonText: 'Yes, stop it!'
+        });
+
+        if (!result.isConfirmed) {
+          setBreakLoading(false);
+          return;
+        }
+
+        const location = await updateLocation(true, true);
+        await stopBreak(activeBreakId, location || undefined);
+        Swal.fire({
+          title: "Break Ended",
+          text: "Welcome back! Your break has been recorded.",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } else {
+        // Constraint: Check if already taken a break today
+        const today = format(new Date(), 'yyyy-MM-dd');
+        const q = query(
+          collection(firestore, 'break_time'),
+          where('employeeId', '==', employeeData.id),
+          where('date', '==', today)
+        );
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          Swal.fire("Action Blocked", "You have already taken your break for today. Only one break is allowed per day.", "error");
+          setBreakLoading(false);
+          return;
+        }
+
+        const location = await updateLocation(true, true);
+        // Start break
+        await startBreak({
+          id: employeeData.id,
+          fullName: employeeData.fullName,
+          employeeCode: employeeData.employeeCode,
+          designation: employeeData.designation
+        }, location || undefined);
+        Swal.fire({
+          title: "Break Started",
+          text: "Take rest! Your break has started.",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false
+        });
+      }
+    } catch (error: any) {
+      console.error("Error toggling break:", error);
+      Swal.fire("Error", error.message || "Failed to process break.", "error");
+    } finally {
+      setBreakLoading(false);
+    }
+  };
 
 
   // Sync In Time picker changes to form state
@@ -843,6 +991,20 @@ export default function AccountDetailsPage() {
             }
           });
 
+          // Fetch monthly break records
+          const fromDateStr = format(startOfCurrentMonth, 'yyyy-MM-dd');
+          const toDateStr = format(endOfCurrentMonth, 'yyyy-MM-dd');
+          const breaksSnapshot = await getDocs(query(
+            collection(firestore, 'break_time'),
+            where('employeeId', '==', employeeData.id),
+            where('date', '>=', fromDateStr),
+            where('date', '<=', toDateStr)
+          ));
+          const monthlyBreakMinutes = breaksSnapshot.docs.reduce((sum, doc) => {
+            const data = doc.data() as BreakTimeRecord;
+            return sum + (data.durationMinutes || 0);
+          }, 0);
+
           setMonthlyStats({
             present: present,
             delayed: delayed,
@@ -850,6 +1012,7 @@ export default function AccountDetailsPage() {
             leave: leaveDaysInMonth,
             visit: visitDaysInMonth,
             advanceSalary: monthlyAdvance.reduce((sum, req) => sum + req.advanceAmount, 0),
+            totalBreakMinutes: monthlyBreakMinutes,
           });
 
         } catch (err) {
@@ -919,7 +1082,19 @@ export default function AccountDetailsPage() {
       const results = await Promise.all(fetchPromises);
       const attendanceRecords = results.filter((record): record is AttendanceDocument => record !== null);
 
+      // Fetch breaks for this range
+      const fromStr = format(startDate, 'yyyy-MM-dd');
+      const toStr = format(effectiveEndDate, 'yyyy-MM-dd');
+      const breaksSnap = await getDocs(query(
+        collection(firestore, 'break_time'),
+        where('employeeId', '==', employeeData.id),
+        where('date', '>=', fromStr),
+        where('date', '<=', toStr)
+      ));
+      const breakRecords = breaksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BreakTimeRecord));
+
       setRangeAttendance(attendanceRecords);
+      setRangeBreaks(breakRecords);
     } catch (err) {
       console.error("Error fetching attendance range:", err);
       setRangeAttendance([]);
@@ -1694,6 +1869,13 @@ export default function AccountDetailsPage() {
               <StatCard title="Total On Leave" value={monthlyStats.leave} icon={<Plane />} description="Leave days this month" className="bg-blue-500" />
               <StatCard title="Total On Visit" value={monthlyStats.visit} icon={<Briefcase />} description="Visit days this month" className="bg-indigo-500" />
               <StatCard title="Advance Salary" value={formatCurrency(monthlyStats.advanceSalary)} icon={<Wallet />} description="Taken this month" className="bg-purple-500" />
+              <StatCard
+                title="Total Break"
+                value={`${Math.floor(monthlyStats.totalBreakMinutes / 60)}h ${monthlyStats.totalBreakMinutes % 60}m`}
+                icon={<Coffee />}
+                description="Total break time this month"
+                className="bg-orange-500"
+              />
             </div>
           </CardContent>
         </Card>
@@ -1713,6 +1895,78 @@ export default function AccountDetailsPage() {
           <TeamAttendanceCard supervisedEmployeeIds={supervisedEmployeeIds} />
         )}
 
+
+        {/* Break Time Section */}
+        <div className={cn(
+          "grid gap-6",
+          employeeData && (isSupervisor || supervisedEmployeeIds.length > 0) ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+        )}>
+          {/* Personal Break Time Card */}
+          <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Clock className="h-6 w-6 text-primary" />
+                Break Time
+              </CardTitle>
+              <CardDescription>
+                Start or stop your break. Standard break (1:00 PM - 2:00 PM) is auto-approved.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center p-6 space-y-4">
+                <div className={cn(
+                  "h-32 w-32 rounded-full border-4 flex flex-col items-center justify-center transition-all duration-500 animate-pulse-slow",
+                  isOnBreak ? "border-orange-500 bg-orange-50 text-orange-600 shadow-orange-100 shadow-2xl" : "border-green-500 bg-green-50 text-green-600"
+                )}>
+                  {isOnBreak ? <Timer className="h-10 w-10 animate-spin-slow" /> : <Coffee className="h-10 w-10" />}
+                  <span className="text-sm font-bold mt-1">{isOnBreak ? "On Break" : "Working"}</span>
+                </div>
+
+                <div className="text-center">
+                  {isOnBreak ? (
+                    <div className="space-y-1">
+                      <p className="text-3xl font-mono font-bold text-orange-600 tracking-wider">
+                        {breakElapsedTime}
+                      </p>
+                      <p className="text-xs text-muted-foreground italic">
+                        Started at: {activeBreakRecord?.startTime ? format(new Date(activeBreakRecord.startTime), 'hh:mm a') : '...'}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Take a break when you need it.
+                    </p>
+                  )}
+                </div>
+
+                <Button
+                  size="lg"
+                  variant={isOnBreak ? "destructive" : "default"}
+                  className={cn(
+                    "w-48 h-12 font-bold transition-all duration-300 transform active:scale-95",
+                    isOnBreak ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700"
+                  )}
+                  onClick={handleToggleBreak}
+                  disabled={breakLoading}
+                >
+                  {breakLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    isOnBreak ? "Stop Break" : "Start Break"
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Team Break Time Card for Supervisors */}
+          {employeeData && (isSupervisor || supervisedEmployeeIds.length > 0) && (
+            <TeamBreakTimeCard
+              isSupervisor={isSupervisor}
+              supervisedEmployeeIds={supervisedEmployeeIds}
+            />
+          )}
+        </div>
 
         <Card className="shadow-xl">
           <CardHeader>
@@ -2128,6 +2382,7 @@ export default function AccountDetailsPage() {
                           <TableHead>Date</TableHead>
                           <TableHead>In Time</TableHead>
                           <TableHead>Out Time</TableHead>
+                          <TableHead>Break</TableHead>
                           <TableHead>Flag</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Action</TableHead>
@@ -2160,6 +2415,17 @@ export default function AccountDetailsPage() {
                                   </Button>
                                 )}
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              {(() => {
+                                const dayDate = att?.date ? (typeof att.date === 'string' ? att.date : format(new Date(att.date), 'yyyy-MM-dd')) : '';
+                                const dayBreaks = rangeBreaks.filter(b => b.date === dayDate);
+                                const totalMins = dayBreaks.reduce((sum, b) => sum + (b.durationMinutes || 0), 0);
+                                if (totalMins === 0) return <span className="text-muted-foreground">-</span>;
+                                const h = Math.floor(totalMins / 60);
+                                const m = totalMins % 60;
+                                return <span className="font-mono text-xs">{h > 0 ? `${h}h ` : ''}{m}m</span>;
+                              })()}
                             </TableCell>
                             <TableCell>
                               <Badge variant={att?.flag === 'P' ? 'default' : att?.flag === 'D' ? 'destructive' : 'secondary'}>

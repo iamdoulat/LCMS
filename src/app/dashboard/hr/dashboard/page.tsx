@@ -9,8 +9,11 @@ import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import type { EmployeeDocument, LeaveApplicationDocument, AttendanceDocument, HolidayDocument, BranchDocument, DepartmentDocument, NoticeBoardSettings, AdvanceSalaryDocument, VisitApplicationDocument } from '@/types';
-import { format, startOfTomorrow, isWithinInterval, startOfDay, endOfDay, parseISO, subDays, eachDayOfInterval, getDay, differenceInDays } from 'date-fns';
+import { format, startOfTomorrow, isWithinInterval, startOfDay, endOfDay, parseISO, subDays, eachDayOfInterval, getDay, differenceInDays, addDays, isSameMonth } from 'date-fns';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
+import { getOnBreakEmployeesSubscription } from '@/lib/firebase/breakTime';
+import { BreakTimeRecord } from '@/types/breakTime';
+import { AttendanceReconciliation } from '@/types/reconciliation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -52,6 +55,10 @@ interface HrmDashboardStats {
     pendingVisitApplications: number;
     onVisitToday: number;
     onVisitTomorrow: number;
+    upcomingHolidays: number;
+    pendingAttendanceRecon: number;
+    pendingAttendanceApproval: number;
+    pendingBreakTimeRecon: number;
 }
 
 const getInitials = (name?: string) => {
@@ -78,6 +85,10 @@ export default function HrmDashboardPage() {
         pendingVisitApplications: 0,
         onVisitToday: 0,
         onVisitTomorrow: 0,
+        upcomingHolidays: 0,
+        pendingAttendanceRecon: 0,
+        pendingAttendanceApproval: 0,
+        pendingBreakTimeRecon: 0,
     });
 
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_hrm_dashboard']);
@@ -111,6 +122,7 @@ export default function HrmDashboardPage() {
     const [leaveSearchTerm, setLeaveSearchTerm] = React.useState('');
     const [leaveFilterBranch, setLeaveFilterBranch] = React.useState(ALL_BRANCHES_FILTER_VALUE);
     const [leaveFilterDept, setLeaveFilterDept] = React.useState(ALL_DEPTS_FILTER_VALUE);
+    const [onBreakEmployees, setOnBreakEmployees] = React.useState<BreakTimeRecord[]>([]);
 
     const isLoading = isLoadingEmployees || isLoadingLeaves || isLoadingAttendance || isLoadingHolidays || isLoadingBranches || isLoadingDepts || isLoadingNotices || isLoadingAdvanceSalary || isLoadingAllVisits;
 
@@ -128,6 +140,13 @@ export default function HrmDashboardPage() {
             setIsLoadingAttendance(false);
         });
 
+        return () => unsubscribe();
+    }, []);
+
+    React.useEffect(() => {
+        const unsubscribe = getOnBreakEmployeesSubscription((employees) => {
+            setOnBreakEmployees(employees);
+        });
         return () => unsubscribe();
     }, []);
 
@@ -238,8 +257,14 @@ export default function HrmDashboardPage() {
             const onVisitTomorrowCount = approvedVisits.filter(v => isWithinInterval(tomorrow, { start: parseISO(v.fromDate), end: parseISO(v.toDate) })).length;
             const pendingVisitApplicationsCount = allVisits.filter(v => v.status === 'Pending').length;
 
+            const nextMonth = addDays(today, 30);
+            const upcomingHolidaysCount = holidays?.filter(h => {
+                const hStart = parseISO(h.fromDate);
+                return (hStart >= today && hStart <= nextMonth);
+            }).length || 0;
 
-            setStats({
+            setStats(prev => ({
+                ...prev,
                 totalEmployees: employees.length,
                 todayPresent: presentCount,
                 todayDelayed: delayedCount,
@@ -252,9 +277,37 @@ export default function HrmDashboardPage() {
                 pendingVisitApplications: pendingVisitApplicationsCount,
                 onVisitToday: onVisitTodayCount,
                 onVisitTomorrow: onVisitTomorrowCount,
-            });
+                upcomingHolidays: upcomingHolidaysCount,
+            }));
         }
-    }, [employees, leaves, attendance, advanceSalaryRequests, allVisits]);
+    }, [employees, leaves, attendance, advanceSalaryRequests, allVisits, holidays]);
+
+    // Fetch separate counts for Reconciliations and Approvals
+    React.useEffect(() => {
+        const fetchAdditionalStats = async () => {
+            try {
+                // Pending Attendance Recon
+                const reconSnap = await getDocs(query(collection(firestore, 'attendance_reconciliation'), where('status', '==', 'pending')));
+
+                // Pending Attendance Approval (where approvalStatus is Pending)
+                // Need to check if there's a more efficient way or if we need a dedicated collection/index
+                const approvalSnap = await getDocs(query(collection(firestore, 'attendance'), where('approvalStatus', '==', 'Pending')));
+
+                // Pending Break Time Recon
+                const breakReconSnap = await getDocs(query(collection(firestore, 'break_time'), where('status', '==', 'pending')));
+
+                setStats(prev => ({
+                    ...prev,
+                    pendingAttendanceRecon: reconSnap.size,
+                    pendingAttendanceApproval: approvalSnap.size,
+                    pendingBreakTimeRecon: breakReconSnap.size,
+                }));
+            } catch (err) {
+                console.error("Error fetching additional stats:", err);
+            }
+        };
+        fetchAdditionalStats();
+    }, []);
 
     React.useEffect(() => {
         const processChartData = async () => {
@@ -493,10 +546,80 @@ export default function HrmDashboardPage() {
                         />
                         <StatCard
                             title="On Break Now"
-                            value="0"
+                            value={
+                                <div className="flex flex-col gap-1">
+                                    <span>{onBreakEmployees.length}</span>
+                                    {onBreakEmployees.length > 0 && (
+                                        <div className="flex -space-x-2 mt-1 overflow-hidden">
+                                            {onBreakEmployees.slice(0, 3).map((emp, i) => (
+                                                <Avatar key={emp.id} className="inline-block h-6 w-6 ring-2 ring-white">
+                                                    <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
+                                                        {getInitials(emp.employeeName)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                            ))}
+                                            {onBreakEmployees.length > 3 && (
+                                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-[10px] ring-2 ring-white">
+                                                    +{onBreakEmployees.length - 3}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            }
                             icon={<Coffee />}
-                            description="Employees currently on break"
+                            description={onBreakEmployees.length > 0 ? onBreakEmployees.map(e => e.employeeName).join(', ').substring(0, 30) + '...' : "Employees currently on break"}
                             className="bg-gray-500"
+                            footer={onBreakEmployees.length > 0 && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="link" className="p-0 h-auto text-white text-xs underline">Quick List</Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-56">
+                                        <ScrollArea className="h-48">
+                                            {onBreakEmployees.map(emp => (
+                                                <DropdownMenuItem key={emp.id} className="flex flex-col items-start">
+                                                    <span className="font-semibold">{emp.employeeName}</span>
+                                                    <span className="text-[10px] text-muted-foreground">Since: {format(new Date(emp.startTime), 'hh:mm a')}</span>
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </ScrollArea>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                        />
+                        {/* New StatCards */}
+                        <StatCard
+                            title="Pending Attendance Recon."
+                            value={stats.pendingAttendanceRecon}
+                            icon={<UserCheck />}
+                            description="Awaiting review"
+                            className="bg-indigo-600"
+                            footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/hr/attendance-reconciliation')}>Manage</Button>}
+                        />
+                        <StatCard
+                            title="Upcoming Holidays"
+                            value={stats.upcomingHolidays}
+                            icon={<Calendar />}
+                            description="In next 30 days"
+                            className="bg-teal-500"
+                            footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/hr/holidays')}>View Calendar</Button>}
+                        />
+                        <StatCard
+                            title="Pending Attendance Approval"
+                            value={stats.pendingAttendanceApproval}
+                            icon={<UserCheck />}
+                            description="Unapproved entries"
+                            className="bg-cyan-600"
+                            footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/hr/attendance')}>View List</Button>}
+                        />
+                        <StatCard
+                            title="Pending Break Time Recon."
+                            value={stats.pendingBreakTimeRecon}
+                            icon={<Clock />}
+                            description="Break review requests"
+                            className="bg-orange-600"
+                            footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/hr/payroll/break-time-reconciliation')}>Review</Button>}
                         />
                     </div>
 

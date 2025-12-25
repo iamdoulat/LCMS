@@ -153,7 +153,7 @@ export default function PrintJobCardPage() {
         return <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white"><p>No data found.</p></div>;
     }
 
-    const { employee, dateRange, attendance, leaves, holidays } = reportData;
+    const { employee, dateRange, attendance, leaves, holidays, breaks } = reportData;
     const days = eachDayOfInterval({ start: parseISO(dateRange.from), end: parseISO(dateRange.to) });
 
     let presentCount = 0;
@@ -210,7 +210,14 @@ export default function PrintJobCardPage() {
                 const inTimeDate = parse12HourTime(inTime, formattedDate);
                 const outTimeDate = parse12HourTime(outTime, formattedDate);
                 if (inTimeDate && outTimeDate && outTimeDate > inTimeDate) {
-                    actualDutyMinutes = differenceInMinutes(outTimeDate, inTimeDate);
+                    const totalMins = differenceInMinutes(outTimeDate, inTimeDate);
+
+                    // Fetch actual break for this day
+                    const dayBreaks = breaks?.filter((b: any) => b.date === formattedDate) || [];
+                    const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
+
+                    // Deduct actual break minutes from total duration
+                    actualDutyMinutes = Math.max(0, totalMins - actualBreakMins);
                     totalActualDutyMinutes += actualDutyMinutes;
                 }
             }
@@ -226,7 +233,12 @@ export default function PrintJobCardPage() {
             expectedDuty: (status === 'P' || status === 'D') ? formatDuration(expectedDutyHour * 60) : '-',
             inTime: formatTime(inTime),
             outTime: formatTime(outTime),
-            breakTime: '00:00',
+            breakTime: (() => {
+                if (status !== 'P' && status !== 'D') return '00:00';
+                const dayBreaks = breaks?.filter((b: any) => b.date === formattedDate) || [];
+                const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
+                return formatDuration(actualBreakMins);
+            })(),
             actualDuty: actualDutyMinutes > 0 ? formatDuration(actualDutyMinutes) : '-',
             extraLess: actualDutyMinutes > 0 ? formatDuration(extraLessMinutes) : '-',
             remarks
