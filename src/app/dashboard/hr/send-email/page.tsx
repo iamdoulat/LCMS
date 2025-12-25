@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SendEmailForm } from '@/components/forms/SendEmailForm';
+import { SendEmailForm } from '@/components/forms/common';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 

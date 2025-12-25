@@ -1,7 +1,7 @@
 
 "use client";
 
-import { AddAttendanceForm } from '@/components/forms/AddAttendanceForm';
+import { AddAttendanceForm } from '@/components/forms/hr';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CalendarCheck, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';

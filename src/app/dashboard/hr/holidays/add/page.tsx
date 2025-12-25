@@ -1,7 +1,7 @@
 
 "use client";
 
-import { AddHolidayForm } from '@/components/forms/AddHolidayForm';
+import { AddHolidayForm } from '@/components/forms/hr';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CalendarPlus, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';

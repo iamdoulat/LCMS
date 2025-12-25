@@ -2,7 +2,7 @@
 
 "use client";
 
-import { CreateInventoryOrderForm } from '@/components/forms/CreateInventoryOrderForm';
+import { CreateInventoryOrderForm } from '@/components/forms/inventory';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';

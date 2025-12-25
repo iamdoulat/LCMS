@@ -10,7 +10,7 @@ import { useParams } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { LCEntryDocument as DeferredPaymentRecord } from '@/types';
-import { EditPaymentTrackingEntryForm } from '@/components/forms/EditPaymentTrackingEntryForm';
+import { EditPaymentTrackingEntryForm } from '@/components/forms/financial';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
 import { Skeleton } from '@/components/ui/skeleton';

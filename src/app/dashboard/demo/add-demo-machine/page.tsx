@@ -1,7 +1,7 @@
 
 "use client";
 
-import { AddDemoMachineForm } from '@/components/forms/AddDemoMachineForm';
+import { AddDemoMachineForm } from '@/components/forms/demo';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Laptop, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';

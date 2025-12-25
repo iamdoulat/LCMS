@@ -16,7 +16,7 @@ import { createLazyComponent } from '@/lib/lazy-load';
 
 // Lazy load the large form component (58KB)
 const EditInstallationReportForm = createLazyComponent(
-  () => import('@/components/forms/EditInstallationReportForm').then(mod => ({ default: mod.EditInstallationReportForm }))
+  () => import('@/components/forms/inventory').then(mod => ({ default: mod.EditInstallationReportForm }))
 );
 
 export default function EditInstallationReportPage() {

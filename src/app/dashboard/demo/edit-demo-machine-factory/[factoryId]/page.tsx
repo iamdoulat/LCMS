@@ -8,7 +8,7 @@ import { ArrowLeft, Factory as FactoryIcon, Loader2, AlertTriangle } from 'lucid
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { EditDemoMachineFactoryForm } from '@/components/forms/EditDemoMachineFactoryForm';
+import { EditDemoMachineFactoryForm } from '@/components/forms/demo';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { DemoMachineFactoryDocument } from '@/types';

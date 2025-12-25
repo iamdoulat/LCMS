@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { FileEdit as InvoiceIcon, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditInvoiceForm } from '@/components/forms/EditInvoiceForm'; 
+import { EditInvoiceForm } from '@/components/forms/financial'; 
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import type { InvoiceDocument } from '@/types';

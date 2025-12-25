@@ -1,7 +1,7 @@
 
 "use client";
 
-import { AddDemoMachineFactoryForm } from '@/components/forms/AddDemoMachineFactoryForm';
+import { AddDemoMachineFactoryForm } from '@/components/forms/demo';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';

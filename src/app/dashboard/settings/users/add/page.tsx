@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { AddUserForm } from '@/components/forms/AddUserForm';
+import { AddUserForm } from '@/components/forms/common';
 
 export default function AddUserPage() {
   return (

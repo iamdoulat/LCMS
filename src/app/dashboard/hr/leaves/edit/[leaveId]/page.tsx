@@ -10,7 +10,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { LeaveApplicationDocument } from '@/types';
-import { EditLeaveForm } from '@/components/forms/EditLeaveForm';
+import { EditLeaveForm } from '@/components/forms/hr';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
 import { Skeleton } from '@/components/ui/skeleton';

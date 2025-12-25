@@ -1,5 +1,5 @@
 
-import { AddSupplierForm } from '@/components/forms/AddSupplierForm';
+import { AddSupplierForm } from '@/components/forms/inventory';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Store } from 'lucide-react'; 
 import { cn } from '@/lib/utils';

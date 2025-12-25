@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Store, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditBeneficiaryForm } from '@/components/forms/EditBeneficiaryForm';
+import { EditBeneficiaryForm } from '@/components/forms/crm';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { SupplierDocument } from '@/types';

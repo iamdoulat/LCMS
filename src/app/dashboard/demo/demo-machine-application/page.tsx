@@ -14,7 +14,7 @@ import { demoMachineApplicationSchema } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { DatePickerField } from '@/components/forms/DatePickerField';
+import { DatePickerField } from '@/components/forms/common';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, AppWindow, Factory, Laptop, CalendarDays, Hash, User, Phone, MessageSquare, FileText, Save, FileBadge, PlusCircle, Trash2 } from 'lucide-react';

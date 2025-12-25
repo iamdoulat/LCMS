@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, BellRing } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { AddNoticeForm } from '@/components/forms/AddNoticeForm';
+import { AddNoticeForm } from '@/components/forms/common';
 
 export default function AddNoticePage() {
   return (

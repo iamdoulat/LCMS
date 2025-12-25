@@ -8,7 +8,7 @@ import { ArrowLeft, Laptop, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { EditDemoMachineForm } from '@/components/forms/EditDemoMachineForm';
+import { EditDemoMachineForm } from '@/components/forms/demo';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { DemoMachineDocument } from '@/types';

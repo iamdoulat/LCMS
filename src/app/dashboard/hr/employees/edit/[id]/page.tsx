@@ -17,7 +17,7 @@ import { createLazyComponent } from '@/lib/lazy-load';
 
 // Lazy load the large form component (45KB)
 const EditEmployeeForm = createLazyComponent(
-  () => import('@/components/forms/EditEmployeeForm').then(mod => ({ default: mod.EditEmployeeForm }))
+  () => import('@/components/forms/hr').then(mod => ({ default: mod.EditEmployeeForm }))
 );
 
 export default function EditEmployeePage() {

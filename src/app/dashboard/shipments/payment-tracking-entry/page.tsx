@@ -1,7 +1,7 @@
 
 "use client";
 
-import { PaymentTrackingEntryForm } from '@/components/forms/PaymentTrackingEntryForm';
+import { PaymentTrackingEntryForm } from '@/components/forms/financial';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DollarSign, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';

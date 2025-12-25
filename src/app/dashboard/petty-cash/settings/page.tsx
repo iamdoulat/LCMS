@@ -27,15 +27,15 @@ import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import type { PettyCashAccountDocument, PettyCashCategoryDocument, ItemCategoryDocument, ItemVariationDocument, ItemSectionDocument } from '@/types';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { AddPettyCashAccountForm } from '@/components/forms/AddPettyCashAccountForm';
-import { AddPettyCashCategoryForm } from '@/components/forms/AddPettyCashCategoryForm';
-import { EditPettyCashAccountForm } from '@/components/forms/EditPettyCashAccountForm';
-import { EditPettyCashCategoryForm } from '@/components/forms/EditPettyCashCategoryForm';
-import { AddItemCategoryForm } from '@/components/forms/AddItemCategoryForm';
-import { EditItemCategoryForm } from '@/components/forms/EditItemCategoryForm';
-import { AddItemVariationForm } from '@/components/forms/AddItemVariationForm';
-import { EditItemVariationForm } from '@/components/forms/EditItemVariationForm';
-import { AddItemSectionForm } from '@/components/forms/AddItemSectionForm';
+import { AddPettyCashAccountForm } from '@/components/forms/financial';
+import { AddPettyCashCategoryForm } from '@/components/forms/financial';
+import { EditPettyCashAccountForm } from '@/components/forms/financial';
+import { EditPettyCashCategoryForm } from '@/components/forms/financial';
+import { AddItemCategoryForm } from '@/components/forms/inventory';
+import { EditItemCategoryForm } from '@/components/forms/inventory';
+import { AddItemVariationForm } from '@/components/forms/inventory';
+import { EditItemVariationForm } from '@/components/forms/inventory';
+import { AddItemSectionForm } from '@/components/forms/inventory';
 
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -63,8 +63,8 @@ const formatCurrency = (value?: number) => {
 };
 
 
-import { AddCurrencyForm } from '@/components/forms/AddCurrencyForm';
-import { EditCurrencyForm } from '@/components/forms/EditCurrencyForm';
+import { AddCurrencyForm } from '@/components/forms/financial';
+import { EditCurrencyForm } from '@/components/forms/financial';
 import type { CurrencyDocument } from '@/types';
 
 export default function PettyCashSettingsPage() {

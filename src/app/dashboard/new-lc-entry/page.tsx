@@ -6,7 +6,7 @@ import { createLazyComponent } from '@/lib/lazy-load';
 
 // Lazy load the large form component (84KB)
 const NewLCEntryForm = createLazyComponent(
-  () => import('@/components/forms/NewLCEntryForm').then(mod => ({ default: mod.NewLCEntryForm }))
+  () => import('@/components/forms/financial').then(mod => ({ default: mod.NewLCEntryForm }))
 );
 
 export default function NewLCEntryPage() {

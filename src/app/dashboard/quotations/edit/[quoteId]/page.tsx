@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Edit, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditQuoteForm } from '@/components/forms/EditQuoteForm'; 
+import { EditQuoteForm } from '@/components/forms/crm'; 
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import type { QuoteDocument } from '@/types';

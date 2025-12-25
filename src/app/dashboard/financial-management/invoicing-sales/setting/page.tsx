@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import { FinancialDocumentSettingsForm } from '@/components/forms/FinancialDocumentSettingsForm';
+import { FinancialDocumentSettingsForm } from '@/components/forms/financial';
 
 export default function FinancialManagementSettingPage() {
   const { userRole, loading: authLoading } = useAuth();

@@ -10,7 +10,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { ClaimReportDocument } from '@/types';
-import { EditClaimReportForm } from '@/components/forms/EditClaimReportForm';
+import { EditClaimReportForm } from '@/components/forms/financial';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
 

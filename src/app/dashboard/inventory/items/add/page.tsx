@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { AddItemForm } from '@/components/forms/AddItemForm';
+import { AddItemForm } from '@/components/forms/inventory';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Package as PackageIcon, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';

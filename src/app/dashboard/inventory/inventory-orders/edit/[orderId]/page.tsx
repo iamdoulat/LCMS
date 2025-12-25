@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ShoppingCart, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditInventoryOrderForm } from '@/components/forms/EditInventoryOrderForm';
+import { EditInventoryOrderForm } from '@/components/forms/inventory';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import type { OrderDocument } from '@/types';

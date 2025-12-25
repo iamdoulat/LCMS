@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { AddBranchForm } from '@/components/forms/AddBranchForm';
+import { AddBranchForm } from '@/components/forms/hr';
 
 export default function AddBranchPage() {
     const router = useRouter();

@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { EditBranchForm } from '@/components/forms/EditBranchForm';
+import { EditBranchForm } from '@/components/forms/hr';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { BranchDocument } from '@/types';

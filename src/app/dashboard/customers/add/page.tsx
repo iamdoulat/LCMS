@@ -1,5 +1,5 @@
 
-import { AddCustomerForm } from '@/components/forms/AddCustomerForm';
+import { AddCustomerForm } from '@/components/forms/crm';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';

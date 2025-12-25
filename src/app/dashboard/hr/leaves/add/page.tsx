@@ -1,7 +1,7 @@
 
 "use client";
 
-import { AddLeaveForm } from '@/components/forms/AddLeaveForm';
+import { AddLeaveForm } from '@/components/forms/hr';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Mailbox, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';

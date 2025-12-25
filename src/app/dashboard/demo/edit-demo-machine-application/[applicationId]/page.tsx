@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import type { DemoMachineApplicationDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
-import { EditDemoMachineApplicationForm } from '@/components/forms/EditDemoMachineApplicationForm';
+import { EditDemoMachineApplicationForm } from '@/components/forms/demo';
 import { Badge } from '@/components/ui/badge';
 import { parseISO, isValid, isPast, isFuture, isToday, startOfDay } from 'date-fns';
 

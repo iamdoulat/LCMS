@@ -16,7 +16,7 @@ import { createLazyComponent } from '@/lib/lazy-load';
 
 // Lazy load the large form component
 const EditLCEntryForm = createLazyComponent(
-  () => import('@/components/forms/EditLCEntryForm').then(mod => ({ default: mod.EditLCEntryForm }))
+  () => import('@/components/forms/financial').then(mod => ({ default: mod.EditLCEntryForm }))
 );
 
 export default function EditLCPage() {

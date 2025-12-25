@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { UserCog, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditApplicantForm } from '@/components/forms/EditApplicantForm'; 
+import { EditApplicantForm } from '@/components/forms/crm'; 
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { CustomerDocument } from '@/types';

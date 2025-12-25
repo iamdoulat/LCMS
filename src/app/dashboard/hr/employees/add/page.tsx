@@ -1,6 +1,6 @@
 "use client";
 
-import { AddEmployeeForm } from '@/components/forms/AddEmployeeForm';
+import { AddEmployeeForm } from '@/components/forms/hr';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';

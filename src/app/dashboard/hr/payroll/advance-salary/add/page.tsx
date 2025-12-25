@@ -5,7 +5,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DollarSign, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AddAdvanceSalaryForm } from '@/components/forms/AddAdvanceSalaryForm';
+import { AddAdvanceSalaryForm } from '@/components/forms/hr';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';

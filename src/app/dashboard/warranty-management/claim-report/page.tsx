@@ -1,7 +1,7 @@
 
 "use client";
 
-import { AddClaimReportForm } from '@/components/forms/AddClaimReportForm';
+import { AddClaimReportForm } from '@/components/forms/financial';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';

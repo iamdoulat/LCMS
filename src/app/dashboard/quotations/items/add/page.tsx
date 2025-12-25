@@ -1,4 +1,4 @@
-import { AddQuoteItemForm } from '@/components/forms/AddQuoteItemForm'; // Changed import
+import { AddQuoteItemForm } from '@/components/forms/crm'; // Changed import
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PlusCircle, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';

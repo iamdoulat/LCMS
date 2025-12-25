@@ -8,7 +8,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { DollarSign, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditSaleForm } from '@/components/forms/EditSaleForm';
+import { EditSaleForm } from '@/components/forms/crm';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import type { SaleDocument } from '@/types';

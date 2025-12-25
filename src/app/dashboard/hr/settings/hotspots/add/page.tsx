@@ -2,7 +2,7 @@
 "use client"
 
 import React from 'react'
-import { AddHotspotForm } from '@/components/forms/AddHotspotForm'
+import { AddHotspotForm } from '@/components/forms/hr'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'

@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Building } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CompanySetupForm } from '@/components/forms/CompanySetupForm';
+import { CompanySetupForm } from '@/components/forms/common';
 
 export default function CompanySetupPage() {
   const { userRole, loading: authLoading } = useAuth();

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { CreateDeliveryChallanForm } from '@/components/forms/CreateDeliveryChallanForm';
+import { CreateDeliveryChallanForm } from '@/components/forms/financial';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Truck, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';

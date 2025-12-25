@@ -1,7 +1,7 @@
 
 "use client";
 
-import { AddVisitApplicationForm } from '@/components/forms/AddVisitApplicationForm';
+import { AddVisitApplicationForm } from '@/components/forms/hr';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plane, ArrowLeft, X } from 'lucide-react';
 import { cn } from '@/lib/utils';

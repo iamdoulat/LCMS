@@ -1,5 +1,5 @@
 
-import { AddProformaInvoiceForm } from '@/components/forms/AddProformaInvoiceForm';
+import { AddProformaInvoiceForm } from '@/components/forms/financial';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FilePlus2 } from 'lucide-react';
 import { cn } from '@/lib/utils';

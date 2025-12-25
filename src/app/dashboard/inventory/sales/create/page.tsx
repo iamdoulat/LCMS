@@ -4,7 +4,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FilePlus2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CreateSaleInvoiceForm } from '@/components/forms/CreateSaleInvoiceForm';
+import { CreateSaleInvoiceForm } from '@/components/forms/financial';
 import * as React from 'react';
 
 export default function CreateNewSaleInvoicePage() {
