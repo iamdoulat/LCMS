@@ -504,6 +504,16 @@ export default function AccountDetailsPage() {
         }
 
         const location = await updateLocation(true, true);
+        if (!location) {
+          Swal.fire({
+            title: "Location Required",
+            text: "Could not capture your current location. Location is mandatory to stop your break. Please ensure GPS is enabled and try again.",
+            icon: "error"
+          });
+          setBreakLoading(false);
+          return;
+        }
+
         await stopBreak(activeBreakId, location || undefined);
         Swal.fire({
           title: "Break Ended",
@@ -514,6 +524,16 @@ export default function AccountDetailsPage() {
         });
       } else {
         const location = await updateLocation(true, true);
+        if (!location) {
+          Swal.fire({
+            title: "Location Required",
+            text: "Could not capture your current location. Location is mandatory to start your break. Please ensure GPS is enabled and try again.",
+            icon: "error"
+          });
+          setBreakLoading(false);
+          return;
+        }
+
         // Start break
         await startBreak({
           id: employeeData.id,
@@ -1614,7 +1634,7 @@ export default function AccountDetailsPage() {
   }
 
   return (
-    <div className="mx-[10px] mt-[10px] mb-[10px] p-0 pb-[10px] md:mx-0 md:mt-0 md:mb-0 md:py-8 md:px-5 space-y-8 max-w-[calc(100vw-20px)] md:max-w-full overflow-x-hidden">
+    <div className="mx-[10px] mt-[10px] mb-[50px] p-0 pb-[10px] md:mx-0 md:mt-0 md:mb-0 md:py-8 md:px-5 space-y-8 max-w-[calc(100vw-20px)] md:max-w-full overflow-x-hidden">
       <Form {...form}>
         <Card className="shadow-xl">
           <CardHeader>

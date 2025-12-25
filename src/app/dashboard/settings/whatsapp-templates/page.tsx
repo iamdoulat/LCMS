@@ -158,7 +158,7 @@ export default function WhatsAppTemplatesPage() {
     };
 
     return (
-        <div className="max-w-none mx-[25px] py-8 px-0">
+        <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
             <div className="flex justify-between items-center flex-wrap gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">WhatsApp Templates</h1>

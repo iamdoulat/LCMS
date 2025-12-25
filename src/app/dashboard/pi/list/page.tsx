@@ -275,7 +275,7 @@ export default function InvoicesListPage() {
   };
 
   return (
-    <div className="max-w-none mx-[25px] py-8 px-0">
+    <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

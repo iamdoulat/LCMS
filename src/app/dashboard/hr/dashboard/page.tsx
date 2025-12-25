@@ -445,7 +445,7 @@ export default function HrmDashboardPage() {
 
     if (isLoading) {
         return (
-            <div className="max-w-none mx-[25px] py-8 px-0">
+            <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
                 <div className="flex justify-center items-center h-96">
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 </div>
@@ -454,7 +454,7 @@ export default function HrmDashboardPage() {
     }
 
     return (
-        <div className="max-w-none mx-[25px] py-8 space-y-8 px-0">
+        <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 space-y-8 px-0">
             <Card className="shadow-xl">
                 <CardHeader>
                     <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>

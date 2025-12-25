@@ -20,7 +20,7 @@ export default function BackupRestorePage() {
 
     if (!canAccess) {
         return (
-            <div className="max-w-none mx-[25px] py-8 px-0">
+            <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
                 <div className="flex flex-col items-center justify-center min-h-[400px]">
                     <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
                     <p className="text-muted-foreground">You do not have permission to access this page.</p>
@@ -114,7 +114,7 @@ export default function BackupRestorePage() {
     };
 
     return (
-        <div className="max-w-none mx-[25px] py-8 px-0">
+        <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
             <div className="space-y-6">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Backup & Restore</h1>

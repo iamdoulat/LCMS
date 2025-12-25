@@ -208,7 +208,7 @@ export default function LcExpireTrackerPage() {
   const handlePageChange = (page: number) => setCurrentPage(page);
 
   return (
-    <div className="max-w-none mx-[25px] py-8 px-0">
+    <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-destructive", "bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 text-transparent bg-clip-text")}>

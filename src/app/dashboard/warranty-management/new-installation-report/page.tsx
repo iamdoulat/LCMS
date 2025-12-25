@@ -9,7 +9,7 @@ import { NewInstallationReportForm } from '@/components/forms/inventory';
 
 export default function NewInstallationReportPage() {
   return (
-    <div className="max-w-none mx-[25px] py-8 px-0">
+    <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
       <Card className="mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
