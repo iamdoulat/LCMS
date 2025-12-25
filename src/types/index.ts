@@ -794,6 +794,7 @@ export interface Item {
   itemSection: string; // New field
   itemType: ItemType; // Single or Variant
   itemVariation?: string; // Optional field, used if itemType is Variant
+  variationOption?: string; // New field: Selected sub-variation (e.g. "Small", "Red")
   itemCode?: string; // SKU
   brandName?: string;
   countryOfOrigin?: string; // Added field
@@ -823,6 +824,7 @@ export const itemSchema = z.object({
   itemSection: z.string().min(1, "Item Section is required."),
   itemType: z.enum(itemTypeOptions, { required_error: "Item Type is required" }),
   itemVariation: z.string().optional(),
+  variationOption: z.string().optional(),
   itemCode: z.string().optional(),
   brandName: z.string().optional(),
   countryOfOrigin: z.string().optional(),
@@ -1329,6 +1331,7 @@ export type ItemCategoryDocument = ItemCategory & { id: string };
 export interface ItemVariation {
   id?: string;
   name: string;
+  subVariations?: string[];
   createdAt?: any;
   updatedAt?: any;
 }
@@ -1354,6 +1357,7 @@ export type ItemSectionFormValues = z.infer<typeof ItemSectionSchema>;
 
 export const ItemVariationSchema = z.object({
   name: z.string().min(2, "Variation name must be at least 2 characters long."),
+  subVariations: z.array(z.string()).optional(),
 });
 export type ItemVariationFormValues = z.infer<typeof ItemVariationSchema>;
 // --- END Petty Cash Types ---

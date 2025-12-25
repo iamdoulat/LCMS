@@ -38,15 +38,17 @@ export function AddItemVariationForm({ onFormSubmit }: AddItemVariationFormProps
 
         try {
             await addDoc(collection(firestore, "item_variations"), dataToSave);
-            Swal.fire({
-                title: "Variation Added!",
-                text: `"${data.name}" has been created successfully.`,
-                icon: "success",
-                timer: 1000,
-                showConfirmButton: false,
-            });
             form.reset();
             onFormSubmit?.();
+            setTimeout(() => {
+                Swal.fire({
+                    title: "Variation Added!",
+                    text: `"${data.name}" has been created successfully.`,
+                    icon: "success",
+                    timer: 1000,
+                    showConfirmButton: false,
+                });
+            }, 300);
         } catch (error) {
             console.error("Error adding item variation: ", error);
             const errorMessage = error instanceof Error ? error.message : "Unknown error occurred.";

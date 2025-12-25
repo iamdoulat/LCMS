@@ -37,14 +37,16 @@ export function EditItemCategoryForm({ initialData, onFormSubmit }: EditItemCate
                 name: data.name,
                 updatedAt: serverTimestamp(),
             });
-            Swal.fire({
-                title: "Category Updated!",
-                text: `"${data.name}" has been updated successfully.`,
-                icon: "success",
-                timer: 1000,
-                showConfirmButton: false,
-            });
             onFormSubmit?.();
+            setTimeout(() => {
+                Swal.fire({
+                    title: "Category Updated!",
+                    text: `"${data.name}" has been updated successfully.`,
+                    icon: "success",
+                    timer: 1000,
+                    showConfirmButton: false,
+                });
+            }, 300);
         } catch (error) {
             console.error("Error updating item category: ", error);
             const errorMessage = error instanceof Error ? error.message : "Unknown error occurred.";

@@ -39,14 +39,16 @@ export function EditCurrencyForm({ initialData, onFormSubmit }: EditCurrencyForm
                 updatedAt: serverTimestamp(),
             });
 
-            Swal.fire({
-                title: "Currency Updated!",
-                text: `${data.name} has been successfully updated.`,
-                icon: "success",
-                timer: 1500,
-                showConfirmButton: false,
-            });
             onFormSubmit();
+            setTimeout(() => {
+                Swal.fire({
+                    title: "Currency Updated!",
+                    text: `${data.name} has been successfully updated.`,
+                    icon: "success",
+                    timer: 1500,
+                    showConfirmButton: false,
+                });
+            }, 300);
         } catch (error: any) {
             console.error("Error updating currency: ", error);
             Swal.fire("Error", `Failed to update currency: ${error.message}`, "error");

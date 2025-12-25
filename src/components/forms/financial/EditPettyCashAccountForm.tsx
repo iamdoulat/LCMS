@@ -41,13 +41,15 @@ export function EditPettyCashAccountForm({ initialData, onFormSubmit }: EditPett
     try {
       const accountDocRef = doc(firestore, "petty_cash_accounts", initialData.id);
       await updateDoc(accountDocRef, dataToUpdate);
-      Swal.fire({
-        title: "Account Updated!",
-        icon: "success",
-        timer: 1000,
-        showConfirmButton: false,
-      });
       onFormSubmit(); // Close the dialog
+      setTimeout(() => {
+        Swal.fire({
+          title: "Account Updated!",
+          icon: "success",
+          timer: 1000,
+          showConfirmButton: false,
+        });
+      }, 300);
     } catch (error: any) {
       Swal.fire("Update Failed", `Failed to update account: ${error.message}`, "error");
     } finally {
@@ -85,19 +87,19 @@ export function EditPettyCashAccountForm({ initialData, onFormSubmit }: EditPett
           )}
         />
         <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
-                <>
+              <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
-                </>
+              </>
             ) : (
-                <>
+              <>
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
-                </>
+              </>
             )}
-            </Button>
+          </Button>
         </div>
       </form>
     </Form>

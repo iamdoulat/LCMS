@@ -37,14 +37,16 @@ export function EditItemSectionForm({ initialData, onFormSubmit }: EditItemSecti
                 name: data.name,
                 updatedAt: serverTimestamp(),
             });
-            Swal.fire({
-                title: "Section Updated!",
-                text: `"${data.name}" has been updated successfully.`,
-                icon: "success",
-                timer: 1000,
-                showConfirmButton: false,
-            });
             onFormSubmit?.();
+            setTimeout(() => {
+                Swal.fire({
+                    title: "Section Updated!",
+                    text: `"${data.name}" has been updated successfully.`,
+                    icon: "success",
+                    timer: 1000,
+                    showConfirmButton: false,
+                });
+            }, 300);
         } catch (error) {
             console.error("Error updating item section: ", error);
             const errorMessage = error instanceof Error ? error.message : "Unknown error occurred.";

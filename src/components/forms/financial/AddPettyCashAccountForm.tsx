@@ -40,14 +40,16 @@ export function AddPettyCashAccountForm({ onFormSubmit }: AddPettyCashAccountFor
 
     try {
       await addDoc(collection(firestore, "petty_cash_accounts"), dataToSave);
-      Swal.fire({
-        title: "Account Created!",
-        icon: "success",
-        timer: 1000,
-        showConfirmButton: false,
-      });
       form.reset();
       onFormSubmit(); // Close the dialog
+      setTimeout(() => {
+        Swal.fire({
+          title: "Account Created!",
+          icon: "success",
+          timer: 1000,
+          showConfirmButton: false,
+        });
+      }, 300);
     } catch (error: any) {
       Swal.fire("Save Failed", `Failed to create account: ${error.message}`, "error");
     } finally {
@@ -78,26 +80,26 @@ export function AddPettyCashAccountForm({ onFormSubmit }: AddPettyCashAccountFor
             <FormItem>
               <FormLabel>Initial Balance</FormLabel>
               <FormControl>
-                <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''}/>
+                <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
-                <>
+              <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
-                </>
+              </>
             ) : (
-                <>
+              <>
                 <Save className="mr-2 h-4 w-4" />
                 Save Account
-                </>
+              </>
             )}
-            </Button>
+          </Button>
         </div>
       </form>
     </Form>

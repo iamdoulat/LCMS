@@ -68,6 +68,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
       itemSection: '',
       itemType: 'Single',
       itemVariation: '',
+      variationOption: '',
       itemCode: '',
       brandName: '',
       supplierId: '',
@@ -117,8 +118,13 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
         modelNumber: initialData.modelNumber || '',
         category: initialData.category?.trim() || '',
         itemSection: initialData.itemSection?.trim() || '',
-        itemType: initialData.itemType || 'Single',
+        itemType: (
+          initialData.itemType === 'Variant' ||
+          initialData.itemType === 'variant' ||
+          (!initialData.itemType && initialData.itemVariation)
+        ) ? 'Variant' : 'Single',
         itemVariation: initialData.itemVariation?.trim() || '',
+        variationOption: initialData.variationOption?.trim() || '',
         itemCode: initialData.itemCode || '',
         brandName: initialData.brandName || '',
         supplierId: initialData.supplierId || '',
@@ -144,6 +150,11 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
   const watchManageStock = form.watch("manageStock");
   const watchItemType = form.watch("itemType");
   const watchCurrency = form.watch("currency");
+  const watchItemVariation = form.watch("itemVariation");
+
+  const selectedVariationData = React.useMemo(() => {
+    return itemVariations?.find(v => v.name === watchItemVariation);
+  }, [itemVariations, watchItemVariation]);
 
   const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -207,6 +218,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
         itemSection: data.itemSection,
         itemType: data.itemType,
         itemVariation: data.itemType === 'Variant' ? data.itemVariation : undefined,
+        variationOption: data.itemType === 'Variant' ? data.variationOption : undefined,
         itemCode: data.itemCode || undefined,
         brandName: data.brandName || undefined,
         supplierId: data.supplierId || undefined,
@@ -402,7 +414,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                 render={({ field }) => (
                   <FormItem className="col-span-1">
                     <FormLabel>Item Type*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} key={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-11">
                           <SelectValue placeholder="Type" />
@@ -435,6 +447,31 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                         <SelectContent>
                           {itemVariations?.map((variation) => (
                             <SelectItem key={variation.id} value={variation.name}>{variation.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {watchItemType === "Variant" && selectedVariationData?.subVariations && selectedVariationData.subVariations.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="variationOption"
+                  render={({ field }) => (
+                    <FormItem className="col-span-1">
+                      <FormLabel>{watchItemVariation || "Variation"} Option</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Select Option" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {selectedVariationData.subVariations.map((option) => (
+                            <SelectItem key={option} value={option}>{option}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

@@ -38,15 +38,17 @@ export function AddItemSectionForm({ onFormSubmit }: AddItemSectionFormProps) {
 
         try {
             await addDoc(collection(firestore, "item_sections"), dataToSave);
-            Swal.fire({
-                title: "Section Added!",
-                text: `"${data.name}" has been created successfully.`,
-                icon: "success",
-                timer: 1000,
-                showConfirmButton: false,
-            });
             form.reset();
             onFormSubmit?.();
+            setTimeout(() => {
+                Swal.fire({
+                    title: "Section Added!",
+                    text: `"${data.name}" has been created successfully.`,
+                    icon: "success",
+                    timer: 1000,
+                    showConfirmButton: false,
+                });
+            }, 300);
         } catch (error) {
             console.error("Error adding item section: ", error);
             const errorMessage = error instanceof Error ? error.message : "Unknown error occurred.";

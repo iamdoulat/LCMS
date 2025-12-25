@@ -39,13 +39,15 @@ export function EditPettyCashCategoryForm({ initialData, onFormSubmit }: EditPet
     try {
       const categoryDocRef = doc(firestore, "petty_cash_categories", initialData.id);
       await updateDoc(categoryDocRef, dataToUpdate);
-      Swal.fire({
-        title: "Category Updated!",
-        icon: "success",
-        timer: 1000,
-        showConfirmButton: false,
-      });
       onFormSubmit(); // Close the dialog
+      setTimeout(() => {
+        Swal.fire({
+          title: "Category Updated!",
+          icon: "success",
+          timer: 1000,
+          showConfirmButton: false,
+        });
+      }, 300);
     } catch (error: any) {
       Swal.fire("Update Failed", `Failed to update category: ${error.message}`, "error");
     } finally {
@@ -70,19 +72,19 @@ export function EditPettyCashCategoryForm({ initialData, onFormSubmit }: EditPet
           )}
         />
         <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
-                <>
+              <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
-                </>
+              </>
             ) : (
-                <>
+              <>
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
-                </>
+              </>
             )}
-            </Button>
+          </Button>
         </div>
       </form>
     </Form>

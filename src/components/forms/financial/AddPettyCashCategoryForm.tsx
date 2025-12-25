@@ -37,14 +37,16 @@ export function AddPettyCashCategoryForm({ onFormSubmit }: AddPettyCashCategoryF
 
     try {
       await addDoc(collection(firestore, "petty_cash_categories"), dataToSave);
-      Swal.fire({
-        title: "Category Created!",
-        icon: "success",
-        timer: 1000,
-        showConfirmButton: false,
-      });
       form.reset();
       onFormSubmit(); // Close the dialog
+      setTimeout(() => {
+        Swal.fire({
+          title: "Category Created!",
+          icon: "success",
+          timer: 1000,
+          showConfirmButton: false,
+        });
+      }, 300);
     } catch (error: any) {
       Swal.fire("Save Failed", `Failed to create category: ${error.message}`, "error");
     } finally {
@@ -69,19 +71,19 @@ export function AddPettyCashCategoryForm({ onFormSubmit }: AddPettyCashCategoryF
           )}
         />
         <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
-                <>
+              <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
-                </>
+              </>
             ) : (
-                <>
+              <>
                 <Save className="mr-2 h-4 w-4" />
                 Save Category
-                </>
+              </>
             )}
-            </Button>
+          </Button>
         </div>
       </form>
     </Form>

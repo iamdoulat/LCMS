@@ -37,15 +37,17 @@ export function AddCurrencyForm({ onFormSubmit }: AddCurrencyFormProps) {
                 createdAt: serverTimestamp(),
             });
 
-            Swal.fire({
-                title: "Currency Added!",
-                text: `${data.name} has been successfully added.`,
-                icon: "success",
-                timer: 1500,
-                showConfirmButton: false,
-            });
             form.reset();
             onFormSubmit();
+            setTimeout(() => {
+                Swal.fire({
+                    title: "Currency Added!",
+                    text: `${data.name} has been successfully added.`,
+                    icon: "success",
+                    timer: 1500,
+                    showConfirmButton: false,
+                });
+            }, 300);
         } catch (error: any) {
             console.error("Error adding currency: ", error);
             Swal.fire("Error", `Failed to add currency: ${error.message}`, "error");
