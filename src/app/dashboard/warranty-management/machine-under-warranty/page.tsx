@@ -36,10 +36,10 @@ const formatDisplayDate = (date: Date): string => {
 };
 
 const getDaysRemainingBadgeVariant = (days: number): "default" | "secondary" | "destructive" => {
-    if (days < 0) return "destructive"; // Should not happen on this page, but good for safety
-    if (days <= 30) return "destructive"; // Less than a month remaining
-    if (days <= 90) return "secondary"; // Less than 3 months remaining
-    return "default";
+  if (days < 0) return "destructive"; // Should not happen on this page, but good for safety
+  if (days <= 30) return "destructive"; // Less than a month remaining
+  if (days <= 90) return "secondary"; // Less than 3 months remaining
+  return "default";
 };
 
 export default function MachineUnderWarrantyPage() {
@@ -93,18 +93,18 @@ export default function MachineUnderWarrantyPage() {
           });
         });
 
-        const sortedMachines = underWarrantyMachines.sort((a, b) => 
-            a.applicantName.localeCompare(b.applicantName) || a.daysRemaining - b.daysRemaining
+        const sortedMachines = underWarrantyMachines.sort((a, b) =>
+          a.applicantName.localeCompare(b.applicantName) || a.daysRemaining - b.daysRemaining
         );
 
         setAllMachines(sortedMachines);
       } catch (error: any) {
         console.error("Error fetching machines under warranty:", error);
         let errorMessage = `Could not fetch data. Please check Firestore rules.`;
-         if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for details.`;
+        if (error.message?.toLowerCase().includes("index")) {
+          errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for details.`;
         } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+          errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
         Swal.fire("Fetch Error", errorMessage, "error");
@@ -120,16 +120,16 @@ export default function MachineUnderWarrantyPage() {
     let filtered = [...allMachines];
 
     if (filterApplicant) {
-        filtered = filtered.filter(m => m.applicantName?.toLowerCase().includes(filterApplicant.toLowerCase()));
+      filtered = filtered.filter(m => m.applicantName?.toLowerCase().includes(filterApplicant.toLowerCase()));
     }
     if (filterBeneficiary) {
-        filtered = filtered.filter(m => m.beneficiaryName?.toLowerCase().includes(filterBeneficiary.toLowerCase()));
+      filtered = filtered.filter(m => m.beneficiaryName?.toLowerCase().includes(filterBeneficiary.toLowerCase()));
     }
     if (filterSerialNo) {
-        filtered = filtered.filter(m => m.serialNo?.toLowerCase().includes(filterSerialNo.toLowerCase()));
+      filtered = filtered.filter(m => m.serialNo?.toLowerCase().includes(filterSerialNo.toLowerCase()));
     }
     if (filterMachineModel) {
-        filtered = filtered.filter(m => m.machineModel?.toLowerCase().includes(filterMachineModel.toLowerCase()));
+      filtered = filtered.filter(m => m.machineModel?.toLowerCase().includes(filterMachineModel.toLowerCase()));
     }
 
     setDisplayedMachines(filtered);
@@ -154,8 +154,8 @@ export default function MachineUnderWarrantyPage() {
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
   };
-  
-   const getPageNumbers = () => {
+
+  const getPageNumbers = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5;
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
@@ -178,7 +178,7 @@ export default function MachineUnderWarrantyPage() {
 
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -220,7 +220,7 @@ export default function MachineUnderWarrantyPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -278,8 +278,8 @@ export default function MachineUnderWarrantyPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-                 <TableCaption className="py-4">
-                    Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, displayedMachines.length)} of {displayedMachines.length} entries.
+                <TableCaption className="py-4">
+                  Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, displayedMachines.length)} of {displayedMachines.length} entries.
                 </TableCaption>
               </Table>
             </div>

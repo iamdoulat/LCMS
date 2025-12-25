@@ -102,8 +102,8 @@ export default function PurchaseOrdersListPage() {
         const fetchedOrders = querySnapshot.docs.map(docSnap => {
           const data = docSnap.data();
           return {
-             id: docSnap.id,
-             ...data,
+            id: docSnap.id,
+            ...data,
           } as OrderDocument;
         });
         setAllOrders(fetchedOrders);
@@ -240,7 +240,7 @@ export default function PurchaseOrdersListPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -273,7 +273,7 @@ export default function PurchaseOrdersListPage() {
                   <Input id="orderNoFilter" placeholder="Search by Order No..." value={filterOrderNumber} onChange={(e) => setFilterOrderNumber(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="beneficiaryFilterOrder" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
+                  <Label htmlFor="beneficiaryFilterOrder" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground" />Beneficiary</Label>
                   <Combobox
                     options={beneficiaryOptions}
                     value={filterBeneficiaryId || ALL_BENEFICIARIES_VALUE}
@@ -289,7 +289,7 @@ export default function PurchaseOrdersListPage() {
                   <Input id="salespersonFilterOrder" placeholder="Search by Salesperson..." value={filterSalesperson} onChange={(e) => setFilterSalesperson(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="yearFilterOrder" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year (Order Date)</Label>
+                  <Label htmlFor="yearFilterOrder" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground" />Year (Order Date)</Label>
                   <Select value={filterYear} onValueChange={(value) => setFilterYear(value)}>
                     <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
                     <SelectContent>
@@ -297,17 +297,17 @@ export default function PurchaseOrdersListPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
-                    <Label htmlFor="sortByOrder" className="text-sm font-medium">Sort By</Label>
-                    <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {orderSortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                  <Label htmlFor="sortByOrder" className="text-sm font-medium">Sort By</Label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {orderSortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-                 <div>
+                <div>
                   <Button onClick={clearFilters} variant="outline" className="w-full">
                     <XCircle className="mr-2 h-4 w-4" /> Clear Filters & Sort
                   </Button>
@@ -330,10 +330,10 @@ export default function PurchaseOrdersListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                 {isLoading ? (
-                   <TableRow><TableCell colSpan={7} className="h-24 text-center p-2 sm:p-4"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary inline" /> Loading Orders...</TableCell></TableRow>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={7} className="h-24 text-center p-2 sm:p-4"><Loader2 className="mr-2 h-6 w-6 animate-spin text-primary inline" /> Loading Orders...</TableCell></TableRow>
                 ) : fetchError ? (
-                     <TableRow><TableCell colSpan={7} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="h-24 text-center text-destructive px-2 sm:px-4 whitespace-pre-wrap">{fetchError}</TableCell></TableRow>
                 ) : currentItems.length > 0 ? (
                   currentItems.map((order) => (
                     <TableRow key={order.id}>
@@ -389,7 +389,7 @@ export default function PurchaseOrdersListPage() {
               <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}><ChevronLeft className="h-4 w-4" /> Previous</Button>
               {getPageNumbers().map((page, index) =>
                 typeof page === 'number' ? (<Button key={page} variant={currentPage === page ? 'default' : 'outline'} size="sm" onClick={() => handlePageChange(page)} className="w-9 h-9 p-0">{page}</Button>)
-                : (<span key={`ellipsis-order-${index}`} className="px-2 py-1 text-sm">{page}</span>)
+                  : (<span key={`ellipsis-order-${index}`} className="px-2 py-1 text-sm">{page}</span>)
               )}
               <Button variant="outline" size="sm" onClick={handleNextPage} disabled={currentPage === totalPages}>Next <ChevronRight className="h-4 w-4" /></Button>
             </div>

@@ -47,7 +47,7 @@ export default function MissingAndFoundPage() {
           const data = docSnap.data();
           const createdAtISO = data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt;
           const updatedAtISO = data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt;
-          
+
           const invoiceDateISO = data.invoiceDate && data.invoiceDate.toDate ? data.invoiceDate.toDate().toISOString() : data.invoiceDate;
           const commercialInvoiceDateISO = data.commercialInvoiceDate && data.commercialInvoiceDate.toDate ? data.commercialInvoiceDate.toDate().toISOString() : data.commercialInvoiceDate;
           const etdDateISO = data.etdDate && data.etdDate.toDate ? data.etdDate.toDate().toISOString() : data.etdDate;
@@ -80,12 +80,12 @@ export default function MissingAndFoundPage() {
       } catch (error: any) {
         console.error("Error fetching installation reports for missing/found page: ", error);
         let errorMessage = `Failed to fetch reports. Please check Firestore rules and connectivity.`;
-         if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch reports: A Firestore index might be required. Please check the browser console for a link to create it.`;
+        if (error.message?.toLowerCase().includes("index")) {
+          errorMessage = `Could not fetch reports: A Firestore index might be required. Please check the browser console for a link to create it.`;
         } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes("permission"))) {
-           errorMessage = `Could not fetch reports: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'.`;
+          errorMessage = `Could not fetch reports: Missing or insufficient permissions. Please check Firestore security rules for 'installation_reports'.`;
         } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+          errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
         Swal.fire("Fetch Error", errorMessage, "error");
@@ -97,7 +97,7 @@ export default function MissingAndFoundPage() {
   }, []);
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -134,23 +134,23 @@ export default function MissingAndFoundPage() {
                 <Card key={report.id} className="shadow-md hover:shadow-lg transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
-                        <div>
-                            <CardTitle className="text-lg font-semibold text-primary mb-1">
-                                C.I.: {report.commercialInvoiceNumber || 'N/A'}
-                                {report.commercialInvoiceDate && ` (Date: ${formatDisplayDate(report.commercialInvoiceDate)})`}
-                                {" | "}L/C: {report.documentaryCreditNumber || 'N/A'}
-                            </CardTitle>
-                            <p className="text-xs text-muted-foreground">
-                                Applicant: <span className="font-medium text-foreground">{report.applicantName || 'N/A'}</span>
-                                {" | "}Beneficiary: <span className="font-medium text-foreground">{report.beneficiaryName || 'N/A'}</span>
-                            </p>
-                        </div>
-                         <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} passHref>
-                            <Button variant="outline" size="icon" className="md:w-auto md:px-3">
-                                <Edit className="h-4 w-4 md:mr-2" />
-                                <span className="sr-only md:not-sr-only">Edit Report</span>
-                            </Button>
-                        </Link>
+                      <div>
+                        <CardTitle className="text-lg font-semibold text-primary mb-1">
+                          C.I.: {report.commercialInvoiceNumber || 'N/A'}
+                          {report.commercialInvoiceDate && ` (Date: ${formatDisplayDate(report.commercialInvoiceDate)})`}
+                          {" | "}L/C: {report.documentaryCreditNumber || 'N/A'}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                          Applicant: <span className="font-medium text-foreground">{report.applicantName || 'N/A'}</span>
+                          {" | "}Beneficiary: <span className="font-medium text-foreground">{report.beneficiaryName || 'N/A'}</span>
+                        </p>
+                      </div>
+                      <Link href={`/dashboard/warranty-management/edit-installation-report/${report.id}`} passHref>
+                        <Button variant="outline" size="icon" className="md:w-auto md:px-3">
+                          <Edit className="h-4 w-4 md:mr-2" />
+                          <span className="sr-only md:not-sr-only">Edit Report</span>
+                        </Button>
+                      </Link>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -163,20 +163,20 @@ export default function MissingAndFoundPage() {
                           </div>
                         </div>
                       )}
-                       {report.extraFoundInfo && report.extraFoundInfo.trim() !== "" && !report.extraItemsIssueResolved && (
-                         <div className="space-y-1">
+                      {report.extraFoundInfo && report.extraFoundInfo.trim() !== "" && !report.extraItemsIssueResolved && (
+                        <div className="space-y-1">
                           <h4 className="text-sm font-medium text-foreground underline">Extra Found and Return Information:</h4>
-                           <div className="p-3 rounded-md border bg-muted/30 text-sm text-muted-foreground whitespace-pre-wrap h-32 overflow-y-auto">
+                          <div className="p-3 rounded-md border bg-muted/30 text-sm text-muted-foreground whitespace-pre-wrap h-32 overflow-y-auto">
                             {report.extraFoundInfo}
                           </div>
                         </div>
                       )}
                     </div>
-                    {( (!report.missingItemInfo || report.missingItemInfo.trim() === "" || report.missingItemsIssueResolved) && 
-                       (!report.extraFoundInfo || report.extraFoundInfo.trim() === "" || report.extraItemsIssueResolved) 
-                     ) && (
+                    {((!report.missingItemInfo || report.missingItemInfo.trim() === "" || report.missingItemsIssueResolved) &&
+                      (!report.extraFoundInfo || report.extraFoundInfo.trim() === "" || report.extraItemsIssueResolved)
+                    ) && (
                         <p className="text-sm text-muted-foreground italic text-center py-4">No unresolved missing or extra items for this report.</p>
-                    )}
+                      )}
                   </CardContent>
                 </Card>
               ))}

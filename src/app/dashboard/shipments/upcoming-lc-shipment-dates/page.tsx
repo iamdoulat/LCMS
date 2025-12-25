@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, CalendarClock, Info, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, Filter, XCircle, Users, Building, Hash } from 'lucide-react';
-import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDocument } from '@/types'; 
+import type { LCEntryDocument, LCStatus, Currency, CustomerDocument, SupplierDocument } from '@/types';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, Timestamp, orderBy as firestoreOrderBy } from 'firebase/firestore';
 import Link from 'next/link';
@@ -19,12 +19,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'latestShipmentDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment' | 'firstShipmentNote' | 'secondShipmentNote' | 'thirdShipmentNote' | 'applicantId' | 'beneficiaryId'> { 
+interface UpcomingLC extends Pick<LCEntryDocument, 'id' | 'documentaryCreditNumber' | 'beneficiaryName' | 'status' | 'applicantName' | 'currency' | 'amount' | 'lcIssueDate' | 'latestShipmentDate' | 'etd' | 'eta' | 'isFirstShipment' | 'isSecondShipment' | 'isThirdShipment' | 'firstShipmentNote' | 'secondShipmentNote' | 'thirdShipmentNote' | 'applicantId' | 'beneficiaryId'> {
   latestShipmentDateObj: Date;
 }
 
 const ITEMS_PER_PAGE = 10;
-const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Draft", "Transmitted", "Shipment Pending"]; 
+const ACTIVE_LC_STATUSES_FOR_UPCOMING: LCStatus[] = ["Draft", "Transmitted", "Shipment Pending"];
 
 const PLACEHOLDER_APPLICANT_VALUE = "__UPCOMING_LC_APPLICANT__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__UPCOMING_LC_BENEFICIARY__";
@@ -39,7 +39,7 @@ const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "ou
     case 'Shipment Pending':
       return 'default';
     case 'Payment Pending':
-        return 'destructive';
+      return 'destructive';
     case 'Payment Done':
       return 'default';
     case 'Shipment Done':
@@ -88,7 +88,7 @@ export default function UpcomingShipmentsPage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        
+
         const arrayQuery = query(
           lcEntriesRef,
           where("status", "array-contains-any", ACTIVE_LC_STATUSES_FOR_UPCOMING)
@@ -99,8 +99,8 @@ export default function UpcomingShipmentsPage() {
         );
 
         const [arraySnapshot, stringSnapshot] = await Promise.all([
-            getDocs(arrayQuery),
-            getDocs(stringQuery),
+          getDocs(arrayQuery),
+          getDocs(stringQuery),
         ]);
 
         const fetchedLCsMap = new Map<string, UpcomingLC>();
@@ -109,23 +109,23 @@ export default function UpcomingShipmentsPage() {
           snapshot.docs.forEach((doc) => {
             if (fetchedLCsMap.has(doc.id)) return;
             const data = doc.data() as LCEntryDocument;
-            let latestShipmentDateObj = new Date(0); 
+            let latestShipmentDateObj = new Date(0);
             if (data.latestShipmentDate) {
               const parsed = parseISO(data.latestShipmentDate);
               if (isValid(parsed)) {
                 latestShipmentDateObj = parsed;
               }
             }
-            
+
             fetchedLCsMap.set(doc.id, {
               id: doc.id,
               documentaryCreditNumber: data.documentaryCreditNumber,
               beneficiaryName: data.beneficiaryName,
               applicantId: data.applicantId,
-              applicantName: data.applicantName, 
+              applicantName: data.applicantName,
               beneficiaryId: data.beneficiaryId,
-              currency: data.currency, 
-              amount: data.amount, 
+              currency: data.currency,
+              amount: data.amount,
               lcIssueDate: data.lcIssueDate,
               latestShipmentDate: data.latestShipmentDate,
               latestShipmentDateObj: latestShipmentDateObj,
@@ -146,20 +146,20 @@ export default function UpcomingShipmentsPage() {
         processSnapshot(stringSnapshot);
 
         const fetchedLCs = Array.from(fetchedLCsMap.values());
-        
+
         const sortedAndFiltered = fetchedLCs
-          .filter(lc => isValid(lc.latestShipmentDateObj) && lc.latestShipmentDateObj.getFullYear() > 1970) 
-          .sort((a, b) => compareAsc(a.latestShipmentDateObj, b.latestShipmentDateObj)); 
-          
+          .filter(lc => isValid(lc.latestShipmentDateObj) && lc.latestShipmentDateObj.getFullYear() > 1970)
+          .sort((a, b) => compareAsc(a.latestShipmentDateObj, b.latestShipmentDateObj));
+
         setAllUpcomingLCs(sortedAndFiltered);
 
       } catch (error: any) {
         console.error("Error fetching upcoming L/Cs: ", error);
         let errorMessage = `Could not fetch upcoming L/C data. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.includes("indexes?create_composite")) {
-            errorMessage = `Could not fetch upcoming L/C data: This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (array-contains-any or in) and 'latestShipmentDate' (ascending).`;
+          errorMessage = `Could not fetch upcoming L/C data: This query likely requires a composite Firestore index. Please check your browser's developer console for a direct link to create it. The index is needed on the 'lc_entries' collection for fields: 'status' (array-contains-any or in) and 'latestShipmentDate' (ascending).`;
         } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+          errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
         Swal.fire({
@@ -172,24 +172,24 @@ export default function UpcomingShipmentsPage() {
       }
     };
     const fetchFilterOptions = async () => {
-        setIsLoadingApplicants(true);
-        setIsLoadingBeneficiaries(true);
-        try {
-            const customersSnapshot = await getDocs(collection(firestore, "customers"));
-            setApplicantOptions(
-            customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
-            );
-            const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
-            setBeneficiaryOptions(
-            suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
-            );
-        } catch (error: any) {
-            console.error("Error fetching filter options for Upcoming Shipments page:", error);
-            Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
-        } finally {
-            setIsLoadingApplicants(false);
-            setIsLoadingBeneficiaries(false);
-        }
+      setIsLoadingApplicants(true);
+      setIsLoadingBeneficiaries(true);
+      try {
+        const customersSnapshot = await getDocs(collection(firestore, "customers"));
+        setApplicantOptions(
+          customersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as CustomerDocument).applicantName || 'Unnamed Applicant' }))
+        );
+        const suppliersSnapshot = await getDocs(collection(firestore, "suppliers"));
+        setBeneficiaryOptions(
+          suppliersSnapshot.docs.map(docSnap => ({ value: docSnap.id, label: (docSnap.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
+        );
+      } catch (error: any) {
+        console.error("Error fetching filter options for Upcoming Shipments page:", error);
+        Swal.fire("Error", `Could not load filter options. Error: ${(error as Error).message}`, "error");
+      } finally {
+        setIsLoadingApplicants(false);
+        setIsLoadingBeneficiaries(false);
+      }
     };
 
     fetchUpcomingLCs();
@@ -238,15 +238,15 @@ export default function UpcomingShipmentsPage() {
 
   const getPageNumbers = () => {
     const pageNumbers = [];
-    const maxPagesToShow = 5; 
+    const maxPagesToShow = 5;
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
 
-    if (totalPages <= maxPagesToShow + 2) { 
+    if (totalPages <= maxPagesToShow + 2) {
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      pageNumbers.push(1); 
+      pageNumbers.push(1);
       let startPage = Math.max(2, currentPage - halfPagesToShow);
       let endPage = Math.min(totalPages - 1, currentPage + halfPagesToShow);
       if (currentPage <= halfPagesToShow + 1) endPage = Math.min(totalPages - 1, maxPagesToShow);
@@ -254,13 +254,13 @@ export default function UpcomingShipmentsPage() {
       if (startPage > 2) pageNumbers.push("...");
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
       if (endPage < totalPages - 1) pageNumbers.push("...");
-      pageNumbers.push(totalPages); 
+      pageNumbers.push(totalPages);
     }
     return pageNumbers;
   };
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -284,7 +284,7 @@ export default function UpcomingShipmentsPage() {
                   <Input id="lcNoFilterUpcoming" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="applicantFilterUpcoming" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</Label>
+                  <Label htmlFor="applicantFilterUpcoming" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground" />Applicant</Label>
                   <Combobox
                     options={applicantOptions}
                     value={filterApplicantId || PLACEHOLDER_APPLICANT_VALUE}
@@ -296,7 +296,7 @@ export default function UpcomingShipmentsPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="beneficiaryFilterUpcoming" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
+                  <Label htmlFor="beneficiaryFilterUpcoming" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground" />Beneficiary</Label>
                   <Combobox
                     options={beneficiaryOptions}
                     value={filterBeneficiaryId || PLACEHOLDER_BENEFICIARY_VALUE}
@@ -315,18 +315,18 @@ export default function UpcomingShipmentsPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-muted-foreground">Loading upcoming L/Cs from database...</p>
             </div>
           ) : fetchError ? (
-             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
+            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
               <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
               <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Data</p>
               <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}>
+                dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}>
               </p>
             </div>
           ) : currentItems.length === 0 ? (
@@ -343,64 +343,64 @@ export default function UpcomingShipmentsPage() {
                 const today = startOfDay(new Date());
                 const shipmentDate = startOfDay(lc.latestShipmentDateObj);
                 const isPastOrToday = isValid(shipmentDate) && compareAsc(shipmentDate, today) <= 0;
-                
+
                 return (
                   <li
                     key={lc.id}
                     className={cn(
-                        "p-4 rounded-lg hover:shadow-md transition-shadow relative", 
-                        isPastOrToday
-                            ? "bg-red-100 dark:bg-red-900/50 border-red-500 dark:border-red-600 border-2"
-                            : "border bg-card"
+                      "p-4 rounded-lg hover:shadow-md transition-shadow relative",
+                      isPastOrToday
+                        ? "bg-red-100 dark:bg-red-900/50 border-red-500 dark:border-red-600 border-2"
+                        : "border bg-card"
                     )}
                   >
-                     <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
-                        <div className="flex flex-wrap gap-1 justify-end">
-                            {Array.isArray(lc.status) ? (
-                                lc.status.map(s => <Badge key={s} variant={getStatusBadgeVariant(s)}>{s}</Badge>)
-                            ) : lc.status ? (
-                                <Badge variant={getStatusBadgeVariant(lc.status as LCStatus)}>{lc.status}</Badge>
-                            ) : null}
-                        </div>
-                        <div className="flex gap-1.5">
-                           {[
-                                { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
-                                { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
-                                { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
-                            ].map((shipment, idx) => (
-                                <TooltipProvider key={idx} delayDuration={100}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                        <Button
-                                            variant={shipment.flag ? "default" : "outline"}
-                                            size="icon"
-                                            className={cn(
-                                                "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                                shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                            )}
-                                            title={`${shipment.label} Shipment Status`}
-                                        >
-                                            {shipment.label}
-                                        </Button>
-                                    </Link>
-                                    </TooltipTrigger>
-                                    {shipment.note && (
-                                    <TooltipContent side="top">
-                                        <p className="max-w-xs">{shipment.note}</p>
-                                    </TooltipContent>
+                    <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
+                      <div className="flex flex-wrap gap-1 justify-end">
+                        {Array.isArray(lc.status) ? (
+                          lc.status.map(s => <Badge key={s} variant={getStatusBadgeVariant(s)}>{s}</Badge>)
+                        ) : lc.status ? (
+                          <Badge variant={getStatusBadgeVariant(lc.status as LCStatus)}>{lc.status}</Badge>
+                        ) : null}
+                      </div>
+                      <div className="flex gap-1.5">
+                        {[
+                          { flag: lc.isFirstShipment, label: "1st", note: lc.firstShipmentNote },
+                          { flag: lc.isSecondShipment, label: "2nd", note: lc.secondShipmentNote },
+                          { flag: lc.isThirdShipment, label: "3rd", note: lc.thirdShipmentNote }
+                        ].map((shipment, idx) => (
+                          <TooltipProvider key={idx} delayDuration={100}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
+                                  <Button
+                                    variant={shipment.flag ? "default" : "outline"}
+                                    size="icon"
+                                    className={cn(
+                                      "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                      shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
                                     )}
-                                </Tooltip>
-                                </TooltipProvider>
-                            ))}
-                        </div>
+                                    title={`${shipment.label} Shipment Status`}
+                                  >
+                                    {shipment.label}
+                                  </Button>
+                                </Link>
+                              </TooltipTrigger>
+                              {shipment.note && (
+                                <TooltipContent side="top">
+                                  <p className="max-w-xs">{shipment.note}</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                        ))}
+                      </div>
                     </div>
 
-                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28"> 
+                    <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28">
                       {lc.documentaryCreditNumber || 'N/A'}
                     </Link>
-                    
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mb-1">
                       <p className="text-muted-foreground">
                         Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
                       </p>
@@ -413,18 +413,18 @@ export default function UpcomingShipmentsPage() {
                       <p className="text-muted-foreground">
                         Latest Shipment: <span className={cn("font-medium", isPastOrToday ? "text-destructive dark:text-red-400" : "text-foreground")}>{formatDisplayDate(lc.latestShipmentDateObj)}</span>
                       </p>
-                       <p className="text-muted-foreground">
+                      <p className="text-muted-foreground">
                         ETD: <span className="font-medium text-foreground">{formatDisplayDate(lc.etd)}</span>
                       </p>
-                       <p className="text-muted-foreground">
+                      <p className="text-muted-foreground">
                         ETA: <span className="font-medium text-foreground">{formatDisplayDate(lc.eta)}</span>
                       </p>
                     </div>
-                    
+
                     <div className="mt-2 flex justify-end">
-                         <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
-                            View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
-                        </Link>
+                      <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline inline-flex items-center">
+                        View L/C Details <ExternalLink className="ml-1 h-3 w-3" />
+                      </Link>
                     </div>
                   </li>
                 );

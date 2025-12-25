@@ -86,50 +86,50 @@ export default function LCPaymentDonePage() {
       setFetchError(null);
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-        
+
         // Query 1: For new data model (status is an array)
         const arrayQuery = query(lcEntriesRef, where("status", "array-contains", "Payment Done"));
-        
+
         // Query 2: For old data model (status is a string)
         const stringQuery = query(lcEntriesRef, where("status", "==", "Payment Done"));
 
         const [arraySnapshot, stringSnapshot] = await Promise.all([
-            getDocs(arrayQuery),
-            getDocs(stringQuery),
+          getDocs(arrayQuery),
+          getDocs(stringQuery),
         ]);
 
         const fetchedLCsMap = new Map<string, PaymentDoneLC>();
 
         const processSnapshot = (snapshot: typeof arraySnapshot) => {
-            snapshot.docs.forEach((doc) => {
-                if (fetchedLCsMap.has(doc.id)) return; // Avoid duplicates
+          snapshot.docs.forEach((doc) => {
+            if (fetchedLCsMap.has(doc.id)) return; // Avoid duplicates
 
-                const data = doc.data() as LCEntryDocument;
-                let updatedAtDate = new Date(0);
+            const data = doc.data() as LCEntryDocument;
+            let updatedAtDate = new Date(0);
 
-                if (data.updatedAt) {
-                    if (typeof (data.updatedAt as unknown as Timestamp).toDate === 'function') {
-                        updatedAtDate = (data.updatedAt as unknown as Timestamp).toDate();
-                    } else if (typeof data.updatedAt === 'string') {
-                        const parsed = parseISO(data.updatedAt);
-                        if (isValid(parsed)) {
-                            updatedAtDate = parsed;
-                        }
-                    }
+            if (data.updatedAt) {
+              if (typeof (data.updatedAt as unknown as Timestamp).toDate === 'function') {
+                updatedAtDate = (data.updatedAt as unknown as Timestamp).toDate();
+              } else if (typeof data.updatedAt === 'string') {
+                const parsed = parseISO(data.updatedAt);
+                if (isValid(parsed)) {
+                  updatedAtDate = parsed;
                 }
-                fetchedLCsMap.set(doc.id, {
-                    ...data,
-                    id: doc.id,
-                    updatedAtDate: updatedAtDate,
-                });
+              }
+            }
+            fetchedLCsMap.set(doc.id, {
+              ...data,
+              id: doc.id,
+              updatedAtDate: updatedAtDate,
             });
+          });
         };
 
         processSnapshot(arraySnapshot);
         processSnapshot(stringSnapshot);
 
         const fetchedLCs = Array.from(fetchedLCsMap.values());
-        
+
         // Sort after merging
         fetchedLCs.sort((a, b) => b.updatedAtDate.getTime() - a.updatedAtDate.getTime());
 
@@ -139,9 +139,9 @@ export default function LCPaymentDonePage() {
         console.error("Error fetching 'Payment Done' L/Cs: ", error);
         let errorMessage = `Could not fetch L/C data for 'Payment Done' status. Please ensure Firestore rules allow reads.`;
         if (error.message && error.message.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (array-contains) and 'updatedAt' (descending).`;
+          errorMessage = `Could not fetch L/C data: A Firestore index is required. Please check the browser console for a link to create the index, or create it manually for the 'lc_entries' collection on 'status' (array-contains) and 'updatedAt' (descending).`;
         } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+          errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
         Swal.fire({
@@ -251,7 +251,7 @@ export default function LCPaymentDonePage() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -275,7 +275,7 @@ export default function LCPaymentDonePage() {
                   <Input id="lcNoFilterPaymentDone" placeholder="Search by L/C No..." value={filterLcNumber} onChange={(e) => setFilterLcNumber(e.target.value)} />
                 </div>
                 <div>
-                  <Label htmlFor="applicantFilterPaymentDone" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground"/>Applicant</Label>
+                  <Label htmlFor="applicantFilterPaymentDone" className="text-sm font-medium flex items-center"><Users className="mr-1 h-4 w-4 text-muted-foreground" />Applicant</Label>
                   <Combobox
                     options={applicantOptions}
                     value={filterApplicantId || PLACEHOLDER_APPLICANT_VALUE}
@@ -287,7 +287,7 @@ export default function LCPaymentDonePage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="beneficiaryFilterPaymentDone" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground"/>Beneficiary</Label>
+                  <Label htmlFor="beneficiaryFilterPaymentDone" className="text-sm font-medium flex items-center"><Building className="mr-1 h-4 w-4 text-muted-foreground" />Beneficiary</Label>
                   <Combobox
                     options={beneficiaryOptions}
                     value={filterBeneficiaryId || PLACEHOLDER_BENEFICIARY_VALUE}
@@ -299,7 +299,7 @@ export default function LCPaymentDonePage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="yearFilterPaymentDone" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground"/>Year (L/C Issue)</Label>
+                  <Label htmlFor="yearFilterPaymentDone" className="text-sm font-medium flex items-center"><CalendarDays className="mr-1 h-4 w-4 text-muted-foreground" />Year (L/C Issue)</Label>
                   <Select value={filterYear} onValueChange={(value) => setFilterYear(value)}>
                     <SelectTrigger><SelectValue placeholder="All Years" /></SelectTrigger>
                     <SelectContent>
@@ -322,11 +322,11 @@ export default function LCPaymentDonePage() {
               <p className="text-muted-foreground">Loading L/Cs with 'Payment Done' status...</p>
             </div>
           ) : fetchError ? (
-             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
+            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-destructive/30 rounded-lg bg-destructive/10 p-6">
               <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
               <p className="text-xl font-semibold text-destructive-foreground mb-2">Error Fetching Data</p>
               <p className="text-sm text-destructive-foreground text-center whitespace-pre-wrap"
-                 dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}>
+                dangerouslySetInnerHTML={{ __html: fetchError.replace(/\b(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-primary hover:underline">$1</a>') }}>
               </p>
             </div>
           ) : currentItems.length === 0 ? (
@@ -343,26 +343,26 @@ export default function LCPaymentDonePage() {
                 <li key={lc.id} className="p-4 rounded-lg border hover:shadow-md transition-shadow relative bg-card">
                   <div className="absolute top-4 right-4 flex flex-col items-end space-y-1 z-10">
                     <div className="flex flex-wrap gap-1 justify-end">
-                       {Array.isArray(lc.status) ? (
-                            lc.status.map(s => (
-                                <Badge
-                                    key={s}
-                                    variant={getStatusBadgeVariant(s)}
-                                    className={s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
-                                >
-                                    {s}
-                                </Badge>
-                            ))
-                        ) : lc.status ? (
-                            <Badge
-                                variant={getStatusBadgeVariant(lc.status as LCStatus)}
-                                className={(lc.status as LCStatus) === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
-                            >
-                                {lc.status}
-                            </Badge>
-                        ) : (
-                            <Badge variant="outline">N/A</Badge>
-                        )}
+                      {Array.isArray(lc.status) ? (
+                        lc.status.map(s => (
+                          <Badge
+                            key={s}
+                            variant={getStatusBadgeVariant(s)}
+                            className={s === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
+                          >
+                            {s}
+                          </Badge>
+                        ))
+                      ) : lc.status ? (
+                        <Badge
+                          variant={getStatusBadgeVariant(lc.status as LCStatus)}
+                          className={(lc.status as LCStatus) === 'Payment Done' ? 'bg-green-500 text-white dark:bg-green-600' : ''}
+                        >
+                          {lc.status}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">N/A</Badge>
+                      )}
                     </div>
                     <div className="flex gap-1.5">
                       {[
@@ -374,17 +374,17 @@ export default function LCPaymentDonePage() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Link href={`/dashboard/total-lc/${lc.id}/edit`} passHref>
-                                  <Button
-                                      variant={shipment.flag ? "default" : "outline"}
-                                      size="icon"
-                                      className={cn(
-                                          "h-7 w-7 rounded-full p-0 text-xs font-bold",
-                                          shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
-                                      )}
-                                      title={`${shipment.label} Shipment Status`}
-                                  >
-                                      {shipment.label}
-                                  </Button>
+                                <Button
+                                  variant={shipment.flag ? "default" : "outline"}
+                                  size="icon"
+                                  className={cn(
+                                    "h-7 w-7 rounded-full p-0 text-xs font-bold",
+                                    shipment.flag ? "bg-green-500 hover:bg-green-600 text-white" : "border-destructive text-destructive hover:bg-destructive/10"
+                                  )}
+                                  title={`${shipment.label} Shipment Status`}
+                                >
+                                  {shipment.label}
+                                </Button>
                               </Link>
                             </TooltipTrigger>
                             {shipment.note && (
@@ -401,15 +401,15 @@ export default function LCPaymentDonePage() {
                   <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-semibold text-primary hover:underline text-lg mb-1 block truncate pr-28">
                     {lc.documentaryCreditNumber || 'N/A'}
                   </Link>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-1">
                     <p className="text-muted-foreground md:col-span-1">
                       Applicant: <span className="font-medium text-foreground truncate">{lc.applicantName || 'N/A'}</span>
                     </p>
-                     <p className="text-muted-foreground md:col-span-1">
+                    <p className="text-muted-foreground md:col-span-1">
                       Value: <span className="font-medium text-foreground">{formatCurrencyValue(lc.currency, lc.amount)}</span>
                     </p>
-                     <p className="text-muted-foreground md:col-span-1">
+                    <p className="text-muted-foreground md:col-span-1">
                       Issued: <span className="font-medium text-foreground">{formatDisplayDate(lc.lcIssueDate)}</span>
                     </p>
                   </div>
@@ -423,8 +423,8 @@ export default function LCPaymentDonePage() {
                       Marked as Payment Done: {isValid(lc.updatedAtDate) && lc.updatedAtDate.getFullYear() > 1 ? format(lc.updatedAtDate, 'PPP p') : 'Date not available'}
                     </p>
                     <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-xs text-primary hover:underline mt-1 sm:mt-0 inline-flex items-center">
-                     View L/C Details <ExternalLink className="ml-1 h-3 w-3"/>
-                   </Link>
+                      View L/C Details <ExternalLink className="ml-1 h-3 w-3" />
+                    </Link>
                   </div>
                 </li>
               ))}

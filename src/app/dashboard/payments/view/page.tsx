@@ -89,7 +89,7 @@ export default function ViewPaymentsPage() {
   }, []);
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -128,9 +128,9 @@ export default function ViewPaymentsPage() {
                     <TableHead>Payment ID</TableHead>
                     <TableHead>Invoice No.</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead><DollarSign className="inline h-4 w-4 mr-1"/>Amount Paid</TableHead>
-                    <TableHead><CalendarDays className="inline h-4 w-4 mr-1"/>Payment Date</TableHead>
-                    <TableHead><CreditCardIcon className="inline h-4 w-4 mr-1"/>Method</TableHead>
+                    <TableHead><DollarSign className="inline h-4 w-4 mr-1" />Amount Paid</TableHead>
+                    <TableHead><CalendarDays className="inline h-4 w-4 mr-1" />Payment Date</TableHead>
+                    <TableHead><CreditCardIcon className="inline h-4 w-4 mr-1" />Method</TableHead>
                     <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -141,7 +141,7 @@ export default function ViewPaymentsPage() {
                       <TableCell>
                         <Link href={`/dashboard/invoices/preview/${payment.invoiceId}`} passHref>
                           <Button variant="link" className="p-0 h-auto text-primary hover:underline">
-                            {payment.invoiceNumber} <ExternalLink className="ml-1 h-3 w-3"/>
+                            {payment.invoiceNumber} <ExternalLink className="ml-1 h-3 w-3" />
                           </Button>
                         </Link>
                       </TableCell>

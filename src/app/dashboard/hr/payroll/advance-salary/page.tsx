@@ -11,7 +11,7 @@ import { AdvanceSalaryList } from '@/components/dashboard/AdvanceSalaryList';
 
 export default function AdvanceSalaryPage() {
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

@@ -223,23 +223,20 @@ export default function TelegramSettingsPage() {
     };
 
     return (
-        <div className="container mx-auto p-6 space-y-6">
-            <div className="flex justify-between items-center">
+        <div className="max-w-none mx-[25px] py-8 px-0">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Telegram Bot Settings</h1>
                     <p className="text-muted-foreground">Manage your Telegram bot for attendance notifications.</p>
                 </div>
 
-                <div className="flex gap-2">
-                    <div className="flex bg-muted p-1 rounded-md border text-xs items-center gap-1 font-medium mr-2">
-                        <span className="px-2">System Pipeline Tests:</span>
-                        <Button variant="secondary" size="sm" className="h-7 text-xs px-2" onClick={() => handleSendSystemTest('in_time')} disabled={sendingTest}>
-                            Test In-Time
-                        </Button>
-                        <Button variant="secondary" size="sm" className="h-7 text-xs px-2" onClick={() => handleSendSystemTest('check_in')} disabled={sendingTest}>
-                            Test Check-In
-                        </Button>
-                    </div>
+                <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleSendSystemTest('in_time')} disabled={sendingTest}>
+                        Test In-Time
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleSendSystemTest('check_in')} disabled={sendingTest}>
+                        Test Check-In
+                    </Button>
                 </div>
 
                 <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>

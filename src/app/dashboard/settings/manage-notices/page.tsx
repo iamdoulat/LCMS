@@ -40,16 +40,16 @@ interface Notice extends NoticeBoardSettings {
 }
 
 const formatDisplayDate = (timestamp: any): string => {
-    if (timestamp instanceof Timestamp) {
-        return format(timestamp.toDate(), 'PPP p');
+  if (timestamp instanceof Timestamp) {
+    return format(timestamp.toDate(), 'PPP p');
+  }
+  if (typeof timestamp === 'string') {
+    const date = new Date(timestamp);
+    if (!isNaN(date.getTime())) {
+      return format(date, 'PPP p');
     }
-    if (typeof timestamp === 'string') {
-        const date = new Date(timestamp);
-        if (!isNaN(date.getTime())) {
-            return format(date, 'PPP p');
-        }
-    }
-    return 'N/A';
+  }
+  return 'N/A';
 };
 
 
@@ -122,7 +122,7 @@ export default function ManageNoticesPage() {
       }
     });
   };
-  
+
   if (authLoading || (!userRole && !fetchError)) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
@@ -135,14 +135,14 @@ export default function ManageNoticesPage() {
   const createMarkup = (htmlContent: string | undefined) => {
     // Ensure this only runs on the client where DOMPurify is available
     if (typeof window === 'undefined' || !htmlContent) {
-        return { __html: '' };
+      return { __html: '' };
     }
     // Sanitize the HTML content before rendering
     return { __html: DOMPurify.sanitize(htmlContent) };
   };
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -164,83 +164,83 @@ export default function ManageNoticesPage() {
         </CardHeader>
         <CardContent>
           {fetchError && (
-             <div className="my-4 text-center text-destructive bg-destructive/10 p-4 rounded-md">{fetchError}</div>
+            <div className="my-4 text-center text-destructive bg-destructive/10 p-4 rounded-md">{fetchError}</div>
           )}
           <div className="rounded-md border">
             <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Target Roles</TableHead>
-                        <TableHead>Last Updated</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Target Roles</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />Loading notices...</TableCell></TableRow>
+                ) : notices.length === 0 && !fetchError ? (
+                  <TableRow><TableCell colSpan={5} className="h-24 text-center">No notices found.</TableCell></TableRow>
+                ) : (
+                  notices.map(notice => (
+                    <TableRow key={notice.id}>
+                      <TableCell className="font-medium">{notice.title || '(No Title)'}</TableCell>
+                      <TableCell>
+                        <Badge variant={notice.isEnabled ? 'default' : 'outline'} className={cn(notice.isEnabled && "bg-green-600 hover:bg-green-700")}>
+                          {notice.isEnabled ? 'Enabled' : 'Disabled'}
+                        </Badge>
+                        <Badge variant={notice.isPopupEnabled ? 'secondary' : 'outline'} className="ml-2">
+                          {notice.isPopupEnabled ? 'Pop-up' : 'No Pop-up'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {notice.targetRoles?.map(role => <Badge key={role} variant="secondary" className="text-xs">{role}</Badge>) || 'N/A'}
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatDisplayDate(notice.updatedAt)}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!isSuperAdmin && !isReadOnly}>
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onSelect={() => setViewingNotice(notice)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              <span>View</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/dashboard/notice/edit/${notice.id}`}>
+                                <FileEdit className="mr-2 h-4 w-4" />
+                                <span>{isReadOnly ? 'View Details' : 'Edit'}</span>
+                              </Link>
+                            </DropdownMenuItem>
+                            {isSuperAdmin && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onSelect={() => handleDeleteNotice(notice.id, notice.title)}
+                                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                  disabled={isReadOnly}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  <span>Delete</span>
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {isLoading ? (
-                        <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />Loading notices...</TableCell></TableRow>
-                    ) : notices.length === 0 && !fetchError ? (
-                        <TableRow><TableCell colSpan={5} className="h-24 text-center">No notices found.</TableCell></TableRow>
-                    ) : (
-                        notices.map(notice => (
-                            <TableRow key={notice.id}>
-                                <TableCell className="font-medium">{notice.title || '(No Title)'}</TableCell>
-                                <TableCell>
-                                  <Badge variant={notice.isEnabled ? 'default' : 'outline'} className={cn(notice.isEnabled && "bg-green-600 hover:bg-green-700")}>
-                                    {notice.isEnabled ? 'Enabled' : 'Disabled'}
-                                  </Badge>
-                                  <Badge variant={notice.isPopupEnabled ? 'secondary' : 'outline'} className="ml-2">
-                                    {notice.isPopupEnabled ? 'Pop-up' : 'No Pop-up'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-wrap gap-1">
-                                    {notice.targetRoles?.map(role => <Badge key={role} variant="secondary" className="text-xs">{role}</Badge>) || 'N/A'}
-                                    </div>
-                                </TableCell>
-                                <TableCell>{formatDisplayDate(notice.updatedAt)}</TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" className="h-8 w-8 p-0" disabled={!isSuperAdmin && !isReadOnly}>
-                                            <span className="sr-only">Open menu</span>
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                            <DropdownMenuItem onSelect={() => setViewingNotice(notice)}>
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                <span>View</span>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem asChild>
-                                                <Link href={`/dashboard/notice/edit/${notice.id}`}>
-                                                    <FileEdit className="mr-2 h-4 w-4" />
-                                                    <span>{isReadOnly ? 'View Details' : 'Edit'}</span>
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            {isSuperAdmin && (
-                                                <>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    onSelect={() => handleDeleteNotice(notice.id, notice.title)}
-                                                    className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                                    disabled={isReadOnly}
-                                                >
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    <span>Delete</span>
-                                                </DropdownMenuItem>
-                                                </>
-                                            )}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                        ))
-                    )}
-                </TableBody>
-                 <TableCaption>A list of all site notices.</TableCaption>
+                  ))
+                )}
+              </TableBody>
+              <TableCaption>A list of all site notices.</TableCaption>
             </Table>
           </div>
         </CardContent>
@@ -248,23 +248,23 @@ export default function ManageNoticesPage() {
 
       <Dialog open={!!viewingNotice} onOpenChange={(isOpen) => !isOpen && setViewingNotice(null)}>
         <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-                <DialogTitle>{viewingNotice?.title || "Notice Preview"}</DialogTitle>
-                <DialogDescription>
-                    This is a preview of how the notice will appear to users.
-                </DialogDescription>
-            </DialogHeader>
-            {viewingNotice?.content && (
-                 <div 
-                    className="prose prose-sm dark:prose-invert max-h-[60vh] overflow-y-auto p-1 mt-2 border-t pt-4"
-                    dangerouslySetInnerHTML={createMarkup(viewingNotice.content)}
-                 />
-            )}
-            <DialogFooter>
-                <DialogClose asChild>
-                    <Button type="button" variant="secondary">Close</Button>
-                </DialogClose>
-            </DialogFooter>
+          <DialogHeader>
+            <DialogTitle>{viewingNotice?.title || "Notice Preview"}</DialogTitle>
+            <DialogDescription>
+              This is a preview of how the notice will appear to users.
+            </DialogDescription>
+          </DialogHeader>
+          {viewingNotice?.content && (
+            <div
+              className="prose prose-sm dark:prose-invert max-h-[60vh] overflow-y-auto p-1 mt-2 border-t pt-4"
+              dangerouslySetInnerHTML={createMarkup(viewingNotice.content)}
+            />
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">Close</Button>
+            </DialogClose>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

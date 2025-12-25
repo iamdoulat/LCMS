@@ -104,7 +104,7 @@ export default function EditProformaInvoicePage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <div className="mb-6">
         <Link href="/dashboard/commission-management/issued-pi-list" passHref>
           <Button variant="outline">

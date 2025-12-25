@@ -263,7 +263,7 @@ export default function QuotesListPage() {
   };
 
   return (
-    <div className="m-[10px] p-0 md:container md:mx-auto md:py-8 md:px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

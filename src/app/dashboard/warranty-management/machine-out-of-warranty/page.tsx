@@ -83,18 +83,18 @@ export default function MachineOutOfWarrantyPage() {
           });
         });
 
-        const sortedMachines = outOfWarrantyMachines.sort((a, b) => 
-            a.applicantName.localeCompare(b.applicantName) || a.warrantyExpiryDate.getTime() - b.warrantyExpiryDate.getTime()
+        const sortedMachines = outOfWarrantyMachines.sort((a, b) =>
+          a.applicantName.localeCompare(b.applicantName) || a.warrantyExpiryDate.getTime() - b.warrantyExpiryDate.getTime()
         );
 
         setAllMachines(sortedMachines);
       } catch (error: any) {
         console.error("Error fetching machines out of warranty:", error);
         let errorMessage = `Could not fetch data. Please check Firestore rules.`;
-         if (error.message?.toLowerCase().includes("index")) {
-            errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for details.`;
+        if (error.message?.toLowerCase().includes("index")) {
+          errorMessage = `Could not fetch data: A Firestore index might be required. Please check the browser console for details.`;
         } else if (error.message) {
-            errorMessage += ` Error: ${error.message}`;
+          errorMessage += ` Error: ${error.message}`;
         }
         setFetchError(errorMessage);
         Swal.fire("Fetch Error", errorMessage, "error");
@@ -110,16 +110,16 @@ export default function MachineOutOfWarrantyPage() {
     let filtered = [...allMachines];
 
     if (filterApplicant) {
-        filtered = filtered.filter(m => m.applicantName?.toLowerCase().includes(filterApplicant.toLowerCase()));
+      filtered = filtered.filter(m => m.applicantName?.toLowerCase().includes(filterApplicant.toLowerCase()));
     }
     if (filterBeneficiary) {
-        filtered = filtered.filter(m => m.beneficiaryName?.toLowerCase().includes(filterBeneficiary.toLowerCase()));
+      filtered = filtered.filter(m => m.beneficiaryName?.toLowerCase().includes(filterBeneficiary.toLowerCase()));
     }
     if (filterSerialNo) {
-        filtered = filtered.filter(m => m.serialNo?.toLowerCase().includes(filterSerialNo.toLowerCase()));
+      filtered = filtered.filter(m => m.serialNo?.toLowerCase().includes(filterSerialNo.toLowerCase()));
     }
     if (filterMachineModel) {
-        filtered = filtered.filter(m => m.machineModel?.toLowerCase().includes(filterMachineModel.toLowerCase()));
+      filtered = filtered.filter(m => m.machineModel?.toLowerCase().includes(filterMachineModel.toLowerCase()));
     }
 
     setDisplayedMachines(filtered);
@@ -144,8 +144,8 @@ export default function MachineOutOfWarrantyPage() {
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
   };
-  
-   const getPageNumbers = () => {
+
+  const getPageNumbers = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5;
     const halfPagesToShow = Math.floor(maxPagesToShow / 2);
@@ -168,7 +168,7 @@ export default function MachineOutOfWarrantyPage() {
 
 
   return (
-    <div className="container mx-auto py-8 px-5">
+    <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -210,7 +210,7 @@ export default function MachineOutOfWarrantyPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -266,8 +266,8 @@ export default function MachineOutOfWarrantyPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-                 <TableCaption className="py-4">
-                    Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, displayedMachines.length)} of {displayedMachines.length} entries.
+                <TableCaption className="py-4">
+                  Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, displayedMachines.length)} of {displayedMachines.length} entries.
                 </TableCaption>
               </Table>
             </div>
