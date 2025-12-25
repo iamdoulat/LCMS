@@ -462,9 +462,23 @@ export interface UserDocumentForAdmin {
   role: UserRole[]; // Changed to an array of roles
   photoURL?: string;
   disabled?: boolean;
+  allowedDevices?: AllowedDevice[];
   createdAt?: any;
   updatedAt?: any;
 }
+
+export interface AllowedDevice {
+  deviceId: string;
+  deviceName: string;
+  brand?: string;
+  model?: string;
+  os?: string; // e.g. "Windows 10"
+  browser?: string; // e.g. "Chrome 120"
+  deviceType?: string; // e.g. "mobile", "desktop"
+  userAgent?: string;
+  registeredAt: any; // Firestore Timestamp
+}
+
 
 export interface LcForInvoiceDropdownOption {
   value: string; // L/C document ID
@@ -859,6 +873,35 @@ export const itemSchema = z.object({
 });
 
 export type ItemFormValues = z.infer<typeof itemSchema>;
+
+
+// --- Device Change Request Types ---
+export interface DeviceChangeRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  deviceId: string;
+  deviceName: string;
+  brand?: string;
+  model?: string;
+  os?: string; // e.g. "Windows 10"
+  browser?: string; // e.g. "Chrome 120"
+  deviceType?: string; // e.g. "mobile", "desktop"
+  userAgent?: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  registeredEmployee?: string; // Name of the approver
+  reviewedBy?: string; // ID of the approver
+  reviewedAt?: any; // Firestore Timestamp
+  createdAt: any; // Firestore Timestamp
+}
+
+export interface DeviceChangeRequestDocument extends DeviceChangeRequest {
+  createdAt: any;
+  updatedAt: any;
+}
+// --- END Device Change Request Types ---
+
 
 // --- Quote Item Types ---
 // This schema is for items that are used in quotes/invoices and don't need stock management fields.

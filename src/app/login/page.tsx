@@ -7,10 +7,16 @@ import { Loader2, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
+import { UAParser } from 'ua-parser-js';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, Timestamp, collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
+import { firestore, auth } from '@/lib/firebase/config';
+import { DeviceApprovalPopup } from '@/components/auth/DeviceApprovalPopup';
+import type { UserDocumentForAdmin, AllowedDevice } from '@/types';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -19,7 +25,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 // Separator component is no longer needed for the "OR" line if we use the div-based approach.
 // import { Separator } from '@/components/ui/separator'; 
-import { auth } from '@/lib/firebase/config';
+
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +43,10 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Device Approval States
+  const [showDevicePopup, setShowDevicePopup] = useState(false);
+  const [isCheckingDevice, setIsCheckingDevice] = useState(false);
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -45,11 +55,163 @@ export default function LoginPage() {
     },
   });
 
-  React.useEffect(() => {
-    if (!authLoading && user) {
-      router.push('/dashboard');
+  // Helper: Get or Create Device ID
+  const getDeviceId = () => {
+    if (typeof window === 'undefined') return 'unknown-device';
+    let id = localStorage.getItem('device_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('device_id', id);
     }
-  }, [user, authLoading, router]);
+    return id;
+  };
+
+  // Helper: Get Device Details
+  const getDeviceDetails = () => {
+    if (typeof window === 'undefined') return {
+      deviceName: 'Unknown Device',
+      browser: 'Unknown',
+      os: 'Unknown',
+      deviceType: 'desktop',
+      userAgent: '',
+      brand: '',
+      model: ''
+    };
+
+    const parser = new UAParser();
+    const result = parser.getResult();
+
+    const browser = result.browser.name ? `${result.browser.name} ${result.browser.version || ''}`.trim() : 'Unknown Browser';
+    const os = result.os.name ? `${result.os.name} ${result.os.version || ''}`.trim() : 'Unknown OS';
+    const deviceType = result.device.type || 'desktop';
+    const brand = result.device.vendor || '';
+    const model = result.device.model || '';
+    const userAgent = result.ua || '';
+
+    const deviceName = `${brand} ${model} (${browser} on ${os})`.trim() || `${browser} on ${os}`.trim();
+
+    return { deviceName, browser, os, deviceType, brand, model, userAgent };
+  };
+
+  const verifyDevice = async (currentUser: any) => {
+    if (!currentUser || isCheckingDevice) return;
+    setIsCheckingDevice(true);
+
+    try {
+      const deviceId = getDeviceId();
+      const { deviceName, browser, os, deviceType, brand, model, userAgent } = getDeviceDetails();
+
+      console.log("Verifying device:", { deviceId, deviceName });
+
+      const userRef = doc(firestore, 'users', currentUser.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        console.warn("User document does not exist for uid:", currentUser.uid);
+        // Ensure user doc exists before adding device
+        // Option: Create it or just redirect (as checked before). 
+        router.push('/dashboard');
+        return;
+      }
+
+      const userData = userSnap.data() as UserDocumentForAdmin;
+      const allowedDevices = userData.allowedDevices || [];
+
+      console.log("Current allowed devices:", allowedDevices);
+
+      // Case 1: No allowed devices (First login ever for this feature/user)
+      if (allowedDevices.length === 0) {
+        console.log("No allowed devices found. Registering current device...");
+        const newDevice: AllowedDevice = {
+          deviceId,
+          deviceName,
+          browser,
+          os,
+          deviceType,
+          brand,
+          model,
+          userAgent,
+          registeredAt: Timestamp.now()
+        };
+        await updateDoc(userRef, {
+          allowedDevices: arrayUnion(newDevice)
+        });
+        console.log("Device registered successfully.");
+        router.push('/dashboard');
+        return;
+      }
+
+      // Case 2: Check if current device is allowed
+      const isAllowed = allowedDevices.some(d => d.deviceId === deviceId);
+      if (isAllowed) {
+        console.log("Device is allowed.");
+        router.push('/dashboard');
+        return;
+      }
+
+      // Case 3: New/Unrecognized Device
+      console.log("Device not recognized. Checking for pending requests...");
+      setShowDevicePopup(true);
+
+      // Check if a pending request already exists to avoid spamming
+      const requestsRef = collection(firestore, 'device_change_requests');
+      const q = query(
+        requestsRef,
+        where('userId', '==', currentUser.uid),
+        where('deviceId', '==', deviceId),
+        where('status', '==', 'pending')
+      );
+      const existingReqs = await getDocs(q);
+
+      if (existingReqs.empty) {
+        console.log("Creating new device change request...");
+        await addDoc(requestsRef, {
+          userId: currentUser.uid,
+          userName: currentUser.displayName || 'Unknown User',
+          userEmail: currentUser.email || 'No Email',
+          deviceId,
+          deviceName,
+          browser,
+          os,
+          deviceType,
+          brand,
+          model,
+          userAgent,
+          status: 'pending',
+          createdAt: serverTimestamp()
+        });
+      } else {
+        console.log("Pending request already exists.");
+      }
+
+    } catch (err) {
+      console.error("Device verification error:", err);
+      setError("Failed to verify device. Please try again.");
+    } finally {
+      setIsCheckingDevice(false);
+    }
+  };
+
+  React.useEffect(() => {
+    // Only run verification if we have a user and aren't already dealing with the popup
+    if (!authLoading && user && !showDevicePopup) {
+      verifyDevice(user);
+    }
+  }, [user, authLoading, router]); // removing showDevicePopup from dependency to avoid loop, but we use it in logic
+
+  const handleCheckNow = async () => {
+    if (user) {
+      await verifyDevice(user);
+    }
+  };
+
+  const handleTryNewUser = async () => {
+    await signOut(auth);
+    setShowDevicePopup(false);
+    // Ensure we are ready for new login
+    router.push('/login');
+  };
+
 
 
   const onEmailSubmit = async (data: LoginFormValues) => {
@@ -133,7 +295,12 @@ export default function LoginPage() {
   };
 
 
-  if (authLoading || (!authLoading && user)) {
+  if (authLoading || (!authLoading && user && !showDevicePopup && !error)) {
+    // Show loader while checking auth OR while verifying device (user exists but popup not shown yet)
+    // We added !error so if there's an error we show the form again (or the error state)
+    // Actually, if user is logged in but blocked, we might want to keep showing loader?
+    // No, if blocked, we show popup. The popup is rendered below.
+    // So if (user && !showDevicePopup), it means we are verifying.
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -250,6 +417,11 @@ export default function LoginPage() {
 
         </CardContent>
       </Card>
+      <DeviceApprovalPopup
+        isOpen={showDevicePopup}
+        onCheckNow={handleCheckNow}
+        onTryNewUser={handleTryNewUser}
+      />
     </div>
   );
 }
