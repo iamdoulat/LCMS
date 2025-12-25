@@ -152,87 +152,59 @@ export function AddItemForm() {
     setIsSubmitting(true);
 
     const selectedSupplier = supplierOptions.find(opt => opt.value === data.supplierId);
-    let photoDownloadURL = null;
+    let photoDownloadURL: string | null = null;
 
     try {
+      // Prepare the base data object with potentially undefined values
+      const baseData: any = {
+        ...data,
+        modelNumber: data.modelNumber || undefined,
+        itemVariation: data.itemType === 'Variant' ? data.itemVariation : undefined,
+        itemCode: data.itemCode || undefined,
+        brandName: data.brandName || undefined,
+        supplierId: data.supplierId || undefined,
+        supplierName: selectedSupplier?.label || undefined,
+        currency: data.currency,
+        description: data.description || undefined,
+        unit: data.unit || undefined,
+        currentQuantity: data.manageStock ? data.currentQuantity : undefined,
+        location: data.manageStock ? (data.location || undefined) : undefined,
+        idealQuantity: data.manageStock ? data.idealQuantity : undefined,
+        warningQuantity: data.manageStock ? data.warningQuantity : undefined,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      // Remove keys with undefined values to prevent Firestore errors
+      Object.keys(baseData).forEach(key => {
+        if (baseData[key] === undefined) {
+          delete baseData[key];
+        }
+      });
+
       if (selectedFile) {
-        // We need an ID for the image path, but we don't have the doc ID yet.
-        // We can create a ref first or use a temp path, but usually better to let Firestore generate the ID.
-        // For simplicity in Add, we might upload to a temp location or just use a timestamp based name if we don't have ID.
-        // However, standard practice here is to Add Doc first then update? Or just generate ID first.
-        // Let's generate a new doc ref to get an ID.
+        // We need an ID for the image path, so we create a doc ref first
         const newDocRef = doc(collection(firestore, "items"));
         const storageRef = ref(storage, `itemImages/${newDocRef.id}/profile.jpg`);
         await uploadBytes(storageRef, selectedFile);
         photoDownloadURL = await getDownloadURL(storageRef);
 
-        // Then set the doc with that ID
-        const dataToSave = {
-          ...data,
-          modelNumber: data.modelNumber || undefined,
-          itemVariation: data.itemType === 'Variant' ? data.itemVariation : undefined,
-          itemCode: data.itemCode || undefined,
-          brandName: data.brandName || undefined,
-          supplierId: data.supplierId || undefined,
-          supplierName: selectedSupplier?.label || undefined,
-          currency: data.currency,
-          description: data.description || undefined,
-          unit: data.unit || undefined,
-          currentQuantity: data.manageStock ? data.currentQuantity : undefined,
-          location: data.manageStock ? (data.location || undefined) : undefined,
-          idealQuantity: data.manageStock ? data.idealQuantity : undefined,
-          warningQuantity: data.manageStock ? data.warningQuantity : undefined,
-          photoURL: photoDownloadURL,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
+        // Add photoURL to the cleaned data
+        baseData.photoURL = photoDownloadURL;
 
-        // Remove undefined keys
-        Object.keys(dataToSave).forEach(key => dataToSave[key as keyof typeof dataToSave] === undefined && delete dataToSave[key as keyof typeof dataToSave]);
-
-        await setDoc(newDocRef, dataToSave);
-
-      } else if (externalUrl) {
-        photoDownloadURL = externalUrl;
-        await addDoc(collection(firestore, 'items'), {
-          ...data,
-          modelNumber: data.modelNumber || undefined,
-          itemVariation: data.itemType === 'Variant' ? data.itemVariation : undefined,
-          itemCode: data.itemCode || undefined,
-          brandName: data.brandName || undefined,
-          supplierId: data.supplierId || undefined,
-          supplierName: selectedSupplier?.label || undefined,
-          currency: data.currency,
-          description: data.description || undefined,
-          unit: data.unit || undefined,
-          currentQuantity: data.manageStock ? data.currentQuantity : undefined,
-          location: data.manageStock ? (data.location || undefined) : undefined,
-          idealQuantity: data.manageStock ? data.idealQuantity : undefined,
-          warningQuantity: data.manageStock ? data.warningQuantity : undefined,
-          photoURL: photoDownloadURL,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        // Use setDoc since we generated the ID
+        await setDoc(newDocRef, baseData);
       } else {
-        await addDoc(collection(firestore, 'items'), {
-          ...data,
-          modelNumber: data.modelNumber || undefined,
-          itemVariation: data.itemType === 'Variant' ? data.itemVariation : undefined,
-          itemCode: data.itemCode || undefined,
-          brandName: data.brandName || undefined,
-          supplierId: data.supplierId || undefined,
-          supplierName: selectedSupplier?.label || undefined,
-          currency: data.currency,
-          description: data.description || undefined,
-          unit: data.unit || undefined,
-          currentQuantity: data.manageStock ? data.currentQuantity : undefined,
-          location: data.manageStock ? (data.location || undefined) : undefined,
-          idealQuantity: data.manageStock ? data.idealQuantity : undefined,
-          warningQuantity: data.manageStock ? data.warningQuantity : undefined,
-          photoURL: null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        // Handle external URL or no image
+        if (externalUrl) {
+          photoDownloadURL = externalUrl;
+          baseData.photoURL = photoDownloadURL;
+        } else {
+          baseData.photoURL = null;
+        }
+
+        // Use addDoc and let Firestore generate ID
+        await addDoc(collection(firestore, 'items'), baseData);
       }
 
       Swal.fire({

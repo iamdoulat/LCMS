@@ -54,7 +54,7 @@ type SaleFormValues = PageSaleFormValues;
 type SaleLineItemFormValues = PageSaleLineItemFormValues;
 
 
-export function CreateSaleInvoiceForm({ itemsCollection = "items" }: { itemsCollection?: "items" | "quote_items" } = {}) {
+export function CreateInvoiceForm({ itemsCollection = "items" }: { itemsCollection?: "items" | "quote_items" } = {}) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [customerOptions, setCustomerOptions] = React.useState<CustomerOption[]>([]);
   const [itemOptions, setItemOptions] = React.useState<ItemOption[]>([]);
