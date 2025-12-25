@@ -429,7 +429,7 @@ export function AddItemForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {selectedVariationData.subVariations.map((option) => (
+                          {selectedVariationData?.subVariations?.map((option) => (
                             <SelectItem key={option} value={option}>{option}</SelectItem>
                           ))}
                         </SelectContent>

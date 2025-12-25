@@ -119,9 +119,8 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
         category: initialData.category?.trim() || '',
         itemSection: initialData.itemSection?.trim() || '',
         itemType: (
-          initialData.itemType === 'Variant' ||
-          initialData.itemType === 'variant' ||
-          (!initialData.itemType && initialData.itemVariation)
+          String(initialData.itemType).toLowerCase() === 'variant' ||
+          (!initialData.itemType && !!initialData.itemVariation)
         ) ? 'Variant' : 'Single',
         itemVariation: initialData.itemVariation?.trim() || '',
         variationOption: initialData.variationOption?.trim() || '',
@@ -470,7 +469,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {selectedVariationData.subVariations.map((option) => (
+                          {selectedVariationData?.subVariations?.map((option) => (
                             <SelectItem key={option} value={option}>{option}</SelectItem>
                           ))}
                         </SelectContent>

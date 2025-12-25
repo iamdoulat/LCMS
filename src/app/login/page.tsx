@@ -101,7 +101,7 @@ export default function LoginPage() {
       const deviceId = getDeviceId();
       const { deviceName, browser, os, deviceType, brand, model, userAgent } = getDeviceDetails();
 
-      console.log("Verifying device:", { deviceId, deviceName });
+      // console.log("Verifying device:", { deviceId, deviceName });
 
       const userRef = doc(firestore, 'users', currentUser.uid);
       const userSnap = await getDoc(userRef);
@@ -118,19 +118,19 @@ export default function LoginPage() {
       const allowedDevices = userData.allowedDevices || [];
       const userRoles = userData.role || [];
 
-      console.log("Current allowed devices:", allowedDevices);
-      console.log("User roles:", userRoles);
+      // console.log("Current allowed devices:", allowedDevices);
+      // console.log("User roles:", userRoles);
 
       // Exempt Super Admin and Admin from device verification
       if (userRoles.includes('Super Admin') || userRoles.includes('Admin')) {
-        console.log("User is Super Admin or Admin - skipping device verification");
+        // console.log("User is Super Admin or Admin - skipping device verification");
         router.push('/dashboard');
         return;
       }
 
       // Case 1: No allowed devices (First login ever for this feature/user)
       if (allowedDevices.length === 0) {
-        console.log("No allowed devices found. Registering current device...");
+        // console.log("No allowed devices found. Registering current device...");
         const newDevice: AllowedDevice = {
           deviceId,
           deviceName,
@@ -145,7 +145,7 @@ export default function LoginPage() {
         await updateDoc(userRef, {
           allowedDevices: arrayUnion(newDevice)
         });
-        console.log("Device registered successfully.");
+        // console.log("Device registered successfully.");
         router.push('/dashboard');
         return;
       }
@@ -153,13 +153,13 @@ export default function LoginPage() {
       // Case 2: Check if current device is allowed
       const isAllowed = allowedDevices.some(d => d.deviceId === deviceId);
       if (isAllowed) {
-        console.log("Device is allowed.");
+        // console.log("Device is allowed.");
         router.push('/dashboard');
         return;
       }
 
       // Case 3: New/Unrecognized Device
-      console.log("Device not recognized. Checking for pending requests...");
+      // console.log("Device not recognized. Checking for pending requests...");
       setShowDevicePopup(true);
 
       // Check if a pending request already exists to avoid spamming
@@ -173,7 +173,7 @@ export default function LoginPage() {
       const existingReqs = await getDocs(q);
 
       if (existingReqs.empty) {
-        console.log("Creating new device change request...");
+        // console.log("Creating new device change request...");
         await addDoc(requestsRef, {
           userId: currentUser.uid,
           userName: currentUser.displayName || 'Unknown User',
@@ -190,7 +190,7 @@ export default function LoginPage() {
           createdAt: serverTimestamp()
         });
       } else {
-        console.log("Pending request already exists.");
+        // console.log("Pending request already exists.");
       }
 
     } catch (err) {
