@@ -158,18 +158,10 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
 
   // Ensure warehouseId is set after warehouses are loaded
   React.useEffect(() => {
-    console.log("Warehouse Effect - initialData.warehouseId:", initialData?.warehouseId);
-    console.log("Warehouse Effect - warehouses:", warehouses);
-    console.log("Warehouse Effect - isLoadingWarehouses:", isLoadingWarehouses);
-
     if (initialData?.warehouseId && warehouses && warehouses.length > 0 && !isLoadingWarehouses) {
       const warehouseExists = warehouses.some(w => w.id === initialData.warehouseId);
-      console.log("Warehouse Effect - warehouseExists:", warehouseExists);
       if (warehouseExists) {
-        console.log("Warehouse Effect - Setting warehouseId to:", initialData.warehouseId);
         form.setValue('warehouseId', initialData.warehouseId);
-      } else {
-        console.warn("Warehouse Effect - Warehouse ID not found in list:", initialData.warehouseId);
       }
     }
   }, [warehouses, isLoadingWarehouses, initialData, form]);
