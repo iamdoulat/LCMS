@@ -7,18 +7,19 @@ import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, userRole } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
       if (user) {
-        router.replace('/dashboard');
+        const isEmployee = userRole?.includes('Employee');
+        router.replace(isEmployee ? '/mobile/dashboard' : '/dashboard');
       } else {
         router.replace('/login');
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading, userRole, router]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-background">

@@ -38,7 +38,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading: authLoading, signInWithGoogle, login: contextLogin, companyLogoUrl } = useAuth();
+  const { user, loading: authLoading, signInWithGoogle, login: contextLogin, companyLogoUrl, userRole } = useAuth();
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,95 +58,84 @@ export default function LoginPage() {
   // Helper: Get or Create Device ID
   const getDeviceId = () => {
     if (typeof window === 'undefined') return 'unknown-device';
-    let id = localStorage.getItem('device_id');
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem('device_id', id);
+    let deviceId = localStorage.getItem('device_id');
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem('device_id', deviceId);
     }
-    return id;
+    return deviceId;
   };
 
-  // Helper: Get Device Details
-  const getDeviceDetails = () => {
-    if (typeof window === 'undefined') return {
-      deviceName: 'Unknown Device',
-      browser: 'Unknown',
-      os: 'Unknown',
-      deviceType: 'desktop',
-      userAgent: '',
-      brand: '',
-      model: ''
-    };
-
+  const getDeviceName = () => {
+    if (typeof window === 'undefined') return 'Unknown Device';
     const parser = new UAParser();
     const result = parser.getResult();
-
-    const browser = result.browser.name ? `${result.browser.name} ${result.browser.version || ''}`.trim() : 'Unknown Browser';
-    const os = result.os.name ? `${result.os.name} ${result.os.version || ''}`.trim() : 'Unknown OS';
-    const deviceType = result.device.type || 'desktop';
-    const brand = result.device.vendor || '';
-    const model = result.device.model || '';
-    const userAgent = result.ua || '';
-
-    const deviceName = `${brand} ${model} (${browser} on ${os})`.trim() || `${browser} on ${os}`.trim();
-
-    return { deviceName, browser, os, deviceType, brand, model, userAgent };
+    const browser = result.browser.name || 'Unknown Browser';
+    const os = result.os.name || 'Unknown OS';
+    const type = result.device.type || 'Desktop';
+    return `${browser} on ${os} (${type})`;
   };
 
+  // Verify Device Function
   const verifyDevice = async (currentUser: any) => {
-    if (!currentUser || isCheckingDevice) return;
     setIsCheckingDevice(true);
+    setError(null);
 
     try {
-      const deviceId = getDeviceId();
-      const { deviceName, browser, os, deviceType, brand, model, userAgent } = getDeviceDetails();
+      if (!currentUser?.uid) return;
 
-      // console.log("Verifying device:", { deviceId, deviceName });
+      // Determine redirection path based on role
+      // If userRole is not yet loaded but user is logged in, we might default to dashboard or wait? 
+      // Assuming userRole is populated if user is populated.
+      // We'll check the fetched 'userRole' from context.
+      const isEmployee = userRole?.includes('Employee');
+      const targetPath = isEmployee ? '/mobile/dashboard' : '/dashboard';
 
-      const userRef = doc(firestore, 'users', currentUser.uid);
-      const userSnap = await getDoc(userRef);
+      const userDocRef = doc(firestore, 'users', currentUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
 
-      if (!userSnap.exists()) {
-        console.warn("User document does not exist for uid:", currentUser.uid);
-        // Ensure user doc exists before adding device
-        // Option: Create it or just redirect (as checked before). 
-        router.push('/dashboard');
+      if (!userDocSnap.exists()) {
+        // console.error("User document does not exist.");
+        // If no user doc, maybe just redirect or let them be? 
+        // Admin likely hasn't set them up, or they are just created.
+        router.push(targetPath);
         return;
       }
 
-      const userData = userSnap.data() as UserDocumentForAdmin;
+      const userData = userDocSnap.data() as UserDocumentForAdmin;
       const allowedDevices = userData.allowedDevices || [];
-      const userRoles = userData.role || [];
+      const deviceId = getDeviceId();
+      const deviceName = getDeviceName();
 
-      // console.log("Current allowed devices:", allowedDevices);
-      // console.log("User roles:", userRoles);
+      // Gather device info for logging/request
+      const parser = new UAParser();
+      const result = parser.getResult();
+      const browser = result.browser.name;
+      const os = result.os.name;
+      const deviceType = result.device.type || 'Desktop';
+      const brand = result.device.vendor;
+      const model = result.device.model;
+      const userAgent = navigator.userAgent;
 
-      // Exempt Super Admin and Admin from device verification
-      if (userRoles.includes('Super Admin') || userRoles.includes('Admin')) {
-        // console.log("User is Super Admin or Admin - skipping device verification");
-        router.push('/dashboard');
-        return;
-      }
+      const newDevice: AllowedDevice = {
+        deviceId,
+        deviceName,
+        registeredAt: Timestamp.now(),
+        userAgent
+      };
 
-      // Case 1: No allowed devices (First login ever for this feature/user)
+      // Case 1: No devices registered yet -> Auto-approve this first device
       if (allowedDevices.length === 0) {
-        // console.log("No allowed devices found. Registering current device...");
-        const newDevice: AllowedDevice = {
-          deviceId,
-          deviceName,
-          browser,
-          os,
-          deviceType,
-          brand,
-          model,
-          userAgent,
+        // console.log("No devices registered. Auto-approving first device...");
+        const userRef = doc(firestore, 'users', currentUser.uid);
+        // Also update `registeredAt` if missing?
+        const updateData: any = {
+          allowedDevices: arrayUnion(newDevice),
           registeredAt: Timestamp.now()
         };
-        await updateDoc(userRef, {
-          allowedDevices: arrayUnion(newDevice)
-        });
+        await updateDoc(userRef, updateData);
         // console.log("Device registered successfully.");
-        router.push('/dashboard');
+        router.push(targetPath);
         return;
       }
 
@@ -154,7 +143,7 @@ export default function LoginPage() {
       const isAllowed = allowedDevices.some(d => d.deviceId === deviceId);
       if (isAllowed) {
         // console.log("Device is allowed.");
-        router.push('/dashboard');
+        router.push(targetPath);
         return;
       }
 
@@ -206,7 +195,7 @@ export default function LoginPage() {
     if (!authLoading && user && !showDevicePopup) {
       verifyDevice(user);
     }
-  }, [user, authLoading, router]); // removing showDevicePopup from dependency to avoid loop, but we use it in logic
+  }, [user, userRole, authLoading, router]); // removing showDevicePopup from dependency to avoid loop, but we use it in logic
 
   const handleCheckNow = async () => {
     if (user) {
