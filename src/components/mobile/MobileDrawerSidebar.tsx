@@ -32,7 +32,7 @@ export function MobileDrawerSidebar() {
     ];
 
     return (
-        <div className="fixed inset-y-0 left-0 w-[70%] bg-[#4c35de] text-white z-0 flex flex-col pt-12 pb-6 px-6 overflow-y-auto">
+        <div className="fixed inset-y-0 left-0 w-[49%] bg-[#4c35de] text-white z-0 flex flex-col pt-12 pb-6 px-6 overflow-y-auto">
             {/* Profile Section */}
             <div className="mb-8 flex flex-col">
                 <div className="h-16 w-16 rounded-xl overflow-hidden border-2 border-white mb-3">

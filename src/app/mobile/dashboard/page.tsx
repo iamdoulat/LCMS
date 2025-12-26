@@ -1,10 +1,15 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { MobileAttendanceModal } from '@/components/mobile/MobileAttendanceModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { firestore } from '@/lib/firebase/config';
+import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
@@ -18,19 +23,210 @@ const allSummaryItems = [
     { id: 'disbursed', label: 'Monthly', subLabel: 'Disbursed', value: '0', icon: Wallet, bgColor: 'bg-teal-50', textColor: 'text-teal-500' },
 ];
 
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
 export default function MobileDashboardPage() {
+    const { user } = useAuth();
+    const router = useRouter();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>(['leave', 'visit', 'pending']);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
     const containerRef = React.useRef<HTMLDivElement>(null);
+    const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+    const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
+    const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string } | null>(null);
 
-    const visibleItems = allSummaryItems.filter(item => selectedIds.includes(item.id));
+    // Load settings from localStorage
+    useEffect(() => {
+        const savedSettings = localStorage.getItem('mobileDashboardSummarySettings');
+        if (savedSettings) {
+            try {
+                setSelectedIds(JSON.parse(savedSettings));
+            } catch (e) {
+                console.error('Failed to parse saved settings', e);
+            }
+        }
+    }, []);
 
+    // Save settings to localStorage whenever they change
     const toggleItem = (id: string) => {
-        setSelectedIds(prev =>
-            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        setSelectedIds(prev => {
+            const newSelection = prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id];
+            localStorage.setItem('mobileDashboardSummarySettings', JSON.stringify(newSelection));
+            return newSelection;
+        });
+    };
+
+    // Fetch today's attendance
+    useEffect(() => {
+        if (!user) return;
+
+        const fetchTodayAttendance = async () => {
+            try {
+                const today = new Date();
+                const dateKey = format(today, 'yyyy-MM-dd');
+                const docId = `${user.uid}_${dateKey}`;
+
+                const attendanceDoc = await getDoc(doc(firestore, 'attendance', docId));
+                if (attendanceDoc.exists()) {
+                    const data = attendanceDoc.data();
+                    setTodayAttendance({
+                        inTime: data.inTime,
+                        outTime: data.outTime
+                    });
+                } else {
+                    setTodayAttendance(null);
+                }
+            } catch (error) {
+                console.error('Error fetching today attendance:', error);
+            }
+        };
+
+        fetchTodayAttendance();
+    }, [user]);
+
+    const [stats, setStats] = useState({
+        leaveSpent: 0,
+        visitCount: 0,
+        pendingCount: 0,
+        missedAttendance: 0,
+        noticesCount: 0,
+        claimAmount: 0,
+        disbursedAmount: 0
+    });
+
+    const visibleItems = allSummaryItems.filter(item => selectedIds.includes(item.id)).map(item => {
+        switch (item.id) {
+            case 'leave': return { ...item, value: stats.leaveSpent.toFixed(1) };
+            case 'visit': return { ...item, value: stats.visitCount.toFixed(1) };
+            case 'pending': return { ...item, value: stats.pendingCount.toString() };
+            case 'missed': return { ...item, value: stats.missedAttendance.toString() };
+            case 'notices': return { ...item, value: stats.noticesCount.toString() };
+            case 'checkin': return { ...item, value: todayAttendance?.inTime || '--:--' };
+            case 'checkout': return { ...item, value: todayAttendance?.outTime || '--:--' };
+            case 'claim': return { ...item, value: stats.claimAmount.toString() };
+            case 'disbursed': return { ...item, value: stats.disbursedAmount.toString() };
+            default: return item;
+        }
+    });
+
+    // Real-time listeners for stats
+    useEffect(() => {
+        if (!user) return;
+
+        const startMonth = startOfMonth(new Date());
+        const endMonth = endOfMonth(new Date());
+
+        // 1. Leave Stats (Approved)
+        const qLeave = query(
+            collection(firestore, 'leave_applications'),
+            where('employeeId', '==', user.uid),
+            where('status', '==', 'Approved')
         );
+        const unsubLeave = onSnapshot(qLeave, (snapshot) => {
+            let totalDays = 0;
+            snapshot.docs.forEach(doc => {
+                const data = doc.data();
+                // Simple day count calculation - refinement needed for exact business logic if complex
+                if (data.totalDays) totalDays += Number(data.totalDays);
+            });
+            setStats(prev => ({ ...prev, leaveSpent: totalDays }));
+        });
+
+        // 2. Visit Stats (Approved)
+        const qVisit = query(
+            collection(firestore, 'visit_applications'),
+            where('employeeId', '==', user.uid),
+            where('status', '==', 'Approved')
+        );
+        const unsubVisit = onSnapshot(qVisit, (snapshot) => {
+            // Counting total approved visits
+            setStats(prev => ({ ...prev, visitCount: snapshot.size }));
+        });
+
+        // 3. Pending Requests (Aggregate)
+        // Note: Creating multiple listeners might be heavy, but fine for single user dashboard
+        const qPendingLeave = query(collection(firestore, 'leave_applications'), where('employeeId', '==', user.uid), where('status', '==', 'Pending'));
+        const qPendingVisit = query(collection(firestore, 'visit_applications'), where('employeeId', '==', user.uid), where('status', '==', 'Pending'));
+        const qPendingAdvance = query(collection(firestore, 'advance_salary'), where('employeeId', '==', user.uid), where('status', '==', 'Pending'));
+
+        // We'll use a single aggregated update for pending to avoid flickering
+        const unsubPendingLeave = onSnapshot(qPendingLeave, (snap) => {
+            updatePendingCount(snap.size, 'leave');
+        });
+        const unsubPendingVisit = onSnapshot(qPendingVisit, (snap) => {
+            updatePendingCount(snap.size, 'visit');
+        });
+        const unsubPendingAdvance = onSnapshot(qPendingAdvance, (snap) => {
+            updatePendingCount(snap.size, 'advance');
+        });
+
+        let pendingCounts = { leave: 0, visit: 0, advance: 0 };
+        const updatePendingCount = (count: number, type: 'leave' | 'visit' | 'advance') => {
+            pendingCounts[type] = count;
+            setStats(prev => ({
+                ...prev,
+                pendingCount: pendingCounts.leave + pendingCounts.visit + pendingCounts.advance
+            }));
+        };
+
+        // 4. Missed Attendance (Flag 'A' in current month)
+        // Note: This logic assumes 'A' flag is set by a cron job or manual process
+        const qMissed = query(
+            collection(firestore, 'attendance'),
+            where('employeeId', '==', user.uid),
+            where('flag', '==', 'A'),
+            where('date', '>=', startMonth.toISOString()),
+            where('date', '<=', endMonth.toISOString())
+        );
+        const unsubMissed = onSnapshot(qMissed, (snapshot) => {
+            setStats(prev => ({ ...prev, missedAttendance: snapshot.size }));
+        });
+
+        // 5. Notices (Unseen count) - Simplified to total active notices for now
+        // For distinct "New", we'd need to compare with last seen ID, but just showing total active is a good start
+        /* 
+        const qNotices = query(collection(firestore, 'site_settings'), where('type', '==', 'notice'), where('isEnabled', '==', true));
+        const unsubNotices = onSnapshot(qNotices, (snapshot) => {
+             // Filter logic would go here
+             setStats(prev => ({ ...prev, noticesCount: snapshot.size }));
+        });
+        */
+
+        return () => {
+            unsubLeave();
+            unsubVisit();
+            unsubPendingLeave();
+            unsubPendingVisit();
+            unsubPendingAdvance();
+            unsubMissed();
+            // unsubNotices();
+        };
+    }, [user]);
+
+    const refreshAttendanceData = async () => {
+        if (!user) return;
+
+        try {
+            const today = new Date();
+            const dateKey = format(today, 'yyyy-MM-dd');
+            const docId = `${user.uid}_${dateKey}`;
+
+            const attendanceDoc = await getDoc(doc(firestore, 'attendance', docId));
+            if (attendanceDoc.exists()) {
+                const data = attendanceDoc.data();
+                setTodayAttendance({
+                    inTime: data.inTime,
+                    outTime: data.outTime
+                });
+            } else {
+                setTodayAttendance(null);
+            }
+        } catch (error) {
+            console.error('Error refreshing attendance:', error);
+        }
     };
 
     const handleRefresh = async () => {
@@ -105,7 +301,10 @@ export default function MobileDashboardPage() {
                 <div className="px-4 pt-6 pb-24 space-y-6">
                     {/* In/Out Time Cards */}
                     <div className="grid grid-cols-2 gap-4">
-                        <Card className="p-4 rounded-xl flex items-center justify-between border-none shadow-sm h-24">
+                        <Card
+                            className="p-4 rounded-xl flex items-center justify-between border-none shadow-sm h-24 cursor-pointer active:scale-95 transition-transform"
+                            onClick={() => setIsAttendanceModalOpen(true)}
+                        >
                             <div>
                                 <div className="flex items-center gap-2 text-blue-600 mb-1">
                                     <div className="rounded-full bg-blue-100 p-2">
@@ -113,14 +312,22 @@ export default function MobileDashboardPage() {
                                     </div>
                                     <span className="font-semibold text-base">In Time</span>
                                 </div>
-                                <p className="text-xs text-muted-foreground font-medium pl-1">Weekend</p>
+                                <p className="text-xs text-muted-foreground font-medium pl-1">
+                                    {todayAttendance?.inTime || 'Not marked'}
+                                </p>
                             </div>
                             <div className="h-10 w-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
                                 <ChevronDown className="h-5 w-5" />
                             </div>
                         </Card>
 
-                        <Card className="p-4 rounded-xl flex items-center justify-between border-none shadow-sm h-24">
+                        <Card
+                            className="p-4 rounded-xl flex items-center justify-between border-none shadow-sm h-24 cursor-pointer active:scale-95 transition-transform"
+                            onClick={() => {
+                                setAttendanceType('out');
+                                setIsAttendanceModalOpen(true);
+                            }}
+                        >
                             <div>
                                 <div className="flex items-center gap-2 text-purple-600 mb-1">
                                     <div className="rounded-full bg-purple-100 p-2">
@@ -128,6 +335,9 @@ export default function MobileDashboardPage() {
                                     </div>
                                     <span className="font-semibold text-base">Out Time</span>
                                 </div>
+                                <p className="text-xs text-muted-foreground font-medium pl-1">
+                                    {todayAttendance?.outTime || 'Not marked'}
+                                </p>
                             </div>
                             <div className="h-10 w-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
                                 <ChevronDown className="h-5 w-5" />
@@ -246,12 +456,15 @@ export default function MobileDashboardPage() {
                             </div>
 
                             {/* Check In/Out */}
-                            <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
+                            <Link
+                                href="/mobile/check-in-out"
+                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] active:scale-95 transition-transform cursor-pointer"
+                            >
                                 <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
                                     <LogIn className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center leading-tight">Check In/Out</span>
-                            </div>
+                            </Link>
 
                             {/* Placeholders for next row */}
                             <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
@@ -264,6 +477,14 @@ export default function MobileDashboardPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Attendance Modal */}
+            <MobileAttendanceModal
+                isOpen={isAttendanceModalOpen}
+                onClose={() => setIsAttendanceModalOpen(false)}
+                onSuccess={refreshAttendanceData}
+                type={attendanceType}
+            />
         </div>
     );
 }

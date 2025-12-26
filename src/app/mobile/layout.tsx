@@ -26,7 +26,7 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
             <div
                 className={cn(
                     "relative z-10 transition-transform duration-300 ease-out min-h-screen bg-slate-50 flex flex-col",
-                    isOpen ? "translate-x-[75%] scale-[0.85] rounded-l-[2.5rem] overflow-hidden shadow-2xl h-screen" : "translate-x-0 scale-100 rounded-none shadow-none"
+                    isOpen ? "translate-x-[49%] scale-[0.85] rounded-l-[2.5rem] overflow-hidden shadow-2xl h-screen" : "translate-x-0 scale-100 rounded-none shadow-none"
                 )}
             >
                 {/* Content */}

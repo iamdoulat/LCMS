@@ -1987,6 +1987,10 @@ export interface Attendance {
   createdAt: any;
   inTimeLocation?: { latitude: number; longitude: number };
   outTimeLocation?: { latitude: number; longitude: number };
+  inTimeAddress?: string;
+  outTimeAddress?: string;
+  inTimeRemarks?: string;
+  outTimeRemarks?: string;
   approvalStatus?: 'Pending' | 'Approved' | 'Rejected';
 }
 export type AttendanceDocument = Attendance & { id: string };
