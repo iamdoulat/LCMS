@@ -18,6 +18,16 @@ export default function MobileAttendancePage() {
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
+
+        // Play water drop sound
+        try {
+            const audio = new Audio('/sounds/water-drop.mp3');
+            audio.volume = 0.5;
+            audio.play().catch(err => console.log('Audio play failed:', err));
+        } catch (err) {
+            console.log('Audio error:', err);
+        }
+
         // Simulate data refresh
         await new Promise(resolve => setTimeout(resolve, 1000));
         setIsRefreshing(false);
