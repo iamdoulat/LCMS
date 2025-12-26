@@ -678,13 +678,7 @@ export function AddItemForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center"><Warehouse className="h-4 w-4 mr-1 text-muted-foreground" />Warehouse</FormLabel>
-                      <Select onValueChange={(value) => {
-                        field.onChange(value);
-                        const selectedWarehouse = warehouses?.find(w => w.id === value);
-                        if (selectedWarehouse) {
-                          form.setValue('warehouseName', selectedWarehouse.name);
-                        }
-                      }} value={field.value || ""} defaultValue={field.value || ""}>
+                      <Select onValueChange={field.onChange} value={field.value || ""} defaultValue={field.value || ""}>
                         <FormControl>
                           <SelectTrigger className="h-11">
                             <SelectValue placeholder={isLoadingWarehouses ? "Loading..." : "Select Warehouse"} />

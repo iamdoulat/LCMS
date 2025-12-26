@@ -61,10 +61,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
   const { data: currencies } = useFirestoreQuery<CurrencyDocument[]>(query(collection(firestore, 'currencies'), orderBy("name", "asc")), undefined, ['currencies']);
   const { data: warehouses, isLoading: isLoadingWarehouses } = useFirestoreQuery<WarehouseDocument[]>(query(collection(firestore, 'warehouses'), orderBy("name", "asc")), undefined, ['warehouses']);
 
-  React.useEffect(() => {
-    console.log("EditItemForm: Warehouses loaded:", warehouses);
-    console.log("EditItemForm: Is loading warehouses:", isLoadingWarehouses);
-  }, [warehouses, isLoadingWarehouses]);
+
 
   const [currencyOptions, setCurrencyOptions] = React.useState<ComboboxOption[]>([]);
 
