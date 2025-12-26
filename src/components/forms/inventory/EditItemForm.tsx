@@ -833,7 +833,7 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
                         <PopoverContent className="w-auto p-0" align="start">
                           <CalendarComponent
                             mode="single"
-                            selected={field.value}
+                            selected={field.value ?? undefined}
                             onSelect={field.onChange}
                             disabled={(date) =>
                               date < new Date()
