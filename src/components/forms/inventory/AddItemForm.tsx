@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import type { ItemFormValues, Item, SupplierDocument, PettyCashCategoryDocument, ItemSectionDocument, ItemVariationDocument, CurrencyDocument } from '@/types';
+import type { ItemFormValues, Item, SupplierDocument, PettyCashCategoryDocument, ItemSectionDocument, ItemVariationDocument, CurrencyDocument, WarehouseDocument } from '@/types';
 import { itemSchema, itemTypeOptions } from '@/types';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -21,7 +21,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin, Building, Layers, Trash2, Crop as CropIcon, Image as ImageIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { Loader2, Package, Save, DollarSign, Warehouse, AlertTriangle, Info, Tag, MapPin, Building, Layers, Trash2, Crop as CropIcon, Image as ImageIcon, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { CheckboxCombobox } from "@/components/ui/checkbox-combobox";
@@ -52,6 +55,7 @@ export function AddItemForm() {
   const { data: itemSections, isLoading: isLoadingItemSections } = useFirestoreQuery<ItemSectionDocument[]>(query(collection(firestore, 'item_sections'), orderBy("createdAt", "desc")), undefined, ['item_sections']);
   const { data: itemVariations, isLoading: isLoadingItemVariations } = useFirestoreQuery<ItemVariationDocument[]>(query(collection(firestore, 'item_variations'), orderBy("createdAt", "desc")), undefined, ['item_variations']);
   const { data: currencies } = useFirestoreQuery<CurrencyDocument[]>(query(collection(firestore, 'currencies'), orderBy("name", "asc")), undefined, ['currencies']);
+  const { data: warehouses, isLoading: isLoadingWarehouses } = useFirestoreQuery<WarehouseDocument[]>(query(collection(firestore, 'warehouses'), orderBy("createdAt", "desc")), undefined, ['warehouses']);
 
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemSchema),
@@ -162,6 +166,7 @@ export function AddItemForm() {
 
     try {
       // Prepare the base data object with potentially undefined values
+      const selectedWarehouse = warehouses?.find(w => w.id === data.warehouseId);
       const baseData: any = {
         ...data,
         modelNumber: data.modelNumber || undefined,
@@ -169,6 +174,11 @@ export function AddItemForm() {
         variationOption: data.itemType === 'Variant' ? data.variationOption : undefined,
         itemCode: data.itemCode || undefined,
         brandName: data.brandName || undefined,
+        countryOfOrigin: data.countryOfOrigin || undefined,
+        mfgDate: data.mfgDate ? data.mfgDate.toISOString() : undefined,
+        expiryDate: data.expiryDate ? data.expiryDate.toISOString() : undefined,
+        warehouseId: data.warehouseId || undefined,
+        warehouseName: selectedWarehouse?.name || undefined,
         supplierId: data.supplierId || undefined,
         supplierName: selectedSupplier?.label || undefined,
         currency: data.currency,
@@ -602,7 +612,7 @@ export function AddItemForm() {
                   name="currentQuantity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Current Balance*</FormLabel>
+                      <FormLabel>Current Stock Balance*</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="0" {...field} value={field.value ?? ''} className="h-11 font-bold" />
                       </FormControl>
@@ -654,6 +664,120 @@ export function AddItemForm() {
                           className="h-11 border-amber-200 focus-visible:ring-amber-500 font-bold"
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Warehouse and Date Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8 pt-8 border-t">
+                <FormField
+                  control={form.control}
+                  name="warehouseId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center"><Warehouse className="h-4 w-4 mr-1 text-muted-foreground" />Warehouse</FormLabel>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        const selectedWarehouse = warehouses?.find(w => w.id === value);
+                        if (selectedWarehouse) {
+                          form.setValue('warehouseName', selectedWarehouse.name);
+                        }
+                      }} value={field.value || ""} defaultValue={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder={isLoadingWarehouses ? "Loading..." : "Select Warehouse"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {warehouses?.map((warehouse) => (
+                            <SelectItem key={warehouse.id} value={warehouse.id}>{warehouse.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="mfgDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="flex items-center mb-2"><Calendar className="h-4 w-4 mr-1 text-muted-foreground" />Mfg. Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "h-11 pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="expiryDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="flex items-center mb-2"><Calendar className="h-4 w-4 mr-1 text-muted-foreground" />Expiry Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "h-11 pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < new Date()
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}

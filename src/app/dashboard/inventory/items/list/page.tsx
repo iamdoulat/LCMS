@@ -297,7 +297,15 @@ export default function ItemsListPage() {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="font-medium px-2 sm:px-4">{item.itemName || 'N/A'}</TableCell>
+                      <TableCell className="font-medium px-2 sm:px-4">
+                        <button
+                          onClick={() => item.id && handleEditItem(item.id)}
+                          className="text-primary hover:underline hover:text-primary/80 transition-colors cursor-pointer text-left font-medium"
+                          disabled={!item.id}
+                        >
+                          {item.itemName || 'N/A'}
+                        </button>
+                      </TableCell>
                       <TableCell className="px-2 sm:px-4">{item.itemCode || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.brandName || 'N/A'}</TableCell>
                       <TableCell className="px-2 sm:px-4">{item.supplierName || 'N/A'}</TableCell>

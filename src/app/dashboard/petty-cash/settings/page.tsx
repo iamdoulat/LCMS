@@ -3,9 +3,11 @@
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Wallet, List } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Wallet, List, QrCode, LayoutGrid, Printer, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { InventoryReportDialog } from '@/components/reports/InventoryReportDialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
     DropdownMenu,
@@ -24,18 +26,11 @@ import {
 } from "@/components/ui/dialog";
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import type { PettyCashAccountDocument, PettyCashCategoryDocument, ItemCategoryDocument, ItemVariationDocument, ItemSectionDocument } from '@/types';
+import type { PettyCashAccountDocument, PettyCashCategoryDocument, ItemCategoryDocument, ItemVariationDocument, ItemSectionDocument, WarehouseDocument } from '@/types';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { AddPettyCashAccountForm } from '@/components/forms/financial';
-import { AddPettyCashCategoryForm } from '@/components/forms/financial';
-import { EditPettyCashAccountForm } from '@/components/forms/financial';
-import { EditPettyCashCategoryForm } from '@/components/forms/financial';
-import { AddItemCategoryForm } from '@/components/forms/inventory';
-import { EditItemCategoryForm } from '@/components/forms/inventory';
-import { AddItemVariationForm } from '@/components/forms/inventory';
-import { EditItemVariationForm } from '@/components/forms/inventory';
-import { AddItemSectionForm } from '@/components/forms/inventory';
+import { AddPettyCashAccountForm, AddPettyCashCategoryForm, EditPettyCashAccountForm, EditPettyCashCategoryForm } from '@/components/forms/financial';
+import { AddItemCategoryForm, AddWarehouseForm, EditWarehouseForm, EditItemCategoryForm, AddItemVariationForm, EditItemVariationForm, AddItemSectionForm } from '@/components/forms/inventory';
 
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,7 +72,7 @@ export default function PettyCashSettingsPage() {
     const { data: itemVariations, isLoading: isLoadingItemVariations } = useFirestoreQuery<ItemVariationDocument[]>(query(collection(firestore, 'item_variations'), orderBy("createdAt", "desc")), undefined, ['item_variations']);
     const { data: itemSections, isLoading: isLoadingItemSections } = useFirestoreQuery<ItemSectionDocument[]>(query(collection(firestore, 'item_sections'), orderBy("createdAt", "desc")), undefined, ['item_sections']);
     const { data: currencies, isLoading: isLoadingCurrencies } = useFirestoreQuery<CurrencyDocument[]>(query(collection(firestore, 'currencies'), orderBy("createdAt", "desc")), undefined, ['currencies']);
-
+    const { data: warehouses, isLoading: isLoadingWarehouses } = useFirestoreQuery<WarehouseDocument[]>(query(collection(firestore, 'warehouses'), orderBy("createdAt", "desc")), undefined, ['warehouses']);
 
     const [isAddAccountDialogOpen, setIsAddAccountDialogOpen] = React.useState(false);
     const [isAddCategoryDialogOpen, setIsAddCategoryDialogOpen] = React.useState(false);
@@ -85,6 +80,8 @@ export default function PettyCashSettingsPage() {
     const [isAddItemVariationDialogOpen, setIsAddItemVariationDialogOpen] = React.useState(false);
     const [isAddItemSectionDialogOpen, setIsAddItemSectionDialogOpen] = React.useState(false);
     const [isAddCurrencyDialogOpen, setIsAddCurrencyDialogOpen] = React.useState(false);
+    const [isAddWarehouseDialogOpen, setIsAddWarehouseDialogOpen] = React.useState(false);
+    const [isInventoryReportOpen, setIsInventoryReportOpen] = React.useState(false);
 
     const [editingAccount, setEditingAccount] = React.useState<PettyCashAccountDocument | null>(null);
     const [isEditAccountDialogOpen, setIsEditAccountDialogOpen] = React.useState(false);
@@ -100,6 +97,9 @@ export default function PettyCashSettingsPage() {
 
     const [editingCurrency, setEditingCurrency] = React.useState<CurrencyDocument | null>(null);
     const [isEditCurrencyDialogOpen, setIsEditCurrencyDialogOpen] = React.useState(false);
+
+    const [editingWarehouse, setEditingWarehouse] = React.useState<WarehouseDocument | null>(null);
+    const [isEditWarehouseDialogOpen, setIsEditWarehouseDialogOpen] = React.useState(false);
 
 
     const handleEdit = (item: any, setEditingItem: React.Dispatch<any>, setIsEditDialogOpen: React.Dispatch<any>) => {
@@ -194,6 +194,67 @@ export default function PettyCashSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Barcode/QR Code Navigation */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-xl font-medium flex items-center gap-2">
+                                <QrCode className="h-5 w-5 text-primary" />
+                                Barcodes/QR Codes
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <CardDescription className="mb-4">
+                                Generate and print barcodes or QR codes for your inventory items.
+                            </CardDescription>
+                            <Link href="/dashboard/inventory/barcodes" passHref>
+                                <Button className="w-full">
+                                    <Printer className="mr-2 h-4 w-4" />
+                                    Go to Generator
+                                </Button>
+                            </Link>
+                        </CardContent>
+                    </Card>
+
+                    {/* Invoice Header Settings Navigation */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-xl font-medium flex items-center gap-2">
+                                <LayoutGrid className="h-5 w-5 text-primary" />
+                                Invoice Header Settings
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <CardDescription className="mb-4">
+                                Configure the layout and content of your invoice headers.
+                            </CardDescription>
+                            <Link href="/dashboard/financial-management/invoicing-sales/setting" passHref>
+                                <Button className="w-full">
+                                    <Settings className="mr-2 h-4 w-4" />
+                                    Configure Header
+                                </Button>
+                            </Link>
+                        </CardContent>
+                    </Card>
+
+                    {/* Inventory Report Dialog Trigger */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-xl font-medium flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-primary" />
+                                Inventory Reports
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <CardDescription className="mb-4">
+                                Generate PDF or CSV reports for current stock, low stock, and more.
+                            </CardDescription>
+                            <Button className="w-full" onClick={() => setIsInventoryReportOpen(true)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                Generate Report
+                            </Button>
+                        </CardContent>
+                    </Card>
+
                     {/* Currency Configuration */}
                     <Dialog open={isAddCurrencyDialogOpen} onOpenChange={setIsAddCurrencyDialogOpen}>
                         {renderTableSection(
@@ -374,6 +435,28 @@ export default function PettyCashSettingsPage() {
                             <AddItemSectionForm onFormSubmit={() => setIsAddItemSectionDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
+
+                    {/* Warehouse Configuration */}
+                    <Dialog open={isAddWarehouseDialogOpen} onOpenChange={setIsAddWarehouseDialogOpen}>
+                        {renderTableSection(
+                            "Warehouse Configuration",
+                            "Manage storage locations/warehouses.",
+                            warehouses,
+                            isLoadingWarehouses,
+                            () => setIsAddWarehouseDialogOpen(true),
+                            (item) => handleEdit(item, setEditingWarehouse, setIsEditWarehouseDialogOpen),
+                            'warehouses',
+                            // @ts-ignore
+                            List
+                        )}
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                                <DialogTitle>Add Warehouse</DialogTitle>
+                                <DialogDescription>Create a new warehouse for inventory storage.</DialogDescription>
+                            </DialogHeader>
+                            <AddWarehouseForm onFormSubmit={() => setIsAddWarehouseDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
                 </CardContent>
             </Card>
 
@@ -451,6 +534,23 @@ export default function PettyCashSettingsPage() {
                     </DialogContent>
                 </Dialog>
             )}
+
+            {editingWarehouse && (
+                <Dialog open={isEditWarehouseDialogOpen} onOpenChange={setIsEditWarehouseDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Edit Warehouse</DialogTitle>
+                            <DialogDescription>Update the name for the "{editingWarehouse.name}" warehouse.</DialogDescription>
+                        </DialogHeader>
+                        <EditWarehouseForm
+                            initialData={editingWarehouse}
+                            onFormSubmit={() => setIsEditWarehouseDialogOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
+            {/* Report Dialog */}
+            <InventoryReportDialog open={isInventoryReportOpen} onOpenChange={setIsInventoryReportOpen} />
         </div>
     );
 }

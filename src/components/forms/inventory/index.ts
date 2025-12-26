@@ -13,3 +13,5 @@ export * from './EditItemSectionForm';
 export * from './EditItemVariationForm';
 export * from './EditPurchaseOrderForm';
 export * from './NewInstallationReportForm';
+export * from './AddWarehouseForm';
+export * from './EditWarehouseForm';

@@ -782,6 +782,21 @@ export const currencySchema = z.object({
 
 export type CurrencyFormValues = z.infer<typeof currencySchema>;
 
+// --- Warehouse Types ---
+export interface Warehouse {
+  id?: string;
+  name: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+export type WarehouseDocument = Warehouse & { id: string };
+
+export const WarehouseSchema = z.object({
+  name: z.string().min(2, "Warehouse name must be at least 2 characters long."),
+});
+export type WarehouseFormValues = z.infer<typeof WarehouseSchema>;
+// --- END Warehouse Types ---
+
 // --- Item (Inventory) Types ---
 export const itemTypeOptions = ["Single", "Variant"] as const;
 export type ItemType = typeof itemTypeOptions[number];
@@ -798,6 +813,10 @@ export interface Item {
   itemCode?: string; // SKU
   brandName?: string;
   countryOfOrigin?: string; // Added field
+  mfgDate?: string; // ISO string
+  expiryDate?: string; // ISO string
+  warehouseId?: string;
+  warehouseName?: string;
   supplierId?: string; // New field
   supplierName?: string; // New field (denormalized for display)
   currency: string; // Added field
@@ -817,6 +836,34 @@ export interface Item {
 }
 export type ItemDocument = Item & { id: string };
 
+// --- Barcode/QR Code Types ---
+export type BarcodeType = 'barcode' | 'qrcode';
+export type BarcodeGenerationMode = 'item' | 'brand' | 'warehouse' | 'category' | 'section';
+export type BarcodeLabelSize = 'small' | 'medium' | 'large';
+
+export interface BarcodeConfig {
+  type: BarcodeType;
+  mode: BarcodeGenerationMode;
+  selectedItems?: string[]; // Item IDs
+  selectedBrands?: string[];
+  selectedWarehouses?: string[];
+  selectedCategories?: string[];
+  selectedSections?: string[];
+  includePrice: boolean;
+  includeName: boolean;
+  includeCode: boolean;
+  labelSize: BarcodeLabelSize;
+}
+
+export interface BarcodeLabel {
+  id: string;
+  itemName: string;
+  itemCode: string;
+  price?: number;
+  currency?: string;
+  qrData: string; // JSON string with all item data
+}
+
 export const itemSchema = z.object({
   itemName: z.string().min(1, "Item Name is required."),
   modelNumber: z.string().optional(),
@@ -828,6 +875,9 @@ export const itemSchema = z.object({
   itemCode: z.string().optional(),
   brandName: z.string().optional(),
   countryOfOrigin: z.string().optional(),
+  mfgDate: z.date().optional().nullable(),
+  expiryDate: z.date().optional().nullable(),
+  warehouseId: z.string().optional(),
   supplierId: z.string().optional(),
   currency: z.string().default("BDT"),
   description: z.string().optional(),
