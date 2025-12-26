@@ -50,12 +50,18 @@ export default function MobileAttendancePage() {
 
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
-            <MobileHeader />
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-50 bg-[#0a1e60]">
+                <MobileHeader />
+            </div>
 
             <div
                 ref={containerRef}
                 className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain relative transition-transform duration-200 ease-out"
-                style={{ transform: `translateY(${isRefreshing ? 60 : pullDistance > 0 ? pullDistance * 0.4 : 0}px)` }}
+                style={{
+                    transform: `translateY(${isRefreshing ? 60 : pullDistance > 0 ? pullDistance * 0.4 : 0}px)`,
+                    backgroundColor: '#f8fafc'
+                }}
                 onTouchStart={(e) => {
                     const scrollTop = containerRef.current?.scrollTop ?? 0;
                     if (scrollTop === 0 && !isRefreshing) {
