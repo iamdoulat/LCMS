@@ -40,7 +40,8 @@ export default function MobileDashboardPage() {
         }
     };
 
-    const getAttendanceStatus = (flag?: string) => {
+    const getAttendanceStatus = (flag?: string, approvalStatus?: string) => {
+        if (approvalStatus === 'Pending') return 'Waiting For Approval';
         if (!flag) return null;
         const statusMap: Record<string, string> = {
             'P': 'Present',
@@ -80,7 +81,7 @@ export default function MobileDashboardPage() {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
     const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
-    const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string; flag?: string } | null>(null);
+    const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string; flag?: string; approvalStatus?: string } | null>(null);
 
     // Load settings from localStorage
     useEffect(() => {
@@ -117,7 +118,8 @@ export default function MobileDashboardPage() {
                 setTodayAttendance({
                     inTime: data.inTime,
                     outTime: data.outTime,
-                    flag: data.flag
+                    flag: data.flag,
+                    approvalStatus: data.approvalStatus
                 });
             } else {
                 setTodayAttendance(null);
@@ -341,20 +343,13 @@ export default function MobileDashboardPage() {
                 </div>
 
                 <div className="px-4 pt-6 pb-24 space-y-6">
-                    {/* Daily Attendance Card */}
-                    <Card className="p-5 rounded-3xl border-none shadow-xl bg-white relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110 duration-700" />
+                    {/* Attendance Cards */}
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* In Time Card */}
+                        <Card className="p-5 rounded-3xl border-none shadow-xl bg-white relative overflow-hidden group/card flex flex-col items-center justify-center min-h-[180px]">
+                            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover/card:scale-110 duration-700" />
 
-                        <div className="flex items-center gap-2.5 mb-8 relative z-10">
-                            <div className="h-9 w-9 rounded-xl bg-blue-50 flex items-center justify-center shadow-sm">
-                                <UserCheck className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <h2 className="font-bold text-xl text-slate-800 tracking-tight">Daily Attendance</h2>
-                        </div>
-
-                        <div className="flex items-center justify-around py-2 relative z-10">
-                            {/* In Time Circle */}
-                            <div className="flex flex-col items-center gap-3">
+                            <div className="flex flex-col items-center gap-4 relative z-10 w-full">
                                 <button
                                     onClick={() => {
                                         setAttendanceType('in');
@@ -362,29 +357,33 @@ export default function MobileDashboardPage() {
                                     }}
                                     disabled={!!todayAttendance?.inTime}
                                     className={cn(
-                                        "h-28 w-28 rounded-full flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xl relative group/btn",
+                                        "h-24 w-24 rounded-full flex flex-col items-center justify-center gap-1 transition-all active:scale-95 shadow-lg relative group/btn",
                                         todayAttendance?.inTime
                                             ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white ring-4 ring-emerald-50"
                                             : "bg-gradient-to-br from-blue-600 to-cyan-500 text-white hover:brightness-110"
                                     )}
                                 >
                                     <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-                                    <Clock className="h-7 w-7 mb-0.5" />
-                                    <span className="text-sm font-bold">In Time</span>
+                                    <Clock className="h-6 w-6 mb-0.5" />
+                                    <span className="text-xs font-bold">In Time</span>
                                     {todayAttendance?.inTime && (
-                                        <span className="text-[11px] font-medium bg-white/20 px-2 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.inTime)}</span>
+                                        <span className="text-[10px] font-medium bg-white/20 px-1.5 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.inTime)}</span>
                                     )}
                                 </button>
-                                <div className="flex flex-col items-center gap-1">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">Status</span>
-                                    <span className="text-xs font-bold text-slate-700">
-                                        {getAttendanceStatus(todayAttendance?.flag) || '08:00 hr(s)'}
+                                <div className="flex flex-col items-center gap-0.5">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
+                                    <span className="text-[11px] font-bold text-slate-700 text-center px-1">
+                                        {getAttendanceStatus(todayAttendance?.flag, todayAttendance?.approvalStatus) || '08:00 hr(s)'}
                                     </span>
                                 </div>
                             </div>
+                        </Card>
 
-                            {/* Out Time Circle */}
-                            <div className="flex flex-col items-center gap-3">
+                        {/* Out Time Card */}
+                        <Card className="p-5 rounded-3xl border-none shadow-xl bg-white relative overflow-hidden group/card flex flex-col items-center justify-center min-h-[180px]">
+                            <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover/card:scale-110 duration-700" />
+
+                            <div className="flex flex-col items-center gap-4 relative z-10 w-full">
                                 <button
                                     onClick={() => {
                                         setAttendanceType('out');
@@ -392,30 +391,30 @@ export default function MobileDashboardPage() {
                                     }}
                                     disabled={!todayAttendance?.inTime || !!todayAttendance?.outTime}
                                     className={cn(
-                                        "h-28 w-28 rounded-full flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 relative group/btn",
+                                        "h-24 w-24 rounded-full flex flex-col items-center justify-center gap-1 transition-all active:scale-95 relative group/btn shadow-lg",
                                         todayAttendance?.outTime
-                                            ? "bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-2xl ring-4 ring-purple-50"
+                                            ? "bg-gradient-to-br from-purple-600 to-indigo-600 text-white ring-4 ring-purple-50"
                                             : todayAttendance?.inTime
-                                                ? "bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-2xl hover:brightness-110"
-                                                : "bg-slate-50 text-slate-300 border-2 border-dashed border-slate-200 shadow-sm"
+                                                ? "bg-gradient-to-br from-orange-500 to-rose-500 text-white hover:brightness-110"
+                                                : "bg-slate-50 text-slate-300 border-2 border-dashed border-slate-200"
                                     )}
                                 >
                                     <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-                                    <Clock className="h-7 w-7 mb-0.5" />
-                                    <span className="text-sm font-bold">Out Time</span>
+                                    <Clock className="h-6 w-6 mb-0.5" />
+                                    <span className="text-xs font-bold">Out Time</span>
                                     {todayAttendance?.outTime && (
-                                        <span className="text-[11px] font-medium bg-white/20 px-2 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.outTime)}</span>
+                                        <span className="text-[10px] font-medium bg-white/20 px-1.5 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.outTime)}</span>
                                     )}
                                 </button>
-                                <div className="flex flex-col items-center gap-1">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">Worked</span>
-                                    <span className="text-xs font-bold text-slate-700">
+                                <div className="flex flex-col items-center gap-0.5">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Worked</span>
+                                    <span className="text-[11px] font-bold text-slate-700">
                                         {calculateWorkHours(todayAttendance?.inTime, todayAttendance?.outTime) || 'Waiting...'}
                                     </span>
                                 </div>
                             </div>
-                        </div>
-                    </Card>
+                        </Card>
+                    </div>
 
                     {/* Summary Section */}
                     <div>
