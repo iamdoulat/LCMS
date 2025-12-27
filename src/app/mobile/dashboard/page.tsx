@@ -78,7 +78,7 @@ export default function MobileDashboardPage() {
     };
     const router = useRouter();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [selectedIds, setSelectedIds] = useState<string[]>(['leave', 'visit', 'pending']);
+    const [selectedIds, setSelectedIds] = useState<string[]>(['leave', 'visit', 'pending', 'missed', 'notices']);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -290,7 +290,15 @@ export default function MobileDashboardPage() {
                         if (!data.date || data.flag !== 'A') return false;
 
                         try {
-                            const dDate = parseISO(data.date);
+                            let dDate: Date;
+                            if (typeof data.date === 'string') {
+                                dDate = parseISO(data.date);
+                            } else if (data.date instanceof Timestamp || (data.date && typeof data.date.toDate === 'function')) {
+                                dDate = data.date.toDate();
+                            } else {
+                                dDate = new Date(data.date);
+                            }
+
                             return dDate.getMonth() === currentMonth &&
                                 dDate.getFullYear() === currentYear;
                         } catch (e) {
@@ -673,10 +681,10 @@ export default function MobileDashboardPage() {
                             {/* Break Time */}
                             <button
                                 onClick={() => setIsBreakModalOpen(true)}
-                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all active:scale-95 text-center w-full"
+                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 text-center w-full group"
                             >
                                 <div className={cn(
-                                    "p-4 rounded-full h-14 w-14 flex items-center justify-center transition-colors shadow-inner",
+                                    "p-4 rounded-full h-14 w-14 flex items-center justify-center transition-all shadow-inner group-hover:scale-110",
                                     isOnBreak ? "bg-orange-100 text-orange-600 animate-pulse" : "bg-blue-100 text-blue-600"
                                 )}>
                                     {isOnBreak ? <Timer className="h-7 w-7 animate-spin-slow" /> : <Coffee className="h-7 w-7" />}
@@ -690,50 +698,50 @@ export default function MobileDashboardPage() {
                             </button>
 
                             {/* Task */}
-                            <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
+                            <button className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
                                     <ListTodo className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Task</span>
-                            </div>
+                            </button>
 
                             {/* Check In/Out */}
                             <Link
                                 href="/mobile/check-in-out"
-                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] active:scale-95 transition-transform cursor-pointer"
+                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
                             >
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
                                     <LogIn className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center leading-tight">Check In/Out</span>
                             </Link>
 
                             {/* Claim */}
-                            <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
+                            <button className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
                                     <Wallet className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Claim</span>
-                            </div>
+                            </button>
 
                             {/* Directory */}
                             <Link
                                 href="/mobile/directory"
-                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all active:scale-95 text-center w-full"
+                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
                             >
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
                                     <Users className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Directory</span>
                             </Link>
 
                             {/* Assets */}
-                            <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
+                            <button className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
                                     <UserCheck className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Assets</span>
-                            </div>
+                            </button>
                         </div>
                     </div>
                 </div>

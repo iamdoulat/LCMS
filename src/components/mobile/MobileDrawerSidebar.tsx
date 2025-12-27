@@ -108,7 +108,7 @@ export function MobileDrawerSidebar() {
                 <span className="font-bold">Log out</span>
             </Button>
 
-            <p className="text-white/40 text-[10px] mt-4 text-center">Version 22.0.19</p>
+            <p className="text-white/40 text-[10px] mt-4 text-center">Version v1.1</p>
         </div>
     );
 }
