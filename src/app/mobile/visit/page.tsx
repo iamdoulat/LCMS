@@ -20,6 +20,7 @@ import {
     Users,
     MessageSquare
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { MobileVisitForm } from '@/components/mobile/MobileVisitForm';
 import type { VisitApplicationDocument } from '@/types';
@@ -31,31 +32,72 @@ export default function MobileVisitApplicationsPage() {
     const [loading, setLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
 
-    useEffect(() => {
+    const fetchData = async () => {
         if (!user?.email) return;
+        setLoading(true);
+        try {
+            // 1. Resolve Employee ID by email
+            const empQuery = query(collection(firestore, 'employees'), where('email', '==', user.email));
+            const empSnap = await getDocs(empQuery);
 
-        const fetchData = async () => {
+            const ids = [user.uid];
+            if (!empSnap.empty) {
+                const empId = empSnap.docs[0].id;
+                if (empId !== user.uid) {
+                    ids.push(empId);
+                }
+            }
+
+            // 2. Fetch Visit Applications for resolved ID(s)
+            const q = query(
+                collection(firestore, 'visit_applications'),
+                where('employeeId', 'in', ids)
+            );
+
+            const snapshot = await getDocs(q);
+            const updatedVisits = snapshot.docs
+                .map(doc => ({
+                    id: doc.id,
+                    ...(doc.data() as any)
+                } as VisitApplicationDocument))
+                .sort((a, b) => {
+                    const dateA = a.applyDate ? new Date(a.applyDate).getTime() : 0;
+                    const dateB = b.applyDate ? new Date(b.applyDate).getTime() : 0;
+                    return dateB - dateA;
+                });
+
+            setVisits(updatedVisits);
+        } catch (err) {
+            console.error("Error fetching data:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!user?.email) {
+            setLoading(false);
+            return;
+        }
+
+        let unsubscribe = () => { };
+
+        const setupListener = async () => {
             try {
-                // 1. Resolve Employee ID by email
                 const empQuery = query(collection(firestore, 'employees'), where('email', '==', user.email));
                 const empSnap = await getDocs(empQuery);
-
                 const ids = [user.uid];
                 if (!empSnap.empty) {
                     const empId = empSnap.docs[0].id;
-                    if (empId !== user.uid) {
-                        ids.push(empId);
-                    }
+                    if (empId !== user.uid) ids.push(empId);
                 }
 
-                // 2. Fetch Visit Applications for resolved ID(s)
-                // Removing orderBy to avoid index requirement; will sort in client
                 const q = query(
                     collection(firestore, 'visit_applications'),
                     where('employeeId', 'in', ids)
                 );
 
-                const unsubscribe = onSnapshot(q, (snapshot) => {
+                unsubscribe = onSnapshot(q, (snapshot) => {
                     const updatedVisits = snapshot.docs
                         .map(doc => ({
                             id: doc.id,
@@ -66,25 +108,20 @@ export default function MobileVisitApplicationsPage() {
                             const dateB = b.applyDate ? new Date(b.applyDate).getTime() : 0;
                             return dateB - dateA;
                         });
-
                     setVisits(updatedVisits);
                     setLoading(false);
                 }, (error) => {
                     console.error("Error listening to visit applications:", error);
                     setLoading(false);
                 });
-
-                return unsubscribe;
             } catch (err) {
-                console.error("Error fetching data:", err);
+                console.error("Error setting up listener:", err);
                 setLoading(false);
             }
         };
 
-        const unsubPromise = fetchData();
-        return () => {
-            unsubPromise.then(unsub => unsub && unsub());
-        };
+        setupListener();
+        return () => unsubscribe();
     }, [user]);
 
     if (loading) {
@@ -100,7 +137,7 @@ export default function MobileVisitApplicationsPage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden relative">
             {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 py-8">
+                <div className="flex items-center px-4 py-6">
                     <button
                         onClick={() => router.back()}
                         className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
@@ -111,7 +148,7 @@ export default function MobileVisitApplicationsPage() {
                 </div>
             </div>
 
-            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain">
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative">
                 <div className="px-6 pt-8 pb-32 space-y-4">
                     {visits.length > 0 ? (
                         visits.map((visit) => {
