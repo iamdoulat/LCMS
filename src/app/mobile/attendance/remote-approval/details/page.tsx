@@ -146,7 +146,7 @@ export default function RemoteAttendanceDetailsPage() {
                         <div className="flex gap-2">
                             <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">042</span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${record.status === 'Approved' ? 'bg-emerald-100 text-emerald-600' :
-                                    record.status === 'Rejected' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                                record.status === 'Rejected' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
                                 }`}>
                                 {record.status || 'Pending'}
                             </span>
@@ -158,7 +158,7 @@ export default function RemoteAttendanceDetailsPage() {
 
                     <div className="flex items-center gap-3 mb-4">
                         <Avatar className="w-12 h-12 border border-slate-100">
-                            <AvatarImage src={record.imageURL} objectFit="cover" />
+                            <AvatarImage src={record.imageURL} />
                             <AvatarFallback className="text-sm bg-slate-200">
                                 {record.employeeName?.substring(0, 2).toUpperCase()}
                             </AvatarFallback>
