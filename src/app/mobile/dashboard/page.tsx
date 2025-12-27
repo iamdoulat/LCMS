@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { MobileAttendanceModal } from '@/components/mobile/MobileAttendanceModal';
+import { MobileBreakTimeModal } from '@/components/mobile/MobileBreakTimeModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck } from 'lucide-react';
+import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, getDocs, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min } from 'date-fns';
@@ -29,6 +31,7 @@ import Link from 'next/link';
 
 export default function MobileDashboardPage() {
     const { user } = useAuth();
+    const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
 
     const formatAttendanceTime = (timeStr?: string) => {
         if (!timeStr) return null;
@@ -80,8 +83,13 @@ export default function MobileDashboardPage() {
     const [pullDistance, setPullDistance] = useState(0);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+    const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
     const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
     const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string; flag?: string; approvalStatus?: string } | null>(null);
+    const [isOnBreak, setIsOnBreak] = useState(false);
+    const [activeBreakRecord, setActiveBreakRecord] = useState<any>(null);
+    const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
+    const [userRole, setUserRole] = useState<string>('user');
 
     // Load settings from localStorage
     useEffect(() => {
@@ -168,10 +176,12 @@ export default function MobileDashboardPage() {
 
                 const ids = [user.uid];
                 if (!empSnap.empty) {
+                    const empData = empSnap.docs[0].data();
                     const empId = empSnap.docs[0].id;
                     if (empId !== user.uid) {
                         ids.push(empId);
                     }
+                    setUserRole(empData.role || 'user');
                 }
 
                 const startMonth = startOfMonth(new Date());
@@ -224,7 +234,6 @@ export default function MobileDashboardPage() {
                             const overlapEnd = min([visitEnd, endOfCurrentYear]);
 
                             if (overlapEnd >= overlapStart) {
-                                // Using the 'day' field if available, otherwise calculate overlap
                                 if (data.day) {
                                     totalDays += Number(data.day);
                                 } else {
@@ -237,23 +246,10 @@ export default function MobileDashboardPage() {
                 });
 
                 // 3. Pending Requests (Aggregate)
-                // Note: Creating multiple listeners might be heavy, but fine for single user dashboard
                 const qPendingLeave = query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids));
                 const qPendingVisit = query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids));
                 const qPendingAdvance = query(collection(firestore, 'advance_salary'), where('employeeId', 'in', ids));
 
-                // We'll use a single aggregated update for pending to avoid flickering
-                const unsubPendingLeave = onSnapshot(qPendingLeave, (snap) => {
-                    updatePendingCount(snap.docs.filter(d => d.data().status === 'Pending').length, 'leave');
-                });
-                const unsubPendingVisit = onSnapshot(qPendingVisit, (snap) => {
-                    updatePendingCount(snap.docs.filter(d => d.data().status === 'Pending').length, 'visit');
-                });
-                const unsubPendingAdvance = onSnapshot(qPendingAdvance, (snap) => {
-                    updatePendingCount(snap.docs.filter(d => d.data().status === 'Pending').length, 'advance');
-                });
-
-                let pendingCounts = { leave: 0, visit: 0, advance: 0 };
                 const updatePendingCount = (count: number, type: 'leave' | 'visit' | 'advance') => {
                     pendingCounts[type] = count;
                     setStats(prev => ({
@@ -262,8 +258,24 @@ export default function MobileDashboardPage() {
                     }));
                 };
 
+                let pendingCounts = { leave: 0, visit: 0, advance: 0 };
+                const unsubPendingLeave = onSnapshot(qPendingLeave, (snap) => {
+                    const myPending = snap.docs.filter(d => d.data().status === 'Pending' && ids.includes(d.data().employeeId)).length;
+                    const teamPending = isSupervisor ? snap.docs.filter(d => d.data().status === 'Pending' && supervisedEmployeeIds.includes(d.data().employeeId)).length : 0;
+                    updatePendingCount(myPending + teamPending, 'leave');
+                });
+                const unsubPendingVisit = onSnapshot(qPendingVisit, (snap) => {
+                    const myPending = snap.docs.filter(d => d.data().status === 'Pending' && ids.includes(d.data().employeeId)).length;
+                    const teamPending = isSupervisor ? snap.docs.filter(d => d.data().status === 'Pending' && supervisedEmployeeIds.includes(d.data().employeeId)).length : 0;
+                    updatePendingCount(myPending + teamPending, 'visit');
+                });
+                const unsubPendingAdvance = onSnapshot(qPendingAdvance, (snap) => {
+                    const myPending = snap.docs.filter(d => d.data().status === 'Pending' && ids.includes(d.data().employeeId)).length;
+                    const teamPending = isSupervisor ? snap.docs.filter(d => d.data().status === 'Pending' && supervisedEmployeeIds.includes(d.data().employeeId)).length : 0; // Advance salary might have different logic but for now including if in team
+                    updatePendingCount(myPending + teamPending, 'advance');
+                });
+
                 // 4. Missed Attendance (Flag 'A' in current month)
-                // Note: This logic assumes 'A' flag is set by a cron job or manual process
                 const qMissed = query(
                     collection(firestore, 'attendance'),
                     where('employeeId', 'in', ids)
@@ -271,22 +283,44 @@ export default function MobileDashboardPage() {
                 const unsubMissed = onSnapshot(qMissed, (snapshot) => {
                     const missedCount = snapshot.docs.filter(doc => {
                         const data = doc.data();
+                        if (!data.date) return false;
+                        const dDate = new Date(data.date);
                         return data.flag === 'A' &&
-                            data.date >= startMonth.toISOString() &&
-                            data.date <= endMonth.toISOString();
+                            dDate >= startMonth &&
+                            dDate <= endMonth;
                     }).length;
                     setStats(prev => ({ ...prev, missedAttendance: missedCount }));
                 });
 
-                // 5. Notices (Unseen count) - Simplified to total active notices for now
-                // For distinct "New", we'd need to compare with last seen ID, but just showing total active is a good start
-                /* 
-                const qNotices = query(collection(firestore, 'site_settings'), where('type', '==', 'notice'), where('isEnabled', '==', true));
+                // 5. Notices (Filtered by role)
+                const qNotices = query(collection(firestore, 'site_settings'), where('isEnabled', '==', true));
                 const unsubNotices = onSnapshot(qNotices, (snapshot) => {
-                     // Filter logic would go here
-                     setStats(prev => ({ ...prev, noticesCount: snapshot.size }));
+                    const filtered = snapshot.docs.filter(doc => {
+                        const data = doc.data();
+                        // If it's a notice (you might need to check a 'type' field if site_settings contains other things)
+                        // Assuming mostisEnabled items here are notices or relevant
+                        if (!data.targetRoles || data.targetRoles.length === 0) return true;
+                        return data.targetRoles.includes(userRole);
+                    });
+                    setStats(prev => ({ ...prev, noticesCount: filtered.length }));
                 });
-                */
+
+                // 6. Break Time
+                const qBreak = query(
+                    collection(firestore, 'break_time'),
+                    where('employeeId', 'in', ids),
+                    where('onBreak', '==', true)
+                );
+                const unsubBreak = onSnapshot(qBreak, (snapshot) => {
+                    if (!snapshot.empty) {
+                        const doc = snapshot.docs[0];
+                        setActiveBreakRecord({ id: doc.id, ...doc.data() });
+                        setIsOnBreak(true);
+                    } else {
+                        setActiveBreakRecord(null);
+                        setIsOnBreak(false);
+                    }
+                });
 
                 return () => {
                     unsubLeave();
@@ -295,7 +329,8 @@ export default function MobileDashboardPage() {
                     unsubPendingVisit();
                     unsubPendingAdvance();
                     unsubMissed();
-                    // unsubNotices();
+                    unsubNotices();
+                    unsubBreak();
                 };
             } catch (err) {
                 console.error("Error setting up dashboard listeners:", err);
@@ -306,7 +341,35 @@ export default function MobileDashboardPage() {
         return () => {
             cleanupPromise.then(cleanup => cleanup && cleanup());
         };
-    }, [user]);
+    }, [user, userRole, isSupervisor, supervisedEmployeeIds]);
+
+    // Timer effect for active break
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isOnBreak && activeBreakRecord?.startTime) {
+            const updateTimer = () => {
+                const start = new Date(activeBreakRecord.startTime);
+                const now = new Date();
+                const diff = Math.max(0, now.getTime() - start.getTime());
+
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                setBreakElapsedTime(
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+                );
+            };
+
+            updateTimer();
+            interval = setInterval(updateTimer, 1000);
+        } else {
+            setBreakElapsedTime("00:00:00");
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isOnBreak, activeBreakRecord?.startTime]);
 
     const refreshAttendanceData = async () => {
         if (!user) return;
@@ -521,6 +584,14 @@ export default function MobileDashboardPage() {
                                     );
                                 }
 
+                                if (item.id === 'pending') {
+                                    return (
+                                        <Link key={item.id} href="/mobile/approve" className="flex-shrink-0 transition-transform active:scale-95">
+                                            {content}
+                                        </Link>
+                                    );
+                                }
+
                                 return (
                                     <div key={item.id} className="flex-shrink-0">
                                         {content}
@@ -591,12 +662,23 @@ export default function MobileDashboardPage() {
                         <h2 className="font-bold text-lg text-slate-800 mb-3">Modules</h2>
                         <div className="grid grid-cols-3 gap-4">
                             {/* Break Time */}
-                            <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
-                                    <Coffee className="h-7 w-7" />
+                            <button
+                                onClick={() => setIsBreakModalOpen(true)}
+                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all active:scale-95 text-center w-full"
+                            >
+                                <div className={cn(
+                                    "p-4 rounded-full h-14 w-14 flex items-center justify-center transition-colors shadow-inner",
+                                    isOnBreak ? "bg-orange-100 text-orange-600 animate-pulse" : "bg-blue-100 text-blue-600"
+                                )}>
+                                    {isOnBreak ? <Timer className="h-7 w-7 animate-spin-slow" /> : <Coffee className="h-7 w-7" />}
                                 </div>
-                                <span className="text-sm font-medium text-slate-600 text-center leading-tight">Break Time</span>
-                            </div>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-sm font-bold text-slate-700 leading-tight">Break Time</span>
+                                    {isOnBreak && (
+                                        <span className="text-[10px] font-mono font-bold text-orange-600 mt-0.5">{breakElapsedTime}</span>
+                                    )}
+                                </div>
+                            </button>
 
                             {/* Task */}
                             <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
@@ -617,12 +699,28 @@ export default function MobileDashboardPage() {
                                 <span className="text-sm font-medium text-slate-600 text-center leading-tight">Check In/Out</span>
                             </Link>
 
-                            {/* Placeholders for next row */}
+                            {/* Claim */}
                             <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
                                 <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
-                                    <Clock className="h-7 w-7" />
+                                    <Wallet className="h-7 w-7" />
                                 </div>
-                                <span className="text-sm font-medium text-slate-600 text-center">History</span>
+                                <span className="text-sm font-medium text-slate-600 text-center">Claim</span>
+                            </div>
+
+                            {/* Directory */}
+                            <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
+                                    <Users className="h-7 w-7" />
+                                </div>
+                                <span className="text-sm font-medium text-slate-600 text-center">Directory</span>
+                            </div>
+
+                            {/* Assets */}
+                            <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
+                                    <UserCheck className="h-7 w-7" />
+                                </div>
+                                <span className="text-sm font-medium text-slate-600 text-center">Assets</span>
                             </div>
                         </div>
                     </div>
@@ -635,6 +733,12 @@ export default function MobileDashboardPage() {
                 onClose={() => setIsAttendanceModalOpen(false)}
                 onSuccess={refreshAttendanceData}
                 type={attendanceType}
+            />
+
+            {/* Break Time Modal */}
+            <MobileBreakTimeModal
+                isOpen={isBreakModalOpen}
+                onClose={() => setIsBreakModalOpen(false)}
             />
         </div>
     );

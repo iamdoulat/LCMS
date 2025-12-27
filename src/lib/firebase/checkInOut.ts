@@ -197,3 +197,27 @@ export const getCheckInOutRecords = async (filters?: {
 
     return records;
 };
+
+/**
+ * Update check-in/out record status
+ */
+export const updateCheckInOutStatus = async (
+    id: string,
+    status: 'Approved' | 'Rejected',
+    reviewerId: string
+) => {
+    try {
+        const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+        const docRef = doc(firestore, 'multiple_check_inout', id);
+
+        await updateDoc(docRef, {
+            status,
+            reviewedBy: reviewerId,
+            reviewedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error('Error updating check-in/out status:', error);
+        throw error;
+    }
+};

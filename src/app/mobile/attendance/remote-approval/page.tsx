@@ -1,0 +1,290 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
+import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase/config';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { ChevronLeft, MapPin, ArrowRight, Loader2, Calendar, Check, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { MultipleCheckInOutRecord } from '@/types/checkInOut';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { updateCheckInOutStatus } from '@/lib/firebase/checkInOut';
+import Swal from 'sweetalert2';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+
+export default function RemoteAttendanceApprovalPage() {
+    const { user } = useAuth();
+    const { isSupervisor, supervisedEmployees, currentEmployeeId } = useSupervisorCheck(user?.email);
+    const router = useRouter();
+
+    const [records, setRecords] = useState<MultipleCheckInOutRecord[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [filterDays, setFilterDays] = useState<30 | 90>(30);
+
+    const [selectedRecord, setSelectedRecord] = useState<MultipleCheckInOutRecord | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [processingId, setProcessingId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchRemoteAttendance = async () => {
+            if (!user || !isSupervisor || supervisedEmployees.length === 0) {
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+            try {
+                const endDate = new Date();
+                const startDate = subDays(endDate, filterDays);
+
+                const employeeIds = supervisedEmployees.map(e => e.id);
+                const fetchedRecords: MultipleCheckInOutRecord[] = [];
+
+                const startIso = startDate.toISOString();
+
+                const q = query(
+                    collection(firestore, 'multiple_check_inout'),
+                    where('timestamp', '>=', startIso),
+                    orderBy('timestamp', 'desc')
+                );
+
+                const snapshot = await getDocs(q);
+
+                snapshot.forEach(doc => {
+                    const data = doc.data() as MultipleCheckInOutRecord;
+                    if (employeeIds.includes(data.employeeId)) {
+                        fetchedRecords.push({ id: doc.id, ...data });
+                    }
+                });
+
+                setRecords(fetchedRecords);
+
+            } catch (error) {
+                console.error("Error fetching remote attendance:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchRemoteAttendance();
+    }, [user, isSupervisor, supervisedEmployees, filterDays]);
+
+
+    const handleToggleFilter = () => {
+        setFilterDays(prev => prev === 30 ? 90 : 30);
+    };
+
+    const handleCardClick = (record: MultipleCheckInOutRecord) => {
+        if (record.status === 'Pending' || !record.status) {
+            setSelectedRecord(record);
+            setIsDialogOpen(true);
+        } else {
+            router.push(`/mobile/attendance/remote-approval/details?id=${record.id}`);
+        }
+    };
+
+    const handleAction = async (action: 'Approved' | 'Rejected') => {
+        if (!selectedRecord || !currentEmployeeId) return;
+
+        setProcessingId(selectedRecord.id);
+        try {
+            await updateCheckInOutStatus(selectedRecord.id, action, currentEmployeeId);
+
+            setRecords(prev => prev.map(r => r.id === selectedRecord.id ? { ...r, status: action } : r));
+
+            Swal.fire({
+                icon: 'success',
+                title: action,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 1500
+            });
+            setIsDialogOpen(false);
+        } catch (error) {
+            console.error("Error updating status:", error);
+            Swal.fire("Error", "Failed to update status", "error");
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const getStatusColor = (status?: string) => {
+        if (status === 'Approved') return 'bg-emerald-100 text-emerald-600';
+        if (status === 'Rejected') return 'bg-red-100 text-red-600';
+        return 'bg-blue-100 text-blue-600';
+    };
+
+    const getEmployeePhoto = (id: string) => {
+        const emp = supervisedEmployees.find(e => e.id === id);
+        return emp?.photoURL;
+    }
+
+    return (
+        <div className="flex flex-col h-screen bg-[#0a1e60]">
+            <div className="px-6 pt-12 pb-6 flex items-center gap-4 text-white">
+                <button
+                    onClick={() => router.back()}
+                    className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                    <ChevronLeft className="w-6 h-6" />
+                </button>
+                <div className="flex-1 text-center pr-10">
+                    <h1 className="text-lg font-bold">Remote Att. Approval</h1>
+                </div>
+            </div>
+
+            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col">
+                <div className="p-6 pb-2">
+                    <div className="flex justify-end">
+                        <button
+                            onClick={handleToggleFilter}
+                            className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full"
+                        >
+                            <Calendar className="w-3 h-3" />
+                            {filterDays === 30 ? 'Last 30 Days' : 'Last 3 Months'}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-4">
+                    {loading ? (
+                        <div className="flex justify-center py-10">
+                            <Loader2 className="animate-spin text-blue-600 w-8 h-8" />
+                        </div>
+                    ) : records.length > 0 ? (
+                        records.map((record) => (
+                            <div
+                                key={record.id}
+                                onClick={() => handleCardClick(record)}
+                                className="bg-white p-4 rounded-2xl shadow-sm relative cursor-pointer active:scale-[0.98] transition-transform"
+                            >
+                                <div className={`absolute left-0 top-6 bottom-6 w-1 rounded-r-full ${record.status === 'Approved' ? 'bg-emerald-500' :
+                                        record.status === 'Rejected' ? 'bg-red-500' : 'bg-blue-500'
+                                    }`}></div>
+
+                                <div className="pl-4">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">042</span>
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusColor(record.status)}`}>
+                                            {record.status || 'Pending'}
+                                        </span>
+                                        <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded uppercase">
+                                            {record.type}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <Avatar className="w-10 h-10 border border-slate-100">
+                                            <AvatarImage src={getEmployeePhoto(record.employeeId) || record.imageURL} />
+                                            <AvatarFallback className="text-xs bg-slate-200">
+                                                {record.employeeName?.substring(0, 2).toUpperCase()}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-800 leading-tight">{record.employeeName}</h3>
+                                            <div className="text-xs font-bold text-indigo-600 mt-0.5">
+                                                {format(new Date(record.timestamp), 'dd-MM-yyyy • hh:mm a')}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="h-px bg-slate-100 my-3"></div>
+
+                                    <div className="flex items-start gap-3">
+                                        <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                        <p className="text-xs font-semibold text-slate-600 flex-1 leading-relaxed line-clamp-2">
+                                            {record.location?.address || `${record.location.latitude}, ${record.location.longitude}`}
+                                        </p>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                router.push(`/mobile/attendance/remote-approval/details?id=${record.id}`);
+                                            }}
+                                            className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors"
+                                        >
+                                            <ArrowRight className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-10 text-slate-400">
+                            No remote attendance records found.
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="w-[90%] rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Verify Remote Attendance</DialogTitle>
+                        <DialogDescription>
+                            Review the request details below.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {selectedRecord && (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl">
+                                <Avatar className="w-12 h-12">
+                                    <AvatarImage src={getEmployeePhoto(selectedRecord.employeeId) || selectedRecord.imageURL} />
+                                    <AvatarFallback>{selectedRecord.employeeName.substring(0, 2)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <div className="font-bold text-slate-800">{selectedRecord.employeeName}</div>
+                                    <div className="text-xs text-slate-500">{selectedRecord.type} • {format(new Date(selectedRecord.timestamp), 'dd MMM, hh:mm a')}</div>
+                                </div>
+                            </div>
+
+                            <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <div className="flex gap-2">
+                                    <MapPin className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                    <span>{selectedRecord.location?.address}</span>
+                                </div>
+                            </div>
+
+                            {selectedRecord.imageURL && (
+                                <div className="rounded-xl overflow-hidden h-32 w-full bg-slate-100">
+                                    <img src={selectedRecord.imageURL} alt="Proof" className="w-full h-full object-cover" />
+                                </div>
+                            )}
+
+                            <DialogFooter className="flex-row gap-2 mt-4">
+                                <Button
+                                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                                    onClick={() => handleAction('Approved')}
+                                    disabled={!!processingId}
+                                >
+                                    {processingId === selectedRecord.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}
+                                    Approve
+                                </Button>
+                                <Button
+                                    className="flex-1"
+                                    variant="destructive"
+                                    onClick={() => handleAction('Rejected')}
+                                    disabled={!!processingId}
+                                >
+                                    {processingId === selectedRecord.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4 mr-2" />}
+                                    Reject
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}

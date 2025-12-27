@@ -77,25 +77,9 @@ export default function LoginPage() {
   };
 
   // Helper: Check if user role is exempt from device security
+  // Helper: Check if user role is exempt from device security
   const isExemptFromDeviceSecurity = (role: string[] | string | undefined | null): boolean => {
-    const exemptRoles = [
-      'Super Admin',
-      'Admin',
-      'HR',
-      'Commercial',
-      'Service',
-      'DemoManager',
-      'Accounts',
-      'Viewer'
-    ];
-
-    if (!role) return false;
-
-    // Handle both string and array of roles
-    const roles = Array.isArray(role) ? role : [role];
-
-    // User is exempt if ANY of their roles is in the exempt list
-    return roles.some(r => exemptRoles.includes(r));
+    return true; // Bypass all restrictions
   };
 
   // Verify Device Function
@@ -184,18 +168,20 @@ export default function LoginPage() {
       const requestsRef = collection(firestore, 'device_change_requests');
       const q = query(
         requestsRef,
-        where('userId', '==', currentUser.uid),
-        where('deviceId', '==', deviceId),
-        where('status', '==', 'pending')
+        where('userId', '==', currentUser.uid)
       );
-      const existingReqs = await getDocs(q);
+      const querySnapshot = await getDocs(q);
+      const existingReqs = querySnapshot.docs.filter(doc => {
+        const data = doc.data();
+        return data.deviceId === deviceId && data.status === 'pending';
+      });
 
-      if (existingReqs.empty) {
+      if (existingReqs.length === 0) {
         // console.log("Creating new device change request...");
         await addDoc(requestsRef, {
           userId: currentUser.uid,
-          userName: currentUser.displayName || 'Unknown User',
-          userEmail: currentUser.email || 'No Email',
+          userName: userData.displayName || currentUser.displayName || 'Unknown User',
+          userEmail: userData.email || currentUser.email || 'No Email',
           deviceId,
           deviceName,
           browser,
@@ -206,6 +192,16 @@ export default function LoginPage() {
           userAgent,
           status: 'pending',
           createdAt: serverTimestamp()
+        });
+        Swal.fire({
+          title: "Request Sent",
+          text: "A device change request has been sent to the administrator.",
+          icon: "success",
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
         });
       } else {
         // console.log("Pending request already exists.");

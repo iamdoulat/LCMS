@@ -15,6 +15,7 @@ import {
     serverTimestamp
 } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
+import { cn } from '@/lib/utils';
 import { DeviceChangeRequest, UserDocumentForAdmin, AllowedDevice } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Check, X, Search, Smartphone } from 'lucide-react';
+import { Loader2, Check, X, Search, Smartphone, RefreshCw } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { toast } from '@/components/ui/use-toast';
 
@@ -43,39 +44,71 @@ export default function DeviceChangeRequestsPage() {
     // Key: userId, Value: AllowedDevice[]
     const [userDevices, setUserDevices] = useState<Record<string, AllowedDevice[]>>({});
 
-    useEffect(() => {
+    const fetchRequests = () => {
+        setLoading(true);
         // Subscribe to requests in real-time
-        const q = query(collection(firestore, 'device_change_requests'), orderBy('createdAt', 'desc'));
+        // Removed orderBy to rule out missing index issues. We sort client-side instead.
+        const q = query(collection(firestore, 'device_change_requests'));
 
         const unsubscribe = onSnapshot(q, async (snapshot) => {
+            console.log("DeviceChangeRequests: Snapshot received. Size:", snapshot.size);
             const reqs = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             })) as DeviceChangeRequest[];
 
-            setRequests(reqs);
+            if (reqs.length > 0) {
+                console.log("DeviceChangeRequests: First request status:", reqs[0].status);
+            }
 
-            // Fetch user docs for any *new* userIds we don't have yet
-            // (Or just refetch all to be safe for "Current Device" updates)
-            const userIds = Array.from(new Set(reqs.map(r => r.userId)));
-            const newUserDevices: Record<string, AllowedDevice[]> = {};
+            // Sort client-side
+            const sortedReqs = [...reqs].sort((a, b) => {
+                const dateA = a.createdAt?.toDate?.() || new Date(0);
+                const dateB = b.createdAt?.toDate?.() || new Date(0);
+                return dateB.getTime() - dateA.getTime();
+            });
 
-            await Promise.all(userIds.map(async (uid) => {
-                try {
-                    const userDoc = await getDoc(doc(firestore, 'users', uid));
-                    if (userDoc.exists()) {
-                        const userData = userDoc.data() as UserDocumentForAdmin;
-                        newUserDevices[uid] = userData.allowedDevices || [];
-                    }
-                } catch (e) {
-                    console.error("Error fetching user device info:", e);
-                }
-            }));
-
-            setUserDevices(newUserDevices);
+            setRequests(sortedReqs);
             setLoading(false);
+
+            // Fetch user docs without blocking the main render
+            const userIds = Array.from(new Set(reqs.map(r => r.userId)));
+            const newUserDevices: Record<string, AllowedDevice[]> = { ...userDevices };
+            let updated = false;
+
+            for (const uid of userIds) {
+                if (!newUserDevices[uid]) {
+                    try {
+                        const userDoc = await getDoc(doc(firestore, 'users', uid));
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data() as UserDocumentForAdmin;
+                            newUserDevices[uid] = userData.allowedDevices || [];
+                            updated = true;
+                        }
+                    } catch (e) {
+                        console.error("Error fetching user device info:", e);
+                    }
+                }
+            }
+
+            if (updated) {
+                setUserDevices(newUserDevices);
+            }
+        }, (error) => {
+            console.error("Firestore onSnapshot error:", error);
+            setLoading(false);
+            toast({
+                title: "Connection Error",
+                description: "Failed to listen for updates. " + error.message,
+                variant: "destructive"
+            });
         });
 
+        return unsubscribe;
+    };
+
+    useEffect(() => {
+        const unsubscribe = fetchRequests();
         return () => unsubscribe();
     }, []);
 
@@ -184,14 +217,31 @@ export default function DeviceChangeRequestsPage() {
             <div className="flex items-center justify-between space-y-2">
                 <h2 className="text-3xl font-bold tracking-tight text-primary">Device Change Requests</h2>
             </div>
-            <div className="flex items-center space-x-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                    placeholder="Search requests..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-8 w-[150px] lg:w-[250px]"
-                />
+            <div className="flex items-center justify-between space-x-2">
+                <div className="flex items-center space-x-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search requests..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="h-8 w-[150px] lg:w-[250px]"
+                    />
+                </div>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                        setRequests([]);
+                        setLoading(true);
+                        // The effect will handle the refresh via the key or just let onSnapshot handle it
+                        // For a hard refresh, we could update a key state
+                        window.location.reload();
+                    }}
+                    className="flex items-center gap-2"
+                >
+                    <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+                    Refresh
+                </Button>
             </div>
 
             <Card className="border-t-4 border-t-primary shadow-md">
