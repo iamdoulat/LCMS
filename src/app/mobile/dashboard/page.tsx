@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, getDocs, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
-import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min, isFriday, isWithinInterval, startOfDay } from 'date-fns';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
@@ -90,6 +90,7 @@ export default function MobileDashboardPage() {
     const [activeBreakRecord, setActiveBreakRecord] = useState<any>(null);
     const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
     const [userRole, setUserRole] = useState<string>('user');
+    const [restrictionNote, setRestrictionNote] = useState<string | null>(null);
 
     // Load settings from localStorage
     useEffect(() => {
@@ -388,6 +389,84 @@ export default function MobileDashboardPage() {
         };
     }, [isOnBreak, activeBreakRecord?.startTime]);
 
+    // Check for restrictions (Weekend, Holiday, Leave, Visit)
+    useEffect(() => {
+        const checkRestrictions = async () => {
+            const today = startOfDay(new Date());
+
+            // 1. Check Weekend (Friday)
+            if (isFriday(today)) {
+                setRestrictionNote("Today is the weekend.");
+                return;
+            }
+
+            // 2. Check Holidays
+            try {
+                const holidaySnap = await getDocs(collection(firestore, 'holidays'));
+                const todayHoliday = holidaySnap.docs.find(doc => {
+                    const data = doc.data();
+                    if (!data.fromDate) return false;
+                    const start = startOfDay(parseISO(data.fromDate));
+                    const end = data.toDate ? startOfDay(parseISO(data.toDate)) : start;
+                    return isWithinInterval(today, { start, end });
+                });
+                if (todayHoliday) {
+                    setRestrictionNote("Today is a holiday.");
+                    return;
+                }
+            } catch (e) {
+                console.error("Error checking holidays:", e);
+            }
+
+            // 3. Check Leaves (Approved)
+            try {
+                if (!user) return;
+                const empQuery = query(collection(firestore, 'employees'), where('email', '==', user.email));
+                const empSnap = await getDocs(empQuery);
+                const ids = [user.uid];
+                if (!empSnap.empty) {
+                    ids.push(empSnap.docs[0].id);
+                }
+
+                const leaveSnap = await getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved')));
+                const todayLeave = leaveSnap.docs.find(doc => {
+                    const data = doc.data();
+                    if (!data.fromDate || !data.toDate) return false;
+                    const start = startOfDay(parseISO(data.fromDate));
+                    const end = startOfDay(parseISO(data.toDate));
+                    return isWithinInterval(today, { start, end });
+                });
+                if (todayLeave) {
+                    setRestrictionNote("You are on leave.");
+                    return;
+                }
+
+                // 4. Check Visits (Approved)
+                const visitSnap = await getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved')));
+                const todayVisit = visitSnap.docs.find(doc => {
+                    const data = doc.data();
+                    if (!data.fromDate || !data.toDate) return false;
+                    const start = startOfDay(parseISO(data.fromDate));
+                    const end = startOfDay(parseISO(data.toDate));
+                    return isWithinInterval(today, { start, end });
+                });
+                if (todayVisit) {
+                    setRestrictionNote("You are on a visit.");
+                    return;
+                }
+            } catch (e) {
+                console.error("Error checking leaves/visits:", e);
+            }
+
+            setRestrictionNote(null);
+        };
+
+        checkRestrictions();
+        // Re-check every hour to handle day transitions
+        const interval = setInterval(checkRestrictions, 60 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, [user]);
+
     const refreshAttendanceData = async () => {
         if (!user) return;
 
@@ -493,12 +572,14 @@ export default function MobileDashboardPage() {
                                         setAttendanceType('in');
                                         setIsAttendanceModalOpen(true);
                                     }}
-                                    disabled={!!todayAttendance?.inTime}
+                                    disabled={!!todayAttendance?.inTime || !!restrictionNote}
                                     className={cn(
                                         "h-24 w-24 rounded-full flex flex-col items-center justify-center gap-1 transition-all active:scale-95 shadow-lg relative group/btn",
                                         todayAttendance?.inTime
                                             ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white ring-4 ring-emerald-50"
-                                            : "bg-gradient-to-br from-blue-600 to-cyan-500 text-white hover:brightness-110"
+                                            : !!restrictionNote
+                                                ? "bg-slate-50 text-slate-300 border-2 border-dashed border-slate-200"
+                                                : "bg-gradient-to-br from-blue-600 to-cyan-500 text-white hover:brightness-110"
                                     )}
                                 >
                                     <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
@@ -510,8 +591,8 @@ export default function MobileDashboardPage() {
                                 </button>
                                 <div className="flex flex-col items-center gap-0.5">
                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
-                                    <span className="text-[11px] font-bold text-slate-700 text-center px-1">
-                                        {getAttendanceStatus(todayAttendance?.flag, todayAttendance?.approvalStatus) || '08:00 hr(s)'}
+                                    <span className="text-[11px] font-bold text-slate-700 text-center px-1 font-mono">
+                                        {restrictionNote || getAttendanceStatus(todayAttendance?.flag, todayAttendance?.approvalStatus) || '08:00 hr(s)'}
                                     </span>
                                 </div>
                             </div>
@@ -527,14 +608,16 @@ export default function MobileDashboardPage() {
                                         setAttendanceType('out');
                                         setIsAttendanceModalOpen(true);
                                     }}
-                                    disabled={!todayAttendance?.inTime || !!todayAttendance?.outTime}
+                                    disabled={!todayAttendance?.inTime || !!todayAttendance?.outTime || !!restrictionNote}
                                     className={cn(
                                         "h-24 w-24 rounded-full flex flex-col items-center justify-center gap-1 transition-all active:scale-95 relative group/btn shadow-lg",
                                         todayAttendance?.outTime
                                             ? "bg-gradient-to-br from-purple-600 to-indigo-600 text-white ring-4 ring-purple-50"
-                                            : todayAttendance?.inTime
-                                                ? "bg-gradient-to-br from-orange-500 to-rose-500 text-white hover:brightness-110"
-                                                : "bg-slate-50 text-slate-300 border-2 border-dashed border-slate-200"
+                                            : !!restrictionNote
+                                                ? "bg-slate-50 text-slate-300 border-2 border-dashed border-slate-200"
+                                                : todayAttendance?.inTime
+                                                    ? "bg-gradient-to-br from-orange-500 to-rose-500 text-white hover:brightness-110"
+                                                    : "bg-slate-50 text-slate-300 border-2 border-dashed border-slate-200"
                                     )}
                                 >
                                     <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
@@ -546,8 +629,8 @@ export default function MobileDashboardPage() {
                                 </button>
                                 <div className="flex flex-col items-center gap-0.5">
                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Worked</span>
-                                    <span className="text-[11px] font-bold text-slate-700">
-                                        {calculateWorkHours(todayAttendance?.inTime, todayAttendance?.outTime) || 'Waiting...'}
+                                    <span className="text-[11px] font-bold text-slate-700 font-mono">
+                                        {restrictionNote ? '---' : calculateWorkHours(todayAttendance?.inTime, todayAttendance?.outTime) || 'Waiting...'}
                                     </span>
                                 </div>
                             </div>
