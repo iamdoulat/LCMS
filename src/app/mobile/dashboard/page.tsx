@@ -281,13 +281,22 @@ export default function MobileDashboardPage() {
                     where('employeeId', 'in', ids)
                 );
                 const unsubMissed = onSnapshot(qMissed, (snapshot) => {
+                    const now = new Date();
+                    const currentMonth = now.getMonth();
+                    const currentYear = now.getFullYear();
+
                     const missedCount = snapshot.docs.filter(doc => {
                         const data = doc.data();
-                        if (!data.date) return false;
-                        const dDate = new Date(data.date);
-                        return data.flag === 'A' &&
-                            dDate >= startMonth &&
-                            dDate <= endMonth;
+                        if (!data.date || data.flag !== 'A') return false;
+
+                        try {
+                            const dDate = parseISO(data.date);
+                            return dDate.getMonth() === currentMonth &&
+                                dDate.getFullYear() === currentYear;
+                        } catch (e) {
+                            console.error("Error parsing date for missed attendance:", data.date, e);
+                            return false;
+                        }
                     }).length;
                     setStats(prev => ({ ...prev, missedAttendance: missedCount }));
                 });
@@ -708,12 +717,15 @@ export default function MobileDashboardPage() {
                             </div>
 
                             {/* Directory */}
-                            <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">
+                            <Link
+                                href="/mobile/directory"
+                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all active:scale-95 text-center w-full"
+                            >
                                 <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center">
                                     <Users className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Directory</span>
-                            </div>
+                            </Link>
 
                             {/* Assets */}
                             <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px]">

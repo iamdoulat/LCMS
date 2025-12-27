@@ -6,7 +6,6 @@ import { useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useMobileSidebar } from '@/context/MobileSidebarContext';
 import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react'; // Need Menu icon manually now
 import Link from 'next/link';
 
 import { firestore } from '@/lib/firebase/config';
@@ -60,14 +59,27 @@ export function MobileHeader() {
                 <div className="flex items-center gap-3">
                     <Button
                         variant="ghost"
-                        size="icon"
                         onClick={(e) => {
                             e.stopPropagation();
                             toggleSidebar();
                         }}
-                        className="text-white hover:bg-white/10"
+                        className="text-white hover:bg-white/10 p-0 h-auto w-auto min-w-0 flex items-center justify-center"
                     >
-                        <Menu className="h-10 w-10" />
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="!h-7 !w-7"
+                        >
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <line x1="3" y1="12" x2="15" y2="12" />
+                            <line x1="3" y1="18" x2="9" y2="18" />
+                        </svg>
                     </Button>
                     <div className="flex flex-col">
                         <h1 className="text-lg font-bold leading-tight">Hi, {user?.displayName || 'Employee'}</h1>
@@ -77,11 +89,11 @@ export function MobileHeader() {
 
                 <div className="flex items-center gap-3">
                     <Link href="/mobile/notifications">
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full h-12 w-12 relative">
-                            <Bell className="h-9 w-9" />
+                        <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full h-7 w-7 p-0 relative min-w-0 flex items-center justify-center">
+                            <Bell className="!h-7 !w-7" />
                             {/* Notification dot - only show if hasUnread is true */}
                             {hasUnread && (
-                                <span className="absolute top-3 right-3 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-[#0a1e60]" />
+                                <span className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-red-500 border border-[#0a1e60]" />
                             )}
                         </Button>
                     </Link>

@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import {
     ChevronLeft,
     Phone,
@@ -23,40 +22,43 @@ import {
     MapPin,
     Building2,
     FileBadge,
-    Pencil,
-    Loader2
+    Loader2,
+    AlertCircle
 } from 'lucide-react';
 import type { Employee } from '@/types';
 
-export default function MobileProfilePage() {
+export default function MobileEmployeeProfilePage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const params = useParams();
+    const employeeId = params.id as string;
+
     const [employee, setEmployee] = useState<Employee | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'official' | 'others'>('personal');
 
     useEffect(() => {
         async function fetchEmployee() {
-            if (!user?.email) return;
+            if (!employeeId) return;
             try {
-                const q = query(
-                    collection(firestore, 'employees'),
-                    where('email', '==', user.email),
-                    limit(1)
-                );
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty) {
-                    setEmployee({ id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as Employee);
+                const docRef = doc(firestore, 'employees', employeeId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    setEmployee({ id: docSnap.id, ...docSnap.data() } as Employee);
+                } else {
+                    setError("Employee not found");
                 }
-            } catch (error) {
-                console.error("Error fetching employee profile:", error);
+            } catch (err) {
+                console.error("Error fetching employee profile:", err);
+                setError("Failed to load profile");
             } finally {
                 setLoading(false);
             }
         }
 
         fetchEmployee();
-    }, [user]);
+    }, [employeeId]);
 
     const handleBack = () => {
         router.back();
@@ -70,16 +72,20 @@ export default function MobileProfilePage() {
         );
     }
 
-    if (!employee) {
+    if (error || !employee) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a1e60] text-white p-6">
-                <p className="text-lg mb-4 text-center">We couldn't find your employee record. Please contact HR.</p>
-                <Button onClick={handleBack} className="bg-white text-[#0a1e60]">Go Back</Button>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a1e60] text-white p-6 text-center">
+                <div className="bg-red-500/20 p-4 rounded-full mb-4">
+                    <AlertCircle className="h-10 w-10 text-red-500" />
+                </div>
+                <h2 className="text-xl font-bold mb-2">{error || "Error"}</h2>
+                <p className="text-white/60 mb-6 font-medium">This employee record might have been removed or the ID is invalid.</p>
+                <Button onClick={handleBack} className="bg-white text-[#0a1e60] px-8 rounded-xl font-bold">Back to Directory</Button>
             </div>
         );
     }
 
-    // Map real data to UI structure
+    // Map real data to UI structure (Same as in main profile page)
     const profileData = {
         name: employee.fullName,
         designation: employee.designation,
@@ -112,29 +118,26 @@ export default function MobileProfilePage() {
                 <Button variant="ghost" size="icon" onClick={handleBack} className="text-white hover:bg-white/10">
                     <ChevronLeft className="h-6 w-6" />
                 </Button>
-                <h1 className="text-xl font-semibold">Profile</h1>
-                <div className="w-10" /> {/* Spacer for centering */}
+                <h1 className="text-xl font-semibold">Employee Profile</h1>
+                <div className="w-10" />
             </header>
 
             {/* Main Content Container */}
             <div className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-8 relative mt-9">
 
-                {/* Profile Header Avatar - Absolute Positioned */}
+                {/* Profile Header Avatar */}
                 <div className="absolute -top-16 left-6 z-50">
-                    <div className="relative">
-                        <div className="h-32 w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-sm">
-                            <Avatar className="h-full w-full">
-                                <AvatarImage src={employee.photoURL || undefined} className="object-cover" />
-                                <AvatarFallback className="text-4xl text-slate-800">{employee.fullName?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                        </div>
-                        <div className="absolute bottom-2 right-2 bg-white rounded-full p-1 shadow-sm border border-slate-100 text-amber-500">
-                            <Pencil className="h-4 w-4" />
-                        </div>
+                    <div className="h-32 w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-sm">
+                        <Avatar className="h-full w-full">
+                            <AvatarImage src={employee.photoURL || undefined} className="object-cover" />
+                            <AvatarFallback className="text-4xl text-slate-800 font-bold bg-slate-200">
+                                {employee.fullName?.charAt(0)}
+                            </AvatarFallback>
+                        </Avatar>
                     </div>
                 </div>
 
-                {/* Contact Actions (Phone/Mail) */}
+                {/* Contact Actions */}
                 <div className="absolute top-6 right-6 flex gap-3">
                     <a href={`tel:${employee.phone}`}>
                         <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-12 w-12 shadow-sm">
@@ -213,7 +216,7 @@ export default function MobileProfilePage() {
                                     </div>
                                     <div>
                                         <div className="text-sm text-blue-500 font-medium mb-1">{item.label}</div>
-                                        <div className="text-lg font-bold text-[#0a1e60]">{item.value}</div>
+                                        <div className="text-lg font-bold text-[#0a1e60] truncate">{item.value}</div>
                                     </div>
                                 </div>
                             )
