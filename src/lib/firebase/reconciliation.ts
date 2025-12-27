@@ -112,7 +112,9 @@ export const approveReconciliation = async (
         await runTransaction(firestore, async (transaction) => {
             // 1. Get the attendance document reference
             // ID format is employeeId_yyyy-MM-dd
-            const attendanceDocId = `${reconciliation.employeeId}_${reconciliation.attendanceDate}`;
+            // Ensure we use only the date part YYYY-MM-DD
+            const datePart = reconciliation.attendanceDate ? reconciliation.attendanceDate.split('T')[0] : '';
+            const attendanceDocId = `${reconciliation.employeeId}_${datePart}`;
             const attendanceRef = doc(firestore, ATTENDANCE_COLLECTION, attendanceDocId);
 
             const attendanceDoc = await transaction.get(attendanceRef);
@@ -142,16 +144,27 @@ export const approveReconciliation = async (
             attendanceUpdates.reconciliationId = reconciliationId;
 
             if (!attendanceDoc.exists()) {
-                // If allowance for creating missing attendance via reconciliation exists
-                // construct full object. For now assuming record exists or we create basic shell.
-                // Let's set basic fields if creating new.
-                const fallbackDate = new Date(`${reconciliation.attendanceDate}T00:00:00`);
-                const isoDate = !isNaN(fallbackDate.getTime()) ? fallbackDate.toISOString() : new Date().toISOString();
+                // Fetch employee data to ensure we have all necessary fields for a valid attendance record
+                const empRef = doc(firestore, 'employees', reconciliation.employeeId);
+                const empDoc = await transaction.get(empRef);
+                const empData = empDoc.exists() ? empDoc.data() : {};
+
+                // robustly construct ISO date from YYYY-MM-DD
+                let isoDate;
+                try {
+                    isoDate = new Date(`${datePart}T00:00:00`).toISOString();
+                } catch (e) {
+                    isoDate = new Date().toISOString();
+                }
 
                 transaction.set(attendanceRef, {
                     employeeId: reconciliation.employeeId,
                     date: isoDate,
-                    employeeName: reconciliation.employeeName, // Assuming present
+                    employeeName: reconciliation.employeeName || empData.fullName || 'Unknown Employee',
+                    employeeCode: empData.employeeCode || '',
+                    designation: empData.designation || '',
+                    department: empData.department || '',
+                    shiftId: empData.shiftId || '',
                     flag: 'P',
                     ...attendanceUpdates
                 });

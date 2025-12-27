@@ -149,10 +149,11 @@ export default function AttendanceReconciliationPage() {
                 showConfirmButton: true,
             });
             fetchData();
-        } catch (error) {
+        } catch (error: any) {
+            console.error("Approval error:", error);
             await safeSwalFire({
                 title: "Error",
-                text: "Failed to approve.",
+                text: `Failed to approve: ${error.message || 'Unknown error'}`,
                 icon: "error",
                 allowOutsideClick: true,
                 allowEscapeKey: true,
