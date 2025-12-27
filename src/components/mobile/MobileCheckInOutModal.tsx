@@ -156,18 +156,11 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                                     latitude={currentLocation.latitude}
                                     longitude={currentLocation.longitude}
                                     radius={0}
+                                    readOnly={true}
                                     onLocationSelect={() => { }}
                                     onAddressFound={(addr) => setAddress(addr)}
+                                    onRefresh={updateLocation}
                                 />
-                                <Button
-                                    size="icon"
-                                    variant="secondary"
-                                    className="absolute top-2 right-2 bg-white/90 h-8 w-8 shadow-sm"
-                                    onClick={updateLocation}
-                                    disabled={isLoadingLocation}
-                                >
-                                    <RefreshCw className={`h-4 w-4 ${isLoadingLocation ? 'animate-spin' : ''}`} />
-                                </Button>
                             </div>
                         ) : (
                             <div className="h-[150px] bg-slate-100 rounded-lg flex flex-col items-center justify-center text-slate-400">

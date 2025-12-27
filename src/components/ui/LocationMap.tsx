@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // Fix for default marker icon in Leaflet with Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -17,14 +19,17 @@ interface LocationMapProps {
     latitude?: number;
     longitude?: number;
     radius?: number;
+    readOnly?: boolean;
     onLocationSelect: (lat: number, lng: number) => void;
     onAddressFound?: (address: string) => void;
+    onRefresh?: () => void;
 }
 
 // Helper components defined outside to prevent recreation on render
-const LocationMarker = ({ position, setPosition }: { position: L.LatLng | null, setPosition: (pos: L.LatLng) => void }) => {
+const LocationMarker = ({ position, setPosition, readOnly }: { position: L.LatLng | null, setPosition: (pos: L.LatLng) => void, readOnly?: boolean }) => {
     const map = useMapEvents({
         click(e) {
+            if (readOnly) return;
             setPosition(e.latlng);
             map.flyTo(e.latlng, map.getZoom());
         },
@@ -49,7 +54,30 @@ const RecenterMap = ({ lat, lng }: { lat: number, lng: number }) => {
     return null;
 }
 
-export default function LocationMap({ latitude, longitude, radius, onLocationSelect, onAddressFound }: LocationMapProps) {
+const RefreshControl = ({ onRefresh }: { onRefresh?: () => void }) => {
+    const map = useMap();
+    if (!onRefresh) return null;
+
+    return (
+        <div className="leaflet-top leaflet-right" style={{ marginTop: '10px', marginRight: '10px', pointerEvents: 'auto' }}>
+            <div className="leaflet-bar leaflet-control">
+                <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-10 w-10 bg-white hover:bg-slate-100 shadow-md border-none rounded-md"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onRefresh();
+                    }}
+                >
+                    <RefreshCw className="h-5 w-5 text-blue-600" />
+                </Button>
+            </div>
+        </div>
+    );
+};
+
+export default function LocationMap({ latitude, longitude, radius, readOnly, onLocationSelect, onAddressFound, onRefresh }: LocationMapProps) {
     const defaultCenter = { lat: 23.8103, lng: 90.4125 }; // Dhaka center as default
     const [position, setPosition] = useState<L.LatLng | null>(
         latitude && longitude ? new L.LatLng(latitude, longitude) : new L.LatLng(defaultCenter.lat, defaultCenter.lng)
@@ -109,7 +137,8 @@ export default function LocationMap({ latitude, longitude, radius, onLocationSel
                     />
                 )}
 
-                <LocationMarker position={position} setPosition={handlePositionChange} />
+                <LocationMarker position={position} setPosition={handlePositionChange} readOnly={readOnly} />
+                <RefreshControl onRefresh={onRefresh} />
                 {/* Recenter mechanism if needed */}
             </MapContainer>
         </div>

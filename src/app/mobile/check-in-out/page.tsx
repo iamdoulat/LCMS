@@ -277,7 +277,7 @@ export default function MobileCheckInOutPage() {
             {/* Custom Header matching image */}
             <div className="bg-[#0a1e60] text-white pt-safe-top pb-[1px] sticky top-0 z-20">
                 <div className="flex items-center justify-between h-12">
-                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-white hover:bg-white/10 -ml-2">
+                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-white hover:bg-white/10 ml-0.5">
                         <ArrowLeft className="h-6 w-6" />
                     </Button>
                     <h1 className="text-xl font-bold">Check In/Out</h1>
