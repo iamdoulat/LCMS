@@ -15,6 +15,15 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
     // But wrapper is fine, just contents might handle it.
     const isLoginPage = pathname === '/mobile/login';
 
+    // Pages that need the dark blue background to match the header (filling status bar area)
+    const isDarkHeaderPage = [
+        '/mobile/attendance/my-attendance',
+        '/mobile/attendance/team-attendance',
+        '/mobile/attendance/reconciliation/my-applications',
+        '/mobile/attendance/reconciliation/approval',
+        '/mobile/attendance/remote-approval'
+    ].some(path => pathname?.startsWith(path));
+
     if (isLoginPage) return <>{children}</>;
 
     return (
@@ -25,7 +34,8 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
             {/* The Main Content (Foreground) */}
             <div
                 className={cn(
-                    "relative z-10 transition-transform duration-300 ease-out min-h-screen bg-slate-50 flex flex-col",
+                    "relative z-10 transition-transform duration-300 ease-out min-h-screen flex flex-col",
+                    isDarkHeaderPage ? "bg-[#0a1e60]" : "bg-slate-50",
                     isOpen ? "translate-x-[49%] scale-[0.85] rounded-l-[2.5rem] overflow-hidden shadow-2xl h-screen" : "translate-x-0 scale-100 rounded-none shadow-none"
                 )}
             >
