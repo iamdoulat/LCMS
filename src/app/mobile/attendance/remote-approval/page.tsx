@@ -63,7 +63,7 @@ export default function RemoteAttendanceApprovalPage() {
                 snapshot.forEach(doc => {
                     const data = doc.data() as MultipleCheckInOutRecord;
                     if (employeeIds.includes(data.employeeId)) {
-                        fetchedRecords.push({ id: doc.id, ...data });
+                        fetchedRecords.push({ ...data, id: doc.id });
                     }
                 });
 
