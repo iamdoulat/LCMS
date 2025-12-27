@@ -25,9 +25,9 @@ export default function MobileLeavePage() {
         try {
             const audio = new Audio('/sounds/water-drop.mp3');
             audio.volume = 0.5;
-            audio.play().catch(err => console.log('Audio play failed:', err));
+            audio.play().catch(() => { });
         } catch (err) {
-            console.log('Audio error:', err);
+            // Silently fail audio
         }
 
         // Simulate data refresh

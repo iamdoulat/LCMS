@@ -77,7 +77,7 @@ export default function LoginPage() {
   };
 
   // Helper: Check if user role is exempt from device security
-  const isExemptFromDeviceSecurity = (role: string[] | string | undefined): boolean => {
+  const isExemptFromDeviceSecurity = (role: string[] | string | undefined | null): boolean => {
     const exemptRoles = [
       'Super Admin',
       'Admin',
