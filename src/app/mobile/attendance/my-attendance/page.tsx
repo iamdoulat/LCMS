@@ -137,7 +137,7 @@ export default function MyAttendancePage() {
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60]">
             {/* Header */}
-            <div className="px-6 pt-12 pb-6 flex items-center gap-4 text-white">
+            <div className="px-6 pt-7 pb-6 flex items-center gap-4 text-white">
                 <button
                     onClick={() => router.back()}
                     className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"

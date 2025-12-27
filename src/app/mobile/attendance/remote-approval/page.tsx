@@ -132,7 +132,7 @@ export default function RemoteAttendanceApprovalPage() {
 
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60]">
-            <div className="px-6 pt-12 pb-6 flex items-center gap-4 text-white">
+            <div className="px-6 pt-7 pb-6 flex items-center gap-4 text-white">
                 <button
                     onClick={() => router.back()}
                     className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
@@ -170,7 +170,7 @@ export default function RemoteAttendanceApprovalPage() {
                                 className="bg-white p-4 rounded-2xl shadow-sm relative cursor-pointer active:scale-[0.98] transition-transform"
                             >
                                 <div className={`absolute left-0 top-6 bottom-6 w-1 rounded-r-full ${record.status === 'Approved' ? 'bg-emerald-500' :
-                                        record.status === 'Rejected' ? 'bg-red-500' : 'bg-blue-500'
+                                    record.status === 'Rejected' ? 'bg-red-500' : 'bg-blue-500'
                                     }`}></div>
 
                                 <div className="pl-4">

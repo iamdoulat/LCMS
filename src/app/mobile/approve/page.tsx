@@ -359,7 +359,7 @@ export default function ApproveApplicationsPage() {
     return (
         <div className="min-h-screen bg-[#f8fafc] pb-20">
             {/* Header */}
-            <div className="bg-[#0a1e60] text-white p-6 pb-20 rounded-b-[2.5rem] relative overflow-hidden">
+            <div className="bg-[#0a1e60] text-white px-6 pt-1 pb-20 rounded-b-[2.5rem] relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 rounded-full -ml-10 -mb-10 blur-2xl" />
 

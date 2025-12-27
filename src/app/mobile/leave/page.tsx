@@ -236,7 +236,7 @@ export default function MobileLeavePage() {
             >
                 {/* Pull to refresh indicator - Absolute positioned above content */}
                 <div className="absolute left-0 right-0 -top-12 flex justify-center py-2 z-10">
-                    <div className={`animate - spin rounded - full h - 8 w - 8 border - b - 2 border - blue - 600 ${isRefreshing || pullDistance > 40 ? 'opacity-100' : 'opacity-0'} `}></div>
+                    <div className={`animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 ${isRefreshing || pullDistance > 40 ? 'opacity-100' : 'opacity-0'} `}></div>
                 </div>
 
                 <div className="px-6 pt-6 pb-24 space-y-6">
@@ -278,7 +278,7 @@ export default function MobileLeavePage() {
                                     <div
                                         key={index}
                                         className={`
-                                            relative min - h - [60px] p - 1 flex flex - col rounded - lg text - sm
+                                            relative min-h-[60px] p-1 flex flex-col rounded-lg text-sm
                                             ${dayObj.isCurrentMonth
                                                 ? dayObj.isToday
                                                     ? 'bg-blue-600 text-white'
@@ -302,7 +302,7 @@ export default function MobileLeavePage() {
 
                                                 {/* Leave avatars */}
                                                 {dayObj.leaves.slice(0, 2).map((leave, idx) => (
-                                                    <Avatar key={`leave - ${idx} `} className="h-4 w-4">
+                                                    <Avatar key={`leave-${idx}`} className="h-4 w-4">
                                                         <AvatarImage src={leave.employee?.photoURL} />
                                                         <AvatarFallback className="text-[8px] bg-emerald-100 text-emerald-700">
                                                             {getInitials(leave.employee?.fullName)}
@@ -312,7 +312,7 @@ export default function MobileLeavePage() {
 
                                                 {/* Visit avatars */}
                                                 {dayObj.visits.slice(0, 2 - dayObj.leaves.length).map((visit, idx) => (
-                                                    <Avatar key={`visit - ${idx} `} className="h-4 w-4">
+                                                    <Avatar key={`visit-${idx}`} className="h-4 w-4">
                                                         <AvatarImage src={visit.employee?.photoURL} />
                                                         <AvatarFallback className="text-[8px] bg-blue-100 text-blue-700">
                                                             {getInitials(visit.employee?.fullName)}
@@ -360,7 +360,7 @@ export default function MobileLeavePage() {
                                 const Icon = action.icon;
                                 const buttonContent = (
                                     <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] hover:shadow-md transition-shadow h-full w-full">
-                                        <div className={`${action.color} p - 4 rounded - full ${action.iconColor} h - 14 w - 14 flex items - center justify - center`}>
+                                        <div className={`${action.color} p-4 rounded-full ${action.iconColor} h-14 w-14 flex items-center justify-center`}>
                                             <Icon className="h-7 w-7" />
                                         </div>
                                         <span className="text-sm font-medium text-slate-700 text-center leading-tight">

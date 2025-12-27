@@ -145,12 +145,14 @@ export const approveReconciliation = async (
                 // If allowance for creating missing attendance via reconciliation exists
                 // construct full object. For now assuming record exists or we create basic shell.
                 // Let's set basic fields if creating new.
+                const fallbackDate = new Date(`${reconciliation.attendanceDate}T00:00:00`);
+                const isoDate = !isNaN(fallbackDate.getTime()) ? fallbackDate.toISOString() : new Date().toISOString();
+
                 transaction.set(attendanceRef, {
                     employeeId: reconciliation.employeeId,
-                    date: new Date(`${reconciliation.attendanceDate}T00:00:00`).toISOString(), // Approx
+                    date: isoDate,
                     employeeName: reconciliation.employeeName, // Assuming present
-                    flag: 'P', // Assuming reconcile means present? Or keep original? 
-                    // Safe to assume if changing times, they were likely present.
+                    flag: 'P',
                     ...attendanceUpdates
                 });
             } else {

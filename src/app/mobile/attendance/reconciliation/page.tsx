@@ -13,13 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
-export default function AttendanceReconciliationPage() {
+import { Suspense } from 'react';
+
+function ReconciliationForm() {
     const { user } = useAuth();
-    // Fetch supervisor info to get current employee details if needed or pass via params/context
-    // Better to fetch employee details to populate 'CreateReconciliationData'
-    // But for now, we'll assume we pass params or use context.
-    // The createReconciliationRequest needs employee info. 
-    // We can fetch 'employees' doc by currentEmployeeId.
     const { currentEmployeeId } = useSupervisorCheck(user?.email);
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -32,12 +29,21 @@ export default function AttendanceReconciliationPage() {
     const [loading, setLoading] = useState(false);
     const [employeeData, setEmployeeData] = useState<any>(null);
 
-    // Form State
-    const [inTimeDate, setInTimeDate] = useState(attendanceDateParam || format(new Date(), 'yyyy-MM-dd'));
-    const [inTime, setInTime] = useState('');
-    const [outTimeDate, setOutTimeDate] = useState(attendanceDateParam || format(new Date(), 'yyyy-MM-dd'));
-    const [outTime, setOutTime] = useState('');
+    // Helper for safe date parsing
+    const safeParseDate = (dateStr: string | null) => {
+        if (!dateStr) return new Date();
+        // If it's a full ISO string, we just want to ensure it's valid
+        const d = new Date(dateStr);
+        return isNaN(d.getTime()) ? new Date() : d;
+    };
 
+    const initialDateStr = attendanceDateParam ? format(safeParseDate(attendanceDateParam), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+
+    // Form State
+    const [inTimeDate, setInTimeDate] = useState(initialDateStr);
+    const [inTime, setInTime] = useState('');
+    const [outTimeDate, setOutTimeDate] = useState(initialDateStr);
+    const [outTime, setOutTime] = useState('');
 
     const [inTimeRemarks, setInTimeRemarks] = useState('');
     const [outTimeRemarks, setOutTimeRemarks] = useState('');
@@ -45,7 +51,6 @@ export default function AttendanceReconciliationPage() {
     useEffect(() => {
         const fetchEmployee = async () => {
             if (currentEmployeeId) {
-                // Fetch employee data for name/code/designation
                 try {
                     const { firestore } = await import('@/lib/firebase/config');
                     const { doc, getDoc } = await import('firebase/firestore');
@@ -68,7 +73,6 @@ export default function AttendanceReconciliationPage() {
             return;
         }
 
-        // Validation
         if ((activeTab === 'in' || activeTab === 'both') && !inTime) {
             Swal.fire("Validation Error", "Please provide In Time.", "warning");
             return;
@@ -88,12 +92,6 @@ export default function AttendanceReconciliationPage() {
 
         setLoading(true);
         try {
-            // Construct request data
-            // We need full ISO strings for times. 
-            // Input time is usually HH:mm (24h) or HH:mm AM/PM depending on browser/device.
-            // Let's assume input type='time' gives HH:mm (24h).
-            // We need to combine *TimeDate + *Time to ISO.
-
             const constructIso = (dateStr: string, timeStr: string) => {
                 if (!dateStr || !timeStr) return undefined;
                 return new Date(`${dateStr}T${timeStr}:00`).toISOString();
@@ -104,7 +102,7 @@ export default function AttendanceReconciliationPage() {
                 employeeCode: employeeData.employeeCode || '',
                 employeeName: employeeData.fullName || user.displayName || 'Unknown',
                 designation: employeeData.designation || '',
-                attendanceDate: attendanceDateParam,
+                attendanceDate: initialDateStr, // Use the date part
                 inTimeRemarks: inTimeRemarks,
                 outTimeRemarks: outTimeRemarks,
             };
@@ -135,12 +133,11 @@ export default function AttendanceReconciliationPage() {
         }
     };
 
-    const formattedHeaderDate = attendanceDateParam ? format(new Date(attendanceDateParam), 'dd-MM-yyyy') : '-';
+    const formattedHeaderDate = attendanceDateParam ? format(safeParseDate(attendanceDateParam), 'dd-MM-yyyy') : '-';
 
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60]">
-            {/* Header */}
-            <div className="px-6 pt-12 pb-6 flex items-center gap-4 text-white">
+            <div className="px-6 pt-7 pb-6 flex items-center gap-4 text-white">
                 <button
                     onClick={() => router.back()}
                     className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
@@ -155,7 +152,6 @@ export default function AttendanceReconciliationPage() {
 
             <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col">
                 <div className="p-6 space-y-6 overflow-y-auto">
-                    {/* Tab Switcher */}
                     <div className="flex bg-white p-1 rounded-xl shadow-sm">
                         <button
                             onClick={() => setActiveTab('in')}
@@ -180,9 +176,7 @@ export default function AttendanceReconciliationPage() {
                         </button>
                     </div>
 
-                    {/* Form Fields */}
                     <div className="bg-white rounded-2xl p-6 shadow-sm space-y-6">
-
                         {(activeTab === 'in' || activeTab === 'both') && (
                             <>
                                 <div className="space-y-2">
@@ -205,7 +199,7 @@ export default function AttendanceReconciliationPage() {
                                             type="time"
                                             value={inTime}
                                             onChange={(e) => setInTime(e.target.value)}
-                                            className="pl-4 h-12 bg-slate-50 border-slate-200 appearance-none" // appearance-none needed for some browsers to allow custom icon overlay if needed, but native picker is fine
+                                            className="pl-4 h-12 bg-slate-50 border-slate-200 appearance-none"
                                         />
                                         <Clock className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
                                     </div>
@@ -276,5 +270,17 @@ export default function AttendanceReconciliationPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function AttendanceReconciliationPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex flex-col h-screen bg-[#0a1e60] items-center justify-center">
+                <Loader2 className="animate-spin text-white w-10 h-10" />
+            </div>
+        }>
+            <ReconciliationForm />
+        </Suspense>
     );
 }

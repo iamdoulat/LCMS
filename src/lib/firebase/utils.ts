@@ -29,7 +29,14 @@ export const determineAttendanceFlag = (inTime: string | undefined): 'P' | 'D' =
                 hours = parseInt(time24Match[1], 10);
                 minutes = parseInt(time24Match[2], 10);
             } else {
-                return 'P'; // Default if both parsing fail
+                // Try ISO String parsing
+                const date = new Date(inTime);
+                if (!isNaN(date.getTime())) {
+                    hours = date.getHours();
+                    minutes = date.getMinutes();
+                } else {
+                    return 'P'; // Default if all parsing fails
+                }
             }
         }
 
