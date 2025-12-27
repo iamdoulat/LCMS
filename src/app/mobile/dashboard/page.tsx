@@ -5,11 +5,12 @@ import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { MobileAttendanceModal } from '@/components/mobile/MobileAttendanceModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X } from 'lucide-react';
+import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse } from 'date-fns';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
@@ -28,6 +29,49 @@ import Link from 'next/link';
 
 export default function MobileDashboardPage() {
     const { user } = useAuth();
+
+    const formatAttendanceTime = (timeStr?: string) => {
+        if (!timeStr) return null;
+        try {
+            const parsed = parse(timeStr, 'HH:mm', new Date());
+            return format(parsed, 'hh:mm a');
+        } catch (e) {
+            return timeStr;
+        }
+    };
+
+    const getAttendanceStatus = (flag?: string) => {
+        if (!flag) return null;
+        const statusMap: Record<string, string> = {
+            'P': 'Present',
+            'D': 'Delayed',
+            'A': 'Absent',
+            'V': 'Visit',
+            'L': 'Leave',
+            'H': 'Holiday'
+        };
+        return statusMap[flag] || flag;
+    };
+
+    const calculateWorkHours = (inTime?: string, outTime?: string) => {
+        if (!inTime || !outTime) return null;
+        try {
+            const start = parse(inTime, 'HH:mm', new Date());
+            const end = parse(outTime, 'HH:mm', new Date());
+            let diff = end.getTime() - start.getTime();
+            if (diff < 0) diff += 24 * 60 * 60 * 1000;
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            let result = '';
+            if (hours > 0) result += `${hours} hr${hours > 1 ? 's' : ''} `;
+            if (mins > 0 || hours === 0) result += `${mins} min`;
+            return result.trim();
+        } catch (e) {
+            return null;
+        }
+    };
     const router = useRouter();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [selectedIds, setSelectedIds] = useState<string[]>(['leave', 'visit', 'pending']);
@@ -36,7 +80,7 @@ export default function MobileDashboardPage() {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
     const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
-    const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string } | null>(null);
+    const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string; flag?: string } | null>(null);
 
     // Load settings from localStorage
     useEffect(() => {
@@ -59,32 +103,30 @@ export default function MobileDashboardPage() {
         });
     };
 
-    // Fetch today's attendance
+    // Real-time listener for today's attendance
     useEffect(() => {
         if (!user) return;
 
-        const fetchTodayAttendance = async () => {
-            try {
-                const today = new Date();
-                const dateKey = format(today, 'yyyy-MM-dd');
-                const docId = `${user.uid}_${dateKey}`;
+        const today = new Date();
+        const dateKey = format(today, 'yyyy-MM-dd');
+        const docId = `${user.uid}_${dateKey}`;
 
-                const attendanceDoc = await getDoc(doc(firestore, 'attendance', docId));
-                if (attendanceDoc.exists()) {
-                    const data = attendanceDoc.data();
-                    setTodayAttendance({
-                        inTime: data.inTime,
-                        outTime: data.outTime
-                    });
-                } else {
-                    setTodayAttendance(null);
-                }
-            } catch (error) {
-                console.error('Error fetching today attendance:', error);
+        const unsubscribe = onSnapshot(doc(firestore, 'attendance', docId), (doc) => {
+            if (doc.exists()) {
+                const data = doc.data();
+                setTodayAttendance({
+                    inTime: data.inTime,
+                    outTime: data.outTime,
+                    flag: data.flag
+                });
+            } else {
+                setTodayAttendance(null);
             }
-        };
+        }, (error) => {
+            console.error('Error listening to today attendance:', error);
+        });
 
-        fetchTodayAttendance();
+        return () => unsubscribe();
     }, [user]);
 
     const [stats, setStats] = useState({
@@ -299,51 +341,81 @@ export default function MobileDashboardPage() {
                 </div>
 
                 <div className="px-4 pt-6 pb-24 space-y-6">
-                    {/* In/Out Time Cards */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <Card
-                            className="p-4 rounded-xl flex items-center justify-between border-none shadow-sm h-24 cursor-pointer active:scale-95 transition-transform"
-                            onClick={() => setIsAttendanceModalOpen(true)}
-                        >
-                            <div>
-                                <div className="flex items-center gap-2 text-blue-600 mb-1">
-                                    <div className="rounded-full bg-blue-100 p-2">
-                                        <LogIn className="h-5 w-5" />
-                                    </div>
-                                    <span className="font-semibold text-base">In Time</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground font-medium pl-1">
-                                    {todayAttendance?.inTime || 'Not marked'}
-                                </p>
-                            </div>
-                            <div className="h-10 w-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-                                <ChevronDown className="h-5 w-5" />
-                            </div>
-                        </Card>
+                    {/* Daily Attendance Card */}
+                    <Card className="p-5 rounded-3xl border-none shadow-xl bg-white relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-bl-full -mr-16 -mt-16 transition-transform group-hover:scale-110 duration-700" />
 
-                        <Card
-                            className="p-4 rounded-xl flex items-center justify-between border-none shadow-sm h-24 cursor-pointer active:scale-95 transition-transform"
-                            onClick={() => {
-                                setAttendanceType('out');
-                                setIsAttendanceModalOpen(true);
-                            }}
-                        >
-                            <div>
-                                <div className="flex items-center gap-2 text-purple-600 mb-1">
-                                    <div className="rounded-full bg-purple-100 p-2">
-                                        <LogOut className="h-5 w-5" />
-                                    </div>
-                                    <span className="font-semibold text-base">Out Time</span>
+                        <div className="flex items-center gap-2.5 mb-8 relative z-10">
+                            <div className="h-9 w-9 rounded-xl bg-blue-50 flex items-center justify-center shadow-sm">
+                                <UserCheck className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <h2 className="font-bold text-xl text-slate-800 tracking-tight">Daily Attendance</h2>
+                        </div>
+
+                        <div className="flex items-center justify-around py-2 relative z-10">
+                            {/* In Time Circle */}
+                            <div className="flex flex-col items-center gap-3">
+                                <button
+                                    onClick={() => {
+                                        setAttendanceType('in');
+                                        setIsAttendanceModalOpen(true);
+                                    }}
+                                    disabled={!!todayAttendance?.inTime}
+                                    className={cn(
+                                        "h-28 w-28 rounded-full flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 shadow-2xl relative group/btn",
+                                        todayAttendance?.inTime
+                                            ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white ring-4 ring-emerald-50"
+                                            : "bg-gradient-to-br from-blue-600 to-cyan-500 text-white hover:brightness-110"
+                                    )}
+                                >
+                                    <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                                    <Clock className="h-7 w-7 mb-0.5" />
+                                    <span className="text-sm font-bold">In Time</span>
+                                    {todayAttendance?.inTime && (
+                                        <span className="text-[11px] font-medium bg-white/20 px-2 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.inTime)}</span>
+                                    )}
+                                </button>
+                                <div className="flex flex-col items-center gap-1">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">Status</span>
+                                    <span className="text-xs font-bold text-slate-700">
+                                        {getAttendanceStatus(todayAttendance?.flag) || '08:00 hr(s)'}
+                                    </span>
                                 </div>
-                                <p className="text-xs text-muted-foreground font-medium pl-1">
-                                    {todayAttendance?.outTime || 'Not marked'}
-                                </p>
                             </div>
-                            <div className="h-10 w-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
-                                <ChevronDown className="h-5 w-5" />
+
+                            {/* Out Time Circle */}
+                            <div className="flex flex-col items-center gap-3">
+                                <button
+                                    onClick={() => {
+                                        setAttendanceType('out');
+                                        setIsAttendanceModalOpen(true);
+                                    }}
+                                    disabled={!todayAttendance?.inTime || !!todayAttendance?.outTime}
+                                    className={cn(
+                                        "h-28 w-28 rounded-full flex flex-col items-center justify-center gap-1.5 transition-all active:scale-95 relative group/btn",
+                                        todayAttendance?.outTime
+                                            ? "bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-2xl ring-4 ring-purple-50"
+                                            : todayAttendance?.inTime
+                                                ? "bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-2xl hover:brightness-110"
+                                                : "bg-slate-50 text-slate-300 border-2 border-dashed border-slate-200 shadow-sm"
+                                    )}
+                                >
+                                    <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                                    <Clock className="h-7 w-7 mb-0.5" />
+                                    <span className="text-sm font-bold">Out Time</span>
+                                    {todayAttendance?.outTime && (
+                                        <span className="text-[11px] font-medium bg-white/20 px-2 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.outTime)}</span>
+                                    )}
+                                </button>
+                                <div className="flex flex-col items-center gap-1">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">Worked</span>
+                                    <span className="text-xs font-bold text-slate-700">
+                                        {calculateWorkHours(todayAttendance?.inTime, todayAttendance?.outTime) || 'Waiting...'}
+                                    </span>
+                                </div>
                             </div>
-                        </Card>
-                    </div>
+                        </div>
+                    </Card>
 
                     {/* Summary Section */}
                     <div>

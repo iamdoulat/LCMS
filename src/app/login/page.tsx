@@ -76,6 +76,28 @@ export default function LoginPage() {
     return `${browser} on ${os} (${type})`;
   };
 
+  // Helper: Check if user role is exempt from device security
+  const isExemptFromDeviceSecurity = (role: string[] | string | undefined): boolean => {
+    const exemptRoles = [
+      'Super Admin',
+      'Admin',
+      'HR',
+      'Commercial',
+      'Service',
+      'DemoManager',
+      'Accounts',
+      'Viewer'
+    ];
+
+    if (!role) return false;
+
+    // Handle both string and array of roles
+    const roles = Array.isArray(role) ? role : [role];
+
+    // User is exempt if ANY of their roles is in the exempt list
+    return roles.some(r => exemptRoles.includes(r));
+  };
+
   // Verify Device Function
   const verifyDevice = async (currentUser: any) => {
     setIsCheckingDevice(true);
@@ -90,6 +112,13 @@ export default function LoginPage() {
       // We'll check the fetched 'userRole' from context.
       const isEmployee = userRole?.includes('Employee');
       const targetPath = isEmployee ? '/mobile/dashboard' : '/dashboard';
+
+      // Check if user is exempt from device security
+      if (isExemptFromDeviceSecurity(userRole)) {
+        // console.log("User is exempt from device security.");
+        router.push(targetPath);
+        return;
+      }
 
       const userDocRef = doc(firestore, 'users', currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);

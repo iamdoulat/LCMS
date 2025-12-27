@@ -5,12 +5,14 @@ import { X, MapPin, Loader2, CheckCircle2, AlertCircle, Navigation, RefreshCw } 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
-import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
 import Swal from 'sweetalert2';
 import dynamic from 'next/dynamic';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 interface MobileAttendanceModalProps {
     isOpen: boolean;
@@ -26,8 +28,9 @@ interface LocationData {
 }
 
 // Use dynamic import for LocationMap to avoid SSR issues
-const LocationMap = dynamic(() => import('@/components/ui/LocationMap'), {
-    loading: () => <div className="h-[300px] w-full bg-slate-100 animate-pulse rounded-md" />,
+// Use dynamic import for GeofenceMap to avoid SSR issues
+const GeofenceMap = dynamic(() => import('@/components/ui/GeofenceMap'), {
+    loading: () => <div className="h-[250px] w-full bg-slate-100 animate-pulse rounded-md" />,
     ssr: false
 });
 
@@ -39,8 +42,120 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
     const [error, setError] = useState<string | null>(null);
     const [address, setAddress] = useState<string | null>(null);
     const [remarks, setRemarks] = useState('');
-    const [geofenceRadius, setGeofenceRadius] = useState<number>(100);
-    const [insideGeofence, setInsideGeofence] = useState<boolean>(true); // Default true until checked
+    const [employeeBranch, setEmployeeBranch] = useState<any>(null);
+    const [branchHotspots, setBranchHotspots] = useState<any[]>([]);
+    const [isInsideGeofence, setIsInsideGeofence] = useState<boolean>(true);
+    const [distanceFromBranch, setDistanceFromBranch] = useState<number>(0);
+    const [isLoadingGeodata, setIsLoadingGeodata] = useState(false);
+
+    // Fetch branch and hotspots
+    React.useEffect(() => {
+        const fetchGeodata = async () => {
+            if (!user || !isOpen) return;
+            setIsLoadingGeodata(true);
+            try {
+                const empDoc = await getDoc(doc(firestore, 'employees', user.uid));
+                if (empDoc.exists()) {
+                    const empData = empDoc.data();
+                    if (empData.branchId) {
+                        const branchDoc = await getDoc(doc(firestore, 'branches', empData.branchId));
+                        if (branchDoc.exists()) {
+                            setEmployeeBranch({ id: branchDoc.id, ...branchDoc.data() });
+                        }
+                    } else if (empData.branch) {
+                        // Fallback to name match if branchId is missing
+                        const branchQuery = query(collection(firestore, 'branches'), where('name', '==', empData.branch));
+                        const branchSnap = await getDocs(branchQuery);
+                        if (!branchSnap.empty) {
+                            setEmployeeBranch({ id: branchSnap.docs[0].id, ...branchSnap.docs[0].data() });
+                        }
+                    }
+
+                    // Fetch hotspots for this branch
+                    const hotspotsQuery = query(
+                        collection(firestore, 'hotspots'),
+                        where('branchId', '==', empData.branchId || '')
+                    );
+                    const hotspotsSnap = await getDocs(hotspotsQuery);
+                    setBranchHotspots(hotspotsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                }
+            } catch (err) {
+                console.error("Error fetching geodata:", err);
+            } finally {
+                setIsLoadingGeodata(false);
+            }
+        };
+
+        fetchGeodata();
+    }, [isOpen, user]);
+
+    // Update geofence status whenever location or geodata changes
+    React.useEffect(() => {
+        if (location && (employeeBranch || branchHotspots.length > 0)) {
+            validateGeofence();
+        }
+    }, [location, employeeBranch, branchHotspots]);
+
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371e3; // metres
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
+
+    const validateGeofence = () => {
+        if (!location) return;
+
+        let inside = false;
+        let minDistance = Infinity;
+
+        // Check branch
+        if (employeeBranch && employeeBranch.latitude && employeeBranch.longitude) {
+            const dist = calculateDistance(
+                location.latitude,
+                location.longitude,
+                Number(employeeBranch.latitude),
+                Number(employeeBranch.longitude)
+            );
+            minDistance = dist;
+            if (dist <= (employeeBranch.allowRadius || 100)) {
+                inside = true;
+            }
+        }
+
+        // Check hotspots
+        branchHotspots.forEach(hotspot => {
+            if (hotspot.latitude && hotspot.longitude) {
+                const dist = calculateDistance(
+                    location.latitude,
+                    location.longitude,
+                    Number(hotspot.latitude),
+                    Number(hotspot.longitude)
+                );
+                if (dist < minDistance) minDistance = dist;
+                if (dist <= (hotspot.allowRadius || 100)) {
+                    inside = true;
+                }
+            }
+        });
+
+        setIsInsideGeofence(inside);
+        setDistanceFromBranch(minDistance);
+    };
+
+    // Auto capture location on mount
+    React.useEffect(() => {
+        if (isOpen && !location && !isCapturing) {
+            captureLocation();
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -76,19 +191,14 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
             let errorMessage = 'Unable to capture location. Please enable location services and try again.';
 
             if (err.code === 1) {
-                errorMessage = 'Location access denied. Please enable location permissions in your device settings.';
+                errorMessage = 'Location access denied. Please enable location permissions.';
             } else if (err.code === 2) {
-                errorMessage = 'Location unavailable. Please turn on your phone\'s location services.';
+                errorMessage = 'Location unavailable.';
             } else if (err.code === 3) {
-                errorMessage = 'Location request timed out. Please try again.';
+                errorMessage = 'Location request timed out.';
             }
 
-            await Swal.fire({
-                title: 'Location Error',
-                text: errorMessage,
-                icon: 'error',
-                confirmButtonText: 'OK'
-            });
+            setError(errorMessage);
         } finally {
             setIsCapturing(false);
         }
@@ -122,47 +232,13 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     throw new Error('You have already checked in for today');
                 }
 
-                // Fetch geofence settings
-                let insideGeofence = true;
-                let needsApproval = false;
-
-                try {
-                    const geofenceDoc = await getDoc(doc(firestore, 'hrm_settings', 'geofence'));
-                    if (geofenceDoc.exists()) {
-                        const geofenceData = geofenceDoc.data();
-                        const centerLat = geofenceData.latitude;
-                        const centerLng = geofenceData.longitude;
-                        const radius = geofenceData.radius || 100; // meters
-                        setGeofenceRadius(radius);
-
-                        // Calculate distance using Haversine formula
-                        const R = 6371e3;
-                        const φ1 = (centerLat * Math.PI) / 180;
-                        const φ2 = (location.latitude * Math.PI) / 180;
-                        const Δφ = ((location.latitude - centerLat) * Math.PI) / 180;
-                        const Δλ = ((location.longitude - centerLng) * Math.PI) / 180;
-
-                        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                            Math.cos(φ1) * Math.cos(φ2) *
-                            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-                        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                        const distance = R * c;
-
-                        insideGeofence = distance <= radius;
-                        setInsideGeofence(insideGeofence);
-                        needsApproval = !insideGeofence;
-                    }
-                } catch (geoErr) {
-                    console.error('Geofence check error:', geoErr);
-                }
+                // Geofence Validation (already calculated by validateGeofence and local state)
+                let status: 'Approved' | 'Pending' = isInsideGeofence ? 'Approved' : 'Pending';
 
                 // Determine attendance flag
                 let flag: 'P' | 'D' = 'P';
                 if (currentTime > '09:30') {
                     flag = 'D';
-                }
-                if (needsApproval) {
-                    flag = 'P'; // Temporary
                 }
 
                 // Save attendance record
@@ -180,8 +256,9 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     },
                     inTimeAddress: address || '',
                     inTimeRemarks: remarks || '',
-                    insideGeofence: insideGeofence,
-                    needsApproval: needsApproval,
+                    isInsideGeofence: isInsideGeofence,
+                    distanceFromBranch: distanceFromBranch,
+                    approvalStatus: status,
                     createdAt: Timestamp.now(),
                     updatedAt: Timestamp.now()
                 };
@@ -190,9 +267,9 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
 
                 await Swal.fire({
                     title: 'Check-In Successful!',
-                    text: insideGeofence
+                    text: isInsideGeofence
                         ? `Check-in time: ${currentTime}`
-                        : 'Check-in recorded. Location outside geofence - pending HR approval.',
+                        : 'Check-in recorded. Outside geofence - pending approval.',
                     icon: 'success',
                     timer: 2000,
                     showConfirmButton: false
@@ -219,6 +296,8 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     },
                     outTimeAddress: address || '',
                     outTimeRemarks: remarks || '',
+                    outTimeIsInsideGeofence: isInsideGeofence,
+                    outTimeDistanceFromBranch: distanceFromBranch,
                     updatedAt: Timestamp.now()
                 }, { merge: true });
 
@@ -272,25 +351,26 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                         {location ? (
                             <div className="space-y-3">
                                 <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100">
-                                    <div className="relative rounded-lg overflow-hidden">
-                                        <LocationMap
-                                            latitude={location.latitude}
-                                            longitude={location.longitude}
-                                            radius={geofenceRadius}
-                                            onLocationSelect={(lat, lng) => {
-                                                // Optional: Allow manual adjustment if needed
-                                            }}
-                                            onAddressFound={(addr) => setAddress(addr)}
+                                    <div className="relative rounded-lg overflow-hidden h-[250px]">
+                                        <GeofenceMap
+                                            userLocation={location ? { lat: location.latitude, lng: location.longitude, address: address || '' } : null}
+                                            branchLocation={employeeBranch ? {
+                                                lat: Number(employeeBranch.latitude),
+                                                lng: Number(employeeBranch.longitude),
+                                                radius: Number(employeeBranch.allowRadius || 100),
+                                                name: employeeBranch.name,
+                                                address: employeeBranch.address
+                                            } : null}
+                                            hotspots={branchHotspots.map(h => ({
+                                                lat: Number(h.latitude),
+                                                lng: Number(h.longitude),
+                                                radius: Number(h.allowRadius || 100),
+                                                name: h.name,
+                                                address: h.address
+                                            }))}
+                                            onRefresh={captureLocation}
+                                            isLoading={isCapturing}
                                         />
-
-                                        <Button
-                                            size="sm"
-                                            variant="secondary"
-                                            className="absolute top-2 right-2 bg-white/90 hover:bg-white shadow-sm h-8 w-8 p-0"
-                                            onClick={captureLocation}
-                                        >
-                                            <RefreshCw className={`h-4 w-4 ${isCapturing ? 'animate-spin' : ''}`} />
-                                        </Button>
                                     </div>
 
                                     {/* Address Display */}
@@ -298,7 +378,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                                         <div className="flex items-start gap-2">
                                             <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
                                             <p className="text-sm text-slate-600 break-words leading-snug">
-                                                {address || 'Fetching address...'}
+                                                {address || 'Location captured'}
                                             </p>
                                         </div>
                                     </div>
@@ -308,7 +388,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
                                         <p className="text-xs text-slate-500 mb-1">Status</p>
-                                        {insideGeofence ? (
+                                        {isInsideGeofence ? (
                                             <div className="flex items-center gap-1.5 text-emerald-600 font-medium text-sm">
                                                 <div className="h-2 w-2 rounded-full bg-emerald-500" />
                                                 Inside Office
@@ -316,7 +396,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                                         ) : (
                                             <div className="flex items-center gap-1.5 text-amber-600 font-medium text-sm">
                                                 <div className="h-2 w-2 rounded-full bg-amber-500" />
-                                                Outside
+                                                Outside ({Math.round(distanceFromBranch)}m)
                                             </div>
                                         )}
                                     </div>
