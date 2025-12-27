@@ -346,7 +346,7 @@ export default function MobileDashboardPage() {
                     {/* Attendance Cards */}
                     <div className="grid grid-cols-2 gap-4">
                         {/* In Time Card */}
-                        <Card className="p-5 rounded-3xl border-none shadow-xl bg-white relative overflow-hidden group/card flex flex-col items-center justify-center min-h-[180px]">
+                        <Card className="p-5 rounded-3xl border border-slate-100 shadow-xl bg-white relative overflow-hidden group/card flex flex-col items-center justify-center min-h-[180px]">
                             <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover/card:scale-110 duration-700" />
 
                             <div className="flex flex-col items-center gap-4 relative z-10 w-full">
@@ -380,7 +380,7 @@ export default function MobileDashboardPage() {
                         </Card>
 
                         {/* Out Time Card */}
-                        <Card className="p-5 rounded-3xl border-none shadow-xl bg-white relative overflow-hidden group/card flex flex-col items-center justify-center min-h-[180px]">
+                        <Card className="p-5 rounded-3xl border border-slate-100 shadow-xl bg-white relative overflow-hidden group/card flex flex-col items-center justify-center min-h-[180px]">
                             <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover/card:scale-110 duration-700" />
 
                             <div className="flex flex-col items-center gap-4 relative z-10 w-full">
@@ -435,7 +435,7 @@ export default function MobileDashboardPage() {
                             {visibleItems.map((item) => {
                                 const Icon = item.icon;
                                 return (
-                                    <div key={item.id} className={`flex-shrink-0 w-[130px] ${item.bgColor} p-3 rounded-xl flex flex-col justify-between h-36 relative overflow-hidden`}>
+                                    <div key={item.id} className={`flex-shrink-0 w-[130px] ${item.bgColor} p-3 rounded-xl flex flex-col justify-between h-36 relative overflow-hidden shadow-sm border border-slate-100`}>
                                         <div className={`bg-white rounded-lg p-2 w-12 h-12 flex items-center justify-center shadow-sm mb-2 ${item.textColor}`}>
                                             <Icon className="h-6 w-6" />
                                         </div>

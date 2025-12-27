@@ -275,8 +275,8 @@ export default function MobileCheckInOutPage() {
     return (
         <div className="flex flex-col h-screen bg-slate-50">
             {/* Custom Header matching image */}
-            <div className="bg-[#0a1e60] text-white pt-safe-top pb-4 px-4 sticky top-0 z-20">
-                <div className="flex items-center justify-between h-14">
+            <div className="bg-[#0a1e60] text-white pt-safe-top pb-[1px] sticky top-0 z-20">
+                <div className="flex items-center justify-between h-6">
                     <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-white hover:bg-white/10 -ml-2">
                         <ArrowLeft className="h-6 w-6" />
                     </Button>
@@ -297,7 +297,7 @@ export default function MobileCheckInOutPage() {
             <div className="bg-white shadow-sm z-10 absolute top-[88px] left-0 right-0 hidden">
                 {/* Just hiding previous attempt */}
             </div>
-            <div className="bg-white px-2 py-3 shadow-sm sticky top-[72px] z-10 flex justify-around">
+            <div className="bg-white px-2 py-3 shadow-sm sticky top-[27px] z-10 flex justify-around">
                 {['Check Ins', 'Completed', 'Supervision'].map((tab) => (
                     <button
                         key={tab}
@@ -317,7 +317,7 @@ export default function MobileCheckInOutPage() {
 
             {/* Floating Action Button */}
             <Button
-                className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95"
+                className="fixed bottom-[79px] right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95"
                 onClick={handleAddClick}
             >
                 <Plus className="h-8 w-8 text-white" />
