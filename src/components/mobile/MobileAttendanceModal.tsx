@@ -237,7 +237,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
 
                 // Determine attendance flag
                 let flag: 'P' | 'D' = 'P';
-                if (currentTime > '09:30') {
+                if (currentTime > '09:10') {
                     flag = 'D';
                 }
 

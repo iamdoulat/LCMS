@@ -9,8 +9,18 @@ import {
     CheckCircle,
     MapPin,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    LucideIcon
 } from 'lucide-react';
+import Link from 'next/link';
+
+interface LeaveAction {
+    label: string;
+    icon: LucideIcon;
+    color: string;
+    iconColor: string;
+    href?: string;
+}
 
 export default function MobileLeavePage() {
     const [currentMonth, setCurrentMonth] = useState(new Date(2025, 11, 1)); // December 2025
@@ -71,9 +81,9 @@ export default function MobileLeavePage() {
         calendarDays.push({ day: i, isCurrentMonth: false });
     }
 
-    const leaveActions = [
+    const leaveActions: LeaveAction[] = [
         { label: 'Leave Calendar', icon: CalendarIcon, color: 'bg-blue-100', iconColor: 'text-blue-600' },
-        { label: 'My Leave Balance', icon: Users, color: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'My Leave Balance', icon: Users, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/leave/balance' },
         { label: 'My Leave Applications', icon: FileText, color: 'bg-blue-100', iconColor: 'text-blue-600' },
         { label: 'Visit', icon: MapPin, color: 'bg-blue-100', iconColor: 'text-blue-600' },
         { label: 'Sub-Ordinate', icon: Users, color: 'bg-blue-100', iconColor: 'text-blue-600' },
@@ -202,17 +212,28 @@ export default function MobileLeavePage() {
                         <div className="grid grid-cols-3 gap-4">
                             {leaveActions.map((action, index) => {
                                 const Icon = action.icon;
-                                return (
-                                    <button
-                                        key={index}
-                                        className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] hover:shadow-md transition-shadow"
-                                    >
+                                const buttonContent = (
+                                    <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] hover:shadow-md transition-shadow h-full w-full">
                                         <div className={`${action.color} p-4 rounded-full ${action.iconColor} h-14 w-14 flex items-center justify-center`}>
                                             <Icon className="h-7 w-7" />
                                         </div>
                                         <span className="text-sm font-medium text-slate-700 text-center leading-tight">
                                             {action.label}
                                         </span>
+                                    </div>
+                                );
+
+                                if (action.href) {
+                                    return (
+                                        <Link key={index} href={action.href} className="active:scale-95 transition-transform">
+                                            {buttonContent}
+                                        </Link>
+                                    );
+                                }
+
+                                return (
+                                    <button key={index} className="active:scale-95 transition-transform text-left">
+                                        {buttonContent}
                                     </button>
                                 );
                             })}

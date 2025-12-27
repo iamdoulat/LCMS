@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
-import { format, startOfMonth, endOfMonth, parse } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min } from 'date-fns';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
@@ -41,7 +41,7 @@ export default function MobileDashboardPage() {
     };
 
     const getAttendanceStatus = (flag?: string, approvalStatus?: string) => {
-        if (approvalStatus === 'Pending') return 'Waiting For Approval';
+        if (approvalStatus === 'Pending') return 'Waiting For Remote Approval';
         if (!flag) return null;
         const statusMap: Record<string, string> = {
             'P': 'Present',
@@ -170,11 +170,23 @@ export default function MobileDashboardPage() {
             where('status', '==', 'Approved')
         );
         const unsubLeave = onSnapshot(qLeave, (snapshot) => {
+            const startOfCurrentYear = startOfYear(new Date());
+            const endOfCurrentYear = endOfYear(new Date());
             let totalDays = 0;
+
             snapshot.docs.forEach(doc => {
                 const data = doc.data();
-                // Simple day count calculation - refinement needed for exact business logic if complex
-                if (data.totalDays) totalDays += Number(data.totalDays);
+                if (data.fromDate && data.toDate) {
+                    const leaveStart = parseISO(data.fromDate);
+                    const leaveEnd = parseISO(data.toDate);
+
+                    const overlapStart = max([leaveStart, startOfCurrentYear]);
+                    const overlapEnd = min([leaveEnd, endOfCurrentYear]);
+
+                    if (overlapEnd >= overlapStart) {
+                        totalDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
+                    }
+                }
             });
             setStats(prev => ({ ...prev, leaveSpent: totalDays }));
         });
@@ -434,8 +446,8 @@ export default function MobileDashboardPage() {
                         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
                             {visibleItems.map((item) => {
                                 const Icon = item.icon;
-                                return (
-                                    <div key={item.id} className={`flex-shrink-0 w-[130px] ${item.bgColor} p-3 rounded-xl flex flex-col justify-between h-36 relative overflow-hidden shadow-sm border border-slate-100`}>
+                                const content = (
+                                    <div className={`flex-shrink-0 w-[130px] ${item.bgColor} p-3 rounded-xl flex flex-col justify-between h-36 relative overflow-hidden shadow-sm border border-slate-100 h-full`}>
                                         <div className={`bg-white rounded-lg p-2 w-12 h-12 flex items-center justify-center shadow-sm mb-2 ${item.textColor}`}>
                                             <Icon className="h-6 w-6" />
                                         </div>
@@ -444,6 +456,20 @@ export default function MobileDashboardPage() {
                                             <div className="text-xs text-slate-500">{item.label}</div>
                                             <div className="text-xs text-slate-500">{item.subLabel}</div>
                                         </div>
+                                    </div>
+                                );
+
+                                if (item.id === 'leave') {
+                                    return (
+                                        <Link key={item.id} href="/mobile/leave/balance" className="flex-shrink-0 transition-transform active:scale-95">
+                                            {content}
+                                        </Link>
+                                    );
+                                }
+
+                                return (
+                                    <div key={item.id} className="flex-shrink-0">
+                                        {content}
                                     </div>
                                 );
                             })}

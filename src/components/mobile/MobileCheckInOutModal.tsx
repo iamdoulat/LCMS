@@ -197,6 +197,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                                 onChange={(e) => setCompanyName(e.target.value)}
                                 placeholder="Enter Client/Company Name"
                                 className="bg-white"
+                                disabled={checkInOutType === 'Check Out'}
                             />
                         </div>
 
