@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, subDays, parseISO } from 'date-fns';
 import { ChevronLeft, Calendar, Check, X, Loader2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { approveReconciliation, rejectReconciliation } from '@/lib/firebase/reconciliation'; // Assume similar for breaktime or generic
 import Swal from 'sweetalert2';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { Button } from '@/components/ui/button';
 
 // Define Types locally if not strictly exported or for convenience
@@ -40,63 +41,57 @@ export default function ReconApprovalPage() {
     const [loading, setLoading] = useState(true);
     const [filterDays, setFilterDays] = useState<30 | 90>(30);
 
+    const fetchRequests = async () => {
+        if (!user || !isSupervisor || supervisedEmployees.length === 0) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
+            const endDate = new Date();
+            const startDate = subDays(endDate, filterDays);
+            const startDateStr = format(startDate, 'yyyy-MM-dd');
+
+            const employeeIds = supervisedEmployees.map(e => e.id);
+            const fetchedRequests: ReconRequest[] = [];
+
+            // Chunk queries by employeeId
+            const chunks = [];
+            for (let i = 0; i < employeeIds.length; i += 10) {
+                chunks.push(employeeIds.slice(i, i + 10));
+            }
+
+            for (const chunk of chunks) {
+                const q = query(
+                    collection(firestore, collectionName),
+                    where('employeeId', 'in', chunk),
+                    where('attendanceDate', '>=', startDateStr)
+                );
+                const snapshot = await getDocs(q);
+                snapshot.forEach(doc => {
+                    fetchedRequests.push({ id: doc.id, ...doc.data() } as ReconRequest);
+                });
+            }
+
+            // Sort client side
+            fetchedRequests.sort((a, b) => b.attendanceDate.localeCompare(a.attendanceDate));
+
+            setRequests(fetchedRequests);
+
+        } catch (error) {
+            console.error("Error fetching recon requests:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchRequests = async () => {
-            if (!user || !isSupervisor || supervisedEmployees.length === 0) {
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
-            try {
-                const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
-                const endDate = new Date();
-                const startDate = subDays(endDate, filterDays);
-                const startIso = startDate.toISOString(); // Filter by appliedAt or attendanceDate? 
-                // attendanceDate is string YYYY-MM-DD. 
-                // Let's filter by attendanceDate >= startDate formatted string?
-                const startDateStr = format(startDate, 'yyyy-MM-dd');
-
-                const employeeIds = supervisedEmployees.map(e => e.id);
-                const fetchedRequests: ReconRequest[] = [];
-
-                // Chunk queries by employeeId
-                const chunks = [];
-                for (let i = 0; i < employeeIds.length; i += 10) {
-                    chunks.push(employeeIds.slice(i, i + 10));
-                }
-
-                // Fetch Pending requests mostly? Or all history? 
-                // "Recon. Approval" implies showing Pending ones mainly, but Ref Image shows "Approved" and 30 days filter.
-                // So likely History as well.
-
-                for (const chunk of chunks) {
-                    const q = query(
-                        collection(firestore, collectionName),
-                        where('employeeId', 'in', chunk),
-                        where('attendanceDate', '>=', startDateStr)
-                        // orderBy('attendanceDate', 'desc') // Requires index
-                    );
-                    const snapshot = await getDocs(q);
-                    snapshot.forEach(doc => {
-                        fetchedRequests.push({ id: doc.id, ...doc.data() } as ReconRequest);
-                    });
-                }
-
-                // Sort client side
-                fetchedRequests.sort((a, b) => b.attendanceDate.localeCompare(a.attendanceDate));
-
-                setRequests(fetchedRequests);
-
-            } catch (error) {
-                console.error("Error fetching recon requests:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchRequests();
     }, [user, isSupervisor, supervisedEmployees, activeTab, filterDays]);
+
+    const containerRef = usePullToRefresh(fetchRequests);
 
 
     const handleAction = async (request: ReconRequest, action: 'approve' | 'reject') => {
@@ -120,8 +115,6 @@ export default function ReconApprovalPage() {
                     // Need 'approveBreakReconciliation'? 
                     // Or just update status?
                     // Let's just update pending status to approved/rejected for now if function missing.
-                    const { updateDoc, doc, serverTimestamp } = await import('firebase/firestore');
-                    const { firestore } = await import('@/lib/firebase/config');
                     await updateDoc(doc(firestore, 'break_reconciliation', request.id), {
                         status: 'approved',
                         reviewedBy: currentEmployeeId,
@@ -129,8 +122,6 @@ export default function ReconApprovalPage() {
                     });
                     // NOTE: Should also update actual 'breaks' collection if approved!
                 } else {
-                    const { updateDoc, doc, serverTimestamp } = await import('firebase/firestore');
-                    const { firestore } = await import('@/lib/firebase/config');
                     await updateDoc(doc(firestore, 'break_reconciliation', request.id), {
                         status: 'rejected',
                         reviewedBy: currentEmployeeId,
@@ -191,18 +182,18 @@ export default function ReconApprovalPage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 py-6">
+                <div className="flex items-center px-4 py-3.5">
                     <button
                         onClick={() => router.back()}
                         className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2">Recon. Approval</h1>
+                    <h1 className="text-base font-bold text-white ml-2">Recon. Approval</h1>
                 </div>
             </div>
 
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
+            <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
                 {/* Tabs & Filter */}
                 <div className="bg-white px-6 pt-6 pb-2 rounded-t-[2rem]">
                     <div className="flex mb-4">

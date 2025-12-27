@@ -10,6 +10,7 @@ import { format, parseISO } from 'date-fns';
 import { Edit2, Clock, Coffee, AlertCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 interface AttendanceRecord {
     id: string;
@@ -102,6 +103,14 @@ export default function MyAttendancePage() {
         }
     }, [currentEmployeeId, activeTab]);
 
+    const refreshData = async () => {
+        if (currentEmployeeId) {
+            await Promise.all([fetchAttendance(), fetchBreaks()]);
+        }
+    };
+
+    const containerRef = usePullToRefresh(refreshData);
+
     const formatTime = (isoString?: string) => {
         if (!isoString) return '-';
         try {
@@ -138,18 +147,18 @@ export default function MyAttendancePage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 py-6">
+                <div className="flex items-center px-4 py-3.5">
                     <button
                         onClick={() => router.back()}
                         className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2">My Attendance</h1>
+                    <h1 className="text-base font-bold text-white ml-2">My Attendance</h1>
                 </div>
             </div>
 
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
+            <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
                 {/* Tabs */}
                 <div className="bg-white px-6 pt-6 pb-2 rounded-t-[2rem] shadow-sm z-10">
                     <div className="flex items-center justify-between p-1 bg-slate-50 rounded-full mb-4">

@@ -10,6 +10,7 @@ import { ChevronLeft, MapPin, ArrowRight, Loader2, Calendar, Check, X, ArrowLeft
 import { useRouter } from 'next/navigation';
 import { MultipleCheckInOutRecord } from '@/types/checkInOut';
 import { Button } from '@/components/ui/button';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { updateCheckInOutStatus } from '@/lib/firebase/checkInOut';
 import Swal from 'sweetalert2';
@@ -35,49 +36,62 @@ export default function RemoteAttendanceApprovalPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [processingId, setProcessingId] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchRemoteAttendance = async () => {
-            if (!user || !isSupervisor || supervisedEmployees.length === 0) {
-                setLoading(false);
-                return;
+    const fetchRemoteAttendance = async () => {
+        if (!user || !isSupervisor || supervisedEmployees.length === 0) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const endDate = new Date();
+            const startDate = subDays(endDate, filterDays);
+
+            const employeeIds = supervisedEmployees.map(e => e.id);
+            const fetchedRecords: MultipleCheckInOutRecord[] = [];
+
+            const startIso = startDate.toISOString();
+
+            // Firebase 'in' query has a limit of 10, so we need to chunk employeeIds
+            const chunks = [];
+            for (let i = 0; i < employeeIds.length; i += 10) {
+                chunks.push(employeeIds.slice(i, i + 10));
             }
 
-            setLoading(true);
-            try {
-                const endDate = new Date();
-                const startDate = subDays(endDate, filterDays);
-
-                const employeeIds = supervisedEmployees.map(e => e.id);
-                const fetchedRecords: MultipleCheckInOutRecord[] = [];
-
-                const startIso = startDate.toISOString();
-
+            for (const chunk of chunks) {
                 const q = query(
                     collection(firestore, 'multiple_check_inout'),
+                    where('employeeId', 'in', chunk), // Filter by supervised employees
                     where('timestamp', '>=', startIso),
                     orderBy('timestamp', 'desc')
                 );
-
                 const snapshot = await getDocs(q);
 
                 snapshot.forEach(doc => {
                     const data = doc.data() as MultipleCheckInOutRecord;
-                    if (employeeIds.includes(data.employeeId)) {
-                        fetchedRecords.push({ ...data, id: doc.id });
-                    }
+                    // Ensure the record is for a supervised employee and has a pending status
+                    // The 'in' query already handles employeeId, but we might want to filter status here if not in query
+                    fetchedRecords.push({ ...data, id: doc.id });
                 });
-
-                setRecords(fetchedRecords);
-
-            } catch (error) {
-                console.error("Error fetching remote attendance:", error);
-            } finally {
-                setLoading(false);
             }
-        };
 
+            // Further filter if needed, or sort if not already sorted by timestamp in query
+            fetchedRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+            setRecords(fetchedRecords);
+
+        } catch (error) {
+            console.error("Error fetching remote attendance:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchRemoteAttendance();
     }, [user, isSupervisor, supervisedEmployees, filterDays]);
+
+    const containerRef = usePullToRefresh(fetchRemoteAttendance);
 
 
     const handleToggleFilter = () => {
@@ -133,18 +147,18 @@ export default function RemoteAttendanceApprovalPage() {
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 py-6">
+                <div className="flex items-center px-4 py-3.5">
                     <button
                         onClick={() => router.back()}
                         className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2">Remote Att. Approval</h1>
+                    <h1 className="text-base font-bold text-white ml-2">Remote Att. Approval</h1>
                 </div>
             </div>
 
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
+            <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
                 <div className="p-6 pb-2">
                     <div className="flex justify-end">
                         <button

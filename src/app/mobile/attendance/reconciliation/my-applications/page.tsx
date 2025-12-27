@@ -10,6 +10,7 @@ import { format, parseISO } from 'date-fns';
 import { ChevronLeft, Calendar, Clock, X, Plus, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 interface ReconRequest {
     id: string;
@@ -36,47 +37,49 @@ export default function MyReconApplicationsPage() {
     const [loading, setLoading] = useState(true);
     const [selectedRequest, setSelectedRequest] = useState<ReconRequest | null>(null);
 
+    const fetchRequests = async () => {
+        if (!currentEmployeeId) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
+
+            // Fetch recent requests
+            // orderBy might need index. If fails, do client sort.
+            // Let's try client sort first to be safe as we did before.
+
+            const q = query(
+                collection(firestore, collectionName),
+                where('employeeId', '==', currentEmployeeId)
+                // orderBy('createdAt', 'desc') 
+            );
+
+            const snapshot = await getDocs(q);
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReconRequest));
+
+            // Client side sort by date/created
+            data.sort((a, b) => {
+                const dateA = a.attendanceDate || '';
+                const dateB = b.attendanceDate || '';
+                return dateB.localeCompare(dateA); // Desc
+            });
+
+            setRequests(data);
+        } catch (error) {
+            console.error("Error fetching requests:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchRequests = async () => {
-            if (!currentEmployeeId) {
-                setLoading(false);
-                return;
-            }
-
-            setLoading(true);
-            try {
-                const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
-
-                // Fetch recent requests
-                // orderBy might need index. If fails, do client sort.
-                // Let's try client sort first to be safe as we did before.
-
-                const q = query(
-                    collection(firestore, collectionName),
-                    where('employeeId', '==', currentEmployeeId)
-                    // orderBy('createdAt', 'desc') 
-                );
-
-                const snapshot = await getDocs(q);
-                const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReconRequest));
-
-                // Client side sort by date/created
-                data.sort((a, b) => {
-                    const dateA = a.attendanceDate || '';
-                    const dateB = b.attendanceDate || '';
-                    return dateB.localeCompare(dateA); // Desc
-                });
-
-                setRequests(data);
-            } catch (error) {
-                console.error("Error fetching requests:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchRequests();
     }, [currentEmployeeId, activeTab]);
+
+    const containerRef = usePullToRefresh(fetchRequests);
 
     const formatDate = (dateStr?: string) => {
         if (!dateStr) return '-';
@@ -118,14 +121,14 @@ export default function MyReconApplicationsPage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 py-6">
+                <div className="flex items-center px-4 py-3.5">
                     <button
                         onClick={() => router.back()}
                         className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2 flex-1">Recon. Application</h1>
+                    <h1 className="text-base font-bold text-white ml-2 flex-1">Recon. Application</h1>
 
                     {/* Add New Button */}
                     <button
@@ -137,7 +140,7 @@ export default function MyReconApplicationsPage() {
                 </div>
             </div>
 
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
+            <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
                 {/* Tabs */}
                 <div className="flex px-6 pt-6 pb-2">
                     <button
