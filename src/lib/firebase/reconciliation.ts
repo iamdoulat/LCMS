@@ -126,12 +126,46 @@ export const approveReconciliation = async (
             };
 
             if (reconciliation.requestedInTime) {
-                attendanceUpdates.inTime = reconciliation.requestedInTime;
+                // Convert ISO to hh:mm A format if needed, or ensure it is in that format
+                // The requestedInTime from reconciliation creation is usually ISO string
+                try {
+                    const d = new Date(reconciliation.requestedInTime);
+                    if (!isNaN(d.getTime())) {
+                        // Format to "hh:mm AM/PM"
+                        let hours = d.getHours();
+                        const minutes = d.getMinutes().toString().padStart(2, '0');
+                        const ampm = hours >= 12 ? 'PM' : 'AM';
+                        hours = hours % 12;
+                        hours = hours ? hours : 12; // the hour '0' should be '12'
+                        attendanceUpdates.inTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                    } else {
+                        // Fallback or keep as is if not parseable
+                        attendanceUpdates.inTime = reconciliation.requestedInTime;
+                    }
+                } catch (e) {
+                    attendanceUpdates.inTime = reconciliation.requestedInTime;
+                }
+
                 // Auto-update flag based on new in-time (P if ≤09:10 AM, D if >09:10 AM)
-                attendanceUpdates.flag = determineAttendanceFlag(reconciliation.requestedInTime);
+                attendanceUpdates.flag = determineAttendanceFlag(attendanceUpdates.inTime);
             }
             if (reconciliation.requestedOutTime) {
-                attendanceUpdates.outTime = reconciliation.requestedOutTime;
+                try {
+                    const d = new Date(reconciliation.requestedOutTime);
+                    if (!isNaN(d.getTime())) {
+                        // Format to "hh:mm AM/PM"
+                        let hours = d.getHours();
+                        const minutes = d.getMinutes().toString().padStart(2, '0');
+                        const ampm = hours >= 12 ? 'PM' : 'AM';
+                        hours = hours % 12;
+                        hours = hours ? hours : 12; // the hour '0' should be '12'
+                        attendanceUpdates.outTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                    } else {
+                        attendanceUpdates.outTime = reconciliation.requestedOutTime;
+                    }
+                } catch (e) {
+                    attendanceUpdates.outTime = reconciliation.requestedOutTime;
+                }
             }
             if (reconciliation.inTimeRemarks) {
                 attendanceUpdates.inTimeRemarks = reconciliation.inTimeRemarks;
