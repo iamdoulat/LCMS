@@ -85,7 +85,7 @@ export default function MobileLeavePage() {
         { label: 'Leave Calendar', icon: CalendarIcon, color: 'bg-blue-100', iconColor: 'text-blue-600' },
         { label: 'My Leave Balance', icon: Users, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/leave/balance' },
         { label: 'My Leave Applications', icon: FileText, color: 'bg-blue-100', iconColor: 'text-blue-600' },
-        { label: 'Visit', icon: MapPin, color: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'Visit', icon: MapPin, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/visit' },
         { label: 'Sub-Ordinate', icon: Users, color: 'bg-blue-100', iconColor: 'text-blue-600' },
         { label: 'Approve', icon: CheckCircle, color: 'bg-blue-100', iconColor: 'text-blue-600' },
     ];

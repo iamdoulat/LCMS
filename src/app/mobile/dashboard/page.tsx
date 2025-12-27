@@ -9,7 +9,7 @@ import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Set
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
-import { doc, getDoc, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min } from 'date-fns';
 
 const allSummaryItems = [
@@ -158,107 +158,153 @@ export default function MobileDashboardPage() {
 
     // Real-time listeners for stats
     useEffect(() => {
-        if (!user) return;
+        if (!user?.email) return;
 
-        const startMonth = startOfMonth(new Date());
-        const endMonth = endOfMonth(new Date());
+        const setupListeners = async () => {
+            try {
+                // 0. Resolve Employee ID by email
+                const empQuery = query(collection(firestore, 'employees'), where('email', '==', user.email));
+                const empSnap = await getDocs(empQuery);
 
-        // 1. Leave Stats (Approved)
-        const qLeave = query(
-            collection(firestore, 'leave_applications'),
-            where('employeeId', '==', user.uid),
-            where('status', '==', 'Approved')
-        );
-        const unsubLeave = onSnapshot(qLeave, (snapshot) => {
-            const startOfCurrentYear = startOfYear(new Date());
-            const endOfCurrentYear = endOfYear(new Date());
-            let totalDays = 0;
-
-            snapshot.docs.forEach(doc => {
-                const data = doc.data();
-                if (data.fromDate && data.toDate) {
-                    const leaveStart = parseISO(data.fromDate);
-                    const leaveEnd = parseISO(data.toDate);
-
-                    const overlapStart = max([leaveStart, startOfCurrentYear]);
-                    const overlapEnd = min([leaveEnd, endOfCurrentYear]);
-
-                    if (overlapEnd >= overlapStart) {
-                        totalDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
+                const ids = [user.uid];
+                if (!empSnap.empty) {
+                    const empId = empSnap.docs[0].id;
+                    if (empId !== user.uid) {
+                        ids.push(empId);
                     }
                 }
-            });
-            setStats(prev => ({ ...prev, leaveSpent: totalDays }));
-        });
 
-        // 2. Visit Stats (Approved)
-        const qVisit = query(
-            collection(firestore, 'visit_applications'),
-            where('employeeId', '==', user.uid),
-            where('status', '==', 'Approved')
-        );
-        const unsubVisit = onSnapshot(qVisit, (snapshot) => {
-            // Counting total approved visits
-            setStats(prev => ({ ...prev, visitCount: snapshot.size }));
-        });
+                const startMonth = startOfMonth(new Date());
+                const endMonth = endOfMonth(new Date());
 
-        // 3. Pending Requests (Aggregate)
-        // Note: Creating multiple listeners might be heavy, but fine for single user dashboard
-        const qPendingLeave = query(collection(firestore, 'leave_applications'), where('employeeId', '==', user.uid), where('status', '==', 'Pending'));
-        const qPendingVisit = query(collection(firestore, 'visit_applications'), where('employeeId', '==', user.uid), where('status', '==', 'Pending'));
-        const qPendingAdvance = query(collection(firestore, 'advance_salary'), where('employeeId', '==', user.uid), where('status', '==', 'Pending'));
+                // 1. Leave Stats (Approved)
+                const qLeave = query(
+                    collection(firestore, 'leave_applications'),
+                    where('employeeId', 'in', ids)
+                );
+                const unsubLeave = onSnapshot(qLeave, (snapshot) => {
+                    const startOfCurrentYear = startOfYear(new Date());
+                    const endOfCurrentYear = endOfYear(new Date());
+                    let totalDays = 0;
 
-        // We'll use a single aggregated update for pending to avoid flickering
-        const unsubPendingLeave = onSnapshot(qPendingLeave, (snap) => {
-            updatePendingCount(snap.size, 'leave');
-        });
-        const unsubPendingVisit = onSnapshot(qPendingVisit, (snap) => {
-            updatePendingCount(snap.size, 'visit');
-        });
-        const unsubPendingAdvance = onSnapshot(qPendingAdvance, (snap) => {
-            updatePendingCount(snap.size, 'advance');
-        });
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        if (data.status === 'Approved' && data.fromDate && data.toDate) {
+                            const leaveStart = parseISO(data.fromDate);
+                            const leaveEnd = parseISO(data.toDate);
 
-        let pendingCounts = { leave: 0, visit: 0, advance: 0 };
-        const updatePendingCount = (count: number, type: 'leave' | 'visit' | 'advance') => {
-            pendingCounts[type] = count;
-            setStats(prev => ({
-                ...prev,
-                pendingCount: pendingCounts.leave + pendingCounts.visit + pendingCounts.advance
-            }));
+                            const overlapStart = max([leaveStart, startOfCurrentYear]);
+                            const overlapEnd = min([leaveEnd, endOfCurrentYear]);
+
+                            if (overlapEnd >= overlapStart) {
+                                totalDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
+                            }
+                        }
+                    });
+                    setStats(prev => ({ ...prev, leaveSpent: totalDays }));
+                });
+
+                // 2. Visit Stats (Approved)
+                const qVisit = query(
+                    collection(firestore, 'visit_applications'),
+                    where('employeeId', 'in', ids)
+                );
+                const unsubVisit = onSnapshot(qVisit, (snapshot) => {
+                    const startOfCurrentYear = startOfYear(new Date());
+                    const endOfCurrentYear = endOfYear(new Date());
+                    let totalDays = 0;
+
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        if (data.fromDate && data.toDate) {
+                            const visitStart = parseISO(data.fromDate);
+                            const visitEnd = parseISO(data.toDate);
+
+                            const overlapStart = max([visitStart, startOfCurrentYear]);
+                            const overlapEnd = min([visitEnd, endOfCurrentYear]);
+
+                            if (overlapEnd >= overlapStart) {
+                                // Using the 'day' field if available, otherwise calculate overlap
+                                if (data.day) {
+                                    totalDays += Number(data.day);
+                                } else {
+                                    totalDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
+                                }
+                            }
+                        }
+                    });
+                    setStats(prev => ({ ...prev, visitCount: totalDays }));
+                });
+
+                // 3. Pending Requests (Aggregate)
+                // Note: Creating multiple listeners might be heavy, but fine for single user dashboard
+                const qPendingLeave = query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids));
+                const qPendingVisit = query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids));
+                const qPendingAdvance = query(collection(firestore, 'advance_salary'), where('employeeId', 'in', ids));
+
+                // We'll use a single aggregated update for pending to avoid flickering
+                const unsubPendingLeave = onSnapshot(qPendingLeave, (snap) => {
+                    updatePendingCount(snap.docs.filter(d => d.data().status === 'Pending').length, 'leave');
+                });
+                const unsubPendingVisit = onSnapshot(qPendingVisit, (snap) => {
+                    updatePendingCount(snap.docs.filter(d => d.data().status === 'Pending').length, 'visit');
+                });
+                const unsubPendingAdvance = onSnapshot(qPendingAdvance, (snap) => {
+                    updatePendingCount(snap.docs.filter(d => d.data().status === 'Pending').length, 'advance');
+                });
+
+                let pendingCounts = { leave: 0, visit: 0, advance: 0 };
+                const updatePendingCount = (count: number, type: 'leave' | 'visit' | 'advance') => {
+                    pendingCounts[type] = count;
+                    setStats(prev => ({
+                        ...prev,
+                        pendingCount: pendingCounts.leave + pendingCounts.visit + pendingCounts.advance
+                    }));
+                };
+
+                // 4. Missed Attendance (Flag 'A' in current month)
+                // Note: This logic assumes 'A' flag is set by a cron job or manual process
+                const qMissed = query(
+                    collection(firestore, 'attendance'),
+                    where('employeeId', 'in', ids)
+                );
+                const unsubMissed = onSnapshot(qMissed, (snapshot) => {
+                    const missedCount = snapshot.docs.filter(doc => {
+                        const data = doc.data();
+                        return data.flag === 'A' &&
+                            data.date >= startMonth.toISOString() &&
+                            data.date <= endMonth.toISOString();
+                    }).length;
+                    setStats(prev => ({ ...prev, missedAttendance: missedCount }));
+                });
+
+                // 5. Notices (Unseen count) - Simplified to total active notices for now
+                // For distinct "New", we'd need to compare with last seen ID, but just showing total active is a good start
+                /* 
+                const qNotices = query(collection(firestore, 'site_settings'), where('type', '==', 'notice'), where('isEnabled', '==', true));
+                const unsubNotices = onSnapshot(qNotices, (snapshot) => {
+                     // Filter logic would go here
+                     setStats(prev => ({ ...prev, noticesCount: snapshot.size }));
+                });
+                */
+
+                return () => {
+                    unsubLeave();
+                    unsubVisit();
+                    unsubPendingLeave();
+                    unsubPendingVisit();
+                    unsubPendingAdvance();
+                    unsubMissed();
+                    // unsubNotices();
+                };
+            } catch (err) {
+                console.error("Error setting up dashboard listeners:", err);
+            }
         };
 
-        // 4. Missed Attendance (Flag 'A' in current month)
-        // Note: This logic assumes 'A' flag is set by a cron job or manual process
-        const qMissed = query(
-            collection(firestore, 'attendance'),
-            where('employeeId', '==', user.uid),
-            where('flag', '==', 'A'),
-            where('date', '>=', startMonth.toISOString()),
-            where('date', '<=', endMonth.toISOString())
-        );
-        const unsubMissed = onSnapshot(qMissed, (snapshot) => {
-            setStats(prev => ({ ...prev, missedAttendance: snapshot.size }));
-        });
-
-        // 5. Notices (Unseen count) - Simplified to total active notices for now
-        // For distinct "New", we'd need to compare with last seen ID, but just showing total active is a good start
-        /* 
-        const qNotices = query(collection(firestore, 'site_settings'), where('type', '==', 'notice'), where('isEnabled', '==', true));
-        const unsubNotices = onSnapshot(qNotices, (snapshot) => {
-             // Filter logic would go here
-             setStats(prev => ({ ...prev, noticesCount: snapshot.size }));
-        });
-        */
-
+        const cleanupPromise = setupListeners();
         return () => {
-            unsubLeave();
-            unsubVisit();
-            unsubPendingLeave();
-            unsubPendingVisit();
-            unsubPendingAdvance();
-            unsubMissed();
-            // unsubNotices();
+            cleanupPromise.then(cleanup => cleanup && cleanup());
         };
     }, [user]);
 
@@ -448,7 +494,7 @@ export default function MobileDashboardPage() {
                                 const Icon = item.icon;
                                 const content = (
                                     <div className={`flex-shrink-0 w-[130px] ${item.bgColor} p-3 rounded-xl flex flex-col justify-between h-36 relative overflow-hidden shadow-sm border border-slate-100 h-full`}>
-                                        <div className={`bg-white rounded-lg p-2 w-12 h-12 flex items-center justify-center shadow-sm mb-2 ${item.textColor}`}>
+                                        <div className={`bg-white rounded-lg p-2 w-12 h-12 flex items-center justify-center shadow-xl/20 mb-2 ${item.textColor}`}>
                                             <Icon className="h-6 w-6" />
                                         </div>
                                         <div className="absolute top-5 right-4 text-lg font-bold text-[#0a1e60]">{item.value}</div>
@@ -462,6 +508,14 @@ export default function MobileDashboardPage() {
                                 if (item.id === 'leave') {
                                     return (
                                         <Link key={item.id} href="/mobile/leave/balance" className="flex-shrink-0 transition-transform active:scale-95">
+                                            {content}
+                                        </Link>
+                                    );
+                                }
+
+                                if (item.id === 'visit') {
+                                    return (
+                                        <Link key={item.id} href="/mobile/visit" className="flex-shrink-0 transition-transform active:scale-95">
                                             {content}
                                         </Link>
                                     );
