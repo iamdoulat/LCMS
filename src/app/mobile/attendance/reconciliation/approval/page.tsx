@@ -6,7 +6,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, subDays, parseISO } from 'date-fns';
-import { ChevronLeft, Calendar, Check, X, Loader2 } from 'lucide-react';
+import { ChevronLeft, Calendar, Check, X, Loader2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { approveReconciliation, rejectReconciliation } from '@/lib/firebase/reconciliation'; // Assume similar for breaktime or generic
 import Swal from 'sweetalert2';
@@ -188,21 +188,21 @@ export default function ReconApprovalPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-[#0a1e60]">
-            {/* Header */}
-            <div className="px-6 pt-7 pb-6 flex items-center gap-4 text-white">
-                <button
-                    onClick={() => router.back()}
-                    className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
-                >
-                    <ChevronLeft className="w-6 h-6" />
-                </button>
-                <div className="flex-1 text-center pr-10">
-                    <h1 className="text-lg font-bold">Recon. Approval</h1>
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-50 bg-[#0a1e60]">
+                <div className="flex items-center px-4 py-6">
+                    <button
+                        onClick={() => router.back()}
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                    >
+                        <ArrowLeft className="h-6 w-6" />
+                    </button>
+                    <h1 className="text-xl font-bold text-white ml-2">Recon. Approval</h1>
                 </div>
             </div>
 
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col">
+            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
                 {/* Tabs & Filter */}
                 <div className="bg-white px-6 pt-6 pb-2 rounded-t-[2rem]">
                     <div className="flex mb-4">
@@ -234,7 +234,7 @@ export default function ReconApprovalPage() {
                 </div>
 
                 {/* List */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="flex-1 p-6 space-y-4">
                     {loading ? (
                         <div className="flex justify-center py-10">
                             <Loader2 className="animate-spin text-blue-600 w-8 h-8" />
