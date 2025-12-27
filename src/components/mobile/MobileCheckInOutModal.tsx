@@ -8,13 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { firestore, storage } from '@/lib/firebase/config';
-import { doc, getDocs, collection, query, where, addDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { firestore } from '@/lib/firebase/config';
+import { serverTimestamp } from 'firebase/firestore';
 import { Loader2, Camera, Upload, MapPin, RefreshCw } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { getValidOption } from '@/types'; // Or where needed helpers are
-import { getCurrentLocation, reverseGeocode } from '@/lib/firebase/checkInOut';
+import { getValidOption } from '@/types';
+import { getCurrentLocation, reverseGeocode, uploadCheckInOutImage, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
 import type { MultipleCheckInOutRecord, MultipleCheckInOutLocation } from '@/types/checkInOut';
 
 // Dynamic import for map
@@ -32,7 +31,7 @@ interface MobileCheckInOutModalProps {
 }
 
 export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutType, initialCompanyName }: MobileCheckInOutModalProps) {
-    const { user } = useAuth();
+    const { user, firestoreUser } = useAuth();
     const [companyName, setCompanyName] = useState(initialCompanyName || '');
     const [remarks, setRemarks] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -102,31 +101,26 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
         setIsSubmitting(true);
 
         try {
-            // Upload Image if present
+            // Upload Image if present using shared helper
             let photoUrl = '';
             if (selectedFile) {
-                const storageRef = ref(storage, `checkin-out/${user.uid}/${Date.now()}_${selectedFile.name}`);
-                await uploadBytes(storageRef, selectedFile);
-                photoUrl = await getDownloadURL(storageRef);
+                photoUrl = await uploadCheckInOutImage(selectedFile, user.uid, checkInOutType);
             }
 
-            // Create Record
-            const recordData = {
-                employeeId: user.uid,
-                type: checkInOutType,
-                companyName: companyName,
-                remarks: remarks,
-                timestamp: new Date().toISOString(), // Use client time for now, or use serverTimestamp if needed by backend logic strictly
-                location: {
+            // Create Record using shared helper
+            await createCheckInOutRecord(
+                user.uid,
+                firestoreUser?.displayName || 'Unknown Employee',
+                companyName,
+                checkInOutType,
+                {
                     latitude: currentLocation.latitude,
                     longitude: currentLocation.longitude,
                     address: address || 'Address not found'
                 },
-                photoUrl: photoUrl,
-                createdAt: serverTimestamp(),
-            };
-
-            await addDoc(collection(firestore, 'multiple_check_inout'), recordData);
+                photoUrl,
+                remarks
+            );
 
             Swal.fire({
                 title: "Success",
