@@ -9,13 +9,55 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, where, onSnapshot, doc } from 'firebase/firestore';
 import { NoticeBoardSettings } from '@/types';
 
 export function MobileHeader() {
     const { user, userRole } = useAuth();
     const { toggleSidebar } = useMobileSidebar();
     const [hasUnread, setHasUnread] = React.useState(false);
+    const [profileImage, setProfileImage] = React.useState<string | undefined>(user?.photoURL || undefined);
+
+    // Listen for real-time profile image updates
+    React.useEffect(() => {
+        if (!user?.email) return;
+
+        let unsubscribe: () => void;
+
+        const setupListener = async () => {
+            try {
+                // Find employee doc by email
+                const q = query(
+                    collection(firestore, 'employees'),
+                    where('email', '==', user.email),
+                    limit(1)
+                );
+
+                const snapshot = await getDocs(q);
+                if (!snapshot.empty) {
+                    const empDoc = snapshot.docs[0];
+
+                    // Set up listener on the specific employee document
+                    unsubscribe = onSnapshot(doc(firestore, 'employees', empDoc.id), (doc) => {
+                        if (doc.exists()) {
+                            const data = doc.data();
+                            if (data.photoURL) {
+                                setProfileImage(data.photoURL);
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error("Error setting up profile listener:", error);
+            }
+        };
+
+        setupListener();
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [user?.email]);
 
     React.useEffect(() => {
         const checkUnreadNotices = async () => {
@@ -99,7 +141,7 @@ export function MobileHeader() {
                     </Link>
                     <Link href="/mobile/profile">
                         <Avatar className="h-10 w-10 border-2 border-white/20">
-                            <AvatarImage src={user?.photoURL || undefined} />
+                            <AvatarImage src={profileImage} />
                             <AvatarFallback className="text-slate-900">{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                         </Avatar>
                     </Link>

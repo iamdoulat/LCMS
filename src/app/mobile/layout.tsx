@@ -49,6 +49,7 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
         '/mobile/approve',
         '/mobile/provident-fund',
         '/mobile/qrcode',
+        '/mobile/payroll',
         '/mobile/profile'
     ].some(path => pathname?.startsWith(path));
 

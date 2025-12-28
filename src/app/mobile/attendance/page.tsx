@@ -219,7 +219,7 @@ export default function MobileAttendancePage() {
         { label: 'Recon. Application', icon: FileText, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/attendance/reconciliation/my-applications' },
         { label: 'Recon. Approval', icon: Users, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/attendance/reconciliation/approval' },
         { label: 'Remote Att. Approval', icon: MapPin, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/attendance/remote-approval' },
-        { label: 'QR Scan / Face Att.', icon: QrCode, color: 'bg-blue-100', iconColor: 'text-blue-600' },
+        { label: 'QR Scan / Face Att.', icon: QrCode, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/qrcode' },
     ];
 
     return (
