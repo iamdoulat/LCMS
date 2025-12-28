@@ -605,6 +605,9 @@ export default function MobileDashboardPage() {
                                     )}
                                 >
                                     <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                                    {todayAttendance?.inTime && !todayAttendance?.outTime && !restrictionNote && (
+                                        <div className="absolute -inset-1.5 rounded-full border-2 border-white/80 animate-ping pointer-events-none" />
+                                    )}
                                     <Clock className="h-6 w-6 mb-0.5" />
                                     <span className="text-xs font-bold">Out Time</span>
                                     {todayAttendance?.outTime && (

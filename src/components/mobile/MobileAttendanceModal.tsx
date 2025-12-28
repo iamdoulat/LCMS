@@ -165,6 +165,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
     const captureLocation = async () => {
         setIsCapturing(true);
         setError(null);
+        let newLocation: LocationData | null = null;
 
         try {
             if (!navigator.geolocation) {
@@ -183,11 +184,12 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 );
             });
 
-            setLocation({
+            newLocation = {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
                 accuracy: position.coords.accuracy
-            });
+            };
+            setLocation(newLocation);
         } catch (err: any) {
             console.error('Location capture error:', err);
 
@@ -207,14 +209,14 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
         }
 
         // Attempt Reverse Geocoding for readable address
-        if (location) {
+        if (newLocation) {
             setIsGeocoding(true);
             try {
-                const readableAddress = await reverseGeocode(location.latitude, location.longitude);
+                const readableAddress = await reverseGeocode(newLocation.latitude, newLocation.longitude);
                 setAddress(readableAddress);
             } catch (err) {
                 console.error('Reverse geocoding error:', err);
-                setAddress(`Coords: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
+                setAddress(`Coords: ${newLocation.latitude.toFixed(6)}, ${newLocation.longitude.toFixed(6)}`);
             } finally {
                 setIsGeocoding(false);
             }

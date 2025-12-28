@@ -8,7 +8,7 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { determineAttendanceFlag } from '@/lib/firebase/utils';
-import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDocs } from 'firebase/firestore';
 import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
@@ -252,19 +252,44 @@ const AttendanceDayRow = ({
 
         Swal.fire({
             title: 'Are you sure?',
-            text: "You won't be able to revert this!",
+            text: "This will delete the daily attendance record AND all associated check-in/out logs for this day. This action cannot be undone!",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: 'Yes, delete it!'
+            confirmButtonText: 'Yes, delete all!',
+            confirmButtonColor: '#d33',
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    await deleteDoc(doc(firestore, "attendance", docId));
-                    Swal.fire('Deleted!', 'The record has been deleted.', 'success');
+                    const batch = writeBatch(firestore);
+
+                    // 1. Delete the main attendance document
+                    const attendanceRef = doc(firestore, "attendance", docId);
+                    batch.delete(attendanceRef);
+
+                    // 2. Find and delete associated multiple_check_inout records
+                    const dayStart = startOfDay(date);
+                    const dayEnd = endOfDay(date);
+
+                    const logsQuery = query(
+                        collection(firestore, "multiple_check_inout"),
+                        where("employeeId", "==", employee.id),
+                        where("timestamp", ">=", dayStart.toISOString()),
+                        where("timestamp", "<=", dayEnd.toISOString())
+                    );
+
+                    const logsSnapshot = await getDocs(logsQuery);
+                    logsSnapshot.forEach((logDoc) => {
+                        batch.delete(logDoc.ref);
+                    });
+
+                    // Commit the batch
+                    await batch.commit();
+
+                    Swal.fire('Deleted!', 'The record and associated logs have been deleted.', 'success');
                     onRecordUpdate();
-                } catch (e) {
+                } catch (e: any) {
                     console.error("Error deleting attendance:", e);
-                    Swal.fire("Error", "Could not delete the record.", "error");
+                    Swal.fire("Error", `Could not delete the record. ${e.message}`, "error");
                 }
             }
         });
