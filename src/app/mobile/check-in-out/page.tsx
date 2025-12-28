@@ -273,55 +273,62 @@ export default function MobileCheckInOutPage() {
 
 
     return (
-        <div className="flex flex-col h-screen bg-slate-50">
-            {/* Custom Header matching image */}
-            <div className="bg-[#0a1e60] text-white pt-safe-top pb-[1px] sticky top-0 z-20">
-                <div className="flex items-center justify-between h-12">
-                    <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-white hover:bg-white/10 ml-0.5">
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
+            {/* Header matching My Attendance */}
+            <div className="sticky top-0 z-50 bg-[#0a1e60]">
+                <div className="flex items-center justify-between px-4 pt-4 pb-6">
+                    <button
+                        onClick={() => router.back()}
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                    >
                         <ArrowLeft className="h-6 w-6" />
-                    </Button>
-                    <h1 className="text-xl font-bold">Check In/Out</h1>
-                    <Button
-                        variant="ghost"
-                        size="icon"
+                    </button>
+                    <h1 className="text-xl font-bold text-white">Check In/Out</h1>
+                    <button
                         onClick={() => setIsFilterOpen(true)}
-                        className={`text-white hover:bg-white/10 -mr-2 ${activeTab !== 'Supervision' ? 'opacity-0 pointer-events-none' : ''}`}
+                        className={`p-2 -mr-2 text-white hover:bg-white/10 rounded-full transition-colors ${activeTab !== 'Supervision' ? 'opacity-0 pointer-events-none' : ''}`}
                     >
                         <Filter className="h-5 w-5" />
-                    </Button>
+                    </button>
                 </div>
             </div>
 
+            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col relative">
 
-            {/* Correct Tab Layout based on image */}
-            <div className="bg-white shadow-sm z-10 absolute top-[88px] left-0 right-0 hidden">
-                {/* Just hiding previous attempt */}
+                {/* Tabs Section */}
+                <div className="bg-white px-6 pt-6 pb-2 rounded-t-[2rem] shadow-sm z-10 shrink-0">
+                    <div className="flex items-center justify-between p-1 bg-slate-50 rounded-full mb-4">
+                        {['Check Ins', 'Completed', 'Supervision'].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab as any)}
+                                className={`flex-1 py-3 text-[10px] sm:text-xs font-bold rounded-full transition-all duration-200 ${activeTab === tab
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-slate-400 hover:text-slate-600'
+                                    }`}
+                            >
+                                <span className="flex items-center justify-center gap-1">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${activeTab === tab ? 'bg-amber-400' : 'bg-transparent'}`}></span>
+                                    {tab}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Main Content List */}
+                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-8 pb-24 overscroll-contain">
+                    {renderContent()}
+                </div>
+
+                {/* Floating Action Button - Moved to 99px layout (79 + 20) */}
+                <Button
+                    className="absolute bottom-[99px] right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95"
+                    onClick={handleAddClick}
+                >
+                    <Plus className="h-8 w-8 text-white" />
+                </Button>
             </div>
-            <div className="bg-white px-2 py-3 shadow-sm sticky top-[51px] z-10 flex justify-around">
-                {['Check Ins', 'Completed', 'Supervision'].map((tab) => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab as any)}
-                        className={`text-sm font-medium transition-all relative px-4 py-1.5 rounded-full ${activeTab === tab ? 'text-blue-600 bg-blue-50' : 'text-slate-500'}`}
-                    >
-                        {activeTab === tab && <span className="absolute left-2 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-amber-400 mr-2" />}
-                        <span className={activeTab === tab ? 'ml-2' : ''}>{tab}</span>
-                    </button>
-                ))}
-            </div>
-
-
-            <div className="flex-1 overflow-y-auto">
-                {renderContent()}
-            </div>
-
-            {/* Floating Action Button */}
-            <Button
-                className="fixed bottom-[79px] right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95"
-                onClick={handleAddClick}
-            >
-                <Plus className="h-8 w-8 text-white" />
-            </Button>
 
             <MobileCheckInOutModal
                 isOpen={isModalOpen}
