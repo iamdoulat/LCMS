@@ -161,6 +161,41 @@ export default function MobileCheckInOutPage() {
         }));
     };
 
+
+    // Swipe Handling
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe || isRightSwipe) {
+            const tabs: ('Check Ins' | 'Completed' | 'Supervision')[] = ['Check Ins', 'Completed', 'Supervision'];
+            const currentIndex = tabs.indexOf(activeTab);
+
+            if (isLeftSwipe && currentIndex < tabs.length - 1) {
+                setActiveTab(tabs[currentIndex + 1]);
+            }
+            if (isRightSwipe && currentIndex > 0) {
+                setActiveTab(tabs[currentIndex - 1]);
+            }
+        }
+    };
+
+
     const renderContent = () => {
         // Logics for different tabs
         let recordsToDisplay: MultipleCheckInOutRecord[] = [];
@@ -293,7 +328,12 @@ export default function MobileCheckInOutPage() {
                 </div>
             </div>
 
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col relative">
+            <div
+                className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col relative"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+            >
 
                 {/* Tabs Section */}
                 <div className="bg-white px-6 pt-6 pb-2 rounded-t-[2rem] shadow-sm z-10 shrink-0">
@@ -303,8 +343,8 @@ export default function MobileCheckInOutPage() {
                                 key={tab}
                                 onClick={() => setActiveTab(tab as any)}
                                 className={`flex-1 py-3 text-[10px] sm:text-xs font-bold rounded-full transition-all duration-200 ${activeTab === tab
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-slate-400 hover:text-slate-600'
+                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-600'
                                     }`}
                             >
                                 <span className="flex items-center justify-center gap-1">
