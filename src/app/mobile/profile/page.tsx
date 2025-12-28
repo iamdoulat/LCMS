@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 import { firestore, storage } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, limit, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Swal from 'sweetalert2';
 import {
@@ -27,7 +27,9 @@ import {
     FileBadge,
     Pencil,
     Loader2,
-    MessageCircle
+    MessageCircle,
+    UserCheck,
+    Network
 } from 'lucide-react';
 import type { Employee } from '@/types';
 import { formatDate } from '@/lib/utils';
@@ -48,6 +50,7 @@ export default function MobileProfilePage() {
     const { user } = useAuth();
     const [employee, setEmployee] = useState<Employee | null>(null);
     const [loading, setLoading] = useState(true);
+    const [supervisorName, setSupervisorName] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'official' | 'others'>('personal');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,7 +65,21 @@ export default function MobileProfilePage() {
                 );
                 const querySnapshot = await getDocs(q);
                 if (!querySnapshot.empty) {
-                    setEmployee({ id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as Employee);
+                    const empData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as Employee;
+                    setEmployee(empData);
+
+                    // Fetch Supervisor Name if ID exists
+                    if (empData.supervisorId) {
+                        try {
+                            const supervisorDocRef = doc(firestore, 'employees', empData.supervisorId);
+                            const supervisorDocSnap = await getDoc(supervisorDocRef);
+                            if (supervisorDocSnap.exists()) {
+                                setSupervisorName(supervisorDocSnap.data()?.fullName || null);
+                            }
+                        } catch (err) {
+                            console.error("Error fetching supervisor:", err);
+                        }
+                    }
                 }
             } catch (error) {
                 console.error("Error fetching employee profile:", error);
@@ -172,6 +189,8 @@ export default function MobileProfilePage() {
             { label: 'Designation', value: employee.designation, icon: Briefcase },
             { label: 'Job Status', value: employee.jobStatus || 'Active', icon: Briefcase },
             { label: 'Branch', value: employee.branch || 'Not Defined', icon: Building2 },
+            { label: 'Department', value: employee.department || 'Not Defined', icon: Network },
+            { label: 'Direct Supervisor', value: supervisorName || 'Not Assigned', icon: UserCheck },
         ],
         others: [
             { label: 'Blood Group', value: employee.bloodGroup || 'N/A', icon: Droplet },
@@ -182,9 +201,9 @@ export default function MobileProfilePage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-y-auto">
             {/* Standard Header */}
-            <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center gap-4 px-4 h-16 text-white overflow-hidden">
+            <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center gap-4 px-4 h-16 text-white overflow-hidden shadow-sm">
                 <button
                     onClick={handleBack}
                     className="p-1 hover:bg-white/10 rounded-full transition-colors"
@@ -195,25 +214,25 @@ export default function MobileProfilePage() {
             </header>
 
             {/* Main Content Container */}
-            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] px-6 pt-12 pb-24 relative mt-10 overflow-y-auto">
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] px-6 pt-12 pb-24 relative mt-10">
 
                 {/* Profile Header Avatar - Absolute Positioned */}
-                <div className="absolute -top-16 left-6 z-10">
+                <div className="absolute -top-12 left-6 z-[60]">
                     <div className="relative group">
                         <div
-                            className="h-32 w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-md cursor-pointer active:scale-95 transition-transform"
+                            className="h-24 w-24 rounded-full border-4 border-white overflow-hidden bg-white shadow-md cursor-pointer active:scale-95 transition-transform"
                             onClick={() => fileInputRef.current?.click()}
                         >
                             <Avatar className="h-full w-full">
                                 <AvatarImage src={employee.photoURL || undefined} className="object-cover" />
-                                <AvatarFallback className="text-4xl text-slate-800">{employee.fullName?.charAt(0) || 'U'}</AvatarFallback>
+                                <AvatarFallback className="text-3xl text-slate-800">{employee.fullName?.charAt(0) || 'U'}</AvatarFallback>
                             </Avatar>
                         </div>
                         <div
-                            className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow-sm border border-slate-100 text-amber-500 cursor-pointer hover:bg-slate-50 transition-colors"
+                            className="absolute bottom-1 right-1 bg-white rounded-full p-1.5 shadow-sm border border-slate-100 text-amber-500 cursor-pointer hover:bg-slate-50 transition-colors"
                             onClick={() => fileInputRef.current?.click()}
                         >
-                            <Pencil className="h-4 w-4" />
+                            <Pencil className="h-3.5 w-3.5" />
                         </div>
                         <input
                             type="file"

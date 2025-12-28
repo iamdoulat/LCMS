@@ -207,7 +207,7 @@ export default function MyAttendancePage() {
                                                     Date ({dateInfo.day})
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-lg font-bold text-slate-800">{dateInfo.full}</span>
+                                                    <span className="text-sm font-bold text-slate-800">{dateInfo.full}</span>
                                                     {record.flag && (
                                                         <span className={`px-2 py-0.5 rounded text-xs font-bold ${getFlagColor(record.flag)}`}>
                                                             {record.flag}
