@@ -125,7 +125,14 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
             return locData;
         } catch (error: any) {
             console.error('Error capturing location for break:', error);
-            Swal.fire('Location Error', error.message || 'Could not get location', 'error');
+            Swal.fire({
+                title: 'Location Error',
+                text: error.message || 'Could not get location',
+                icon: 'error',
+                customClass: {
+                    container: 'z-[99999] !important'
+                }
+            });
             return null;
         } finally {
             setIsLoadingLocation(false);
@@ -161,7 +168,16 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
                     showCancelButton: true,
                     confirmButtonColor: '#d33',
                     cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Yes, stop it!'
+                    confirmButtonText: 'Yes, stop it!',
+                    customClass: {
+                        container: 'z-[99999] !important',
+                        popup: 'z-[99999] !important'
+                    },
+                    didOpen: () => {
+                        // Ensure focus is moved to the alert
+                        const confirmBtn = Swal.getConfirmButton();
+                        if (confirmBtn) confirmBtn.focus();
+                    }
                 });
 
                 if (!result.isConfirmed) {

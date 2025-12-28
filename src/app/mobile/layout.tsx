@@ -27,12 +27,18 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
             }
         };
 
+        const handleDragStart = (e: DragEvent) => {
+            e.preventDefault();
+        };
+
         document.addEventListener('contextmenu', handleContextMenu);
         document.addEventListener('touchstart', handleTouchStart, { passive: false });
+        document.addEventListener('dragstart', handleDragStart);
 
         return () => {
             document.removeEventListener('contextmenu', handleContextMenu);
             document.removeEventListener('touchstart', handleTouchStart);
+            document.removeEventListener('dragstart', handleDragStart);
         };
     }, []);
 
@@ -57,7 +63,15 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
     if (isLoginPage) return <>{children}</>;
 
     return (
-        <div className="fixed inset-0 bg-[#4c35de] overflow-hidden select-none overscroll-none touch-none">
+        <div
+            className="fixed inset-0 bg-[#4c35de] overflow-hidden select-none overscroll-none touch-none"
+            style={{
+                WebkitTouchCallout: 'none',
+                WebkitUserSelect: 'none',
+                userSelect: 'none'
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+        >
             {/* The Sidebar (Backend) */}
             <MobileDrawerSidebar />
 

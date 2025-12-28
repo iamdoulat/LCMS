@@ -203,21 +203,22 @@ export default function MobileProfilePage() {
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-y-auto">
             {/* Standard Header */}
-            <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center gap-4 px-4 h-16 text-white overflow-hidden shadow-sm">
+            {/* Standard Header */}
+            <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center gap-4 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] min-h-[calc(4rem+env(safe-area-inset-top))] text-white overflow-hidden shadow-sm transition-all">
                 <button
                     onClick={handleBack}
-                    className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                    className="p-1 hover:bg-white/10 rounded-full transition-colors mt-1"
                 >
                     <ChevronLeft className="w-7 h-7" />
                 </button>
-                <h1 className="text-xl font-bold">Profile</h1>
+                <h1 className="text-xl font-bold mt-1">Profile</h1>
             </header>
 
             {/* Main Content Container */}
             <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] px-6 pt-12 pb-24 relative mt-10">
 
                 {/* Profile Header Avatar - Absolute Positioned */}
-                <div className="absolute -top-12 left-6 z-[60]">
+                <div className="absolute -top-12 left-6 z-[60] translate-y-[10px]">
                     <div className="relative group">
                         <div
                             className="h-24 w-24 rounded-full border-4 border-white overflow-hidden bg-white shadow-md cursor-pointer active:scale-95 transition-transform"
