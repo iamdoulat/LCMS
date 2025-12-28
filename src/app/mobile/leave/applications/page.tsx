@@ -119,26 +119,22 @@ export default function MyLeaveApplicationsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] pb-24">
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Header */}
-            <div className="bg-[#0a1e60] text-white p-6 pb-8 rounded-b-[2rem] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 rounded-full -ml-10 -mb-10 blur-2xl" />
-
-                <div className="relative flex items-center justify-between">
+            <div className="sticky top-0 z-50 bg-[#0a1e60]">
+                <div className="flex items-center px-4 pt-1 pb-6">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors"
+                        className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors text-white"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold tracking-tight">My Leave Applications</h1>
-                    <div className="w-10" />
+                    <h1 className="text-xl font-bold text-white ml-2">My Leave Applications</h1>
                 </div>
             </div>
 
             {/* Applications List */}
-            <div className="px-5 pt-6 space-y-4">
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative px-5 pt-8 space-y-4">
                 {loading ? (
                     Array.from({ length: 3 }).map((_, i) => (
                         <Card key={i} className="p-4 border-none shadow-sm animate-pulse">
@@ -201,6 +197,9 @@ export default function MyLeaveApplicationsPage() {
                         <p className="text-slate-500 font-medium">No applications found</p>
                     </div>
                 )}
+
+                {/* Spacer bottom */}
+                <div className="h-24" />
             </div>
 
             {/* Floating Action Button */}

@@ -357,26 +357,21 @@ export default function ApproveApplicationsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] pb-20">
-            {/* Header */}
-            <div className="bg-[#0a1e60] text-white px-6 pt-1 pb-20 rounded-b-[2.5rem] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 rounded-full -ml-10 -mb-10 blur-2xl" />
-
-                <div className="relative flex items-center justify-between mb-2">
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-50 bg-[#0a1e60]">
+                <div className="flex items-center px-4 pt-1 pb-6">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors"
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold tracking-tight">Approve Applications</h1>
-                    <div className="w-10" />
+                    <h1 className="text-xl font-bold text-white ml-2">Approve Applications</h1>
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div className="px-5 -mt-12">
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative px-5 pt-8">
                 <Card className="p-1 px-3 rounded-full border-none shadow-lg mb-6 flex justify-between bg-white/95 backdrop-blur">
                     <button
                         onClick={() => setActiveTab('leave')}

@@ -55,19 +55,33 @@ const attendanceDaySchema = z.object({
 });
 type AttendanceDayFormValues = z.infer<typeof attendanceDaySchema>;
 
-// Helper to convert "10:41 AM" to "10:41"
-const parse12HourTo24Hour = (time12h?: string): string => {
-    if (!time12h) return '';
+// Helper to convert times to 24-hour format for HTML time inputs
+// Handles both "10:41 AM" (12-hour) and "09:19" (24-hour) formats
+const normalizeTimeTo24Hour = (time?: string): string => {
+    if (!time) return '';
+
+    // Trim whitespace
+    const trimmedTime = time.trim();
+
+    // Check if it's already in 24-hour format (HH:mm)
+    if (/^\d{1,2}:\d{2}$/.test(trimmedTime)) {
+        // Already in 24-hour format, just return it
+        return trimmedTime;
+    }
+
+    // Try to parse as 12-hour format (hh:mm a)
     try {
-        const date = parseDateFns(time12h, 'hh:mm a', new Date());
+        const date = parseDateFns(trimmedTime, 'hh:mm a', new Date());
         if (isValid(date)) {
             return format(date, 'HH:mm');
         }
     } catch (e) {
-        console.warn(`Could not parse time: ${time12h}`, e);
+        console.warn(`Could not parse time: ${trimmedTime}`, e);
     }
+
     return ''; // Return empty if parsing fails
 };
+
 
 
 const AttendanceDayRow = ({
@@ -126,8 +140,8 @@ const AttendanceDayRow = ({
         const isPresent = initialData?.flag === 'P' || initialData?.flag === 'D';
         form.reset({
             flag: initialData?.flag || defaultFlag,
-            inTime: isPresent ? parse12HourTo24Hour(initialData?.inTime) : '',
-            outTime: isPresent ? parse12HourTo24Hour(initialData?.outTime) : '',
+            inTime: isPresent ? normalizeTimeTo24Hour(initialData?.inTime) : '',
+            outTime: isPresent ? normalizeTimeTo24Hour(initialData?.outTime) : '',
             inTimeRemarks: initialData?.inTimeRemarks || '',
             outTimeRemarks: initialData?.outTimeRemarks || '',
         });

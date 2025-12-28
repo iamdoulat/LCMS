@@ -121,14 +121,14 @@ export default function MyReconApplicationsPage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 py-3.5">
+                <div className="flex items-center px-4 pt-1 pb-6">
                     <button
                         onClick={() => router.back()}
                         className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-base font-bold text-white ml-2 flex-1">Recon. Application</h1>
+                    <h1 className="text-xl font-bold text-white ml-2 flex-1">Recon. Application</h1>
 
                     {/* Add New Button */}
                     <button

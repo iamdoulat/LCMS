@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
-import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { firestore, storage } from '@/lib/firebase/config';
+import { collection, query, where, getDocs, limit, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import Swal from 'sweetalert2';
 import {
     ChevronLeft,
     Phone,
@@ -24,9 +26,22 @@ import {
     Building2,
     FileBadge,
     Pencil,
-    Loader2
+    Loader2,
+    MessageCircle
 } from 'lucide-react';
 import type { Employee } from '@/types';
+import { formatDate } from '@/lib/utils';
+
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+    <svg
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        className={className}
+        xmlns="http://www.w3.org/2000/svg"
+    >
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884a9.89 9.89 0 019.884 9.89c-.001 5.45-4.437 9.884-9.889 9.884m0-21.667C6.014.118.118 6.015.118 13.337a13.15 13.15 0 001.767 6.64L.018 24l4.184-1.096c1.616.88 3.447 1.344 5.31 1.345h.005c7.322 0 13.22-5.9 13.223-13.222A13.24 13.24 0 0012.051.118z" />
+    </svg>
+);
 
 export default function MobileProfilePage() {
     const router = useRouter();
@@ -34,6 +49,7 @@ export default function MobileProfilePage() {
     const [employee, setEmployee] = useState<Employee | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'personal' | 'official' | 'others'>('personal');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         async function fetchEmployee() {
@@ -62,6 +78,66 @@ export default function MobileProfilePage() {
         router.back();
     };
 
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !user || !employee) return;
+
+        // Check file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'File too large',
+                text: 'Please select an image smaller than 5MB.',
+                confirmButtonColor: '#3b82f6'
+            });
+            return;
+        }
+
+        try {
+            Swal.fire({
+                title: 'Uploading...',
+                text: 'Please wait while we update your profile picture.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const timestamp = Date.now();
+            const fileName = `${timestamp}_${file.name.replace(/\s+/g, '_')}`;
+            const storagePath = `profileImages/${user.uid}/${fileName}`;
+            const storageRef = ref(storage, storagePath);
+
+            await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(storageRef);
+
+            // Update Firestore
+            const employeeRef = doc(firestore, 'employees', employee.id);
+            await updateDoc(employeeRef, {
+                photoURL: downloadURL,
+                updatedAt: serverTimestamp()
+            });
+
+            setEmployee(prev => prev ? { ...prev, photoURL: downloadURL } : null);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Updated!',
+                text: 'Your profile picture has been updated successfully.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Upload Failed',
+                text: 'Something went wrong. Please try again.',
+                confirmButtonColor: '#3b82f6'
+            });
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-[#0a1e60]">
@@ -85,14 +161,14 @@ export default function MobileProfilePage() {
         designation: employee.designation,
         code: employee.employeeCode,
         personal: [
-            { label: 'Date of Birth', value: employee.dateOfBirth || 'N/A', icon: Calendar },
+            { label: 'Date of Birth', value: formatDate(employee.dateOfBirth), icon: Calendar },
             { label: 'National ID', value: employee.nationalId || 'N/A', icon: CreditCard },
             { label: 'Nationality', value: employee.nationality || 'Bangladeshi', icon: Flag },
             { label: 'Email', value: employee.email, icon: Mail },
         ],
         official: [
             { label: 'Employee Code', value: employee.employeeCode, icon: FileBadge },
-            { label: 'Joining Date', value: employee.joinedDate || 'N/A', icon: Calendar },
+            { label: 'Joining Date', value: formatDate(employee.joinedDate), icon: Calendar },
             { label: 'Designation', value: employee.designation, icon: Briefcase },
             { label: 'Job Status', value: employee.jobStatus || 'Active', icon: Briefcase },
             { label: 'Branch', value: employee.branch || 'Not Defined', icon: Building2 },
@@ -106,43 +182,67 @@ export default function MobileProfilePage() {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#0a1e60]">
-            {/* Header */}
-            <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center justify-between px-4 py-4 text-white">
-                <Button variant="ghost" size="icon" onClick={handleBack} className="text-white hover:bg-white/10">
-                    <ChevronLeft className="h-6 w-6" />
-                </Button>
-                <h1 className="text-xl font-semibold">Profile</h1>
-                <div className="w-10" /> {/* Spacer for centering */}
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
+            {/* Standard Header */}
+            <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center gap-4 px-4 h-16 text-white overflow-hidden">
+                <button
+                    onClick={handleBack}
+                    className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                >
+                    <ChevronLeft className="w-7 h-7" />
+                </button>
+                <h1 className="text-xl font-bold">Profile</h1>
             </header>
 
             {/* Main Content Container */}
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-8 relative mt-9">
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] px-6 pt-12 pb-24 relative mt-10 overflow-y-auto">
 
                 {/* Profile Header Avatar - Absolute Positioned */}
-                <div className="absolute -top-16 left-6 z-50">
-                    <div className="relative">
-                        <div className="h-32 w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-sm">
+                <div className="absolute -top-16 left-6 z-10">
+                    <div className="relative group">
+                        <div
+                            className="h-32 w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-md cursor-pointer active:scale-95 transition-transform"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
                             <Avatar className="h-full w-full">
                                 <AvatarImage src={employee.photoURL || undefined} className="object-cover" />
                                 <AvatarFallback className="text-4xl text-slate-800">{employee.fullName?.charAt(0) || 'U'}</AvatarFallback>
                             </Avatar>
                         </div>
-                        <div className="absolute bottom-2 right-2 bg-white rounded-full p-1 shadow-sm border border-slate-100 text-amber-500">
+                        <div
+                            className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow-sm border border-slate-100 text-amber-500 cursor-pointer hover:bg-slate-50 transition-colors"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
                             <Pencil className="h-4 w-4" />
                         </div>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                        />
                     </div>
                 </div>
 
                 {/* Contact Actions (Phone/Mail) */}
                 <div className="absolute top-6 right-6 flex gap-3">
                     <a href={`tel:${employee.phone}`}>
-                        <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-12 w-12 shadow-sm">
+                        <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-12 w-12 shadow-sm border-none">
                             <Phone className="h-6 w-6" />
                         </Button>
                     </a>
+                    <a
+                        href={`https://api.whatsapp.com/send?phone=${employee.phone?.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <Button size="icon" className="bg-green-100 hover:bg-green-200 text-green-600 rounded-2xl h-12 w-12 shadow-sm border-none">
+                            <WhatsAppIcon className="h-8 w-8" />
+                        </Button>
+                    </a>
                     <a href={`mailto:${employee.email}`}>
-                        <Button size="icon" className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-2xl h-12 w-12 shadow-sm">
+                        <Button size="icon" className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-2xl h-12 w-12 shadow-sm border-none">
                             <Mail className="h-6 w-6" />
                         </Button>
                     </a>
@@ -150,77 +250,64 @@ export default function MobileProfilePage() {
 
                 {/* Name & Title */}
                 <div className="mt-16 mb-8">
-                    <h2 className="text-xl font-bold text-[#0a1e60] uppercase leading-tight mb-1">
+                    <h2 className="text-2xl font-black text-[#0a1e60] uppercase leading-tight mb-1 tracking-tight">
                         {profileData.name}
                     </h2>
-                    <div className="flex items-center flex-wrap gap-2 text-sm text-slate-500 font-medium">
+                    <div className="flex items-center flex-wrap gap-2 text-sm text-slate-500 font-semibold uppercase tracking-wider">
                         <span>{profileData.designation}</span>
-                        <span className="bg-purple-100 text-purple-600 px-2 py-0.5 rounded text-xs font-bold">
+                        <span className="bg-purple-100 text-purple-600 px-2.5 py-1 rounded-lg text-[10px] font-black">
                             {profileData.code}
                         </span>
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex items-center gap-3 mb-6">
-                    <button
-                        onClick={() => setActiveTab('personal')}
-                        className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-colors ${activeTab === 'personal'
-                            ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
-                            : 'bg-white text-slate-600 shadow-sm'
-                            }`}
-                    >
-                        <User className="h-5 w-5" />
-                        {activeTab === 'personal' && <span>Personal</span>}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('official')}
-                        className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-colors ${activeTab === 'official'
-                            ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
-                            : 'bg-white text-slate-600 shadow-sm'
-                            }`}
-                    >
-                        <Briefcase className="h-5 w-5" />
-                        {activeTab === 'official' && <span>Official</span>}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('others')}
-                        className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-colors ${activeTab === 'others'
-                            ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
-                            : 'bg-white text-slate-600 shadow-sm'
-                            }`}
-                    >
-                        <LayoutGrid className="h-5 w-5" />
-                        {activeTab === 'others' && <span>Others</span>}
-                    </button>
+                <div className="flex items-center gap-3 mb-6 bg-white/50 p-1.5 rounded-2xl border border-slate-100 shadow-sm">
+                    {(['personal', 'official', 'others'] as const).map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all duration-300 ${activeTab === tab
+                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-[1.02]'
+                                : 'text-slate-500 hover:bg-white'
+                                }`}
+                        >
+                            {tab === 'personal' && <User className="h-5 w-5" />}
+                            {tab === 'official' && <Briefcase className="h-5 w-5" />}
+                            {tab === 'others' && <LayoutGrid className="h-5 w-5" />}
+                            <span className="capitalize text-xs">{tab}</span>
+                        </button>
+                    ))}
                 </div>
 
                 {/* Info Card */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm min-h-[400px]">
-                    <h3 className="text-lg font-bold text-[#0a1e60] mb-6">
-                        {activeTab === 'personal' && 'Personal Info'}
-                        {activeTab === 'official' && 'Official Info'}
-                        {activeTab === 'others' && 'Others Info'}
-                    </h3>
+                <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-white/60 mb-8 backdrop-blur-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <h3 className="text-lg font-black text-[#0a1e60] tracking-tight">
+                            {activeTab === 'personal' && 'Personal Information'}
+                            {activeTab === 'official' && 'Official Records'}
+                            {activeTab === 'others' && 'Contact & Identity'}
+                        </h3>
+                        <div className="h-1 w-12 bg-blue-600 rounded-full" />
+                    </div>
 
                     <div className="space-y-6">
                         {profileData[activeTab].map((item, index) => {
                             const Icon = item.icon;
                             return (
-                                <div key={index} className="flex items-start gap-4 pb-6 border-b border-slate-50 last:border-0 last:pb-0">
-                                    <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center text-[#0a1e60]">
+                                <div key={index} className="flex items-center gap-4 group transition-all">
+                                    <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center text-[#0a1e60] group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors border border-slate-100">
                                         <Icon className="h-6 w-6" />
                                     </div>
-                                    <div>
-                                        <div className="text-sm text-blue-500 font-medium mb-1">{item.label}</div>
-                                        <div className="text-lg font-bold text-[#0a1e60]">{item.value}</div>
+                                    <div className="flex-1">
+                                        <div className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-0.5">{item.label}</div>
+                                        <div className="text-base font-bold text-[#0a1e60]">{item.value}</div>
                                     </div>
                                 </div>
                             )
                         })}
                     </div>
                 </div>
-
             </div>
         </div>
     );

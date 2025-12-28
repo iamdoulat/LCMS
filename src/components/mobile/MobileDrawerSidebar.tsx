@@ -46,8 +46,6 @@ export function MobileDrawerSidebar() {
     // Menu Items based on the reference image
     const menuItems = [
         { href: '/mobile/dashboard', label: 'Home', icon: Home },
-        { href: '/mobile/break', label: 'Break Time', icon: Coffee },
-        { href: '/mobile/attendance-reminder', label: 'Attendance Reminder', icon: Bell }, // "Attendance Reminder"
         { href: '/mobile/directory', label: 'Directory', icon: Contact },
         { href: '/mobile/qrcode', label: 'My QR Code', icon: QrCode },
         { href: '/mobile/profile', label: 'My Profile', icon: User },
@@ -93,9 +91,9 @@ export function MobileDrawerSidebar() {
             </nav>
 
             {/* Time Format Switch */}
-            <div className="bg-white/10 rounded-lg p-1 flex items-center justify-between mt-6 mb-4 w-[160px]">
+            <div className="bg-white/10 rounded-lg p-1 flex items-center justify-between mt-6 mb-4 w-[160px] opacity-50 pointer-events-none">
                 <span className="text-xs px-2">12h</span>
-                <Switch className="data-[state=checked]:bg-white data-[state=unchecked]:bg-slate-400 h-5 w-9" />
+                <Switch disabled className="data-[state=checked]:bg-white data-[state=unchecked]:bg-slate-400 h-5 w-9" />
                 <span className="text-xs px-2">24h</span>
             </div>
 

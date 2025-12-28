@@ -64,7 +64,7 @@ export async function POST(request: Request) {
             try {
                 finalAddress = await reverseGeocode(location.latitude, location.longitude);
             } catch (err) {
-                finalAddress = `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+                finalAddress = `Coords: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
             }
         } else if (!finalAddress) {
             finalAddress = 'Location unavailable';

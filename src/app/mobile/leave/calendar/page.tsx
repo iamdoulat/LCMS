@@ -102,26 +102,22 @@ export default function LeaveCalendarPage() {
     const weekDays = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
     return (
-        <div className="min-h-screen bg-[#f8fafc]">
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Header */}
-            <div className="bg-[#0a1e60] text-white p-6 pb-8 rounded-b-[2rem] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 rounded-full -ml-10 -mb-10 blur-2xl" />
-
-                <div className="relative flex items-center justify-between">
+            <div className="sticky top-0 z-50 bg-[#0a1e60]">
+                <div className="flex items-center px-4 pt-1 pb-6">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors"
+                        className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors text-white"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold tracking-tight">Leave Calender</h1>
-                    <div className="w-10" />
+                    <h1 className="text-xl font-bold text-white ml-2">Leave Calender</h1>
                 </div>
             </div>
 
-            {/* Calendar */}
-            <div className="px-5 pt-6">
+            {/* Calendar Container */}
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain px-5 pt-8">
                 <div className="bg-white rounded-2xl p-6 shadow-sm">
                     {/* Month Navigation */}
                     <div className="flex items-center justify-between mb-6">
@@ -199,6 +195,8 @@ export default function LeaveCalendarPage() {
                         </div>
                     </div>
                 </div>
+                {/* Spacer bottom */}
+                <div className="h-24" />
             </div>
         </div>
     );

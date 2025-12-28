@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { reverseGeocode } from '@/lib/firebase/checkInOut';
+import { determineAttendanceFlag } from '@/lib/firebase/utils';
 
 interface MobileAttendanceModalProps {
     isOpen: boolean;
@@ -47,6 +49,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
     const [isInsideGeofence, setIsInsideGeofence] = useState<boolean>(true);
     const [distanceFromBranch, setDistanceFromBranch] = useState<number>(0);
     const [isLoadingGeodata, setIsLoadingGeodata] = useState(false);
+    const [isGeocoding, setIsGeocoding] = useState(false);
 
     // Fetch branch and hotspots
     React.useEffect(() => {
@@ -202,6 +205,20 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
         } finally {
             setIsCapturing(false);
         }
+
+        // Attempt Reverse Geocoding for readable address
+        if (location) {
+            setIsGeocoding(true);
+            try {
+                const readableAddress = await reverseGeocode(location.latitude, location.longitude);
+                setAddress(readableAddress);
+            } catch (err) {
+                console.error('Reverse geocoding error:', err);
+                setAddress(`Coords: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`);
+            } finally {
+                setIsGeocoding(false);
+            }
+        }
     };
 
     const handleSubmit = async () => {
@@ -236,10 +253,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 let status: 'Approved' | 'Pending' = isInsideGeofence ? 'Approved' : 'Pending';
 
                 // Determine attendance flag
-                let flag: 'P' | 'D' = 'P';
-                if (currentTime > '09:10') {
-                    flag = 'D';
-                }
+                const flag = determineAttendanceFlag(currentTime);
 
                 // Save attendance record
                 const attendanceData = {
@@ -275,6 +289,29 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     showConfirmButton: false
                 });
 
+                // Trigger Notification
+                fetch('/api/notify/attendance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'in_time',
+                        employeeId: user.uid,
+                        employeeName: employeeData.fullName || user.displayName || 'Unknown',
+                        employeeCode: employeeData.employeeCode,
+                        employeeEmail: employeeData.email,
+                        employeePhone: employeeData.phone,
+                        time: currentTime,
+                        date: format(today, 'PPP'),
+                        flag: flag,
+                        location: {
+                            latitude: location.latitude,
+                            longitude: location.longitude,
+                            address: address || ''
+                        },
+                        remarks: remarks
+                    })
+                }).catch(err => console.error('[ATTENDANCE NOTIFY] Notification error:', err));
+
             } else {
                 // Check-out logic
                 if (!attendanceDoc.exists() || !attendanceDoc.data().inTime) {
@@ -308,6 +345,28 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     timer: 2000,
                     showConfirmButton: false
                 });
+
+                // Trigger Notification
+                fetch('/api/notify/attendance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'out_time',
+                        employeeId: user.uid,
+                        employeeName: employeeData.fullName || user.displayName || 'Unknown',
+                        employeeCode: employeeData.employeeCode,
+                        employeeEmail: employeeData.email,
+                        employeePhone: employeeData.phone,
+                        time: currentTime,
+                        date: format(today, 'PPP'),
+                        location: {
+                            latitude: location.latitude,
+                            longitude: location.longitude,
+                            address: address || ''
+                        },
+                        remarks: remarks
+                    })
+                }).catch(err => console.error('[ATTENDANCE NOTIFY] Notification error:', err));
             }
 
             // Play success sound
@@ -378,7 +437,14 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                                         <div className="flex items-start gap-2">
                                             <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
                                             <p className="text-sm text-slate-600 break-words leading-snug">
-                                                {address || 'Location captured'}
+                                                {isGeocoding ? (
+                                                    <span className="flex items-center gap-1.5 text-slate-400 italic">
+                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                        Locating address...
+                                                    </span>
+                                                ) : (
+                                                    address || (isCapturing ? 'Capturing...' : 'Address unavailable')
+                                                )}
                                             </p>
                                         </div>
                                     </div>

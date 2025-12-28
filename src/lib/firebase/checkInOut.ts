@@ -97,13 +97,18 @@ export const getCurrentLocation = async (options?: PositionOptions & {
 export const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+            {
+                headers: {
+                    'User-Agent': 'NextsewAttendanceApp/1.0'
+                }
+            }
         );
         const data = await response.json();
-        return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        return data.display_name || `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     } catch (error) {
         console.error('Reverse geocoding failed:', error);
-        return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        return `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
 };
 

@@ -6,7 +6,7 @@ import { MobileAttendanceModal } from '@/components/mobile/MobileAttendanceModal
 import { MobileBreakTimeModal } from '@/components/mobile/MobileBreakTimeModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer } from 'lucide-react';
+import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer, QrCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
@@ -773,7 +773,7 @@ export default function MobileDashboardPage() {
                                     {isOnBreak ? <Timer className="h-7 w-7 animate-spin-slow" /> : <Coffee className="h-7 w-7" />}
                                 </div>
                                 <div className="flex flex-col items-center">
-                                    <span className="text-sm font-bold text-slate-700 leading-tight">Break Time</span>
+                                    <span className="text-sm font-medium text-slate-600 leading-tight">Break Time</span>
                                     {isOnBreak && (
                                         <span className="text-[10px] font-mono font-bold text-orange-600 mt-0.5">{breakElapsedTime}</span>
                                     )}
@@ -797,6 +797,17 @@ export default function MobileDashboardPage() {
                                     <LogIn className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center leading-tight">Check In/Out</span>
+                            </Link>
+
+                            {/* QR Scan / Face Att. */}
+                            <Link
+                                href="/mobile/qrcode"
+                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
+                            >
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
+                                    <QrCode className="h-7 w-7" />
+                                </div>
+                                <span className="text-sm font-medium text-slate-600 text-center leading-tight">QR Scan / Face Att.</span>
                             </Link>
 
                             {/* Claim */}

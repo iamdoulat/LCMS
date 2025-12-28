@@ -15,32 +15,60 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
     // But wrapper is fine, just contents might handle it.
     const isLoginPage = pathname === '/mobile/login';
 
+    React.useEffect(() => {
+        const handleContextMenu = (e: MouseEvent) => {
+            e.preventDefault();
+        };
+
+        const handleTouchStart = (e: TouchEvent) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        };
+
+        document.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+        return () => {
+            document.removeEventListener('contextmenu', handleContextMenu);
+            document.removeEventListener('touchstart', handleTouchStart);
+        };
+    }, []);
+
     // Pages that need the dark blue background to match the header (filling status bar area)
     const isDarkHeaderPage = [
         '/mobile/attendance/my-attendance',
         '/mobile/attendance/team-attendance',
         '/mobile/attendance/reconciliation/my-applications',
         '/mobile/attendance/reconciliation/approval',
-        '/mobile/attendance/remote-approval'
+        '/mobile/attendance/remote-approval',
+        '/mobile/visit',
+        '/mobile/leave/calendar',
+        '/mobile/leave/applications',
+        '/mobile/leave/subordinate',
+        '/mobile/approve',
+        '/mobile/provident-fund',
+        '/mobile/qrcode',
+        '/mobile/profile'
     ].some(path => pathname?.startsWith(path));
 
     if (isLoginPage) return <>{children}</>;
 
     return (
-        <div className="relative min-h-screen bg-[#4c35de] overflow-hidden">
+        <div className="fixed inset-0 bg-[#4c35de] overflow-hidden select-none overscroll-none touch-none">
             {/* The Sidebar (Backend) */}
             <MobileDrawerSidebar />
 
             {/* The Main Content (Foreground) */}
             <div
                 className={cn(
-                    "relative z-10 transition-transform duration-300 ease-out min-h-screen flex flex-col",
+                    "relative z-10 transition-transform duration-300 ease-out flex flex-col h-full w-full",
                     isDarkHeaderPage ? "bg-[#0a1e60]" : "bg-slate-50",
-                    isOpen ? "translate-x-[49%] scale-[0.85] rounded-l-[2.5rem] overflow-hidden shadow-2xl h-screen" : "translate-x-0 scale-100 rounded-none shadow-none"
+                    isOpen ? "translate-x-[49%] scale-[0.85] rounded-l-[2.5rem] overflow-hidden shadow-2xl" : "translate-x-0 scale-100 rounded-none shadow-none"
                 )}
             >
                 {/* Content */}
-                <main className="flex-1 relative">
+                <main className="flex-1 relative overflow-hidden flex flex-col">
                     {children}
                     {/* Overlay to catch clicks when sidebar is open, but allow header interaction (z-50 > z-40) */}
                     {isOpen && (

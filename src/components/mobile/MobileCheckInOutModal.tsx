@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
-import { serverTimestamp } from 'firebase/firestore';
+import { serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { Loader2, Camera, Upload, MapPin, RefreshCw } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { getValidOption } from '@/types';
@@ -101,6 +101,10 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
         setIsSubmitting(true);
 
         try {
+            // Fetch employee data for notification details
+            const employeeDoc = await getDoc(doc(firestore, 'employees', user.uid));
+            const employeeData = employeeDoc.exists() ? employeeDoc.data() : null;
+
             // Upload Image if present using shared helper
             let photoUrl = '';
             if (selectedFile) {
@@ -110,7 +114,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
             // Create Record using shared helper
             await createCheckInOutRecord(
                 user.uid,
-                firestoreUser?.displayName || 'Unknown Employee',
+                employeeData?.fullName || firestoreUser?.displayName || 'Unknown Employee',
                 companyName,
                 checkInOutType,
                 {
@@ -129,6 +133,32 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                 timer: 1500,
                 showConfirmButton: false
             });
+
+            // Trigger Notification
+            const notificationType = checkInOutType === 'Check In' ? 'check_in' : 'check_out';
+            fetch('/api/notify/attendance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: notificationType,
+                    employeeId: user.uid,
+                    employeeName: employeeData?.fullName || firestoreUser?.displayName || 'Unknown Employee',
+                    employeeCode: employeeData?.employeeCode || 'N/A',
+                    employeeEmail: employeeData?.email || user.email,
+                    employeePhone: employeeData?.phone || employeeData?.contactNumber,
+                    time: new Date().toLocaleTimeString(),
+                    date: new Date().toLocaleDateString(),
+                    location: {
+                        latitude: currentLocation.latitude,
+                        longitude: currentLocation.longitude,
+                        address: address || ''
+                    },
+                    companyName: companyName,
+                    remarks: remarks,
+                    photoUrl: photoUrl || undefined
+                })
+            }).catch(err => console.error('[ATTENDANCE NOTIFY] Notification error:', err));
+
             onSuccess();
             onClose();
 

@@ -43,7 +43,12 @@ export default function MobileAttendancePage() {
     const [loading, setLoading] = useState(true);
 
     const fetchWeeklySummary = async () => {
-        if (!supervisedEmployeeIds.length) {
+        console.log('[ATTENDANCE] Starting fetchWeeklySummary');
+        console.log('[ATTENDANCE] supervisedEmployeeIds:', supervisedEmployeeIds);
+
+        if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) {
+            console.log('[ATTENDANCE] No supervised employees found');
+            setAttendanceData({ present: 0, delay: 0, weekend: 0, leave: 0, absent: 0 });
             setLoading(false);
             return;
         }
@@ -55,27 +60,39 @@ export default function MobileAttendancePage() {
             const end = endOfWeek(today, { weekStartsOn: 6 });
             const weekDays = eachDayOfInterval({ start, end });
 
-            // 1. Fetch Attendance Records for the week
-            // Firestore 'in' limit is 10. Split if needed. 
-            // For simplicity in this iteration, we'll fetch for the first 10 supervised employees.
-            // In production, batching logic is needed.
-            const employeeIdsToFetch = supervisedEmployeeIds.slice(0, 10);
+            console.log('[ATTENDANCE] Week range:', {
+                start: format(start, 'yyyy-MM-dd'),
+                end: format(end, 'yyyy-MM-dd'),
+                weekDays: weekDays.map(d => format(d, 'yyyy-MM-dd'))
+            });
 
-            // Note: Querying by date range string assuming 'date' field is 'YYYY-MM-DD' or similar sortable string.
-            // If date is Timestamp, we need range queries. Assuming 'date' is string 'YYYY-MM-DD' based on typical patterns.
+            // 1. Fetch Attendance Records for supervised employees
+            // Firestore 'in' limit is 30 (previously 10). Split if needed.
+            const employeeIdsToFetch = supervisedEmployeeIds.slice(0, 30);
+            console.log('[ATTENDANCE] Fetching attendance for employees:', employeeIdsToFetch);
+
             const startDateStr = format(start, 'yyyy-MM-dd');
             const endDateStr = format(end, 'yyyy-MM-dd');
 
+            // Fetch all attendance records for these employees (no date filter to avoid composite index)
             const attendanceQuery = query(
                 collection(firestore, 'attendance'),
-                where('employeeId', 'in', employeeIdsToFetch),
-                where('date', '>=', startDateStr),
-                where('date', '<=', endDateStr)
+                where('employeeId', 'in', employeeIdsToFetch)
             );
             const attendanceSnap = await getDocs(attendanceQuery);
-            const attendanceRecords = attendanceSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+            console.log('[ATTENDANCE] Total attendance records fetched:', attendanceSnap.docs.length);
 
-            // 2. Fetch Approved Leave Applications overlapping this week
+            // Filter by date client-side
+            const attendanceRecords = attendanceSnap.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as any))
+                .filter((record: any) => {
+                    return record.date && record.date >= startDateStr && record.date <= endDateStr;
+                });
+
+            console.log('[ATTENDANCE] Filtered attendance records:', attendanceRecords.length);
+            console.log('[ATTENDANCE] Sample attendance records:', attendanceRecords.slice(0, 3));
+
+            // 2. Fetch Approved Leave Applications
             const leaveQuery = query(
                 collection(firestore, 'leave_applications'),
                 where('employeeId', 'in', employeeIdsToFetch),
@@ -83,12 +100,13 @@ export default function MobileAttendancePage() {
             );
             const leaveSnap = await getDocs(leaveQuery);
             const leaveApplications = leaveSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+            console.log('[ATTENDANCE] Leave applications:', leaveApplications.length);
 
-            // 3. Fetch Holidays (Assuming a single document or collection of holidays)
-            // Ideally query range, but often holidays are a single doc with an array or small collection.
-            // Assuming 'hrm_settings/holiday/items' collection.
-            const holidaySnap = await getDocs(collection(firestore, 'hrm_settings/holiday/items'));
+            // 3. Fetch Holidays
+            const holidaySnap = await getDocs(collection(firestore, 'holidays'));
             const holidays = holidaySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+            console.log('[ATTENDANCE] Holidays:', holidays.length);
+            console.log('[ATTENDANCE] Sample holiday:', holidays[0]);
 
             // Calculate Stats
             let present = 0;
@@ -97,26 +115,13 @@ export default function MobileAttendancePage() {
             let leave = 0;
             let absent = 0;
 
+            console.log('[ATTENDANCE] Processing', employeeIdsToFetch.length, 'employees for', weekDays.length, 'days');
+
             employeeIdsToFetch.forEach(empId => {
                 weekDays.forEach(day => {
                     const dateStr = format(day, 'yyyy-MM-dd');
 
-                    // If day is in future (relative to now), skip counting as absent?
-                    // Usually summary includes "so far" or "planned"? 
-                    // Let's count up to 'end' but strictly speaking we shouldn't count 'Absent' for tomorrow.
-                    // Subordinate summary usually shows historical + today status.
-                    if (isAfter(startOfDay(day), startOfDay(today))) {
-                        // Future days: Check if approved leave or holiday/weekend exist, otherwise ignore (don't count absent)
-                        // But for a weekly chart 100%, we might want to fill it. 
-                        // Let's counting everything. If it's future and no leave/holiday, simply don't count it as Absent yet?
-                        // Or count as 'Remaining'? 
-                        // The prompt asks for Present, Delay, Weekend, Absent, Leave.
-                        // We will count future days as 'Absent' only if passed, or maybe just ignore?
-                        // Let's ignore future days for "Absent/Present/Delay" counts to avoid skewing data with 0s.
-                        // BUT "Weekend" and "Leave" can be known in advance.
-                    }
-
-                    // 1. Check Attendance
+                    // 1. Check Attendance Record
                     const record = attendanceRecords.find((r: any) => r.employeeId === empId && r.date === dateStr);
                     if (record) {
                         if (record.flag === 'P' || record.flag === 'V') present++;
@@ -138,13 +143,11 @@ export default function MobileAttendancePage() {
                         return;
                     }
 
-                    // 3. Check Holiday/Weekend in Settings
-                    // Assuming holiday doc has 'date' or 'startDate'/'endDate'
+                    // 3. Check Holiday/Weekend
                     const isHoliday = holidays.some((h: any) => {
-                        // Simple check if holiday collection has 'date' field
-                        return h.date === dateStr;
+                        const holidayDate = h.date?.toDate ? format(h.date.toDate(), 'yyyy-MM-dd') : h.date;
+                        return holidayDate === dateStr;
                     });
-                    // Also check Friday
                     const isWeekend = isFriday(day);
 
                     if (isHoliday || isWeekend) {
@@ -159,18 +162,26 @@ export default function MobileAttendancePage() {
                 });
             });
 
+            console.log('[ATTENDANCE] Final counts:', { present, delay, weekend, leave, absent });
             setAttendanceData({ present, delay, weekend, leave, absent });
 
         } catch (error) {
-            console.error("Error fetching weekly summary:", error);
+            console.error("[ATTENDANCE] Error fetching weekly summary:", error);
+            setAttendanceData({ present: 0, delay: 0, weekend: 0, leave: 0, absent: 0 });
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchWeeklySummary();
-    }, [supervisedEmployeeIds]);
+        console.log('[ATTENDANCE] useEffect triggered, supervisedEmployeeIds.length:', supervisedEmployeeIds?.length);
+        if (supervisedEmployeeIds && supervisedEmployeeIds.length > 0) {
+            fetchWeeklySummary();
+        } else {
+            setLoading(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [supervisedEmployeeIds.length]);
 
 
     const handleRefresh = async () => {
@@ -271,96 +282,110 @@ export default function MobileAttendancePage() {
                             <div className="flex justify-center py-10">
                                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
                             </div>
+                        ) : supervisedEmployeeIds.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-10 text-center">
+                                <Users className="h-16 w-16 text-slate-300 mb-3" />
+                                <p className="text-slate-500 font-medium">No Subordinates Found</p>
+                                <p className="text-sm text-slate-400 mt-1">You don't have any subordinates to supervise</p>
+                            </div>
+                        ) : total === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-10 text-center">
+                                <Clock className="h-16 w-16 text-slate-300 mb-3" />
+                                <p className="text-slate-500 font-medium">No Attendance Data</p>
+                                <p className="text-sm text-slate-400 mt-1">No attendance records found for this week</p>
+                            </div>
                         ) : (
-                            <div className="flex items-center justify-between mb-6">
-                                {/* SVG Donut Chart */}
-                                <div className="relative w-48 h-48 flex-shrink-0">
-                                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                        {/* Background circle */}
-                                        <circle
-                                            cx="50"
-                                            cy="50"
-                                            r={radius}
-                                            fill="none"
-                                            stroke="#f1f5f9"
-                                            strokeWidth="15"
-                                        />
+                            <div className="space-y-6">
+                                {/* SVG Donut Chart - Centered */}
+                                <div className="flex justify-center">
+                                    <div className="relative w-48 h-48">
+                                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                            {/* Background circle */}
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r={radius}
+                                                fill="none"
+                                                stroke="#f1f5f9"
+                                                strokeWidth="15"
+                                            />
 
-                                        {/* Present segment (green) */}
-                                        <circle
-                                            cx="50"
-                                            cy="50"
-                                            r={radius}
-                                            fill="none"
-                                            stroke="#10b981"
-                                            strokeWidth="15"
-                                            strokeDasharray={`${(presentAngle / 360) * circumference} ${circumference}`}
-                                            strokeDashoffset="0"
-                                            className="transition-all duration-500"
-                                        />
+                                            {/* Present segment (green) */}
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r={radius}
+                                                fill="none"
+                                                stroke="#10b981"
+                                                strokeWidth="15"
+                                                strokeDasharray={`${(presentAngle / 360) * circumference} ${circumference}`}
+                                                strokeDashoffset="0"
+                                                className="transition-all duration-500"
+                                            />
 
-                                        {/* Delay segment (yellow) */}
-                                        <circle
-                                            cx="50"
-                                            cy="50"
-                                            r={radius}
-                                            fill="none"
-                                            stroke="#fbbf24"
-                                            strokeWidth="15"
-                                            strokeDasharray={`${(delayAngle / 360) * circumference} ${circumference}`}
-                                            strokeDashoffset={`-${(presentAngle / 360) * circumference}`}
-                                            className="transition-all duration-500"
-                                        />
+                                            {/* Delay segment (yellow) */}
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r={radius}
+                                                fill="none"
+                                                stroke="#fbbf24"
+                                                strokeWidth="15"
+                                                strokeDasharray={`${(delayAngle / 360) * circumference} ${circumference}`}
+                                                strokeDashoffset={`-${(presentAngle / 360) * circumference}`}
+                                                className="transition-all duration-500"
+                                            />
 
-                                        {/* Weekend segment (purple) */}
-                                        <circle
-                                            cx="50"
-                                            cy="50"
-                                            r={radius}
-                                            fill="none"
-                                            stroke="#a78bfa"
-                                            strokeWidth="15"
-                                            strokeDasharray={`${(weekendAngle / 360) * circumference} ${circumference}`}
-                                            strokeDashoffset={`-${((presentAngle + delayAngle) / 360) * circumference}`}
-                                            className="transition-all duration-500"
-                                        />
+                                            {/* Weekend segment (purple) */}
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r={radius}
+                                                fill="none"
+                                                stroke="#a78bfa"
+                                                strokeWidth="15"
+                                                strokeDasharray={`${(weekendAngle / 360) * circumference} ${circumference}`}
+                                                strokeDashoffset={`-${((presentAngle + delayAngle) / 360) * circumference}`}
+                                                className="transition-all duration-500"
+                                            />
 
-                                        {/* Leave segment (cyan) */}
-                                        <circle
-                                            cx="50"
-                                            cy="50"
-                                            r={radius}
-                                            fill="none"
-                                            stroke="#06b6d4"
-                                            strokeWidth="15"
-                                            strokeDasharray={`${(leaveAngle / 360) * circumference} ${circumference}`}
-                                            strokeDashoffset={`-${((presentAngle + delayAngle + weekendAngle) / 360) * circumference}`}
-                                            className="transition-all duration-500"
-                                        />
+                                            {/* Leave segment (cyan) */}
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r={radius}
+                                                fill="none"
+                                                stroke="#06b6d4"
+                                                strokeWidth="15"
+                                                strokeDasharray={`${(leaveAngle / 360) * circumference} ${circumference}`}
+                                                strokeDashoffset={`-${((presentAngle + delayAngle + weekendAngle) / 360) * circumference}`}
+                                                className="transition-all duration-500"
+                                            />
 
-                                        {/* Absent segment (red) */}
-                                        <circle
-                                            cx="50"
-                                            cy="50"
-                                            r={radius}
-                                            fill="none"
-                                            stroke="#ef4444"
-                                            strokeWidth="15"
-                                            strokeDasharray={`${(absentAngle / 360) * circumference} ${circumference}`}
-                                            strokeDashoffset={`-${((presentAngle + delayAngle + weekendAngle + leaveAngle) / 360) * circumference}`}
-                                            className="transition-all duration-500"
-                                        />
-                                    </svg>
+                                            {/* Absent segment (red) */}
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r={radius}
+                                                fill="none"
+                                                stroke="#ef4444"
+                                                strokeWidth="15"
+                                                strokeDasharray={`${(absentAngle / 360) * circumference} ${circumference}`}
+                                                strokeDashoffset={`-${((presentAngle + delayAngle + weekendAngle + leaveAngle) / 360) * circumference}`}
+                                                className="transition-all duration-500"
+                                            />
+                                        </svg>
 
-                                    {/* Center text */}
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <div className="text-3xl font-bold text-emerald-500">{attendanceData.present}</div>
-                                        <div className="text-sm font-semibold text-emerald-500">Present</div>
+                                        {/* Center text */}
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                            <div className="text-3xl font-bold text-emerald-500">{attendanceData.present}</div>
+                                            <div className="text-sm font-semibold text-emerald-500">Present</div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Legend */}
-                                <div className="space-y-3 flex-1 ml-4">
+                                {/* Legend - Left aligned below chart */}
+                                <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
