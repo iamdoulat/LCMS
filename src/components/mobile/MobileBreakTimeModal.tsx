@@ -32,6 +32,7 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const [currentLocation, setCurrentLocation] = useState<any>(null);
     const [todayAttendance, setTodayAttendance] = useState<any>(null);
+    const [showStopConfirmation, setShowStopConfirmation] = useState(false);
 
     const isOnBreak = externalIsOnBreak !== undefined ? externalIsOnBreak : internalIsOnBreak;
     const activeBreakRecord = externalBreakRecord !== undefined ? externalBreakRecord : internalActiveBreakRecord;
@@ -157,56 +158,43 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
             return;
         }
 
+        if (isOnBreak && activeBreakRecord?.id) {
+            // Show confirmation UI instead of Swal
+            setShowStopConfirmation(true);
+            return;
+        }
+
+        // Start Break Logic
+        await performBreakAction(false);
+    };
+
+    const confirmStopBreak = async () => {
+        setShowStopConfirmation(false);
+        await performBreakAction(true);
+    };
+
+    const performBreakAction = async (isStopping: boolean) => {
         setBreakLoading(true);
         try {
-            if (isOnBreak && activeBreakRecord?.id) {
-                // Stop break
-                const result = await Swal.fire({
-                    title: 'Stop Break?',
-                    text: 'Are you sure you want to stop your break?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Yes, stop it!',
-                    customClass: {
-                        container: 'z-[99999] !important',
-                        popup: 'z-[99999] !important'
-                    },
-                    didOpen: () => {
-                        // Ensure focus is moved to the alert
-                        const confirmBtn = Swal.getConfirmButton();
-                        if (confirmBtn) confirmBtn.focus();
-                    }
-                });
+            const location = await captureLocation();
+            if (!location) {
+                setBreakLoading(false);
+                return;
+            }
 
-                if (!result.isConfirmed) {
-                    setBreakLoading(false);
-                    return;
-                }
-
-                const location = await captureLocation();
-                if (!location) {
-                    setBreakLoading(false);
-                    return;
-                }
-
+            if (isStopping && activeBreakRecord?.id) {
                 await stopBreak(activeBreakRecord.id, location);
                 Swal.fire({
                     title: "Break Ended",
                     text: "Welcome back! Your break has been recorded.",
                     icon: "success",
                     timer: 1500,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    customClass: {
+                        container: 'z-[99999] !important'
+                    }
                 });
             } else {
-                // Start break
-                const location = await captureLocation();
-                if (!location) {
-                    setBreakLoading(false);
-                    return;
-                }
-
                 await startBreak({
                     id: employeeData.id,
                     fullName: employeeData.fullName,
@@ -219,12 +207,22 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
                     text: "Take rest! Your break has started.",
                     icon: "success",
                     timer: 1500,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    customClass: {
+                        container: 'z-[99999] !important'
+                    }
                 });
             }
         } catch (error: any) {
             console.error("Error toggling break:", error);
-            Swal.fire("Error", error.message || "Failed to process break.", "error");
+            Swal.fire({
+                title: "Error",
+                text: error.message || "Failed to process break.",
+                icon: "error",
+                customClass: {
+                    container: 'z-[99999] !important'
+                }
+            });
         } finally {
             setBreakLoading(false);
         }
@@ -235,7 +233,37 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
             if (!open && isFrozen) return; // Prevent closing if frozen
             if (!open) onClose();
         }}>
-            <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 border-0 h-[80vh] sm:h-auto flex flex-col">
+            <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 border-0 h-auto max-h-[85vh] sm:h-auto flex flex-col relative w-[90%] rounded-2xl">
+                {/* Confirmation Overlay */}
+                {showStopConfirmation && (
+                    <div className="fixed inset-0 z-[100] bg-white/90 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
+                        <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-xs border border-slate-100 text-center">
+                            <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
+                                <AlertCircle className="h-8 w-8" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">Stop Break?</h3>
+                            <p className="text-sm text-slate-500 mb-6">
+                                Are you sure you want to stop your break? This will record your break end time.
+                            </p>
+                            <div className="flex gap-3">
+                                <Button
+                                    onClick={() => setShowStopConfirmation(false)}
+                                    variant="outline"
+                                    className="flex-1 rounded-xl h-12 font-bold border-slate-200"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={confirmStopBreak}
+                                    className="flex-1 rounded-xl h-12 font-bold bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-100"
+                                >
+                                    Yes, Stop
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 bg-white border-b sticky top-0 z-10">
                     <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
