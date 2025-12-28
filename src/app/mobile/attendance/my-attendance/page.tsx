@@ -109,6 +109,34 @@ export default function MyAttendancePage() {
         }
     };
 
+    // Swipe Handling
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe && activeTab === 'attendance') {
+            setActiveTab('break');
+        }
+        if (isRightSwipe && activeTab === 'break') {
+            setActiveTab('attendance');
+        }
+    };
+
     const containerRef = usePullToRefresh(refreshData);
 
     const formatTime = (isoString?: string) => {
@@ -158,7 +186,13 @@ export default function MyAttendancePage() {
                 </div>
             </div>
 
-            <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
+            <div
+                ref={containerRef}
+                className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+            >
                 {/* Tabs */}
                 <div className="bg-white px-6 pt-6 pb-2 rounded-t-[2rem] shadow-sm z-10">
                     <div className="flex items-center justify-between p-1 bg-slate-50 rounded-full mb-4">

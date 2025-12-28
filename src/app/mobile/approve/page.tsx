@@ -356,6 +356,34 @@ export default function ApproveApplicationsPage() {
         );
     };
 
+    // Swipe Handling
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe && activeTab === 'leave') {
+            setActiveTab('visit');
+        }
+        if (isRightSwipe && activeTab === 'visit') {
+            setActiveTab('leave');
+        }
+    };
+
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
@@ -371,7 +399,12 @@ export default function ApproveApplicationsPage() {
                 </div>
             </div>
 
-            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative px-5 pt-8">
+            <div
+                className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative px-5 pt-8"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+            >
                 <Card className="p-1 px-3 rounded-full border-none shadow-lg mb-6 flex justify-between bg-white/95 backdrop-blur">
                     <button
                         onClick={() => setActiveTab('leave')}

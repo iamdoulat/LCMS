@@ -54,6 +54,39 @@ export default function MobileProfilePage() {
     const [activeTab, setActiveTab] = useState<'personal' | 'official' | 'others'>('personal');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Swipe Handling
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe || isRightSwipe) {
+            const tabs = ['personal', 'official', 'others'];
+            const currentIndex = tabs.indexOf(activeTab);
+
+            if (isLeftSwipe && currentIndex < tabs.length - 1) {
+                setActiveTab(tabs[currentIndex + 1] as any);
+            }
+            if (isRightSwipe && currentIndex > 0) {
+                setActiveTab(tabs[currentIndex - 1] as any);
+            }
+        }
+    };
+
     useEffect(() => {
         async function fetchEmployee() {
             if (!user?.email) return;
@@ -215,7 +248,12 @@ export default function MobileProfilePage() {
             </header>
 
             {/* Main Content Container */}
-            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] px-6 pt-12 pb-24 relative mt-10">
+            <div
+                className="flex-1 bg-slate-50 rounded-t-[2.5rem] px-6 pt-12 pb-24 relative mt-10"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+            >
 
                 {/* Profile Header Avatar - Absolute Positioned */}
                 <div className="absolute -top-12 left-6 z-[60] translate-y-[10px]">
