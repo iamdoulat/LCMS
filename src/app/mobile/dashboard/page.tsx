@@ -640,12 +640,12 @@ export default function MobileDashboardPage() {
                             {visibleItems.map((item) => {
                                 const Icon = item.icon;
                                 const content = (
-                                    <div className={`flex-shrink-0 w-[130px] ${item.bgColor} p-3 rounded-xl flex flex-col justify-between h-36 relative overflow-hidden shadow-sm border border-slate-100 h-full`}>
-                                        <div className={`bg-white rounded-lg p-2 w-12 h-12 flex items-center justify-center shadow-xl/20 mb-2 ${item.textColor}`}>
+                                    <div className={`flex-shrink-0 w-[130px] ${item.bgColor} p-3 rounded-xl flex flex-col h-36 relative overflow-hidden shadow-sm border border-slate-100 h-full`}>
+                                        <div className={`bg-white rounded-lg p-2 w-12 h-12 flex items-center justify-center shadow-xl/20 mb-[15px] ${item.textColor}`}>
                                             <Icon className="h-6 w-6" />
                                         </div>
                                         <div className="absolute top-5 right-4 text-lg font-bold text-[#0a1e60]">{item.value}</div>
-                                        <div className="mt-auto">
+                                        <div>
                                             <div className="text-xs text-slate-500">{item.label}</div>
                                             <div className="text-xs text-slate-500">{item.subLabel}</div>
                                         </div>
