@@ -30,7 +30,9 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Check, X, Search, Smartphone, RefreshCw } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Loader2, Check, X, Search, Smartphone, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { toast } from '@/components/ui/use-toast';
 
@@ -39,6 +41,9 @@ export default function DeviceChangeRequestsPage() {
     const [requests, setRequests] = useState<DeviceChangeRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+    const [featureEnabled, setFeatureEnabled] = useState(true);
 
     // Cache for user allowed devices to avoid repetitive fetching
     // Key: userId, Value: AllowedDevice[]
@@ -111,6 +116,48 @@ export default function DeviceChangeRequestsPage() {
         const unsubscribe = fetchRequests();
         return () => unsubscribe();
     }, []);
+
+    // Listen to feature toggle setting
+    useEffect(() => {
+        const settingsRef = doc(firestore, 'system_settings', 'device_change_feature');
+        const unsubscribe = onSnapshot(settingsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                setFeatureEnabled(snapshot.data().enabled ?? true);
+            }
+        }, (error) => {
+            console.error('Error listening to feature toggle:', error);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const handleToggleFeature = async (enabled: boolean) => {
+        if (!currentUser) return;
+
+        // Optimistic update - immediately update UI
+        setFeatureEnabled(enabled);
+
+        try {
+            const settingsRef = doc(firestore, 'system_settings', 'device_change_feature');
+            await updateDoc(settingsRef, {
+                enabled,
+                updatedBy: currentUser.uid,
+                updatedAt: serverTimestamp()
+            });
+            toast({
+                title: enabled ? 'Feature Enabled' : 'Feature Disabled',
+                description: `Device change requests are now ${enabled ? 'enabled' : 'disabled'} for employees.`,
+            });
+        } catch (error: any) {
+            console.error('Error updating feature toggle:', error);
+            // Revert optimistic update on error
+            setFeatureEnabled(!enabled);
+            toast({
+                title: 'Error',
+                description: error.message || 'Failed to update setting.',
+                variant: 'destructive'
+            });
+        }
+    };
 
     const handleApprove = async (request: DeviceChangeRequest) => {
         if (!currentUser) return;
@@ -203,7 +250,11 @@ export default function DeviceChangeRequestsPage() {
         (req.userEmail || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Pagination could be added here, but for now we'll show all
+    // Pagination
+    const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedRequests = filteredRequests.slice(startIndex, endIndex);
 
     // Formatting helper
     const getDeviceString = (device: AllowedDevice) => {
@@ -227,21 +278,34 @@ export default function DeviceChangeRequestsPage() {
                         className="h-8 w-[150px] lg:w-[250px]"
                     />
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                        setRequests([]);
-                        setLoading(true);
-                        // The effect will handle the refresh via the key or just let onSnapshot handle it
-                        // For a hard refresh, we could update a key state
-                        window.location.reload();
-                    }}
-                    className="flex items-center gap-2"
-                >
-                    <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-                    Refresh
-                </Button>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
+                        <Label htmlFor="feature-toggle" className="text-sm font-medium cursor-pointer">
+                            Device Change Requests
+                        </Label>
+                        <Switch
+                            id="feature-toggle"
+                            checked={featureEnabled}
+                            onCheckedChange={handleToggleFeature}
+                        />
+                        <span className={cn("text-xs font-semibold", featureEnabled ? "text-green-600" : "text-red-600")}>
+                            {featureEnabled ? 'ON' : 'OFF'}
+                        </span>
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setRequests([]);
+                            setLoading(true);
+                            window.location.reload();
+                        }}
+                        className="flex items-center gap-2"
+                    >
+                        <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+                        Refresh
+                    </Button>
+                </div>
             </div>
 
             <Card className="border-t-4 border-t-primary shadow-md">
@@ -267,7 +331,7 @@ export default function DeviceChangeRequestsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredRequests.map((req) => {
+                                    {paginatedRequests.map((req) => {
                                         const devices = userDevices[req.userId] || [];
                                         const currentDeviceStr = devices.length > 0
                                             ? devices.map(d => getDeviceString(d)).join(', ') // Or just list them
@@ -345,7 +409,7 @@ export default function DeviceChangeRequestsPage() {
                                             </TableRow>
                                         );
                                     })}
-                                    {filteredRequests.length === 0 && (
+                                    {paginatedRequests.length === 0 && (
                                         <TableRow>
                                             <TableCell colSpan={6} className="h-24 text-center">
                                                 No requests found.
@@ -354,6 +418,38 @@ export default function DeviceChangeRequestsPage() {
                                     )}
                                 </TableBody>
                             </Table>
+                        </div>
+                    )}
+
+                    {/* Pagination Controls */}
+                    {filteredRequests.length > 0 && (
+                        <div className="flex items-center justify-between mt-4">
+                            <div className="text-sm text-muted-foreground">
+                                Showing {startIndex + 1}-{Math.min(endIndex, filteredRequests.length)} of {filteredRequests.length} requests
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                    Previous
+                                </Button>
+                                <div className="text-sm font-medium">
+                                    Page {currentPage} of {totalPages}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </CardContent>

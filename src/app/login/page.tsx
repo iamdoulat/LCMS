@@ -76,10 +76,11 @@ export default function LoginPage() {
     return `${browser} on ${os} (${type})`;
   };
 
-  // Helper: Check if user role is exempt from device security
-  // Helper: Check if user role is exempt from device security
-  const isExemptFromDeviceSecurity = (role: string[] | string | undefined | null): boolean => {
-    return true; // Bypass all restrictions
+  // Helper: Check if user should have device security (ONLY employees)
+  const shouldCheckDevice = (role: string[] | string | undefined | null): boolean => {
+    if (!role) return false;
+    const roles = Array.isArray(role) ? role : [role];
+    return roles.some(r => r.toLowerCase() === 'employee');
   };
 
   // Verify Device Function
@@ -97,9 +98,19 @@ export default function LoginPage() {
       const isEmployee = userRole?.includes('Employee');
       const targetPath = isEmployee ? '/mobile/dashboard' : '/dashboard';
 
-      // Check if user is exempt from device security
-      if (isExemptFromDeviceSecurity(userRole)) {
-        // console.log("User is exempt from device security.");
+      // Check if device change feature is enabled
+      const settingsRef = doc(firestore, 'system_settings', 'device_change_feature');
+      const settingsSnap = await getDoc(settingsRef);
+      const featureEnabled = settingsSnap.exists() ? (settingsSnap.data().enabled ?? true) : true;
+
+      // If feature is disabled, skip device check
+      if (!featureEnabled) {
+        router.push(targetPath);
+        return;
+      }
+
+      // Only check devices for employee role
+      if (!shouldCheckDevice(userRole)) {
         router.push(targetPath);
         return;
       }

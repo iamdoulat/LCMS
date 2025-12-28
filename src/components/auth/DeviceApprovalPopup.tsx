@@ -54,7 +54,7 @@ export function DeviceApprovalPopup({ isOpen, onCheckNow, onTryNewUser }: Device
                         Your Request is Pending for Approval
                     </DialogTitle>
                     <DialogDescription className="text-center text-gray-600 font-medium">
-                        It appears that you are logged in from a different device.
+                        This device is awaiting approval from HR. Please wait or try again later.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col space-y-3 py-4 w-full">
@@ -64,13 +64,13 @@ export function DeviceApprovalPopup({ isOpen, onCheckNow, onTryNewUser }: Device
                         disabled={isLoading}
                     >
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Check now
+                        Check Again
                     </Button>
                     <Button
                         className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-6 rounded-xl"
                         onClick={onTryNewUser}
                     >
-                        Try New User
+                        Try Later
                     </Button>
                 </div>
             </DialogContent>

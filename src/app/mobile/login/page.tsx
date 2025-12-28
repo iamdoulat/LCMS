@@ -4,17 +4,20 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, LogIn } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
+import { UAParser } from 'ua-parser-js';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '@/lib/firebase/config';
+import { sendPasswordResetEmail, signOut } from 'firebase/auth';
+import { auth, firestore } from '@/lib/firebase/config';
 import { DeviceApprovalPopup } from '@/components/auth/DeviceApprovalPopup';
+import { doc, getDoc, updateDoc, arrayUnion, Timestamp, collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import type { UserDocumentForAdmin, AllowedDevice } from '@/types';
 
 // Schema - same as main app
 const loginSchema = z.object({
@@ -26,16 +29,10 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function MobileLoginPage() {
     const router = useRouter();
-    const { login: contextLogin, companyLogoUrl, loading: authLoading, user } = useAuth();
+    const { login: contextLogin, companyLogoUrl, loading: authLoading, user, userRole } = useAuth();
     const [isEmailLoading, setIsEmailLoading] = useState(false);
-
-    // Note: We are reusing the DeviceApprovalPopup, which requires 'user' state logic
-    // in the main login page, verifyDevice() was called in useEffect.
-    // Since we are reusing 'useAuth', checking device logic might need to be replicated or centralized.
-    // For now, I will implement the login form first. To fully support device approval, 
-    // we would need that logic here too if it's not in a global context.
-    // The user prompt said "functionality same as main app", so I should probably copy the verification logic 
-    // or at least standard login.
+    const [showDevicePopup, setShowDevicePopup] = useState(false);
+    const [isCheckingDevice, setIsCheckingDevice] = useState(false);
 
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
@@ -45,14 +42,178 @@ export default function MobileLoginPage() {
         },
     });
 
+    // Helper: Get or Create Device ID
+    const getDeviceId = () => {
+        if (typeof window === 'undefined') return 'unknown-device';
+        let deviceId = localStorage.getItem('device_id');
+        if (!deviceId) {
+            deviceId = crypto.randomUUID();
+            localStorage.setItem('device_id', deviceId);
+        }
+        return deviceId;
+    };
+
+    const getDeviceName = () => {
+        if (typeof window === 'undefined') return 'Unknown Device';
+        const parser = new UAParser();
+        const result = parser.getResult();
+        const browser = result.browser.name || 'Unknown Browser';
+        const os = result.os.name || 'Unknown OS';
+        const type = result.device.type || 'Mobile';
+        return `${browser} on ${os} (${type})`;
+    };
+
+    const shouldCheckDevice = (role: string[] | string | undefined | null): boolean => {
+        if (!role) return false;
+        const roles = Array.isArray(role) ? role : [role];
+        return roles.some(r => r.toLowerCase() === 'employee');
+    };
+
+    const verifyDevice = async (currentUser: any) => {
+        setIsCheckingDevice(true);
+        try {
+            if (!currentUser?.uid) return;
+
+            const targetPath = '/mobile/dashboard';
+
+            // Check if device change feature is enabled
+            const settingsRef = doc(firestore, 'system_settings', 'device_change_feature');
+            const settingsSnap = await getDoc(settingsRef);
+            const featureEnabled = settingsSnap.exists() ? (settingsSnap.data().enabled ?? true) : true;
+
+            // If feature is disabled, skip device check
+            if (!featureEnabled) {
+                router.push(targetPath);
+                return;
+            }
+
+            // Only check devices for employee role
+            if (!shouldCheckDevice(userRole)) {
+                router.push(targetPath);
+                return;
+            }
+
+            const userDocRef = doc(firestore, 'users', currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+
+            if (!userDocSnap.exists()) {
+                router.push(targetPath);
+                return;
+            }
+
+            const userData = userDocSnap.data() as UserDocumentForAdmin;
+            const allowedDevices = userData.allowedDevices || [];
+            const deviceId = getDeviceId();
+            const deviceName = getDeviceName();
+
+            // Gather device info
+            const parser = new UAParser();
+            const result = parser.getResult();
+            const browser = result.browser.name;
+            const os = result.os.name;
+            const deviceType = result.device.type || 'Mobile';
+            const brand = result.device.vendor;
+            const model = result.device.model;
+            const userAgent = navigator.userAgent;
+
+            const newDevice: AllowedDevice = {
+                deviceId,
+                deviceName,
+                registeredAt: Timestamp.now(),
+                userAgent
+            };
+
+            // Case 1: No devices registered yet -> Auto-approve first device
+            if (allowedDevices.length === 0) {
+                const userRef = doc(firestore, 'users', currentUser.uid);
+                await updateDoc(userRef, {
+                    allowedDevices: arrayUnion(newDevice),
+                    registeredAt: Timestamp.now()
+                });
+                router.push(targetPath);
+                return;
+            }
+
+            // Case 2: Check if current device is allowed
+            const isAllowed = allowedDevices.some(d => d.deviceId === deviceId);
+            if (isAllowed) {
+                router.push(targetPath);
+                return;
+            }
+
+            // Case 3: Unrecognized Device - Show popup
+            setShowDevicePopup(true);
+
+            // Check if pending request exists
+            const requestsRef = collection(firestore, 'device_change_requests');
+            const q = query(
+                requestsRef,
+                where('userId', '==', currentUser.uid)
+            );
+            const querySnapshot = await getDocs(q);
+            const existingReqs = querySnapshot.docs.filter(doc => {
+                const data = doc.data();
+                return data.deviceId === deviceId && data.status === 'pending';
+            });
+
+            if (existingReqs.length === 0) {
+                // Create new request
+                await addDoc(requestsRef, {
+                    userId: currentUser.uid,
+                    userName: userData.displayName || currentUser.displayName || 'Unknown User',
+                    userEmail: userData.email || currentUser.email || 'No Email',
+                    deviceId,
+                    deviceName,
+                    browser,
+                    os,
+                    deviceType,
+                    brand,
+                    model,
+                    userAgent,
+                    status: 'pending',
+                    createdAt: serverTimestamp()
+                });
+                Swal.fire({
+                    title: "Request Sent",
+                    text: "A device change request has been sent to HR.",
+                    icon: "success",
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                });
+            }
+        } catch (err) {
+            console.error("Device verification error:", err);
+        } finally {
+            setIsCheckingDevice(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!authLoading && user && !showDevicePopup) {
+            verifyDevice(user);
+        }
+    }, [user, userRole, authLoading]);
+
+    const handleCheckNow = async () => {
+        if (user) {
+            await verifyDevice(user);
+        }
+    };
+
+    const handleTryLater = async () => {
+        await signOut(auth);
+        setShowDevicePopup(false);
+        router.push('/mobile/login');
+    };
+
     const onEmailSubmit = async (data: LoginFormValues) => {
         setIsEmailLoading(true);
         try {
             await contextLogin(data.email, data.password);
-            // AuthContext watcher will handle redirect, OR we do it manually.
-            // If role is employee -> mobile/dashboard.
-            // We'll rely on the redirect logic we will implement next.
-            router.push('/mobile/dashboard');
+            // Device check will happen in useEffect
         } catch (err: any) {
             Swal.fire({
                 icon: 'error',
@@ -101,6 +262,14 @@ export default function MobileLoginPage() {
             }
         }
     };
+
+    if (authLoading || (!authLoading && user && !showDevicePopup)) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#0a1e60]">
+                <Loader2 className="h-12 w-12 animate-spin text-white" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0a1e60]">
@@ -158,6 +327,12 @@ export default function MobileLoginPage() {
                 </Form>
             </div>
             <p className="mt-8 text-white/50 text-xs">© 2025 NextSew. All rights reserved.</p>
+
+            <DeviceApprovalPopup
+                isOpen={showDevicePopup}
+                onCheckNow={handleCheckNow}
+                onTryNewUser={handleTryLater}
+            />
         </div>
     );
 }

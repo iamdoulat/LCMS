@@ -784,9 +784,7 @@ export default function DailyAttendancePage() {
                     <Alert className="mb-6 border-blue-500/50 bg-blue-500/10 text-blue-800 dark:text-blue-200">
                         <AlertTriangle className="h-4 w-4 !text-blue-600" />
                         <AlertTitle className="font-semibold !text-blue-700 dark:!text-blue-300">Bulk Upload CSV Format</AlertTitle>
-                        <AlertDescription>
-                            The CSV file must have the following headers: <strong>employeeCode,date,flag,inTime,outTime,remarks</strong>. Date format should be MM/DD/YYYY or YYYY-MM-DD. Time format must be HH:mm (24-hour).
-                        </AlertDescription>
+
                     </Alert>
                     <Card className="mb-6 shadow-md p-4">
                         <CardHeader className="p-2 pb-4">
@@ -801,17 +799,8 @@ export default function DailyAttendancePage() {
                                         <Input id="search-term-employee-attendance" placeholder="Search..." className="pl-10 h-10 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="flagFilter">Flag</Label>
-                                    <Select value={filterFlag} onValueChange={(v) => setFilterFlag(v)}>
-                                        <SelectTrigger id="flagFilter" className="h-10"><SelectValue placeholder="All Flags" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value={ALL_FLAGS_VALUE}>All Flags</SelectItem>
-                                            {attendanceFlagOptions.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
+
+                                <div className="grid grid-cols-2 gap-4 lg:col-span-2">
                                     <div className="space-y-1">
                                         <Label>From*</Label>
                                         <DatePickerField
@@ -852,7 +841,17 @@ export default function DailyAttendancePage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end pt-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-end pt-4">
+                                <div className="space-y-1">
+                                    <Label htmlFor="flagFilter">Flag</Label>
+                                    <Select value={filterFlag} onValueChange={(v) => setFilterFlag(v)}>
+                                        <SelectTrigger id="flagFilter" className="h-10"><SelectValue placeholder="All Flags" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL_FLAGS_VALUE}>All Flags</SelectItem>
+                                            {attendanceFlagOptions.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <div className="space-y-1">
                                     <Label>Branch</Label>
                                     <Select value={selectedBranch} onValueChange={setSelectedBranch}>
