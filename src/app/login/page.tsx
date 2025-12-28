@@ -109,24 +109,23 @@ export default function LoginPage() {
         return;
       }
 
-      // Only check devices for employee role
-      if (!shouldCheckDevice(userRole)) {
-        router.push(targetPath);
-        return;
-      }
-
       const userDocRef = doc(firestore, 'users', currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
-        // console.error("User document does not exist.");
-        // If no user doc, maybe just redirect or let them be? 
-        // Admin likely hasn't set them up, or they are just created.
         router.push(targetPath);
         return;
       }
 
       const userData = userDocSnap.data() as UserDocumentForAdmin;
+
+      // Check role directly from fresh data
+      const freshRole = userData.role;
+      if (!shouldCheckDevice(freshRole)) {
+        router.push(targetPath);
+        return;
+      }
+
       const allowedDevices = userData.allowedDevices || [];
       const deviceId = getDeviceId();
       const deviceName = getDeviceName();

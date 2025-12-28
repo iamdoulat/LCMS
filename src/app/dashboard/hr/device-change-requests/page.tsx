@@ -257,10 +257,21 @@ export default function DeviceChangeRequestsPage() {
     const paginatedRequests = filteredRequests.slice(startIndex, endIndex);
 
     // Formatting helper
-    const getDeviceString = (device: AllowedDevice) => {
+    const getDeviceString = (device: AllowedDevice | DeviceChangeRequest) => {
+        const parts = [];
+        if (device.brand && device.model) {
+            parts.push(`${device.brand} ${device.model}`);
+        } else if (device.deviceName) {
+            parts.push(device.deviceName);
+        }
+
         const details = [device.browser, device.os].filter(Boolean).join(' on ');
-        const type = device.deviceType ? `(${device.deviceType})` : '';
-        return `${details} ${type}`.trim() || device.deviceName || 'Unknown Device';
+        if (details) parts.push(`(${details})`);
+
+        const type = device.deviceType ? `[${device.deviceType}]` : '';
+        if (type) parts.push(type);
+
+        return parts.join(' ') || 'Unknown Device';
     };
 
     return (
@@ -366,8 +377,8 @@ export default function DeviceChangeRequestsPage() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm">{req.deviceId.substring(0, 12)}</span>
-                                                        <span className="text-xs text-muted-foreground">({req.deviceName})</span>
+                                                        <span className="text-sm font-medium">{getDeviceString(req)}</span>
+                                                        <span className="text-xs text-muted-foreground">{req.deviceId.substring(0, 12)}...</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
