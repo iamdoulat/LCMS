@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { MobileAttendanceModal } from '@/components/mobile/MobileAttendanceModal';
-import { MobileBreakTimeModal } from '@/components/mobile/MobileBreakTimeModal';
+// MobileBreakTimeModal is now global via Context
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer, QrCode, Banknote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
+import { useBreakTime } from '@/context/BreakTimeContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, getDocs, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min, isFriday, isWithinInterval, startOfDay } from 'date-fns';
@@ -83,11 +84,10 @@ export default function MobileDashboardPage() {
     const [pullDistance, setPullDistance] = useState(0);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
-    const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
+    // isBreakModalOpen state removed
     const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
     const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string; flag?: string; approvalStatus?: string } | null>(null);
-    const [isOnBreak, setIsOnBreak] = useState(false);
-    const [activeBreakRecord, setActiveBreakRecord] = useState<any>(null);
+    const { isOnBreak, activeBreakRecord, openBreakModal } = useBreakTime();
     const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
     const [userRole, setUserRole] = useState<string>('user');
     const [restrictionNote, setRestrictionNote] = useState<string | null>(null);
@@ -323,22 +323,7 @@ export default function MobileDashboardPage() {
                     setStats(prev => ({ ...prev, noticesCount: filtered.length }));
                 });
 
-                // 6. Break Time
-                const qBreak = query(
-                    collection(firestore, 'break_time'),
-                    where('employeeId', 'in', ids),
-                    where('onBreak', '==', true)
-                );
-                const unsubBreak = onSnapshot(qBreak, (snapshot) => {
-                    if (!snapshot.empty) {
-                        const doc = snapshot.docs[0];
-                        setActiveBreakRecord({ id: doc.id, ...doc.data() });
-                        setIsOnBreak(true);
-                    } else {
-                        setActiveBreakRecord(null);
-                        setIsOnBreak(false);
-                    }
-                });
+                // 6. Break Time listener removed (handled by Context)
 
                 return () => {
                     unsubLeave();
@@ -348,7 +333,6 @@ export default function MobileDashboardPage() {
                     unsubPendingAdvance();
                     unsubMissed();
                     unsubNotices();
-                    unsubBreak();
                 };
             } catch (err) {
                 console.error("Error setting up dashboard listeners:", err);
@@ -763,7 +747,7 @@ export default function MobileDashboardPage() {
                         <div className="grid grid-cols-3 gap-4">
                             {/* Break Time */}
                             <button
-                                onClick={() => setIsBreakModalOpen(true)}
+                                onClick={openBreakModal}
                                 className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 text-center w-full group"
                             >
                                 <div className={cn(
@@ -848,12 +832,6 @@ export default function MobileDashboardPage() {
                 onClose={() => setIsAttendanceModalOpen(false)}
                 onSuccess={refreshAttendanceData}
                 type={attendanceType}
-            />
-
-            {/* Break Time Modal */}
-            <MobileBreakTimeModal
-                isOpen={isBreakModalOpen}
-                onClose={() => setIsBreakModalOpen(false)}
             />
         </div>
     );

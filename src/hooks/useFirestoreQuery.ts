@@ -18,16 +18,18 @@ const defaultTransformer = <T>(snapshot: QuerySnapshot<DocumentData>): T[] => {
  * @returns The state of the query including data, error, and loading status.
  */
 export const useFirestoreQuery = <T>(
-    firestoreQuery: Query<DocumentData>,
+    firestoreQuery: Query<DocumentData> | null,
     transformer?: (snapshot: QuerySnapshot<DocumentData>) => T,
     queryKey?: any[],
-    enabled: boolean = true, // Add the enabled option with a default value
+    enabled: boolean = true,
 ) => {
     // A query key is required for TanStack Query to work correctly.
     // We use a combination of the query's path and any additional keys.
-    const key = queryKey || [(firestoreQuery as any)._query.path.segments.join('/')];
+    const path = firestoreQuery ? (firestoreQuery as any)._query?.path?.segments?.join('/') : 'no-query';
+    const key = queryKey || [path];
 
     const queryFn = async () => {
+        if (!firestoreQuery) throw new Error("Query is null");
         const snapshot = await getDocs(firestoreQuery);
         // Use the provided transformer or the default one.
         const transformFn = transformer || (defaultTransformer as (snapshot: QuerySnapshot<DocumentData>) => T);
@@ -37,6 +39,6 @@ export const useFirestoreQuery = <T>(
     return useQuery<T, Error>({
         queryKey: key,
         queryFn,
-        enabled, // Pass the enabled option to useQuery
+        enabled: enabled && !!firestoreQuery,
     });
 };

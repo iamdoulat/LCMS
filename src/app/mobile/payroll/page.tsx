@@ -41,14 +41,15 @@ export default function MobilePayrollPage() {
         });
     }, [user]);
 
-    const { data: payslips, isLoading } = useFirestoreQuery(
+    const { data: payslips, isLoading } = useFirestoreQuery<any[]>(
         employeeId ? query(
             collection(firestore, 'payslips'),
             where('employeeId', '==', employeeId),
             orderBy('createdAt', 'desc')
         ) : null,
-        { initialData: [] },
-        ['mobile_payslips', employeeId || '']
+        undefined, // transformer
+        ['mobile_payslips', employeeId || ''], // queryKey
+        !!employeeId // enabled
     );
 
     const formatCurrency = (val: number) => {

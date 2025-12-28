@@ -17,18 +17,24 @@ import { cn } from '@/lib/utils';
 interface MobileBreakTimeModalProps {
     isOpen: boolean;
     onClose: () => void;
+    isFrozen?: boolean;
+    externalIsOnBreak?: boolean;
+    externalBreakRecord?: BreakTimeRecord | null;
 }
 
-export function MobileBreakTimeModal({ isOpen, onClose }: MobileBreakTimeModalProps) {
+export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, externalIsOnBreak, externalBreakRecord }: MobileBreakTimeModalProps) {
     const { user } = useAuth();
     const [employeeData, setEmployeeData] = useState<any>(null);
-    const [isOnBreak, setIsOnBreak] = useState(false);
-    const [activeBreakRecord, setActiveBreakRecord] = useState<BreakTimeRecord | null>(null);
+    const [internalIsOnBreak, setInternalIsOnBreak] = useState(false);
+    const [internalActiveBreakRecord, setInternalActiveBreakRecord] = useState<BreakTimeRecord | null>(null);
     const [breakLoading, setBreakLoading] = useState(false);
     const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const [currentLocation, setCurrentLocation] = useState<any>(null);
     const [todayAttendance, setTodayAttendance] = useState<any>(null);
+
+    const isOnBreak = externalIsOnBreak !== undefined ? externalIsOnBreak : internalIsOnBreak;
+    const activeBreakRecord = externalBreakRecord !== undefined ? externalBreakRecord : internalActiveBreakRecord;
 
     // Fetch employee data and today's attendance
     useEffect(() => {
@@ -57,9 +63,9 @@ export function MobileBreakTimeModal({ isOpen, onClose }: MobileBreakTimeModalPr
         fetchData();
     }, [user, isOpen]);
 
-    // Real-time listener for active break
+    // Real-time listener for active break (Only if external state not provided)
     useEffect(() => {
-        if (!user?.uid || !isOpen) return;
+        if (!user?.uid || !isOpen || externalIsOnBreak !== undefined) return;
 
         const q = query(
             collection(firestore, 'break_time'),
@@ -70,16 +76,16 @@ export function MobileBreakTimeModal({ isOpen, onClose }: MobileBreakTimeModalPr
         const unsubscribe = onSnapshot(q, (snapshot) => {
             if (!snapshot.empty) {
                 const doc = snapshot.docs[0];
-                setActiveBreakRecord({ id: doc.id, ...doc.data() } as BreakTimeRecord);
-                setIsOnBreak(true);
+                setInternalActiveBreakRecord({ id: doc.id, ...doc.data() } as BreakTimeRecord);
+                setInternalIsOnBreak(true);
             } else {
-                setActiveBreakRecord(null);
-                setIsOnBreak(false);
+                setInternalActiveBreakRecord(null);
+                setInternalIsOnBreak(false);
             }
         });
 
         return () => unsubscribe();
-    }, [user, isOpen]);
+    }, [user, isOpen, externalIsOnBreak]);
 
     // Timer effect
     useEffect(() => {
@@ -209,7 +215,10 @@ export function MobileBreakTimeModal({ isOpen, onClose }: MobileBreakTimeModalPr
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog open={isOpen} onOpenChange={(open) => {
+            if (!open && isFrozen) return; // Prevent closing if frozen
+            if (!open) onClose();
+        }}>
             <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 border-0 h-[80vh] sm:h-auto flex flex-col">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 bg-white border-b sticky top-0 z-10">
@@ -217,14 +226,16 @@ export function MobileBreakTimeModal({ isOpen, onClose }: MobileBreakTimeModalPr
                         <Coffee className="h-5 w-5 text-orange-500" />
                         Break Time
                     </h2>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={onClose}
-                        className="h-8 w-8 rounded-full hover:bg-slate-100"
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
+                    {!isFrozen && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={onClose}
+                            className="h-8 w-8 rounded-full hover:bg-slate-100"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto">

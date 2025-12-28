@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { MobileSidebarProvider, useMobileSidebar } from '@/context/MobileSidebarContext';
+import { BreakTimeProvider } from '@/context/BreakTimeContext';
 import { MobileDrawerSidebar } from '@/components/mobile/MobileDrawerSidebar';
 import { MobileNavbar } from '@/components/mobile/MobileNavbar';
 import { cn } from '@/lib/utils';
@@ -99,7 +100,9 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
     return (
         <MobileSidebarProvider>
-            <MobileLayoutContent>{children}</MobileLayoutContent>
+            <BreakTimeProvider>
+                <MobileLayoutContent>{children}</MobileLayoutContent>
+            </BreakTimeProvider>
         </MobileSidebarProvider>
     );
 }
