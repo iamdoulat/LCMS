@@ -19,15 +19,17 @@ export async function POST(request: Request) {
         }
         const recData = recDoc.data();
 
-        // 2. Fetch Employee Email & Phone
+        // 2. Fetch Employee Email & Phone & Department
         let employeeEmail = '';
         let employeePhone = '';
+        let employeeDept = '';
         if (recData?.employeeId) {
             const empDoc = await admin.firestore().collection('employees').doc(recData.employeeId).get();
             if (empDoc.exists) {
                 const d = empDoc.data();
                 employeeEmail = d?.email;
                 employeePhone = d?.phone; // Get phone
+                employeeDept = d?.department;
             }
         }
 
@@ -51,6 +53,14 @@ export async function POST(request: Request) {
             employee_name: recData?.employeeName || 'Employee',
             date: recData?.attendanceDate || 'N/A',
             rejection_reason: rejectionReason || recData?.reviewComments || 'No reason provided', // For rejected template
+
+            // Added variables per user request
+            department: employeeDept || 'N/A',
+            attendance_date: recData?.attendanceDate || 'N/A',
+            reconciliation_in_time: recData?.requestedInTime || 'N/A',
+            in_time_remarks: recData?.inTimeRemarks || 'N/A',
+            reconciliation_out_time: recData?.requestedOutTime || 'N/A',
+            out_time_remarks: recData?.outTimeRemarks || 'N/A',
 
             // Standard details if needed in approved template too
             designation: recData?.designation || 'N/A',
