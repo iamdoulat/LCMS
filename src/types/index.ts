@@ -2172,24 +2172,4 @@ export const MultipleCheckInOutSchema = z.object({
 export type MultipleCheckInOutConfiguration = z.infer<typeof MultipleCheckInOutSchema>;
 // --- END HRM Settings Types ---
 
-// --- Device Change Request Types ---
-export interface DeviceChangeRequest {
-  id: string;
-  userId: string;
-  userName?: string;
-  userEmail?: string;
-  deviceId: string;
-  deviceName: string;
-  browser?: string;
-  os?: string;
-  deviceType?: string; // e.g., "mobile", "desktop"
-  brand?: string;
-  model?: string;
-  userAgent?: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  registeredEmployee?: string;
-  reviewedBy?: string;
-  reviewedAt?: any; // Firestore Timestamp
-  createdAt: any; // Firestore Timestamp
-}
-// --- END Device Change Request Types ---
+

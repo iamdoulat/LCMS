@@ -109,23 +109,30 @@ export default function LoginPage() {
         return;
       }
 
+      console.log("[verifyDevice] Fetching fresh user doc for:", currentUser.uid);
       const userDocRef = doc(firestore, 'users', currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
+        console.log("[verifyDevice] User document does not exist.");
         router.push(targetPath);
         return;
       }
 
-      const userData = userDocSnap.data() as UserDocumentForAdmin;
+      const userData = userDocSnap.data() as any; // Cast to any to ensure we can access 'role'
+      console.log("[verifyDevice] Fresh User Data:", userData);
 
       // Check role directly from fresh data
       const freshRole = userData.role;
+      console.log("[verifyDevice] Fresh Role:", freshRole);
+
       if (!shouldCheckDevice(freshRole)) {
+        console.log("[verifyDevice] Skipping device check (Role mismatch)");
         router.push(targetPath);
         return;
       }
 
+      console.log("[verifyDevice] Role matched. Proceeding to check devices...");
       const allowedDevices = userData.allowedDevices || [];
       const deviceId = getDeviceId();
       const deviceName = getDeviceName();
