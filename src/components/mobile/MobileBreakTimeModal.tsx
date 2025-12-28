@@ -233,7 +233,7 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
             if (!open && isFrozen) return; // Prevent closing if frozen
             if (!open) onClose();
         }}>
-            <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 border-0 h-auto max-h-[85vh] sm:h-auto flex flex-col relative w-[90%] rounded-2xl">
+            <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-slate-50 border-0 h-auto max-h-[85vh] sm:h-auto flex flex-col relative w-[90%] rounded-2xl top-[300px] translate-y-0">
                 {/* Confirmation Overlay */}
                 {showStopConfirmation && (
                     <div className="fixed inset-0 z-[100] bg-white/90 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in duration-200">
