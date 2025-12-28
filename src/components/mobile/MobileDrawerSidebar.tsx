@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useMobileSidebar } from '@/context/MobileSidebarContext';
 import { useAuth } from '@/context/AuthContext';
@@ -19,6 +19,7 @@ import type { Employee } from '@/types';
 
 export function MobileDrawerSidebar() {
     const pathname = usePathname();
+    const router = useRouter();
     const { user, logout } = useAuth();
     const { setIsOpen } = useMobileSidebar();
     const [employee, setEmployee] = useState<Employee | null>(null);
@@ -90,12 +91,23 @@ export function MobileDrawerSidebar() {
                 })}
             </nav>
 
-            {/* Time Format Switch */}
-            <div className="bg-white/10 rounded-lg p-1 flex items-center justify-between mt-6 mb-4 w-[160px] opacity-50 pointer-events-none">
-                <span className="text-xs px-2">12h</span>
-                <Switch disabled className="data-[state=checked]:bg-white data-[state=unchecked]:bg-slate-400 h-5 w-9" />
-                <span className="text-xs px-2">24h</span>
+            {/* Mobile/Web Mode Switch */}
+            <div className="bg-white/10 rounded-lg p-1 flex items-center justify-between mt-6 mb-4 w-[160px]">
+                <span className={cn("text-xs px-2 font-medium cursor-pointer transition-colors", pathname.includes('/mobile') ? "text-white" : "text-white/50")}>Mobile</span>
+                <Switch
+                    checked={!pathname.includes('/mobile')}
+                    onCheckedChange={(checked) => {
+                        if (checked) {
+                            router.push('/dashboard');
+                        } else {
+                            router.push('/mobile/dashboard');
+                        }
+                    }}
+                    className="data-[state=checked]:bg-white data-[state=unchecked]:bg-slate-400 h-5 w-9"
+                />
+                <span className={cn("text-xs px-2 font-medium cursor-pointer transition-colors", !pathname.includes('/mobile') ? "text-white" : "text-white/50")}>Web</span>
             </div>
+
 
             {/* Logout Button */}
             <Button

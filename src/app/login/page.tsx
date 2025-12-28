@@ -133,7 +133,7 @@ export default function LoginPage() {
       }
 
       console.log("[verifyDevice] Role matched. Proceeding to check devices...");
-      const allowedDevices = userData.allowedDevices || [];
+      const allowedDevices = (userData.allowedDevices || []) as AllowedDevice[];
       const deviceId = getDeviceId();
       const deviceName = getDeviceName();
 
@@ -170,7 +170,7 @@ export default function LoginPage() {
       }
 
       // Case 2: Check if current device is allowed
-      const isAllowed = allowedDevices.some(d => d.deviceId === deviceId);
+      const isAllowed = allowedDevices.some((d) => d.deviceId === deviceId);
       if (isAllowed) {
         // console.log("Device is allowed.");
         router.push(targetPath);

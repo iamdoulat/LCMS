@@ -606,6 +606,11 @@ export default function DashboardPage() {
                   My Dashboard
                 </Button>
               </Link>
+              <Link href="/mobile/dashboard">
+                <Button variant="default" size="sm" className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all ml-1">
+                  Mobile Mode
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

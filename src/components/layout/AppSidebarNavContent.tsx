@@ -219,6 +219,7 @@ const settingsNavItems: NavItem[] = [
   { href: '/dashboard/settings/whatsapp', label: 'WhatsApp Settings', icon: MessageSquare, iconColorClass: 'bg-icon-settings' },
   { href: '/dashboard/settings/telegram', label: 'Telegram Bot Settings', icon: Send, iconColorClass: 'bg-icon-settings' },
   { href: '/dashboard/settings/backup-restore', label: 'Backup & Restore', icon: Database, iconColorClass: 'bg-icon-settings' },
+  { href: '/mobile/dashboard', label: 'Mobile Mode', icon: Smartphone, iconColorClass: 'bg-icon-dashboard' },
 ];
 
 // Define Group Structure
