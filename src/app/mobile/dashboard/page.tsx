@@ -567,6 +567,12 @@ export default function MobileDashboardPage() {
                                     )}
                                 >
                                     <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                                    {!todayAttendance?.inTime && !restrictionNote && (
+                                        <>
+                                            <div className="absolute inset-0 rounded-full bg-sky-500 opacity-20 animate-ping [animation-duration:6000ms] pointer-events-none z-[-1]" />
+                                            <div className="absolute inset-0 rounded-full bg-sky-500 opacity-20 animate-ping [animation-duration:6000ms] pointer-events-none z-[-1]" style={{ animationDelay: '3000ms' }} />
+                                        </>
+                                    )}
                                     <Clock className="h-6 w-6 mb-0.5" />
                                     <span className="text-xs font-bold">In Time</span>
                                     {todayAttendance?.inTime && (
@@ -606,7 +612,10 @@ export default function MobileDashboardPage() {
                                 >
                                     <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                                     {todayAttendance?.inTime && !todayAttendance?.outTime && !restrictionNote && (
-                                        <div className="absolute -inset-1.5 rounded-full border-2 border-white/80 animate-ping pointer-events-none" />
+                                        <>
+                                            <div className="absolute inset-0 rounded-full bg-sky-500 opacity-20 animate-ping [animation-duration:6000ms] pointer-events-none z-[-1]" />
+                                            <div className="absolute inset-0 rounded-full bg-sky-500 opacity-20 animate-ping [animation-duration:6000ms] pointer-events-none z-[-1]" style={{ animationDelay: '3000ms' }} />
+                                        </>
                                     )}
                                     <Clock className="h-6 w-6 mb-0.5" />
                                     <span className="text-xs font-bold">Out Time</span>
