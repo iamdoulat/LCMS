@@ -31,6 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
+import { RoleBadge } from '@/components/ui/RoleBadge';
 
 
 const formatDisplayDate = (dateString?: string) => {
@@ -53,6 +54,7 @@ const EmployeeListSkeleton = () => (
       <TableRow key={i}>
         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
         <TableCell className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-5 w-32" /></TableCell>
+        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
         <TableCell><Skeleton className="h-5 w-28" /></TableCell>
         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
@@ -219,6 +221,7 @@ export default function EmployeesListPage() {
                 <TableRow>
                   <TableHead>Code</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Date of Birth</TableHead>
                   <TableHead>Joined Date</TableHead>
@@ -233,7 +236,7 @@ export default function EmployeesListPage() {
                   <EmployeeListSkeleton />
                 ) : fetchError ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-destructive">
+                    <TableCell colSpan={10} className="h-24 text-center text-destructive">
                       {fetchError.message}
                     </TableCell>
                   </TableRow>
@@ -249,6 +252,9 @@ export default function EmployeesListPage() {
                           </Avatar>
                           <span className="font-medium">{employee.fullName}</span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <RoleBadge roles={employee.role} size="xs" />
                       </TableCell>
                       <TableCell>{employee.designation}</TableCell>
                       <TableCell>{formatDisplayDate(employee.dateOfBirth)}</TableCell>
@@ -285,7 +291,7 @@ export default function EmployeesListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
+                    <TableCell colSpan={10} className="h-24 text-center">
                       No employees found matching your criteria.
                     </TableCell>
                   </TableRow>

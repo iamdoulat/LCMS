@@ -33,6 +33,7 @@ import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { determineAttendanceFlag } from '@/lib/firebase/utils';
 import type { EmployeeDocument, AttendanceDocument, BranchDocument } from '@/types';
+import { RoleBadge } from '@/components/ui/RoleBadge';
 
 interface TeamAttendanceCardProps {
     supervisedEmployeeIds: string[];
@@ -460,6 +461,9 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                                                 <div className="flex flex-col">
                                                     <p className="text-xs font-medium leading-none">{emp.fullName}</p>
                                                     <p className="text-[10px] text-muted-foreground mt-1">{emp.employeeCode}</p>
+                                                    <div className="mt-1">
+                                                        <RoleBadge roles={emp.role} size="xs" />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </TableCell>

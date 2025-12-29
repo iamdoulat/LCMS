@@ -1712,6 +1712,7 @@ export interface Employee {
   bloodGroup?: (typeof bloodGroupOptions)[number];
   photoURL?: string;
   status?: EmployeeStatus;
+  role?: UserRole[]; // Role(s) of the employee
   leaveGroupId?: string;
   leaveGroupName?: string;
   createdAt?: any;

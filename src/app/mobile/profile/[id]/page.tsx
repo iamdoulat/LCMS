@@ -10,6 +10,7 @@ import {
     ChevronLeft,
     Phone,
     Mail,
+    MessageCircle,
     User,
     Briefcase,
     LayoutGrid,
@@ -26,6 +27,8 @@ import {
     AlertCircle
 } from 'lucide-react';
 import type { Employee } from '@/types';
+import { format, parseISO, isValid } from 'date-fns';
+import { RoleBadge } from '@/components/ui/RoleBadge';
 
 export default function MobileEmployeeProfilePage() {
     const router = useRouter();
@@ -85,20 +88,34 @@ export default function MobileEmployeeProfilePage() {
         );
     }
 
+    // Helper function to format dates
+    const formatDate = (dateStr?: string) => {
+        if (!dateStr) return 'N/A';
+        try {
+            const date = parseISO(dateStr);
+            if (isValid(date)) {
+                return format(date, 'dd MMM yyyy');
+            }
+            return dateStr;
+        } catch {
+            return dateStr;
+        }
+    };
+
     // Map real data to UI structure (Same as in main profile page)
     const profileData = {
         name: employee.fullName,
         designation: employee.designation,
         code: employee.employeeCode,
         personal: [
-            { label: 'Date of Birth', value: employee.dateOfBirth || 'N/A', icon: Calendar },
+            { label: 'Date of Birth', value: formatDate(employee.dateOfBirth), icon: Calendar },
             { label: 'National ID', value: employee.nationalId || 'N/A', icon: CreditCard },
             { label: 'Nationality', value: employee.nationality || 'Bangladeshi', icon: Flag },
             { label: 'Email', value: employee.email, icon: Mail },
         ],
         official: [
             { label: 'Employee Code', value: employee.employeeCode, icon: FileBadge },
-            { label: 'Joining Date', value: employee.joinedDate || 'N/A', icon: Calendar },
+            { label: 'Joining Date', value: formatDate(employee.joinedDate), icon: Calendar },
             { label: 'Designation', value: employee.designation, icon: Briefcase },
             { label: 'Job Status', value: employee.jobStatus || 'Active', icon: Briefcase },
             { label: 'Branch', value: employee.branch || 'Not Defined', icon: Building2 },
@@ -138,15 +155,20 @@ export default function MobileEmployeeProfilePage() {
                 </div>
 
                 {/* Contact Actions */}
-                <div className="absolute top-6 right-6 flex gap-3">
+                <div className="absolute top-6 right-6 flex gap-2">
                     <a href={`tel:${employee.phone}`}>
-                        <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-12 w-12 shadow-sm">
-                            <Phone className="h-6 w-6" />
+                        <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-11 w-11 shadow-sm">
+                            <Phone className="h-5 w-5" />
+                        </Button>
+                    </a>
+                    <a href={`https://wa.me/${employee.phone?.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer">
+                        <Button size="icon" className="bg-green-100 hover:bg-green-200 text-green-600 rounded-2xl h-11 w-11 shadow-sm">
+                            <MessageCircle className="h-5 w-5" />
                         </Button>
                     </a>
                     <a href={`mailto:${employee.email}`}>
-                        <Button size="icon" className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-2xl h-12 w-12 shadow-sm">
-                            <Mail className="h-6 w-6" />
+                        <Button size="icon" className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-2xl h-11 w-11 shadow-sm">
+                            <Mail className="h-5 w-5" />
                         </Button>
                     </a>
                 </div>
@@ -162,40 +184,48 @@ export default function MobileEmployeeProfilePage() {
                             {profileData.code}
                         </span>
                     </div>
+                    {/* Role Badges */}
+                    {employee.role && employee.role.length > 0 && (
+                        <div className="mt-2">
+                            <RoleBadge roles={employee.role} size="sm" />
+                        </div>
+                    )}
                 </div>
 
-                {/* Tabs */}
-                <div className="flex items-center gap-3 mb-6">
-                    <button
-                        onClick={() => setActiveTab('personal')}
-                        className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-colors ${activeTab === 'personal'
-                            ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
-                            : 'bg-white text-slate-600 shadow-sm'
-                            }`}
-                    >
-                        <User className="h-5 w-5" />
-                        {activeTab === 'personal' && <span>Personal</span>}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('official')}
-                        className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-colors ${activeTab === 'official'
-                            ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
-                            : 'bg-white text-slate-600 shadow-sm'
-                            }`}
-                    >
-                        <Briefcase className="h-5 w-5" />
-                        {activeTab === 'official' && <span>Official</span>}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('others')}
-                        className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-semibold transition-colors ${activeTab === 'others'
-                            ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
-                            : 'bg-white text-slate-600 shadow-sm'
-                            }`}
-                    >
-                        <LayoutGrid className="h-5 w-5" />
-                        {activeTab === 'others' && <span>Others</span>}
-                    </button>
+                {/* Tabs - Horizontal Scrollable */}
+                <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 mb-6">
+                    <div className="flex gap-3 min-w-max">
+                        <button
+                            onClick={() => setActiveTab('personal')}
+                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'personal'
+                                ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
+                                : 'bg-white text-slate-600 shadow-sm'
+                                }`}
+                        >
+                            <User className="h-5 w-5" />
+                            <span>Personal</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('official')}
+                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'official'
+                                ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
+                                : 'bg-white text-slate-600 shadow-sm'
+                                }`}
+                        >
+                            <Briefcase className="h-5 w-5" />
+                            <span>Official</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('others')}
+                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'others'
+                                ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
+                                : 'bg-white text-slate-600 shadow-sm'
+                                }`}
+                        >
+                            <LayoutGrid className="h-5 w-5" />
+                            <span>Others</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Info Card */}
