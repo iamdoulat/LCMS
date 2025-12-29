@@ -46,8 +46,23 @@ export default function MobileDashboardPage() {
         }
     };
 
-    const getAttendanceStatus = (flag?: string, approvalStatus?: string) => {
-        if (approvalStatus === 'Pending') return 'Waiting For Remote Approval';
+    const getAttendanceStatus = (flag?: string, approvalStatus?: string, inTimeApprovalStatus?: string, outTimeApprovalStatus?: string) => {
+        // Check for pending approvals - prioritize specific approval statuses
+        if (inTimeApprovalStatus === 'Pending' && outTimeApprovalStatus === 'Pending') {
+            return 'Pending Approval (In & Out)';
+        }
+        if (inTimeApprovalStatus === 'Pending') {
+            return 'Pending In-Time Approval';
+        }
+        if (outTimeApprovalStatus === 'Pending') {
+            return 'Pending Out-Time Approval';
+        }
+        // Fallback to general approval status
+        if (approvalStatus === 'Pending') {
+            return 'Pending Approval';
+        }
+
+        // If approved or no approval needed, show the flag status
         if (!flag) return null;
         const statusMap: Record<string, string> = {
             'P': 'Present',
@@ -592,7 +607,7 @@ export default function MobileDashboardPage() {
                                 <div className="flex flex-col items-center gap-0.5">
                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
                                     <span className="text-[11px] font-bold text-slate-700 text-center px-1 font-mono">
-                                        {restrictionNote || getAttendanceStatus(todayAttendance?.flag, todayAttendance?.approvalStatus) || '08:00 hr(s)'}
+                                        {restrictionNote || getAttendanceStatus(todayAttendance?.flag, todayAttendance?.approvalStatus, todayAttendance?.inTimeApprovalStatus, todayAttendance?.outTimeApprovalStatus) || '08:00 hr(s)'}
                                     </span>
                                 </div>
                             </div>

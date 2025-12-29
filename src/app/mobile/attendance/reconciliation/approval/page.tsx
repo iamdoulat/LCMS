@@ -39,7 +39,10 @@ export default function ReconApprovalPage() {
     const [activeTab, setActiveTab] = useState<'attendance' | 'breaktime'>('attendance');
     const [requests, setRequests] = useState<ReconRequest[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterDays, setFilterDays] = useState<30 | 90>(30);
+    const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'all'>('pending');
+    const [showFilters, setShowFilters] = useState(false);
+    const [filterDays, setFilterDays] = useState<30 | 90 | 180 | 365 | 'all'>('all');
+    const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
 
     const fetchRequests = async () => {
         if (!user || !isSupervisor || supervisedEmployees.length === 0) {
@@ -50,11 +53,9 @@ export default function ReconApprovalPage() {
         setLoading(true);
         try {
             const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
-            const endDate = new Date();
-            const startDate = subDays(endDate, filterDays);
-            const startDateStr = format(startDate, 'yyyy-MM-dd');
-
-            const employeeIds = supervisedEmployees.map(e => e.id);
+            const employeeIds = selectedEmployee === 'all'
+                ? supervisedEmployees.map(e => e.id)
+                : [selectedEmployee];
             const fetchedRequests: ReconRequest[] = [];
 
             // Chunk queries by employeeId
@@ -64,11 +65,53 @@ export default function ReconApprovalPage() {
             }
 
             for (const chunk of chunks) {
-                const q = query(
-                    collection(firestore, collectionName),
-                    where('employeeId', 'in', chunk),
-                    where('attendanceDate', '>=', startDateStr)
-                );
+                let q;
+
+                // For approved view, fetch all approved/rejected records
+                if (statusFilter === 'approved') {
+                    q = query(
+                        collection(firestore, collectionName),
+                        where('employeeId', 'in', chunk),
+                        where('status', 'in', ['approved', 'rejected'])
+                    );
+                } else if (filterDays !== 'all') {
+                    // Apply date filter
+                    const endDate = new Date();
+                    const startDate = subDays(endDate, Number(filterDays));
+                    const startDateStr = format(startDate, 'yyyy-MM-dd');
+
+                    if (statusFilter === 'pending') {
+                        q = query(
+                            collection(firestore, collectionName),
+                            where('employeeId', 'in', chunk),
+                            where('status', '==', 'pending'),
+                            where('attendanceDate', '>=', startDateStr)
+                        );
+                    } else {
+                        // 'all' status - show everything within date range
+                        q = query(
+                            collection(firestore, collectionName),
+                            where('employeeId', 'in', chunk),
+                            where('attendanceDate', '>=', startDateStr)
+                        );
+                    }
+                } else {
+                    // No date filter - fetch all records
+                    if (statusFilter === 'pending') {
+                        q = query(
+                            collection(firestore, collectionName),
+                            where('employeeId', 'in', chunk),
+                            where('status', '==', 'pending')
+                        );
+                    } else {
+                        // All statuses, all time
+                        q = query(
+                            collection(firestore, collectionName),
+                            where('employeeId', 'in', chunk)
+                        );
+                    }
+                }
+
                 const snapshot = await getDocs(q);
                 snapshot.forEach(doc => {
                     fetchedRequests.push({ id: doc.id, ...doc.data() } as ReconRequest);
@@ -89,7 +132,7 @@ export default function ReconApprovalPage() {
 
     useEffect(() => {
         fetchRequests();
-    }, [user, isSupervisor, supervisedEmployees, activeTab, filterDays]);
+    }, [user, isSupervisor, supervisedEmployees, activeTab, filterDays, statusFilter, selectedEmployee]);
 
     const containerRef = usePullToRefresh(fetchRequests);
 
@@ -247,15 +290,96 @@ export default function ReconApprovalPage() {
                         </button>
                     </div>
 
-                    <div className="flex justify-end">
+                    {/* Status Filter Buttons */}
+                    <div className="flex gap-2 mb-3">
                         <button
-                            onClick={handleToggleFilter}
-                            className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full"
+                            onClick={() => setStatusFilter('pending')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${statusFilter === 'pending'
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'bg-slate-100 text-slate-500'
+                                }`}
                         >
-                            <Calendar className="w-3 h-3" />
-                            {filterDays === 30 ? 'Last 30 Days' : 'Last 3 Months'}
+                            Pending
+                        </button>
+                        <button
+                            onClick={() => setStatusFilter('approved')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${statusFilter === 'approved'
+                                ? 'bg-emerald-600 text-white shadow-md'
+                                : 'bg-slate-100 text-slate-500'
+                                }`}
+                        >
+                            Approved
+                        </button>
+                        <button
+                            onClick={() => setStatusFilter('all')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${statusFilter === 'all'
+                                ? 'bg-purple-600 text-white shadow-md'
+                                : 'bg-slate-100 text-slate-500'
+                                }`}
+                        >
+                            All
                         </button>
                     </div>
+
+                    <div className="flex justify-between items-center">
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full hover:bg-slate-200 transition-colors"
+                        >
+                            <Calendar className="w-3 h-3" />
+                            Filters {showFilters ? '▲' : '▼'}
+                        </button>
+                        <div className="text-xs font-semibold text-slate-500">
+                            {requests.length} {requests.length === 1 ? 'record' : 'records'}
+                        </div>
+                    </div>
+
+                    {/* Filters Panel */}
+                    {showFilters && (
+                        <div className="mt-3 p-4 bg-slate-50 rounded-xl space-y-3 animate-in slide-in-from-top-2">
+                            {/* Date Range Filter */}
+                            <div>
+                                <label className="text-xs font-bold text-slate-700 mb-2 block">Date Range</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { value: 30, label: '30 Days' },
+                                        { value: 90, label: '90 Days' },
+                                        { value: 180, label: '180 Days' },
+                                        { value: 365, label: '1 Year' },
+                                        { value: 'all', label: 'All Time' }
+                                    ].map((option) => (
+                                        <button
+                                            key={option.value}
+                                            onClick={() => setFilterDays(option.value as any)}
+                                            className={`py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all ${filterDays === option.value
+                                                ? 'bg-blue-600 text-white shadow-sm'
+                                                : 'bg-white text-slate-600 border border-slate-200'
+                                                }`}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Employee Filter */}
+                            <div>
+                                <label className="text-xs font-bold text-slate-700 mb-2 block">Employee</label>
+                                <select
+                                    value={selectedEmployee}
+                                    onChange={(e) => setSelectedEmployee(e.target.value)}
+                                    className="w-full py-2 px-3 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="all">All Employees</option>
+                                    {supervisedEmployees.map((emp) => (
+                                        <option key={emp.id} value={emp.id}>
+                                            {emp.fullName}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* List */}
@@ -265,64 +389,77 @@ export default function ReconApprovalPage() {
                             <Loader2 className="animate-spin text-blue-600 w-8 h-8" />
                         </div>
                     ) : requests.length > 0 ? (
-                        requests.map((req) => (
-                            <div key={req.id} className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-emerald-500"> {/* Defaulting color/style per image */}
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusColor(req.status)}`}>
-                                            {req.status}
-                                        </span>
-                                        {/* Req Time Badge if Pending? */}
-                                        {activeTab === 'attendance' && req.requestedInTime && (
-                                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">In Time</span>
-                                        )}
-                                        {activeTab === 'attendance' && req.requestedOutTime && (
-                                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Out Time</span>
+                        requests.map((req) => {
+                            const borderColor = req.status === 'approved'
+                                ? 'border-emerald-500'
+                                : req.status === 'rejected'
+                                    ? 'border-red-500'
+                                    : 'border-blue-500';
+
+                            return (
+                                <div key={req.id} className={`bg-white p-5 rounded-2xl shadow-sm border-l-4 ${borderColor}`}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusColor(req.status)}`}>
+                                                {req.status}
+                                            </span>
+                                            {/* Req Time Badge if Pending? */}
+                                            {activeTab === 'attendance' && req.requestedInTime && (
+                                                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">In Time</span>
+                                            )}
+                                            {activeTab === 'attendance' && req.requestedOutTime && (
+                                                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Out Time</span>
+                                            )}
+                                        </div>
+                                        <div className="text-xs font-bold text-slate-400">
+                                            {req.employeeName.split(' ')[0]} {/* First Name */}
+                                        </div>
+                                    </div>
+
+                                    <h3 className="font-bold text-slate-800 text-sm mb-3">
+                                        {activeTab === 'attendance' ? 'Attendance Reconciliation' : 'Breaktime Reconciliation'} for <span className="text-blue-600">{formatDate(req.attendanceDate)}</span>
+                                    </h3>
+
+                                    <div className="flex items-center justify-between">
+                                        {/* Action Buttons if Pending */}
+                                        {req.status === 'pending' ? (
+                                            <div className="flex gap-2 w-full">
+                                                <Button
+                                                    onClick={() => handleAction(req, 'approve')}
+                                                    size="sm"
+                                                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-9"
+                                                >
+                                                    <Check className="w-4 h-4 mr-1" /> Approve
+                                                </Button>
+                                                <Button
+                                                    onClick={() => handleAction(req, 'reject')}
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    className="flex-1 h-9"
+                                                >
+                                                    <X className="w-4 h-4 mr-1" /> Reject
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="w-full">
+                                                <div className={`text-xs font-bold px-3 py-2 rounded-lg text-center ${req.status === 'approved'
+                                                    ? 'bg-emerald-50 text-emerald-700'
+                                                    : 'bg-red-50 text-red-700'
+                                                    }`}>
+                                                    {req.status === 'approved' ? '✓ Approved' : '✗ Rejected'}
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
-                                    <div className="text-xs font-bold text-slate-400">
-                                        {req.employeeName.split(' ')[0]} {/* First Name */}
+
+                                    {/* Timestamp if needed like image */}
+                                    <div className="mt-3 pt-3 border-t border-slate-50 flex justify-end text-[10px] bg-slate-50 -mx-5 -mb-5 p-3 text-slate-500 font-bold rounded-b-2xl">
+                                        {/* Mock time or created at */}
+                                        {formatDate(req.attendanceDate)}
                                     </div>
                                 </div>
-
-                                <h3 className="font-bold text-slate-800 text-sm mb-3">
-                                    {activeTab === 'attendance' ? 'Attendance Reconciliation' : 'Breaktime Reconciliation'} for <span className="text-blue-600">{formatDate(req.attendanceDate)}</span>
-                                </h3>
-
-                                <div className="flex items-center justify-between">
-                                    {/* Action Buttons if Pending */}
-                                    {req.status === 'pending' ? (
-                                        <div className="flex gap-2 w-full">
-                                            <Button
-                                                onClick={() => handleAction(req, 'approve')}
-                                                size="sm"
-                                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 h-9"
-                                            >
-                                                <Check className="w-4 h-4 mr-1" /> Approve
-                                            </Button>
-                                            <Button
-                                                onClick={() => handleAction(req, 'reject')}
-                                                size="sm"
-                                                variant="destructive"
-                                                className="flex-1 h-9"
-                                            >
-                                                <X className="w-4 h-4 mr-1" /> Reject
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <div className="w-full text-right text-xs font-semibold text-slate-400">
-                                            Reviewed
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Timestamp if needed like image */}
-                                <div className="mt-3 pt-3 border-t border-slate-50 flex justify-end text-[10px] bg-slate-50 -mx-5 -mb-5 p-3 text-slate-500 font-bold rounded-b-2xl">
-                                    {/* Mock time or created at */}
-                                    {formatDate(req.attendanceDate)}
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     ) : (
                         <div className="text-center py-20 text-slate-400">
                             No data to show

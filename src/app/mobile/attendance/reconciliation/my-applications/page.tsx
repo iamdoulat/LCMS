@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subDays } from 'date-fns';
 import { ChevronLeft, Calendar, Clock, X, Plus, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -36,6 +36,9 @@ export default function MyReconApplicationsPage() {
     const [requests, setRequests] = useState<ReconRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedRequest, setSelectedRequest] = useState<ReconRequest | null>(null);
+    const [statusFilter, setStatusFilter] = useState<'all' | 'Pending' | 'Approved' | 'Rejected'>('all');
+    const [showFilters, setShowFilters] = useState(false);
+    const [filterDays, setFilterDays] = useState<30 | 90 | 180 | 365 | 'all'>('all');
 
     const fetchRequests = async () => {
         if (!currentEmployeeId) {
@@ -47,18 +50,31 @@ export default function MyReconApplicationsPage() {
         try {
             const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
 
-            // Fetch recent requests
-            // orderBy might need index. If fails, do client sort.
-            // Let's try client sort first to be safe as we did before.
+            let q;
+            if (filterDays !== 'all') {
+                const endDate = new Date();
+                const startDate = subDays(endDate, Number(filterDays));
+                const startDateStr = format(startDate, 'yyyy-MM-dd');
 
-            const q = query(
-                collection(firestore, collectionName),
-                where('employeeId', '==', currentEmployeeId)
-                // orderBy('createdAt', 'desc') 
-            );
+                q = query(
+                    collection(firestore, collectionName),
+                    where('employeeId', '==', currentEmployeeId),
+                    where('attendanceDate', '>=', startDateStr)
+                );
+            } else {
+                q = query(
+                    collection(firestore, collectionName),
+                    where('employeeId', '==', currentEmployeeId)
+                );
+            }
 
             const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReconRequest));
+            let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReconRequest));
+
+            // Apply status filter client-side
+            if (statusFilter !== 'all') {
+                data = data.filter(req => req.status === statusFilter);
+            }
 
             // Client side sort by date/created
             data.sort((a, b) => {
@@ -77,7 +93,7 @@ export default function MyReconApplicationsPage() {
 
     useEffect(() => {
         fetchRequests();
-    }, [currentEmployeeId, activeTab]);
+    }, [currentEmployeeId, activeTab, filterDays, statusFilter]);
 
     const containerRef = usePullToRefresh(fetchRequests);
 
@@ -176,21 +192,106 @@ export default function MyReconApplicationsPage() {
                 onTouchEnd={onTouchEnd}
             >
                 {/* Tabs */}
-                <div className="flex px-6 pt-6 pb-2">
-                    <button
-                        onClick={() => setActiveTab('attendance')}
-                        className={`flex-1 pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'attendance' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400'
-                            }`}
-                    >
-                        Attendance Recon.
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('breaktime')}
-                        className={`flex-1 pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'breaktime' ? 'border-yellow-500 text-yellow-500' : 'border-transparent text-slate-400'
-                            }`}
-                    >
-                        Breaktime Recon.
-                    </button>
+                <div className="bg-white px-6 pt-6 pb-2 rounded-t-[2rem]">
+                    <div className="flex mb-4">
+                        <button
+                            onClick={() => setActiveTab('attendance')}
+                            className={`flex-1 pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'attendance' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-400'
+                                }`}
+                        >
+                            Attendance Recon.
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('breaktime')}
+                            className={`flex-1 pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'breaktime' ? 'border-yellow-500 text-yellow-500' : 'border-transparent text-slate-400'
+                                }`}
+                        >
+                            Breaktime Recon.
+                        </button>
+                    </div>
+
+                    {/* Status Filter Tabs */}
+                    <div className="flex gap-2 mb-3">
+                        <button
+                            onClick={() => setStatusFilter('all')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${statusFilter === 'all'
+                                    ? 'bg-slate-600 text-white shadow-md'
+                                    : 'bg-slate-100 text-slate-500'
+                                }`}
+                        >
+                            All
+                        </button>
+                        <button
+                            onClick={() => setStatusFilter('Pending')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${statusFilter === 'Pending'
+                                    ? 'bg-yellow-600 text-white shadow-md'
+                                    : 'bg-slate-100 text-slate-500'
+                                }`}
+                        >
+                            Pending
+                        </button>
+                        <button
+                            onClick={() => setStatusFilter('Approved')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${statusFilter === 'Approved'
+                                    ? 'bg-emerald-600 text-white shadow-md'
+                                    : 'bg-slate-100 text-slate-500'
+                                }`}
+                        >
+                            Approved
+                        </button>
+                        <button
+                            onClick={() => setStatusFilter('Rejected')}
+                            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${statusFilter === 'Rejected'
+                                    ? 'bg-red-600 text-white shadow-md'
+                                    : 'bg-slate-100 text-slate-500'
+                                }`}
+                        >
+                            Rejected
+                        </button>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className="flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full hover:bg-slate-200 transition-colors"
+                        >
+                            <Calendar className="w-3 h-3" />
+                            Filters {showFilters ? '▲' : '▼'}
+                        </button>
+                        <div className="text-xs font-semibold text-slate-500">
+                            {requests.length} {requests.length === 1 ? 'record' : 'records'}
+                        </div>
+                    </div>
+
+                    {/* Filters Panel */}
+                    {showFilters && (
+                        <div className="mt-3 p-4 bg-slate-50 rounded-xl space-y-3 animate-in slide-in-from-top-2">
+                            {/* Date Range Filter */}
+                            <div>
+                                <label className="text-xs font-bold text-slate-700 mb-2 block">Date Range</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { value: 30, label: '30 Days' },
+                                        { value: 90, label: '90 Days' },
+                                        { value: 180, label: '180 Days' },
+                                        { value: 365, label: '1 Year' },
+                                        { value: 'all', label: 'All Time' }
+                                    ].map((option) => (
+                                        <button
+                                            key={option.value}
+                                            onClick={() => setFilterDays(option.value as any)}
+                                            className={`py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all ${filterDays === option.value
+                                                    ? 'bg-blue-600 text-white shadow-sm'
+                                                    : 'bg-white text-slate-600 border border-slate-200'
+                                                }`}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* List */}

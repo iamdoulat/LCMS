@@ -333,12 +333,18 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 await setDoc(doc(firestore, 'attendance', docId), attendanceData);
 
                 await Swal.fire({
-                    title: 'Check-In Successful!',
-                    text: isInsideGeofence
-                        ? `Check-in time: ${currentTime}`
-                        : 'Check-in recorded. Outside geofence - pending approval.',
-                    icon: 'success',
-                    timer: 2000,
+                    title: isInsideGeofence ? 'Check-In Approved!' : 'Check-In Pending Approval',
+                    html: isInsideGeofence
+                        ? `<div class="text-center">
+                            <p class="text-sm mb-1">Check-in time: <strong>${currentTime}</strong></p>
+                            <p class="text-xs text-green-600">✓ Inside office geofence - Auto-approved</p>
+                          </div>`
+                        : `<div class="text-center">
+                            <p class="text-sm mb-1">Check-in time: <strong>${currentTime}</strong></p>
+                            <p class="text-xs text-orange-600">⚠ Outside office geofence - Pending supervisor approval</p>
+                          </div>`,
+                    icon: isInsideGeofence ? 'success' : 'warning',
+                    timer: 3000,
                     showConfirmButton: false
                 });
 
@@ -396,10 +402,18 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 }, { merge: true });
 
                 await Swal.fire({
-                    title: 'Check-Out Successful!',
-                    text: `Check-out time: ${currentTime}`,
-                    icon: 'success',
-                    timer: 2000,
+                    title: isInsideGeofence ? 'Check-Out Approved!' : 'Check-Out Pending Approval',
+                    html: isInsideGeofence
+                        ? `<div class="text-center">
+                            <p class="text-sm mb-1">Check-out time: <strong>${currentTime}</strong></p>
+                            <p class="text-xs text-green-600">✓ Inside office geofence - Auto-approved</p>
+                          </div>`
+                        : `<div class="text-center">
+                            <p class="text-sm mb-1">Check-out time: <strong>${currentTime}</strong></p>
+                            <p class="text-xs text-orange-600">⚠ Outside office geofence - Pending supervisor approval</p>
+                          </div>`,
+                    icon: isInsideGeofence ? 'success' : 'warning',
+                    timer: 3000,
                     showConfirmButton: false
                 });
 

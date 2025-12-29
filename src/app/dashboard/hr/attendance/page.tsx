@@ -330,6 +330,23 @@ const AttendanceDayRow = ({
                 />
             </TableCell>
             <TableCell>
+                {initialData?.inTimeApprovalStatus === 'Pending' || initialData?.outTimeApprovalStatus === 'Pending' || initialData?.approvalStatus === 'Pending' ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                        Pending
+                    </span>
+                ) : initialData?.inTimeApprovalStatus === 'Approved' || initialData?.approvalStatus === 'Approved' ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                        Approved
+                    </span>
+                ) : initialData?.inTimeApprovalStatus === 'Rejected' || initialData?.approvalStatus === 'Rejected' ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                        Rejected
+                    </span>
+                ) : (
+                    <span className="text-xs text-muted-foreground">-</span>
+                )}
+            </TableCell>
+            <TableCell>
                 <div className="flex items-center gap-1">
                     <Controller control={control} name="inTime" render={({ field }) => <Input type="time" {...field} className="h-9" disabled={flag !== 'P' && flag !== 'D'} />} />
                     {initialData?.inTimeLocation && (
@@ -435,6 +452,7 @@ const EmployeeAttendanceRow = ({
                                     <TableRow>
                                         <TableHead>Attendance Date</TableHead>
                                         <TableHead>Flag</TableHead>
+                                        <TableHead>Approval Status</TableHead>
                                         <TableHead>In Time</TableHead>
                                         <TableHead>In Time Remarks</TableHead>
                                         <TableHead>Out Time</TableHead>
