@@ -90,7 +90,7 @@ export default function MobileDashboardPage() {
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
     // isBreakModalOpen state removed
     const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
-    const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string; flag?: string; approvalStatus?: string } | null>(null);
+    const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string; flag?: string; approvalStatus?: string; inTimeApprovalStatus?: string; outTimeApprovalStatus?: string } | null>(null);
     const { isOnBreak, activeBreakRecord, openBreakModal } = useBreakTime();
     const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
     // Local role for display/legacy check, but we'll prioritize globalUserRole
@@ -134,7 +134,9 @@ export default function MobileDashboardPage() {
                     inTime: data.inTime,
                     outTime: data.outTime,
                     flag: data.flag,
-                    approvalStatus: data.approvalStatus
+                    approvalStatus: data.approvalStatus,
+                    inTimeApprovalStatus: data.inTimeApprovalStatus,
+                    outTimeApprovalStatus: data.outTimeApprovalStatus
                 });
             } else {
                 setTodayAttendance(null);
@@ -470,7 +472,9 @@ export default function MobileDashboardPage() {
                     inTime: data.inTime,
                     outTime: data.outTime,
                     flag: data.flag,
-                    approvalStatus: data.approvalStatus
+                    approvalStatus: data.approvalStatus,
+                    inTimeApprovalStatus: data.inTimeApprovalStatus,
+                    outTimeApprovalStatus: data.outTimeApprovalStatus
                 });
             } else {
                 setTodayAttendance(null);
@@ -631,8 +635,10 @@ export default function MobileDashboardPage() {
                                 </button>
                                 <div className="flex flex-col items-center gap-0.5">
                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Worked</span>
-                                    <span className="text-[11px] font-bold text-slate-700 font-mono">
-                                        {restrictionNote ? '---' : calculateWorkHours(todayAttendance?.inTime, todayAttendance?.outTime) || 'Waiting...'}
+                                    <span className="text-[11px] font-bold text-slate-700 font-mono text-center">
+                                        {restrictionNote ? '---' :
+                                            todayAttendance?.outTimeApprovalStatus === 'Pending' ? 'Waiting For Approval' :
+                                                calculateWorkHours(todayAttendance?.inTime, todayAttendance?.outTime) || 'Waiting...'}
                                     </span>
                                 </div>
                             </div>

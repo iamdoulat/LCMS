@@ -68,29 +68,53 @@ export default function RemoteAttendanceDetailsPage() {
         const fetchRecord = async () => {
             if (!id) return;
             try {
+                const isOutTime = id.endsWith('_out');
+                const realId = isOutTime ? id.replace('_out', '') : id;
+
                 // Try attendance first as it is now the primary source
-                let docRef = doc(firestore, 'attendance', id);
+                let docRef = doc(firestore, 'attendance', realId);
                 const attSnap = await getDoc(docRef);
                 if (attSnap.exists()) {
                     const data = attSnap.data();
-                    setRecord({
-                        id: attSnap.id,
-                        employeeId: data.employeeId,
-                        employeeName: data.employeeName || 'Unknown',
-                        type: 'In Time',
-                        timestamp: data.date,
-                        location: {
-                            latitude: data.inTimeLocation?.latitude || 0,
-                            longitude: data.inTimeLocation?.longitude || 0,
-                            address: data.inTimeAddress || 'Unknown'
-                        },
-                        remarks: data.inTimeRemarks || '',
-                        status: data.approvalStatus,
-                        imageURL: '', // attendance doesn't have imageURL usually
-                        createdAt: data.createdAt,
-                        updatedAt: data.updatedAt,
-                        companyName: 'Office'
-                    } as MultipleCheckInOutRecord);
+                    if (isOutTime) {
+                        setRecord({
+                            id: attSnap.id,
+                            employeeId: data.employeeId,
+                            employeeName: data.employeeName || 'Unknown',
+                            type: 'Out Time',
+                            timestamp: data.date,
+                            location: {
+                                latitude: data.outTimeLocation?.latitude || 0,
+                                longitude: data.outTimeLocation?.longitude || 0,
+                                address: data.outTimeAddress || 'Unknown'
+                            },
+                            remarks: data.outTimeRemarks || '',
+                            status: data.outTimeApprovalStatus || data.approvalStatus,
+                            imageURL: '',
+                            createdAt: data.createdAt,
+                            updatedAt: data.updatedAt,
+                            companyName: 'Office'
+                        } as MultipleCheckInOutRecord);
+                    } else {
+                        setRecord({
+                            id: attSnap.id,
+                            employeeId: data.employeeId,
+                            employeeName: data.employeeName || 'Unknown',
+                            type: 'In Time',
+                            timestamp: data.date,
+                            location: {
+                                latitude: data.inTimeLocation?.latitude || 0,
+                                longitude: data.inTimeLocation?.longitude || 0,
+                                address: data.inTimeAddress || 'Unknown'
+                            },
+                            remarks: data.inTimeRemarks || '',
+                            status: data.inTimeApprovalStatus || data.approvalStatus,
+                            imageURL: '',
+                            createdAt: data.createdAt,
+                            updatedAt: data.updatedAt,
+                            companyName: 'Office'
+                        } as MultipleCheckInOutRecord);
+                    }
                     return;
                 }
 

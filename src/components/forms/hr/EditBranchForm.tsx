@@ -33,7 +33,8 @@ const BranchSchema = z.object({
   requireRemoteAttendanceApproval: z.boolean().default(false),
   allowRadius: z.number().optional(),
   address: z.string().optional(),
-  willNotifySupervisor: z.boolean().default(false),
+  willNotifySupervisorInTime: z.boolean().default(false),
+  willNotifySupervisorOutTime: z.boolean().optional().default(false),
   notifyAllRemoteAttendances: z.boolean().default(false),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -59,7 +60,8 @@ export function EditBranchForm({ initialData, onFormSubmit }: EditBranchFormProp
       requireRemoteAttendanceApproval: initialData.requireRemoteAttendanceApproval || false,
       allowRadius: initialData.allowRadius || 50,
       address: initialData.address || '',
-      willNotifySupervisor: initialData.willNotifySupervisor || false,
+      willNotifySupervisorInTime: initialData.willNotifySupervisorInTime || false,
+      willNotifySupervisorOutTime: initialData.willNotifySupervisorOutTime || false,
       notifyAllRemoteAttendances: initialData.notifyAllRemoteAttendances || false,
       latitude: initialData.latitude,
       longitude: initialData.longitude,
@@ -77,7 +79,8 @@ export function EditBranchForm({ initialData, onFormSubmit }: EditBranchFormProp
       requireRemoteAttendanceApproval: data.requireRemoteAttendanceApproval || false,
       allowRadius: data.allowRadius || 50,
       address: data.address || '',
-      willNotifySupervisor: data.willNotifySupervisor || false,
+      willNotifySupervisorInTime: data.willNotifySupervisorInTime || false,
+      willNotifySupervisorOutTime: data.willNotifySupervisorOutTime || false,
       notifyAllRemoteAttendances: data.notifyAllRemoteAttendances || false,
       latitude: data.latitude || null, // Create null if undefined to clear or set empty
       longitude: data.longitude || null,
@@ -236,13 +239,26 @@ export function EditBranchForm({ initialData, onFormSubmit }: EditBranchFormProp
 
         <FormField
           control={form.control}
-          name="willNotifySupervisor"
+          name="willNotifySupervisorInTime"
           render={({ field }) => (
             <FormItem className="flex flex-row items-center space-x-2 space-y-0">
               <FormControl>
                 <Checkbox checked={field.value} onCheckedChange={field.onChange} />
               </FormControl>
-              <FormLabel className="font-medium cursor-pointer text-sm">Will Notify Supervisor (In time only)</FormLabel>
+              <FormLabel className="font-medium cursor-pointer text-sm">Will Notify Supervisor (In time)</FormLabel>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="willNotifySupervisorOutTime"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+              <FormControl>
+                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+              <FormLabel className="font-medium cursor-pointer text-sm">Will Notify Supervisor (Out time)</FormLabel>
             </FormItem>
           )}
         />

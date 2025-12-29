@@ -1759,7 +1759,8 @@ export const BranchSchema = z.object({
   requireRemoteAttendanceApproval: z.boolean().optional(),
   allowRadius: z.number().optional(),
   address: z.string().optional(),
-  willNotifySupervisor: z.boolean().optional(),
+  willNotifySupervisorInTime: z.boolean().optional(),
+  willNotifySupervisorOutTime: z.boolean().optional(),
   notifyAllRemoteAttendances: z.boolean().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -1775,7 +1776,8 @@ export interface BranchDocument {
   requireRemoteAttendanceApproval?: boolean;
   allowRadius?: number;
   address?: string;
-  willNotifySupervisor?: boolean;
+  willNotifySupervisorInTime?: boolean;
+  willNotifySupervisorOutTime?: boolean;
   notifyAllRemoteAttendances?: boolean;
   latitude?: number;
   longitude?: number;
@@ -1990,6 +1992,8 @@ export interface Attendance {
   inTimeAddress?: string;
   outTimeAddress?: string;
   approvalStatus?: 'Pending' | 'Approved' | 'Rejected';
+  inTimeApprovalStatus?: 'Pending' | 'Approved' | 'Rejected';
+  outTimeApprovalStatus?: 'Pending' | 'Approved' | 'Rejected';
 }
 export type AttendanceDocument = Attendance & { id: string };
 // --- END Attendance Types ---

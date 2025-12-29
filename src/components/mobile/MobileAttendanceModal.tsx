@@ -325,6 +325,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     isInsideGeofence: isInsideGeofence,
                     distanceFromBranch: distanceFromBranch,
                     approvalStatus: status,
+                    inTimeApprovalStatus: status,
                     createdAt: Timestamp.now(),
                     updatedAt: Timestamp.now()
                 };
@@ -375,6 +376,8 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 }
 
                 // Update attendance record with check-out
+                const outStatus = (isInsideGeofence || isPrivilegedRole) ? 'Approved' : 'Pending';
+
                 await setDoc(doc(firestore, 'attendance', docId), {
                     outTime: currentTime,
                     outTimeLocation: {
@@ -387,7 +390,8 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     outTimeRemarks: remarks || '',
                     outTimeIsInsideGeofence: isInsideGeofence,
                     outTimeDistanceFromBranch: distanceFromBranch,
-                    approvalStatus: (isInsideGeofence || isPrivilegedRole) ? 'Approved' : 'Pending',
+                    outTimeApprovalStatus: outStatus,
+                    approvalStatus: outStatus === 'Pending' ? 'Pending' : attendanceDoc.data()?.approvalStatus,
                     updatedAt: Timestamp.now()
                 }, { merge: true });
 

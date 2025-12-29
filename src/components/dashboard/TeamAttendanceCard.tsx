@@ -112,33 +112,40 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
     };
 
     // Helper: Handle Approval
-    const handleApprove = async (attendanceId: string, inTime: string | undefined) => {
+    const handleApprove = async (attendanceId: string, time: string | undefined, type: 'in' | 'out') => {
         try {
-            const newFlag = determineAttendanceFlag(inTime);
+            const updateData: any = {};
+            if (type === 'in') {
+                const newFlag = determineAttendanceFlag(time);
+                updateData.flag = newFlag;
+                updateData.inTimeApprovalStatus = 'Approved';
+                // For backward compatibility, also update general status
+                updateData.approvalStatus = 'Approved';
+            } else {
+                updateData.outTimeApprovalStatus = 'Approved';
+            }
+
             const ref = doc(firestore, 'attendance', attendanceId);
-            await updateDoc(ref, {
-                flag: newFlag,
-                approvalStatus: 'Approved'
-            });
+            await updateDoc(ref, updateData);
             Swal.fire({
                 icon: 'success',
                 title: 'Approved',
-                text: 'Attendance approved successfully.',
+                text: `${type === 'in' ? 'In-Time' : 'Out-Time'} approved successfully.`,
                 timer: 1500,
                 showConfirmButton: false
             });
         } catch (error) {
             console.error("Error approving attendance:", error);
-            Swal.fire('Error', 'Failed to approve attendance.', 'error');
+            Swal.fire('Error', `Failed to approve ${type} attendance.`, 'error');
         }
     };
 
     // Helper: Handle Rejection
-    const handleReject = async (attendanceId: string) => {
+    const handleReject = async (attendanceId: string, type: 'in' | 'out') => {
         try {
             const result = await Swal.fire({
                 title: 'Are you sure?',
-                text: "This will mark the attendance as Absent.",
+                text: type === 'in' ? "This will mark the attendance as Absent." : "This will reject the out-time record.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
@@ -147,20 +154,26 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
             });
 
             if (result.isConfirmed) {
+                const updateData: any = {};
+                if (type === 'in') {
+                    updateData.flag = 'A';
+                    updateData.inTimeApprovalStatus = 'Rejected';
+                    updateData.approvalStatus = 'Rejected';
+                } else {
+                    updateData.outTimeApprovalStatus = 'Rejected';
+                }
+
                 const ref = doc(firestore, 'attendance', attendanceId);
-                await updateDoc(ref, {
-                    flag: 'A',
-                    approvalStatus: 'Rejected'
-                });
+                await updateDoc(ref, updateData);
                 Swal.fire(
                     'Rejected!',
-                    'Attendance has been marked as Absent.',
+                    type === 'in' ? 'Attendance has been marked as Absent.' : 'Out-time has been rejected.',
                     'success'
                 );
             }
         } catch (error) {
             console.error("Error rejecting attendance:", error);
-            Swal.fire('Error', 'Failed to reject attendance.', 'error');
+            Swal.fire('Error', `Failed to reject ${type} attendance.`, 'error');
         }
     };
 
@@ -210,40 +223,57 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                 else if (att.flag === 'D') status = 'Delayed';
                 else if (att.flag === 'L') status = 'On Leave';
 
-                // Check for Radius Violation if approval not yet decided
-                if (!currentApprovalStatus && att.inTimeLocation) {
-                    // Try to find branch
-                    let branch = branches.find(b => b.id === emp.branchId);
-                    // Fallback to name matching if branchId invalid / missing but branch name exists
-                    if (!branch && emp.branch) {
-                        branch = branches.find(b => b.name === emp.branch);
-                    }
+                let inTimeAppStatus = att.inTimeApprovalStatus || att.approvalStatus;
+                let outTimeAppStatus = att.outTimeApprovalStatus;
 
-                    if (branch && branch.latitude && branch.longitude && branch.allowRadius) {
-                        const dist = calculateDistance(
-                            att.inTimeLocation.latitude,
-                            att.inTimeLocation.longitude,
-                            branch.latitude,
-                            branch.longitude
-                        );
+                // Radius Validation Logic
+                let branch = branches.find(b => b.id === emp.branchId);
+                if (!branch && emp.branch) {
+                    branch = branches.find(b => b.name === emp.branch);
+                }
+
+                if (branch && branch.latitude && branch.longitude && branch.allowRadius) {
+                    // Check In-Time Radius
+                    if (!inTimeAppStatus && att.inTimeLocation) {
+                        const dist = calculateDistance(att.inTimeLocation.latitude, att.inTimeLocation.longitude, branch.latitude, branch.longitude);
                         if (dist > branch.allowRadius) {
-                            approvalRequired = true;
-                            // Virtual status for UI
-                            currentApprovalStatus = 'Pending';
+                            inTimeAppStatus = 'Pending';
+                        }
+                    }
+                    // Check Out-Time Radius
+                    if (!outTimeAppStatus && att.outTimeLocation) {
+                        const dist = calculateDistance(att.outTimeLocation.latitude, att.outTimeLocation.longitude, branch.latitude, branch.longitude);
+                        if (dist > branch.allowRadius) {
+                            outTimeAppStatus = 'Pending';
                         }
                     }
                 }
+
+                return {
+                    ...emp,
+                    inTime: att?.inTime || '-',
+                    outTime: att?.outTime || '-',
+                    inTimeLocation: att?.inTimeLocation,
+                    outTimeLocation: att?.outTimeLocation,
+                    status: status,
+                    attendanceId: att?.id,
+                    inTimeApprovalStatus: inTimeAppStatus,
+                    outTimeApprovalStatus: outTimeAppStatus,
+                    approvalStatus: inTimeAppStatus || outTimeAppStatus // Primary status for badges
+                };
             }
 
             return {
                 ...emp,
-                inTime: att?.inTime || '-',
-                outTime: att?.outTime || '-',
-                inTimeLocation: att?.inTimeLocation,
-                outTimeLocation: att?.outTimeLocation,
-                status: status,
-                attendanceId: att?.id,
-                approvalStatus: currentApprovalStatus
+                inTime: '-',
+                outTime: '-',
+                inTimeLocation: undefined,
+                outTimeLocation: undefined,
+                status: 'Absent',
+                attendanceId: undefined,
+                inTimeApprovalStatus: undefined,
+                outTimeApprovalStatus: undefined,
+                approvalStatus: undefined
             };
         });
 
@@ -406,7 +436,8 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                                 <TableHead className="text-xs whitespace-nowrap">In Time</TableHead>
                                 <TableHead className="text-xs whitespace-nowrap">Out Time</TableHead>
                                 <TableHead className="text-xs whitespace-nowrap">Status</TableHead>
-                                <TableHead className="text-center text-xs whitespace-nowrap">Approval</TableHead>
+                                <TableHead className="text-center text-xs whitespace-nowrap">In time Approval</TableHead>
+                                <TableHead className="text-center text-xs whitespace-nowrap">Out Time Approval</TableHead>
                                 <TableHead className="text-right text-xs whitespace-nowrap">Action</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -464,7 +495,11 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            {emp.approvalStatus === 'Pending' ? (
+                                            {emp.inTimeApprovalStatus === 'Pending' ? (
+                                                <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-orange-500 text-orange-500">
+                                                    Pending
+                                                </Badge>
+                                            ) : emp.outTimeApprovalStatus === 'Pending' ? (
                                                 <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-orange-500 text-orange-500">
                                                     Pending
                                                 </Badge>
@@ -483,12 +518,12 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                                             )}
                                         </TableCell>
                                         <TableCell className="text-center">
-                                            {emp.approvalStatus === 'Pending' && emp.attendanceId && (
+                                            {emp.inTimeApprovalStatus === 'Pending' && emp.attendanceId && (
                                                 <div className="flex items-center justify-center gap-1">
                                                     <Button
                                                         size="sm"
                                                         className="h-6 w-6 p-0 bg-green-500 hover:bg-green-600 rounded-full"
-                                                        onClick={() => handleApprove(emp.attendanceId!, emp.inTime)}
+                                                        onClick={() => handleApprove(emp.attendanceId!, emp.inTime, 'in')}
                                                         title="Approve"
                                                     >
                                                         <Check className="h-3 w-3 text-white" />
@@ -497,18 +532,47 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                                                         size="sm"
                                                         variant="destructive"
                                                         className="h-6 w-6 p-0 rounded-full"
-                                                        onClick={() => handleReject(emp.attendanceId!)}
+                                                        onClick={() => handleReject(emp.attendanceId!, 'in')}
                                                         title="Reject"
                                                     >
                                                         <X className="h-3 w-3 text-white" />
                                                     </Button>
                                                 </div>
                                             )}
-                                            {emp.approvalStatus === 'Approved' && (
-                                                <span className="text-[10px] text-green-600 font-medium">Approved</span>
+                                            {emp.inTimeApprovalStatus === 'Approved' && (
+                                                <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">Approved</span>
                                             )}
-                                            {emp.approvalStatus === 'Rejected' && (
-                                                <span className="text-[10px] text-red-600 font-medium">Rejected</span>
+                                            {emp.inTimeApprovalStatus === 'Rejected' && (
+                                                <span className="text-[10px] text-red-600 font-medium whitespace-nowrap">Rejected</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            {emp.outTimeApprovalStatus === 'Pending' && emp.attendanceId && (
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-6 w-6 p-0 bg-green-500 hover:bg-green-600 rounded-full"
+                                                        onClick={() => handleApprove(emp.attendanceId!, emp.outTime, 'out')}
+                                                        title="Approve"
+                                                    >
+                                                        <Check className="h-3 w-3 text-white" />
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        className="h-6 w-6 p-0 rounded-full"
+                                                        onClick={() => handleReject(emp.attendanceId!, 'out')}
+                                                        title="Reject"
+                                                    >
+                                                        <X className="h-3 w-3 text-white" />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                            {emp.outTimeApprovalStatus === 'Approved' && (
+                                                <span className="text-[10px] text-green-600 font-medium whitespace-nowrap">Approved</span>
+                                            )}
+                                            {emp.outTimeApprovalStatus === 'Rejected' && (
+                                                <span className="text-[10px] text-red-600 font-medium whitespace-nowrap">Rejected</span>
                                             )}
                                         </TableCell>
                                         <TableCell className="text-right">
