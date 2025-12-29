@@ -68,16 +68,8 @@ export default function RemoteAttendanceDetailsPage() {
         const fetchRecord = async () => {
             if (!id) return;
             try {
-                // Try multiple_check_inout first
-                let docRef = doc(firestore, 'multiple_check_inout', id);
-                let snap = await getDoc(docRef);
-                if (snap.exists()) {
-                    setRecord({ id: snap.id, ...snap.data() } as MultipleCheckInOutRecord);
-                    return;
-                }
-
-                // Try attendance
-                docRef = doc(firestore, 'attendance', id);
+                // Try attendance first as it is now the primary source
+                let docRef = doc(firestore, 'attendance', id);
                 const attSnap = await getDoc(docRef);
                 if (attSnap.exists()) {
                     const data = attSnap.data();
@@ -99,6 +91,14 @@ export default function RemoteAttendanceDetailsPage() {
                         updatedAt: data.updatedAt,
                         companyName: 'Office'
                     } as MultipleCheckInOutRecord);
+                    return;
+                }
+
+                // Fallback to multiple_check_inout for legacy support or if needed
+                docRef = doc(firestore, 'multiple_check_inout', id);
+                let snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    setRecord({ id: snap.id, ...snap.data() } as MultipleCheckInOutRecord);
                 }
             } catch (error) {
                 console.error("Error fetching record:", error);

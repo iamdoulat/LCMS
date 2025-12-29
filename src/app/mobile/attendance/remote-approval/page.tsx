@@ -51,40 +51,26 @@ export default function RemoteAttendanceApprovalPage() {
         try {
             const endDate = new Date();
             const startDate = subDays(endDate, filterDays);
-            const startIso = startDate.toISOString();
             const fetchedRecords: UnifiedApprovalRecord[] = [];
 
             // Check if user has an administrative role
             const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
             const isAdmin = userRole?.some((role: string) => privilegedRoles.includes(role));
 
-            // Helper to map and push records
-            const processMultiple = (snap: any) => {
-                snap.forEach((doc: any) => {
-                    const data = doc.data();
-                    const emp = supervisedEmployees.find(e => e.id === data.employeeId);
-                    fetchedRecords.push({
-                        ...data,
-                        id: doc.id,
-                        source: 'multiple',
-                        employeeCode: emp?.employeeCode || 'N/A'
-                    } as UnifiedApprovalRecord);
-                });
-            };
-
             const processDaily = (snap: any) => {
                 snap.forEach((doc: any) => {
                     const data = doc.data();
-                    const emp = supervisedEmployees.find(e => e.id === data.employeeId);
-                    // Map daily attendance geofence violation to approval record
+                    const emp = supervisedEmployees.find(e => e.id === data.employeeId || e.uid === data.employeeId);
+
+                    // Map daily attendance records with Pending status
                     if (data.approvalStatus === 'Pending') {
                         fetchedRecords.push({
                             id: doc.id,
-                            employeeId: data.employeeId,
+                            employeeId: data.employeeId || data.uid,
                             employeeName: data.employeeName || emp?.fullName || 'Unknown',
                             employeeCode: emp?.employeeCode || 'N/A',
                             type: 'Check In', // Daily attendance approval is for check-in
-                            timestamp: data.date, // already ISO-ish or timestamp
+                            timestamp: data.date,
                             location: {
                                 latitude: data.inTimeLocation?.latitude || 0,
                                 longitude: data.inTimeLocation?.longitude || 0,
@@ -102,16 +88,7 @@ export default function RemoteAttendanceApprovalPage() {
             };
 
             if (isAdmin) {
-                // Fetch visit records
-                const qMultiple = query(
-                    collection(firestore, 'multiple_check_inout'),
-                    where('timestamp', '>=', startIso)
-                );
-                const subMultiple = await getDocs(qMultiple);
-                processMultiple(subMultiple);
-
                 // Fetch daily attendance records - Only pending ones
-                // Using only approvalStatus filter to minimize index needs
                 const qDaily = query(
                     collection(firestore, 'attendance'),
                     where('approvalStatus', '==', 'Pending')
@@ -120,33 +97,22 @@ export default function RemoteAttendanceApprovalPage() {
                 processDaily(subDaily);
             } else {
                 const employeeIds = supervisedEmployees.map(e => e.id);
-                if (employeeIds.length === 0) {
+                const employeeUids = supervisedEmployees.map(e => e.uid).filter(Boolean) as string[];
+                const allTeamIds = Array.from(new Set([...employeeIds, ...employeeUids]));
+
+                if (allTeamIds.length === 0) {
                     setRecords([]);
                     setLoading(false);
                     return;
                 }
 
                 const chunks = [];
-                for (let i = 0; i < employeeIds.length; i += 10) {
-                    chunks.push(employeeIds.slice(i, i + 10));
+                for (let i = 0; i < allTeamIds.length; i += 10) {
+                    chunks.push(allTeamIds.slice(i, i + 10));
                 }
 
                 for (const chunk of chunks) {
                     try {
-                        // Visit records
-                        const qMultiple = query(
-                            collection(firestore, 'multiple_check_inout'),
-                            where('employeeId', 'in', chunk),
-                            where('timestamp', '>=', startIso)
-                        );
-                        const subMultiple = await getDocs(qMultiple);
-                        processMultiple(subMultiple);
-                    } catch (err) {
-                        console.error("Error fetching multiple_check_inout for chunk:", err);
-                    }
-
-                    try {
-                        // Daily records - only fetch pending ones
                         const qDaily = query(
                             collection(firestore, 'attendance'),
                             where('employeeId', 'in', chunk),
@@ -160,15 +126,8 @@ export default function RemoteAttendanceApprovalPage() {
                 }
             }
 
-            // Post-process daily records: filter by date if they were fetched without date filter
-            // Also sorts all records by timestamp
-            let filteredRecords = fetchedRecords;
-            if (!isAdmin) {
-                // For non-admins, ensure we didn't get old records (though currently queries are safe)
-                filteredRecords = fetchedRecords.filter(r => new Date(r.timestamp) >= startDate);
-            }
-
-            // Sort and update state
+            // Filter by date range and sort
+            const filteredRecords = fetchedRecords.filter(r => new Date(r.timestamp) >= startDate);
             filteredRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setRecords(filteredRecords);
 
@@ -204,36 +163,32 @@ export default function RemoteAttendanceApprovalPage() {
 
         setProcessingId(selectedRecord.id);
         try {
-            if (selectedRecord.source === 'multiple') {
-                await updateCheckInOutStatus(selectedRecord.id, action, currentEmployeeId);
+            // Update Daily Attendance
+            const { doc, updateDoc, serverTimestamp, getDoc } = await import('firebase/firestore');
+            const docRef = doc(firestore, 'attendance', selectedRecord.id);
+
+            if (action === 'Approved') {
+                // Check if we need to determine the flag (P or D)
+                const snap = await getDoc(docRef);
+                const inTime = snap.data()?.inTime;
+                const { determineAttendanceFlag } = await import('@/lib/firebase/utils');
+                const flag = determineAttendanceFlag(inTime);
+
+                await updateDoc(docRef, {
+                    approvalStatus: 'Approved',
+                    flag: flag,
+                    reviewedBy: currentEmployeeId,
+                    reviewedAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
             } else {
-                // Update Daily Attendance
-                const { doc, updateDoc, serverTimestamp, getDoc } = await import('firebase/firestore');
-                const docRef = doc(firestore, 'attendance', selectedRecord.id);
-
-                if (action === 'Approved') {
-                    // Check if we need to determine the flag (P or D)
-                    const snap = await getDoc(docRef);
-                    const inTime = snap.data()?.inTime;
-                    const { determineAttendanceFlag } = await import('@/lib/firebase/utils');
-                    const flag = determineAttendanceFlag(inTime);
-
-                    await updateDoc(docRef, {
-                        approvalStatus: 'Approved',
-                        flag: flag,
-                        reviewedBy: currentEmployeeId,
-                        reviewedAt: serverTimestamp(),
-                        updatedAt: serverTimestamp()
-                    });
-                } else {
-                    await updateDoc(docRef, {
-                        approvalStatus: 'Rejected',
-                        flag: 'A', // Marked as Absent if rejected
-                        reviewedBy: currentEmployeeId,
-                        reviewedAt: serverTimestamp(),
-                        updatedAt: serverTimestamp()
-                    });
-                }
+                await updateDoc(docRef, {
+                    approvalStatus: 'Rejected',
+                    flag: 'A', // Marked as Absent if rejected
+                    reviewedBy: currentEmployeeId,
+                    reviewedAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                });
             }
 
             setRecords(prev => prev.map(r => r.id === selectedRecord.id ? { ...r, status: action } : r));
