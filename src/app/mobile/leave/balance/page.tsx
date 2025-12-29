@@ -15,8 +15,6 @@ import {
     Loader2,
     Info,
     TrendingUp,
-    PieChart as PieIcon,
-    BarChart3,
     ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -59,6 +57,8 @@ export default function MyLeaveBalancePage() {
     const [leaveGroup, setLeaveGroup] = useState<LeaveGroupDocument | null>(null);
     const [leaves, setLeaves] = useState<LeaveApplicationDocument[]>([]);
     const [viewMode, setViewMode] = useState<'pie' | 'bar'>('pie');
+    const [startX, setStartX] = useState(0);
+    const [currentX, setCurrentX] = useState(0);
 
     // Fetch Employee and Leave Data
     useEffect(() => {
@@ -113,6 +113,32 @@ export default function MyLeaveBalancePage() {
 
         fetchData();
     }, [user]);
+
+    // Swipe logic for horizontal tab swap
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setStartX(e.touches[0].clientX);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        setCurrentX(e.touches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+        const diff = startX - currentX;
+        const threshold = 50;
+
+        if (Math.abs(diff) > threshold) {
+            if (diff > 0) {
+                // Swipe Left -> Next Tab (Pie to Bar)
+                if (viewMode === 'pie') setViewMode('bar');
+            } else {
+                // Swipe Right -> Prev Tab (Bar to Pie)
+                if (viewMode === 'bar') setViewMode('pie');
+            }
+        }
+        setStartX(0);
+        setCurrentX(0);
+    };
 
     // Calculate Balances
     const balanceData = useMemo(() => {
@@ -186,30 +212,30 @@ export default function MyLeaveBalancePage() {
 
                     {/* Charts Section */}
                     <Card className="rounded-2xl border-none shadow-sm overflow-hidden">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                        <CardHeader className="pb-2 border-b">
                             <CardTitle className="text-lg font-bold text-slate-800">Visual Summary</CardTitle>
-                            <div className="flex items-center bg-slate-100 p-1 rounded-xl">
-                                <button
-                                    onClick={() => setViewMode('pie')}
-                                    className={cn(
-                                        "p-2 rounded-lg transition-all",
-                                        viewMode === 'pie' ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"
-                                    )}
-                                >
-                                    <PieIcon className="h-4 w-4" />
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('bar')}
-                                    className={cn(
-                                        "p-2 rounded-lg transition-all",
-                                        viewMode === 'bar' ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"
-                                    )}
-                                >
-                                    <BarChart3 className="h-4 w-4" />
-                                </button>
+                            {/* Horizontal Tabs */}
+                            <div className="flex items-center justify-center gap-4 pt-3">
+                                {(['pie', 'bar'] as const).map((mode) => (
+                                    <button
+                                        key={mode}
+                                        onClick={() => setViewMode(mode)}
+                                        className={cn(
+                                            "pb-2 relative text-sm font-semibold transition-colors capitalize px-4 border-b-2",
+                                            viewMode === mode ? "text-blue-600 border-blue-600" : "text-slate-400 border-transparent"
+                                        )}
+                                    >
+                                        {mode === 'pie' ? 'Pie Chart' : 'Bar Chart'}
+                                    </button>
+                                ))}
                             </div>
                         </CardHeader>
-                        <CardContent className="pt-6">
+                        <CardContent
+                            className="pt-6"
+                            onTouchStart={handleTouchStart}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                        >
                             <div className="h-[250px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
                                     {viewMode === 'pie' ? (
