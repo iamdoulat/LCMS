@@ -109,7 +109,6 @@ export default function LoginPage() {
         return;
       }
 
-      console.log("[verifyDevice] Fetching fresh user doc for:", currentUser.uid);
       const userDocRef = doc(firestore, 'users', currentUser.uid);
       const userDocSnap = await getDoc(userDocRef);
 
@@ -120,11 +119,9 @@ export default function LoginPage() {
       }
 
       const userData = userDocSnap.data() as any; // Cast to any to ensure we can access 'role'
-      console.log("[verifyDevice] Fresh User Data:", userData);
 
       // Check role directly from fresh data
       const freshRole = userData.role;
-      console.log("[verifyDevice] Fresh Role:", freshRole);
 
       if (!shouldCheckDevice(freshRole)) {
         console.log("[verifyDevice] Skipping device check (Role mismatch)");

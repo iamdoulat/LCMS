@@ -43,11 +43,7 @@ export default function MobileAttendancePage() {
     const [loading, setLoading] = useState(true);
 
     const fetchWeeklySummary = async () => {
-        console.log('[ATTENDANCE] Starting fetchWeeklySummary');
-        console.log('[ATTENDANCE] supervisedEmployeeIds:', supervisedEmployeeIds);
-
         if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) {
-            console.log('[ATTENDANCE] No supervised employees found');
             setAttendanceData({ present: 0, delay: 0, weekend: 0, leave: 0, absent: 0 });
             setLoading(false);
             return;
@@ -60,19 +56,12 @@ export default function MobileAttendancePage() {
             const end = endOfWeek(today, { weekStartsOn: 6 });
             const weekDays = eachDayOfInterval({ start, end });
 
-            console.log('[ATTENDANCE] Week range:', {
-                start: format(start, 'yyyy-MM-dd'),
-                end: format(end, 'yyyy-MM-dd'),
-                weekDays: weekDays.map(d => format(d, 'yyyy-MM-dd'))
-            });
-
             // 1. Fetch Attendance Records for supervised employees
             // We collect both document IDs and UIDs for each employee for resilient matching
             const allPossibleIds = supervisedEmployees.map(e => [e.id, e.uid]).flat().filter((id): id is string => !!id);
 
             // Limit to top 30 unique IDs (Firestore limit)
             const uniquePossibleIds = Array.from(new Set(allPossibleIds)).slice(0, 30);
-            console.log('[ATTENDANCE] Fetching attendance for ids:', uniquePossibleIds);
 
             const startDateStr = format(start, 'yyyy-MM-dd');
             const endDateStr = format(end, 'yyyy-MM-dd');
@@ -83,7 +72,6 @@ export default function MobileAttendancePage() {
                 where('employeeId', 'in', uniquePossibleIds)
             );
             const attendanceSnap = await getDocs(attendanceQuery);
-            console.log('[ATTENDANCE] Total attendance records fetched:', attendanceSnap.docs.length);
 
             // Filter by date client-side
             const attendanceRecords = attendanceSnap.docs
@@ -96,9 +84,6 @@ export default function MobileAttendancePage() {
                     return rDatePrefix >= startDateStr && rDatePrefix <= endDateStr;
                 });
 
-            console.log('[ATTENDANCE] Filtered attendance records:', attendanceRecords.length);
-            console.log('[ATTENDANCE] Sample attendance records:', attendanceRecords.slice(0, 3));
-
             // 2. Fetch Approved Leave Applications
             const leaveQuery = query(
                 collection(firestore, 'leave_applications'),
@@ -107,13 +92,10 @@ export default function MobileAttendancePage() {
             );
             const leaveSnap = await getDocs(leaveQuery);
             const leaveApplications = leaveSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-            console.log('[ATTENDANCE] Leave applications:', leaveApplications.length);
 
             // 3. Fetch Holidays
             const holidaySnap = await getDocs(collection(firestore, 'holidays'));
             const holidays = holidaySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-            console.log('[ATTENDANCE] Holidays:', holidays.length);
-            console.log('[ATTENDANCE] Sample holiday:', holidays[0]);
 
             // Calculate Stats
             let present = 0;
@@ -121,8 +103,6 @@ export default function MobileAttendancePage() {
             let weekend = 0;
             let leave = 0;
             let absent = 0;
-
-            console.log('[ATTENDANCE] Processing', supervisedEmployees.length, 'employees for', weekDays.length, 'days');
 
             supervisedEmployees.forEach(emp => {
                 weekDays.forEach(day => {
@@ -177,7 +157,6 @@ export default function MobileAttendancePage() {
                 });
             });
 
-            console.log('[ATTENDANCE] Final counts:', { present, delay, weekend, leave, absent });
             setAttendanceData({ present, delay, weekend, leave, absent });
 
         } catch (error) {
@@ -189,7 +168,6 @@ export default function MobileAttendancePage() {
     };
 
     useEffect(() => {
-        console.log('[ATTENDANCE] useEffect triggered, supervisedEmployeeIds.length:', supervisedEmployeeIds?.length);
         if (supervisedEmployeeIds && supervisedEmployeeIds.length > 0) {
             fetchWeeklySummary();
         } else {

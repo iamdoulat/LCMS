@@ -63,7 +63,6 @@ export default function MyAttendancePage() {
                 return timeB - timeA;
             });
 
-            console.log(`Fetched ${data.length} attendance records for ids:`, queryIds);
             setAttendanceRecords(data.slice(0, 30));
         } catch (error) {
             console.error("Error fetching attendance:", error);

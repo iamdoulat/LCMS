@@ -31,7 +31,8 @@ const BranchSchema = z.object({
   requireRemoteAttendanceApproval: z.boolean().default(false),
   allowRadius: z.number().optional(),
   address: z.string().optional(),
-  willNotifySupervisor: z.boolean().default(false),
+  willNotifySupervisorInTime: z.boolean().default(false),
+  willNotifySupervisorOutTime: z.boolean().default(false),
   notifyAllRemoteAttendances: z.boolean().default(false),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -55,7 +56,8 @@ export function AddBranchForm({ onFormSubmit }: AddBranchFormProps) {
       requireRemoteAttendanceApproval: false,
       allowRadius: 50,
       address: '',
-      willNotifySupervisor: false,
+      willNotifySupervisorInTime: false,
+      willNotifySupervisorOutTime: false,
       notifyAllRemoteAttendances: false,
       latitude: undefined,
       longitude: undefined,
@@ -73,7 +75,8 @@ export function AddBranchForm({ onFormSubmit }: AddBranchFormProps) {
       requireRemoteAttendanceApproval: data.requireRemoteAttendanceApproval || false,
       allowRadius: data.allowRadius || 50,
       address: data.address || '',
-      willNotifySupervisor: data.willNotifySupervisor || false,
+      willNotifySupervisorInTime: data.willNotifySupervisorInTime || false,
+      willNotifySupervisorOutTime: data.willNotifySupervisorOutTime || false,
       notifyAllRemoteAttendances: data.notifyAllRemoteAttendances || false,
       latitude: data.latitude || null,
       longitude: data.longitude || null,
@@ -209,6 +212,37 @@ export function AddBranchForm({ onFormSubmit }: AddBranchFormProps) {
           )}
         />
 
+        <div className="space-y-4 border rounded-md p-3 bg-muted/20">
+          <h4 className="text-sm font-medium">Supervisor Notifications</h4>
+          <div className="flex flex-col gap-3">
+            <FormField
+              control={form.control}
+              name="willNotifySupervisorInTime"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <FormLabel className="font-medium cursor-pointer text-sm">Notify on Remote In-Time</FormLabel>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="willNotifySupervisorOutTime"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <FormLabel className="font-medium cursor-pointer text-sm">Notify on Remote Out-Time</FormLabel>
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
         <FormField
           control={form.control}
           name="allowRadius"
@@ -226,19 +260,6 @@ export function AddBranchForm({ onFormSubmit }: AddBranchFormProps) {
                 </FormControl>
               </div>
               <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="willNotifySupervisor"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-              <FormControl>
-                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-              </FormControl>
-              <FormLabel className="font-medium cursor-pointer text-sm">Will Notify Supervisor (In time only)</FormLabel>
             </FormItem>
           )}
         />
