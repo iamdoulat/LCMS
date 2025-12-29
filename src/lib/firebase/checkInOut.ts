@@ -19,76 +19,38 @@ export const getCurrentLocation = async (options?: PositionOptions & {
         throw new Error('Geolocation is not supported by your browser');
     }
 
-    const stage1Options: PositionOptions = {
+    const posOptions: PositionOptions = {
         enableHighAccuracy: true,
-        timeout: 20000,
+        timeout: 15000,
         maximumAge: options?.forceRefresh ? 0 : 30000,
         ...options
     };
 
-    const stage2Options: PositionOptions = {
-        enableHighAccuracy: false,
-        timeout: 15000,
-        maximumAge: options?.forceRefresh ? 0 : 60000,
-        ...options
-    };
-
-    const stage3Options: PositionOptions = {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: 600000, // 10 minutes old
-        ...options
-    };
-
-    const getPos = (opts: PositionOptions): Promise<GeolocationPosition> => {
-        return new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, opts);
-            // Add internal safety timeout for this promise as well
-            setTimeout(() => reject(new Error('Internal Timeout')), opts.timeout! + 2000);
-        });
-    };
-
-    const mapPos = (pos: GeolocationPosition): MultipleCheckInOutLocation => ({
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        accuracy: pos.coords.accuracy
-    });
-
-    try {
-        // Stage 1: High Accuracy
-        options?.onProgress?.('Attempting precise GPS location (Stage 1)...');
-        const pos1 = await getPos(stage1Options);
-        return mapPos(pos1);
-    } catch (err1: any) {
-        if (err1.code === 1) { // PERMISSION_DENIED
-            throw new Error("Location permission denied. Please allow access in browser settings.");
-        }
-
-        try {
-            // Stage 2: Low Accuracy Fallback
-            options?.onProgress?.('GPS slow, trying Wi-Fi/Cellular (Stage 2)...');
-            const pos2 = await getPos(stage2Options);
-            return mapPos(pos2);
-        } catch (err2: any) {
-
-            try {
-                // Stage 3: Last Known / Cached Position
-                options?.onProgress?.('Getting last known position (Stage 3)...');
-                const pos3 = await getPos(stage3Options);
-                return mapPos(pos3);
-            } catch (err3: any) {
+    return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                resolve({
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                    accuracy: pos.coords.accuracy
+                });
+            },
+            (err) => {
                 let msg = "Could not capture location. ";
-                if (err1.code === 3 || err2.code === 3) { // TIMEOUT
-                    msg += "The request timed out. Please ensure GPS is enabled and you have a clear view of the sky.";
-                } else if (err1.code === 2 || err2.code === 2) { // POSITION_UNAVAILABLE
+                if (err.code === 1) {
+                    msg = "Location permission denied. Please allow access in browser settings.";
+                } else if (err.code === 3) {
+                    msg += "The request timed out. Please ensure GPS is enabled.";
+                } else if (err.code === 2) {
                     msg += "Location provider not available. Check your device settings.";
                 } else {
                     msg += "Please ensure GPS/Location service is enabled on your device.";
                 }
-                throw new Error(msg);
-            }
-        }
-    }
+                reject(new Error(msg));
+            },
+            posOptions
+        );
+    });
 };
 
 /**
@@ -142,6 +104,7 @@ export const createCheckInOutRecord = async (
     remarks: string,
     additionalData?: {
         status?: 'Approved' | 'Pending' | 'Rejected';
+        approvalStatus?: 'Approved' | 'Pending' | 'Rejected';
         distanceFromBranch?: number;
         isInsideGeofence?: boolean;
     }

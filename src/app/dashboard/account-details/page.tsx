@@ -98,8 +98,14 @@ const formatCurrency = (value?: number) => {
 
 
 export default function AccountDetailsPage() {
-  const { user, loading: authLoading, setUser: setAuthUser } = useAuth();
+  const { user, userRole, loading: authLoading, setUser: setAuthUser } = useAuth();
   const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+
+  const isPrivilegedRole = useMemo(() => {
+    if (!userRole) return false;
+    const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
+    return userRole.some(role => privilegedRoles.includes(role));
+  }, [userRole]);
   const [employeeData, setEmployeeData] = useState<EmployeeDocument | null>(null);
   const [isEmployeeDataLoading, setIsEmployeeDataLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -587,34 +593,10 @@ export default function AccountDetailsPage() {
     if (isLoadingLocation) return null;
     setIsLoadingLocation(true);
 
-    let progressToast: any = null;
-
     try {
       const location = await getCurrentLocation({
         forceRefresh,
-        onProgress: (msg) => {
-          if (showNotification) {
-            if (!progressToast) {
-              progressToast = Swal.fire({
-                title: 'Capturing Location',
-                text: msg,
-                icon: 'info',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                  Swal.showLoading();
-                }
-              });
-            } else {
-              Swal.update({
-                text: msg
-              });
-            }
-          }
-        }
       });
-
-      if (progressToast) Swal.close();
 
       setCurrentLocation(location);
 
@@ -635,7 +617,6 @@ export default function AccountDetailsPage() {
       });
       return location;
     } catch (error: any) {
-      if (progressToast) Swal.close();
       console.error('Error capturing location:', error);
       if (showNotification) {
         Swal.fire('Location Error', error.message || 'Could not get location', 'error');
@@ -933,7 +914,8 @@ export default function AccountDetailsPage() {
             console.warn("Could not fetch payslips.", err);
           }
 
-          const monthlyAttendanceSnapshot = await getDocs(query(collection(firestore, 'attendance'), where('employeeId', '==', employeeData.id), where('date', '>=', fromDate), where('date', '<=', toDate)));
+          const employeeIds = [employeeData.id, user.uid].filter((id, index, self) => id && self.indexOf(id) === index);
+          const monthlyAttendanceSnapshot = await getDocs(query(collection(firestore, 'attendance'), where('employeeId', 'in', employeeIds), where('date', '>=', fromDate), where('date', '<=', toDate)));
           const currentMonthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
 
           let present = 0, delayed = 0, absent = 0, leaveDaysInMonth = 0, visitDaysInMonth = 0;
@@ -1016,7 +998,7 @@ export default function AccountDetailsPage() {
           const toDateStr = format(endOfCurrentMonth, 'yyyy-MM-dd');
           const breaksSnapshot = await getDocs(query(
             collection(firestore, 'break_time'),
-            where('employeeId', '==', employeeData.id)
+            where('employeeId', 'in', employeeIds)
           ));
           const monthlyBreakMinutes = breaksSnapshot.docs
             .map(doc => doc.data() as BreakTimeRecord)
@@ -1052,8 +1034,9 @@ export default function AccountDetailsPage() {
 
   // Real-time listener for leave applications
   useEffect(() => {
-    if (employeeData?.id) {
-      const q = query(collection(firestore, 'leave_applications'), where('employeeId', '==', employeeData.id));
+    if (employeeData?.id && user?.uid) {
+      const employeeIds = [employeeData.id, user.uid].filter((id, index, self) => id && self.indexOf(id) === index);
+      const q = query(collection(firestore, 'leave_applications'), where('employeeId', 'in', employeeIds));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const updatedLeaves = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
         setLeaves(updatedLeaves);
@@ -1089,9 +1072,18 @@ export default function AccountDetailsPage() {
         const docRef = doc(firestore, 'attendance', docId);
 
         try {
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            return { ...docSnap.data(), id: docSnap.id } as AttendanceDocument;
+          const docSnap1 = await getDoc(docRef);
+          if (docSnap1.exists()) {
+            return { ...docSnap1.data(), id: docSnap1.id } as AttendanceDocument;
+          }
+
+          // Try fallback to UID if different
+          if (user?.uid && user.uid !== employeeData.id) {
+            const docId2 = `${user.uid}_${formattedDate}`;
+            const docSnap2 = await getDoc(doc(firestore, 'attendance', docId2));
+            if (docSnap2.exists()) {
+              return { ...docSnap2.data(), id: docSnap2.id } as AttendanceDocument;
+            }
           }
         } catch (error) {
           console.error(`Error fetching attendance for ${formattedDate}:`, error);
@@ -1318,6 +1310,7 @@ export default function AccountDetailsPage() {
           inTimeRemarks: attendanceRemarks,
           inTimeLocation: attendanceLocation,
           updatedBy: user.uid,
+          approvalStatus: isPrivilegedRole ? 'Approved' : 'Approved', // Keeping existing behavior but ensuring field exists
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
@@ -1354,6 +1347,7 @@ export default function AccountDetailsPage() {
           outTime: currentTime,
           outTimeRemarks: attendanceRemarks,
           outTimeLocation: attendanceLocation,
+          approvalStatus: isPrivilegedRole ? 'Approved' : 'Approved', // Keeping existing behavior but ensuring field exists
           updatedAt: serverTimestamp(),
         };
         await updateDoc(docRef, dataToSet);
@@ -2282,7 +2276,7 @@ export default function AccountDetailsPage() {
                       const radius = employeeBranch.allowRadius || 50;
                       isInsideGeofence = distanceFromBranch <= radius;
 
-                      if (!isInsideGeofence) {
+                      if (!isInsideGeofence && !isPrivilegedRole) {
                         status = 'Pending';
                       }
                     }
@@ -2298,6 +2292,7 @@ export default function AccountDetailsPage() {
                       checkInOutRemarks,
                       {
                         status,
+                        approvalStatus: status,
                         distanceFromBranch,
                         isInsideGeofence
                       }

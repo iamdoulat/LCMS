@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { determineAttendanceFlag } from '@/lib/firebase/utils';
 import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDocs } from 'firebase/firestore';
-import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument } from '@/types';
+import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, UserDocumentForAdmin } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { cn } from '@/lib/utils';
@@ -199,7 +199,8 @@ const AttendanceDayRow = ({
         setIsSubmitting(true);
 
         const formattedDate = format(date, 'yyyy-MM-dd');
-        const docId = `${employee.id}_${formattedDate}`;
+        // Use existing document ID if available, otherwise construct one
+        const docId = initialData?.id || `${employee.id}_${formattedDate}`;
 
         const dataToSave: Partial<AttendanceDocument> = {
             employeeId: employee.id,
@@ -248,7 +249,8 @@ const AttendanceDayRow = ({
 
     const onDelete = async () => {
         const formattedDate = format(date, 'yyyy-MM-dd');
-        const docId = `${employee.id}_${formattedDate}`;
+        // Use existing document ID if available, otherwise construct one
+        const docId = initialData?.id || `${employee.id}_${formattedDate}`;
 
         Swal.fire({
             title: 'Are you sure?',
@@ -270,9 +272,15 @@ const AttendanceDayRow = ({
                     const dayStart = startOfDay(date);
                     const dayEnd = endOfDay(date);
 
+                    // Combine Firestore ID and UID for the query if they differ
+                    const employeeIdsForQuery = [employee.id];
+                    if (employee.uid && employee.uid !== employee.id) {
+                        employeeIdsForQuery.push(employee.uid);
+                    }
+
                     const logsQuery = query(
                         collection(firestore, "multiple_check_inout"),
-                        where("employeeId", "==", employee.id),
+                        where("employeeId", "in", employeeIdsForQuery),
                         where("timestamp", ">=", dayStart.toISOString()),
                         where("timestamp", "<=", dayEnd.toISOString())
                     );
@@ -483,6 +491,11 @@ export default function DailyAttendancePage() {
         query(collection(firestore, "employees"), orderBy("fullName")),
         undefined,
         ['employees_for_attendance']
+    );
+    const { data: usersData, isLoading: isLoadingUsers } = useFirestoreQuery<UserDocumentForAdmin[]>(
+        query(collection(firestore, "users"), orderBy("displayName")),
+        undefined,
+        ['users_for_attendance']
     );
     const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(
         query(collection(firestore, "branches")),
@@ -697,15 +710,43 @@ export default function DailyAttendancePage() {
     }, [refetchAttendance]);
 
 
-    const filteredEmployees = React.useMemo(() => {
+    const combinedEmployees = React.useMemo(() => {
         if (!employees) return [];
 
+        const merged = [...employees];
+
+        // Add users which are not in employees list
+        if (usersData) {
+            usersData.forEach(u => {
+                const alreadyExists = merged.some(e => e.email === u.email || e.uid === u.id);
+                if (!alreadyExists) {
+                    // Create synthetic EmployeeDocument
+                    merged.push({
+                        id: u.id,
+                        uid: u.id,
+                        fullName: u.displayName,
+                        email: u.email,
+                        employeeCode: `USER-${u.id.substring(0, 5).toUpperCase()}`,
+                        designation: u.role?.join(', ') || 'User',
+                        status: 'Active',
+                        branch: 'N/A'
+                    } as any);
+                }
+            });
+        }
+
+        return merged.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+    }, [employees, usersData]);
+
+    const filteredEmployees = React.useMemo(() => {
+        if (!combinedEmployees) return [];
+
         // First filter by supervisor access
-        let accessFilteredEmployees = employees;
+        let accessFilteredEmployees = combinedEmployees;
         if ((!isHROrAdmin && isSupervisor) || (isHROrAdmin && isSupervisor && viewTeam)) {
             // Supervisors see only their team (or HR/Admin forcing team view)
-            accessFilteredEmployees = employees.filter(emp =>
-                supervisedEmployeeIds.includes(emp.id)
+            accessFilteredEmployees = combinedEmployees.filter(emp =>
+                supervisedEmployeeIds.includes(emp.id) || (emp.uid && supervisedEmployeeIds.includes(emp.uid))
             );
         } else if (!isHROrAdmin && !isSupervisor) {
             // Regular employees see nothing
@@ -736,17 +777,20 @@ export default function DailyAttendancePage() {
 
     const attendanceByEmployee = React.useMemo(() => {
         const map = new Map<string, AttendanceDocument[]>();
-        if (allAttendance) {
+        if (allAttendance && (employees || usersData)) {
             allAttendance.forEach(att => {
-                const employeeId = att.employeeId;
-                if (!map.has(employeeId)) {
-                    map.set(employeeId, []);
+                // Find matching employee by ID OR UID
+                const matchedEmp = combinedEmployees.find(e => e.id === att.employeeId || e.uid === att.employeeId);
+                const employeeKey = matchedEmp ? matchedEmp.id : att.employeeId;
+
+                if (!map.has(employeeKey)) {
+                    map.set(employeeKey, []);
                 }
-                map.get(employeeId)!.push(att);
+                map.get(employeeKey)!.push(att);
             });
         }
         return map;
-    }, [allAttendance]);
+    }, [allAttendance, combinedEmployees, employees, usersData]);
 
     const getDefaultFlag = (date: Date, employeeId: string, holidays: HolidayDocument[], leaves: LeaveApplicationDocument[], visits: VisitApplicationDocument[]): AttendanceFlag => {
         const dayOfWeek = getDay(date);
@@ -760,7 +804,7 @@ export default function DailyAttendancePage() {
         return 'A';
     };
 
-    const isLoading = isLoadingEmployees || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance || isLoadingHolidays || isLoadingLeaves || isLoadingVisits;
+    const isLoading = isLoadingEmployees || isLoadingUsers || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance || isLoadingHolidays || isLoadingLeaves || isLoadingVisits;
 
     return (
         <div className="py-8 px-5">

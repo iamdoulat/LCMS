@@ -28,7 +28,7 @@ import {
 
 export default function MobileAttendancePage() {
     const { user } = useAuth();
-    const { supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const { supervisedEmployees, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -67,17 +67,20 @@ export default function MobileAttendancePage() {
             });
 
             // 1. Fetch Attendance Records for supervised employees
-            // Firestore 'in' limit is 30 (previously 10). Split if needed.
-            const employeeIdsToFetch = supervisedEmployeeIds.slice(0, 30);
-            console.log('[ATTENDANCE] Fetching attendance for employees:', employeeIdsToFetch);
+            // We collect both document IDs and UIDs for each employee for resilient matching
+            const allPossibleIds = supervisedEmployees.map(e => [e.id, e.uid]).flat().filter((id): id is string => !!id);
+
+            // Limit to top 30 unique IDs (Firestore limit)
+            const uniquePossibleIds = Array.from(new Set(allPossibleIds)).slice(0, 30);
+            console.log('[ATTENDANCE] Fetching attendance for ids:', uniquePossibleIds);
 
             const startDateStr = format(start, 'yyyy-MM-dd');
             const endDateStr = format(end, 'yyyy-MM-dd');
 
-            // Fetch all attendance records for these employees (no date filter to avoid composite index)
+            // Fetch all attendance records for these IDs
             const attendanceQuery = query(
                 collection(firestore, 'attendance'),
-                where('employeeId', 'in', employeeIdsToFetch)
+                where('employeeId', 'in', uniquePossibleIds)
             );
             const attendanceSnap = await getDocs(attendanceQuery);
             console.log('[ATTENDANCE] Total attendance records fetched:', attendanceSnap.docs.length);
@@ -95,7 +98,7 @@ export default function MobileAttendancePage() {
             // 2. Fetch Approved Leave Applications
             const leaveQuery = query(
                 collection(firestore, 'leave_applications'),
-                where('employeeId', 'in', employeeIdsToFetch),
+                where('employeeId', 'in', uniquePossibleIds),
                 where('status', '==', 'Approved')
             );
             const leaveSnap = await getDocs(leaveQuery);
@@ -115,14 +118,17 @@ export default function MobileAttendancePage() {
             let leave = 0;
             let absent = 0;
 
-            console.log('[ATTENDANCE] Processing', employeeIdsToFetch.length, 'employees for', weekDays.length, 'days');
+            console.log('[ATTENDANCE] Processing', supervisedEmployees.length, 'employees for', weekDays.length, 'days');
 
-            employeeIdsToFetch.forEach(empId => {
+            supervisedEmployees.forEach(emp => {
                 weekDays.forEach(day => {
                     const dateStr = format(day, 'yyyy-MM-dd');
 
-                    // 1. Check Attendance Record
-                    const record = attendanceRecords.find((r: any) => r.employeeId === empId && r.date === dateStr);
+                    // 1. Check Attendance Record (match by ID or UID)
+                    const record = attendanceRecords.find((r: any) =>
+                        (r.employeeId === emp.id || (emp.uid && r.employeeId === emp.uid)) &&
+                        r.date === dateStr
+                    );
                     if (record) {
                         if (record.flag === 'P' || record.flag === 'V') present++;
                         else if (record.flag === 'D') delay++;
@@ -133,9 +139,9 @@ export default function MobileAttendancePage() {
                         return; // Found record, done for this day
                     }
 
-                    // 2. Check Leave Application
+                    // 2. Check Leave Application (match by ID or UID)
                     const onLeave = leaveApplications.some((app: any) => {
-                        return app.employeeId === empId &&
+                        return (app.employeeId === emp.id || (emp.uid && app.employeeId === emp.uid)) &&
                             dateStr >= app.fromDate && dateStr <= app.toDate;
                     });
                     if (onLeave) {

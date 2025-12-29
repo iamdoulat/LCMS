@@ -43,24 +43,27 @@ export default function MyAttendancePage() {
     const router = useRouter();
 
     const fetchAttendance = async () => {
-        if (!currentEmployeeId) return;
+        const queryIds = [currentEmployeeId, user?.uid].filter((id): id is string => !!id);
+        if (queryIds.length === 0) return;
+
         setLoading(true);
         try {
-            // Fetch all records for employee and sort client-side to avoid composite index requirement
+            // Use 'in' operator to pick up records saved under either UID or doc ID
             const q = query(
                 collection(firestore, 'attendance'),
-                where('employeeId', '==', currentEmployeeId)
+                where('employeeId', 'in', queryIds)
             );
             const snapshot = await getDocs(q);
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
 
             // Sort by date desc
             data.sort((a, b) => {
-                if (!a.date || !b.date) return 0;
-                return new Date(b.date).getTime() - new Date(a.date).getTime();
+                const timeA = a.date ? new Date(a.date).getTime() : 0;
+                const timeB = b.date ? new Date(b.date).getTime() : 0;
+                return timeB - timeA;
             });
 
-            console.log(`Fetched ${data.length} attendance records for ${currentEmployeeId}`);
+            console.log(`Fetched ${data.length} attendance records for ids:`, queryIds);
             setAttendanceRecords(data.slice(0, 30));
         } catch (error) {
             console.error("Error fetching attendance:", error);
@@ -70,24 +73,27 @@ export default function MyAttendancePage() {
     };
 
     const fetchBreaks = async () => {
-        if (!currentEmployeeId) return;
+        const queryIds = [currentEmployeeId, user?.uid].filter((id): id is string => !!id);
+        if (queryIds.length === 0) return;
+
         setLoading(true);
         try {
-            // Fetch all break records for employee and sort client-side to avoid composite index requirement
+            // Fetch records for employee using 'in' operator for resilience
             const q = query(
                 collection(firestore, 'break_time'),
-                where('employeeId', '==', currentEmployeeId)
+                where('employeeId', 'in', queryIds)
             );
             const snapshot = await getDocs(q);
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BreakRecord));
 
             // Sort by startTime desc
             data.sort((a, b) => {
-                if (!a.startTime || !b.startTime) return 0;
-                return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
+                const timeA = a.startTime ? new Date(a.startTime).getTime() : 0;
+                const timeB = b.startTime ? new Date(b.startTime).getTime() : 0;
+                return timeB - timeA;
             });
 
-            console.log(`Fetched ${data.length} break records for ${currentEmployeeId}`);
+            console.log(`Fetched ${data.length} break records for ids:`, queryIds);
             setBreakRecords(data.slice(0, 30));
         } catch (error) {
             console.error("Error fetching breaks:", error);

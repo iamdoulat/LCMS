@@ -233,7 +233,11 @@ export default function MultipleCheckInOutPage() {
                             'Check Out',
                             checkIn.location, // Use same location as check-in
                             '', // No image for auto-checkout
-                            `Auto check-out: Visit exceeded ${multiCheckConfig?.maxHourLimitOfCheckOut || 8} hours. Automatically checked out at ${format(autoCheckoutTime, 'hh:mm a')}`
+                            `Auto check-out: Visit exceeded ${multiCheckConfig?.maxHourLimitOfCheckOut || 8} hours. Automatically checked out at ${format(autoCheckoutTime, 'hh:mm a')}`,
+                            {
+                                status: 'Approved',
+                                approvalStatus: 'Approved'
+                            }
                         );
 
 

@@ -176,6 +176,7 @@ export const approveReconciliation = async (
             // If we want to capture that it was reconciled
             attendanceUpdates.isReconciled = true;
             attendanceUpdates.reconciliationId = reconciliationId;
+            attendanceUpdates.approvalStatus = 'Approved';
 
             if (!attendanceDoc.exists()) {
                 // Fetch employee data to ensure we have all necessary fields for a valid attendance record

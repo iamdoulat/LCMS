@@ -31,13 +31,15 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function MobileDashboardPage() {
-    const { user } = useAuth();
-    const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const { user, userRole: globalUserRole } = useAuth();
+    const { isSupervisor, supervisedEmployeeIds, currentEmployeeId } = useSupervisorCheck(user?.email);
 
     const formatAttendanceTime = (timeStr?: string) => {
         if (!timeStr) return null;
         try {
-            const parsed = parse(timeStr, 'HH:mm', new Date());
+            // Support both HH:mm and hh:mm a
+            const formatStr = (timeStr.includes('AM') || timeStr.includes('PM')) ? 'hh:mm a' : 'HH:mm';
+            const parsed = parse(timeStr, formatStr, new Date());
             return format(parsed, 'hh:mm a');
         } catch (e) {
             return timeStr;
@@ -61,17 +63,19 @@ export default function MobileDashboardPage() {
     const calculateWorkHours = (inTime?: string, outTime?: string) => {
         if (!inTime || !outTime) return null;
         try {
-            const start = parse(inTime, 'HH:mm', new Date());
-            const end = parse(outTime, 'HH:mm', new Date());
+            const inFormat = (inTime.includes('AM') || inTime.includes('PM')) ? 'hh:mm a' : 'HH:mm';
+            const outFormat = (outTime.includes('AM') || outTime.includes('PM')) ? 'hh:mm a' : 'HH:mm';
+            const start = parse(inTime, inFormat, new Date());
+            const end = parse(outTime, outFormat, new Date());
             let diff = end.getTime() - start.getTime();
             if (diff < 0) diff += 24 * 60 * 60 * 1000;
 
             const hours = Math.floor(diff / (1000 * 60 * 60));
-            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
             let result = '';
             if (hours > 0) result += `${hours} hr${hours > 1 ? 's' : ''} `;
-            if (mins > 0 || hours === 0) result += `${mins} min`;
+            if (minutes > 0 || hours === 0) result += `${minutes} min`;
             return result.trim();
         } catch (e) {
             return null;
@@ -89,7 +93,8 @@ export default function MobileDashboardPage() {
     const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string; flag?: string; approvalStatus?: string } | null>(null);
     const { isOnBreak, activeBreakRecord, openBreakModal } = useBreakTime();
     const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
-    const [userRole, setUserRole] = useState<string>('user');
+    // Local role for display/legacy check, but we'll prioritize globalUserRole
+    const [localUserRole, setLocalUserRole] = useState<string>('user');
     const [restrictionNote, setRestrictionNote] = useState<string | null>(null);
 
     // Load settings from localStorage
@@ -115,11 +120,12 @@ export default function MobileDashboardPage() {
 
     // Real-time listener for today's attendance
     useEffect(() => {
-        if (!user) return;
+        const canonicalId = currentEmployeeId || user?.uid;
+        if (!canonicalId) return;
 
         const today = new Date();
         const dateKey = format(today, 'yyyy-MM-dd');
-        const docId = `${user.uid}_${dateKey}`;
+        const docId = `${canonicalId}_${dateKey}`;
 
         const unsubscribe = onSnapshot(doc(firestore, 'attendance', docId), (doc) => {
             if (doc.exists()) {
@@ -138,7 +144,7 @@ export default function MobileDashboardPage() {
         });
 
         return () => unsubscribe();
-    }, [user]);
+    }, [user, currentEmployeeId]);
 
     const [stats, setStats] = useState({
         leaveSpent: 0,
@@ -171,18 +177,15 @@ export default function MobileDashboardPage() {
 
         const setupListeners = async () => {
             try {
-                // 0. Resolve Employee ID by email
-                const empQuery = query(collection(firestore, 'employees'), where('email', '==', user.email));
-                const empSnap = await getDocs(empQuery);
+                const canonicalId = currentEmployeeId || user.uid;
+                const ids = [user.uid, canonicalId].filter((v, i, a) => a.indexOf(v) === i);
 
-                const ids = [user.uid];
-                if (!empSnap.empty) {
-                    const empData = empSnap.docs[0].data();
-                    const empId = empSnap.docs[0].id;
-                    if (empId !== user.uid) {
-                        ids.push(empId);
+                if (currentEmployeeId && currentEmployeeId !== user.uid) {
+                    // Try to get role from employee data for local setting
+                    const empDoc = await getDoc(doc(firestore, 'employees', currentEmployeeId));
+                    if (empDoc.exists()) {
+                        setLocalUserRole(empDoc.data().role || 'user');
                     }
-                    setUserRole(empData.role || 'user');
                 }
 
                 const startMonth = startOfMonth(new Date());
@@ -318,7 +321,7 @@ export default function MobileDashboardPage() {
                         // If it's a notice (you might need to check a 'type' field if site_settings contains other things)
                         // Assuming mostisEnabled items here are notices or relevant
                         if (!data.targetRoles || data.targetRoles.length === 0) return true;
-                        return data.targetRoles.includes(userRole);
+                        return data.targetRoles.includes(localUserRole);
                     });
                     setStats(prev => ({ ...prev, noticesCount: filtered.length }));
                 });
@@ -343,7 +346,7 @@ export default function MobileDashboardPage() {
         return () => {
             cleanupPromise.then(cleanup => cleanup && cleanup());
         };
-    }, [user, userRole, isSupervisor, supervisedEmployeeIds]);
+    }, [user, localUserRole, isSupervisor, supervisedEmployeeIds, currentEmployeeId]);
 
     // Timer effect for active break
     useEffect(() => {
@@ -452,19 +455,22 @@ export default function MobileDashboardPage() {
     }, [user]);
 
     const refreshAttendanceData = async () => {
-        if (!user) return;
+        const canonicalId = currentEmployeeId || user?.uid;
+        if (!canonicalId) return;
 
         try {
             const today = new Date();
             const dateKey = format(today, 'yyyy-MM-dd');
-            const docId = `${user.uid}_${dateKey}`;
+            const docId = `${canonicalId}_${dateKey}`;
 
             const attendanceDoc = await getDoc(doc(firestore, 'attendance', docId));
             if (attendanceDoc.exists()) {
                 const data = attendanceDoc.data();
                 setTodayAttendance({
                     inTime: data.inTime,
-                    outTime: data.outTime
+                    outTime: data.outTime,
+                    flag: data.flag,
+                    approvalStatus: data.approvalStatus
                 });
             } else {
                 setTodayAttendance(null);

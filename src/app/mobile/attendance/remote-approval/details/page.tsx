@@ -68,10 +68,37 @@ export default function RemoteAttendanceDetailsPage() {
         const fetchRecord = async () => {
             if (!id) return;
             try {
-                const docRef = doc(firestore, 'multiple_check_inout', id);
-                const snap = await getDoc(docRef);
+                // Try multiple_check_inout first
+                let docRef = doc(firestore, 'multiple_check_inout', id);
+                let snap = await getDoc(docRef);
                 if (snap.exists()) {
                     setRecord({ id: snap.id, ...snap.data() } as MultipleCheckInOutRecord);
+                    return;
+                }
+
+                // Try attendance
+                docRef = doc(firestore, 'attendance', id);
+                const attSnap = await getDoc(docRef);
+                if (attSnap.exists()) {
+                    const data = attSnap.data();
+                    setRecord({
+                        id: attSnap.id,
+                        employeeId: data.employeeId,
+                        employeeName: data.employeeName || 'Unknown',
+                        type: 'Check In',
+                        timestamp: data.date,
+                        location: {
+                            latitude: data.inTimeLocation?.latitude || 0,
+                            longitude: data.inTimeLocation?.longitude || 0,
+                            address: data.inTimeAddress || 'Unknown'
+                        },
+                        remarks: data.inTimeRemarks || '',
+                        status: data.approvalStatus,
+                        imageURL: '', // attendance doesn't have imageURL usually
+                        createdAt: data.createdAt,
+                        updatedAt: data.updatedAt,
+                        companyName: 'Office'
+                    } as MultipleCheckInOutRecord);
                 }
             } catch (error) {
                 console.error("Error fetching record:", error);
@@ -144,15 +171,20 @@ export default function RemoteAttendanceDetailsPage() {
                 <div className="bg-white p-5 rounded-2xl shadow-xl">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex gap-2">
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">042</span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${record.status === 'Approved' ? 'bg-emerald-100 text-emerald-600' :
                                 record.status === 'Rejected' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
                                 }`}>
                                 {record.status || 'Pending'}
                             </span>
-                            <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded uppercase">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${record.type === 'Check In' ? 'text-blue-600 bg-blue-50' : 'text-emerald-600 bg-emerald-50'
+                                }`}>
                                 {record.type}
                             </span>
+                            {record.companyName === 'Office' && (
+                                <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                                    GEOFENCE
+                                </span>
+                            )}
                         </div>
                     </div>
 

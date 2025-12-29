@@ -23,6 +23,7 @@ export interface MultipleCheckInOutRecord {
     imageURL: string; // Firebase Storage URL
     remarks: string;
     status?: 'Approved' | 'Pending' | 'Rejected';
+    approvalStatus?: 'Approved' | 'Pending' | 'Rejected';
     distanceFromBranch?: number; // Optional: Store distance for audit
     isInsideGeofence?: boolean; // Optional: Store validation result
     createdAt: Timestamp;

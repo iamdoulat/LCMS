@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { ChevronLeft, Search, UserCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
@@ -37,17 +37,19 @@ export default function TeamAttendancePage() {
 
         setLoading(true);
         try {
-            // Get today's date in YYYY-MM-DD
-            const today = format(new Date(), 'yyyy-MM-dd');
+            // Get today's start and end timestamps in the format used by MobileAttendanceModal
+            const now = new Date();
+            const startStr = format(startOfDay(now), "yyyy-MM-dd'T'00:00:00.000xxx");
+            const endStr = format(endOfDay(now), "yyyy-MM-dd'T'23:59:59.999xxx");
 
-            // Fetch attendance for all supervised employees for today
             const employeeIds = supervisedEmployees.map(e => e.id);
             const summaries: AttendanceSummary[] = [];
 
-            // Firestore 'in' limit is 10. We might have more.
-            // Approach: Fetch ALL attendance for 'today'. 
-            // CAUTION: If many employees, this is bad. 
-            // Better Approach: Chunk employeeIds.
+            if (employeeIds.length === 0) {
+                setAttendanceData([]);
+                setLoading(false);
+                return;
+            }
 
             const chunks = [];
             for (let i = 0; i < employeeIds.length; i += 10) {
@@ -59,8 +61,9 @@ export default function TeamAttendancePage() {
             for (const chunk of chunks) {
                 const q = query(
                     collection(firestore, 'attendance'),
-                    where('date', '==', today),
-                    where('employeeId', 'in', chunk)
+                    where('employeeId', 'in', chunk),
+                    where('date', '>=', startStr),
+                    where('date', '<=', endStr)
                 );
                 const snapshot = await getDocs(q);
                 snapshot.forEach(doc => {
@@ -74,11 +77,11 @@ export default function TeamAttendancePage() {
                 const att = attendanceMap.get(emp.id);
                 summaries.push({
                     employeeId: emp.id,
-                    employeeName: emp.name,
-                    photoURL: emp.photoURL, // Assuming this exists in supervisedEmployees? Check hook.
+                    employeeName: emp.fullName || emp.name,
+                    photoURL: emp.photoURL,
                     inTime: att?.inTime,
                     outTime: att?.outTime,
-                    flag: att?.flag || 'A' // Default to Absent if no record found? Or N/A.
+                    flag: att?.flag || 'A'
                 });
             }
 

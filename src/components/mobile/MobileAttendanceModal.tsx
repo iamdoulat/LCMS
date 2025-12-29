@@ -37,7 +37,12 @@ const GeofenceMap = dynamic(() => import('@/components/ui/GeofenceMap'), {
 });
 
 export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: MobileAttendanceModalProps) {
-    const { user } = useAuth();
+    const { user, userRole } = useAuth();
+    const isPrivilegedRole = React.useMemo(() => {
+        if (!userRole) return false;
+        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
+        return userRole.some(role => privilegedRoles.includes(role));
+    }, [userRole]);
     const [isCapturing, setIsCapturing] = useState(false);
     const [location, setLocation] = useState<LocationData | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,11 +62,25 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
             if (!user || !isOpen) return;
             setIsLoadingGeodata(true);
             try {
-                const empDoc = await getDoc(doc(firestore, 'employees', user.uid));
+                // First try to fetch by UID
+                let empDoc = await getDoc(doc(firestore, 'employees', user.uid));
+
+                // If not found by UID, try by email
+                if (!empDoc.exists() && user.email) {
+                    const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) {
+                        empDoc = snap.docs[0];
+                    }
+                }
+
                 let branchIdForHotspots = '';
 
                 if (empDoc.exists()) {
                     const empData = empDoc.data();
+                    // Store the found employee document ID for attendance submission
+                    // We can use a ref or just rely on the same logic in handleSubmit
+
                     if (empData.branchId) {
                         branchIdForHotspots = empData.branchId;
                         const branchDoc = await getDoc(doc(firestore, 'branches', empData.branchId));
@@ -248,18 +267,30 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
         setError(null);
 
         try {
-            // Fetch employee data
-            const employeeDoc = await getDoc(doc(firestore, 'employees', user.uid));
+            // First try to fetch by UID
+            let employeeDoc = await getDoc(doc(firestore, 'employees', user.uid));
+
+            // If not found by UID, try by email
+            if (!employeeDoc.exists() && user.email) {
+                const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    employeeDoc = snap.docs[0];
+                }
+            }
+
+            const canonicalId = employeeDoc.exists() ? employeeDoc.id : user.uid;
             const employeeData = employeeDoc.exists() ? employeeDoc.data() : {
                 fullName: user.displayName || 'Unknown',
                 employeeCode: `EMP-${user.uid.substring(0, 5).toUpperCase()}`,
                 email: user.email || '',
                 phone: ''
             };
+
             const today = new Date();
             const dateKey = format(today, 'yyyy-MM-dd');
-            const docId = `${user.uid}_${dateKey}`;
-            const currentTime = format(today, 'HH:mm');
+            const docId = `${canonicalId}_${dateKey}`;
+            const currentTime = format(today, 'hh:mm a'); // Consistent with dashboard format
 
             // Get existing attendance record
             const attendanceDoc = await getDoc(doc(firestore, 'attendance', docId));
@@ -271,14 +302,14 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 }
 
                 // Geofence Validation (already calculated by validateGeofence and local state)
-                let status: 'Approved' | 'Pending' = isInsideGeofence ? 'Approved' : 'Pending';
+                let status: 'Approved' | 'Pending' = (isInsideGeofence || isPrivilegedRole) ? 'Approved' : 'Pending';
 
                 // Determine attendance flag
                 const flag = determineAttendanceFlag(currentTime);
 
                 // Save attendance record
                 const attendanceData = {
-                    employeeId: user.uid,
+                    employeeId: canonicalId,
                     employeeName: employeeData.fullName || user.displayName || 'Unknown',
                     date: format(today, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
                     inTime: currentTime,
@@ -356,6 +387,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     outTimeRemarks: remarks || '',
                     outTimeIsInsideGeofence: isInsideGeofence,
                     outTimeDistanceFromBranch: distanceFromBranch,
+                    approvalStatus: (isInsideGeofence || isPrivilegedRole) ? 'Approved' : 'Pending',
                     updatedAt: Timestamp.now()
                 }, { merge: true });
 

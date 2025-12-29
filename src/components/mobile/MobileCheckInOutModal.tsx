@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
-import { serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { serverTimestamp, doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { Loader2, Camera, Upload, MapPin, RefreshCw } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { getValidOption } from '@/types';
@@ -31,7 +31,12 @@ interface MobileCheckInOutModalProps {
 }
 
 export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutType, initialCompanyName }: MobileCheckInOutModalProps) {
-    const { user, firestoreUser } = useAuth();
+    const { user, userRole, firestoreUser } = useAuth();
+    const isPrivilegedRole = React.useMemo(() => {
+        if (!userRole) return false;
+        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
+        return userRole.some(role => privilegedRoles.includes(role));
+    }, [userRole]);
     const [companyName, setCompanyName] = useState(initialCompanyName || '');
     const [remarks, setRemarks] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -101,19 +106,30 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
         setIsSubmitting(true);
 
         try {
-            // Fetch employee data for notification details
-            const employeeDoc = await getDoc(doc(firestore, 'employees', user.uid));
+            // First try to fetch by UID
+            let employeeDoc = await getDoc(doc(firestore, 'employees', user.uid));
+
+            // If not found by UID, try by email
+            if (!employeeDoc.exists() && user.email) {
+                const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    employeeDoc = snap.docs[0];
+                }
+            }
+
+            const canonicalId = employeeDoc.exists() ? employeeDoc.id : user.uid;
             const employeeData = employeeDoc.exists() ? employeeDoc.data() : null;
 
             // Upload Image if present using shared helper
             let photoUrl = '';
             if (selectedFile) {
-                photoUrl = await uploadCheckInOutImage(selectedFile, user.uid, checkInOutType);
+                photoUrl = await uploadCheckInOutImage(selectedFile, canonicalId, checkInOutType);
             }
 
             // Create Record using shared helper
             await createCheckInOutRecord(
-                user.uid,
+                canonicalId,
                 employeeData?.fullName || firestoreUser?.displayName || 'Unknown Employee',
                 companyName,
                 checkInOutType,
@@ -123,7 +139,11 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                     address: address || 'Address not found'
                 },
                 photoUrl,
-                remarks
+                remarks,
+                {
+                    status: 'Approved',
+                    approvalStatus: 'Approved'
+                }
             );
 
             Swal.fire({
@@ -141,7 +161,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     type: notificationType,
-                    employeeId: user.uid,
+                    employeeId: canonicalId,
                     employeeName: employeeData?.fullName || firestoreUser?.displayName || 'Unknown Employee',
                     employeeCode: employeeData?.employeeCode || 'N/A',
                     employeeEmail: employeeData?.email || user.email,
