@@ -58,9 +58,12 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
             setIsLoadingGeodata(true);
             try {
                 const empDoc = await getDoc(doc(firestore, 'employees', user.uid));
+                let branchIdForHotspots = '';
+
                 if (empDoc.exists()) {
                     const empData = empDoc.data();
                     if (empData.branchId) {
+                        branchIdForHotspots = empData.branchId;
                         const branchDoc = await getDoc(doc(firestore, 'branches', empData.branchId));
                         if (branchDoc.exists()) {
                             setEmployeeBranch({ id: branchDoc.id, ...branchDoc.data() });
@@ -70,18 +73,33 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                         const branchQuery = query(collection(firestore, 'branches'), where('name', '==', empData.branch));
                         const branchSnap = await getDocs(branchQuery);
                         if (!branchSnap.empty) {
-                            setEmployeeBranch({ id: branchSnap.docs[0].id, ...branchSnap.docs[0].data() });
+                            const bDoc = branchSnap.docs[0];
+                            branchIdForHotspots = bDoc.id;
+                            setEmployeeBranch({ id: bDoc.id, ...bDoc.data() });
                         }
                     }
-
-                    // Fetch hotspots for this branch
-                    const hotspotsQuery = query(
-                        collection(firestore, 'hotspots'),
-                        where('branchId', '==', empData.branchId || '')
-                    );
-                    const hotspotsSnap = await getDocs(hotspotsQuery);
-                    setBranchHotspots(hotspotsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                 }
+
+                // If no branch found yet (e.g. for Admin/HR), fetch Head Office or first branch
+                if (!branchIdForHotspots) {
+                    const branchesQuery = query(collection(firestore, 'branches'));
+                    const branchesSnap = await getDocs(branchesQuery);
+                    if (!branchesSnap.empty) {
+                        const branches = branchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        const headOffice = branches.find((b: any) => b.isHeadOffice);
+                        const fallbackBranch = headOffice || branches[0];
+                        branchIdForHotspots = fallbackBranch.id;
+                        setEmployeeBranch(fallbackBranch);
+                    }
+                }
+
+                // Fetch hotspots for the determined branch (or all if no branch)
+                const hotspotsQuery = branchIdForHotspots
+                    ? query(collection(firestore, 'hotspots'), where('branchId', '==', branchIdForHotspots))
+                    : query(collection(firestore, 'hotspots'));
+
+                const hotspotsSnap = await getDocs(hotspotsQuery);
+                setBranchHotspots(hotspotsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             } catch (err) {
                 console.error("Error fetching geodata:", err);
             } finally {
