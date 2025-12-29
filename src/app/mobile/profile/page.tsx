@@ -13,6 +13,7 @@ import {
     ChevronLeft,
     Phone,
     Mail,
+    MessageCircle,
     User,
     Briefcase,
     LayoutGrid,
@@ -27,12 +28,12 @@ import {
     FileBadge,
     Pencil,
     Loader2,
-    MessageCircle,
     UserCheck,
     Network
 } from 'lucide-react';
 import type { Employee } from '@/types';
-import { formatDate } from '@/lib/utils';
+import { format, parseISO, isValid } from 'date-fns';
+import { RoleBadge } from '@/components/ui/RoleBadge';
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
     <svg
@@ -57,34 +58,66 @@ export default function MobileProfilePage() {
     // Swipe Handling
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const [touchStartY, setTouchStartY] = useState<number | null>(null);
+    const [touchEndY, setTouchEndY] = useState<number | null>(null);
     const minSwipeDistance = 50;
 
     const onTouchStart = (e: React.TouchEvent) => {
         setTouchEnd(null);
+        setTouchEndY(null);
         setTouchStart(e.targetTouches[0].clientX);
+        setTouchStartY(e.targetTouches[0].clientY);
     };
 
     const onTouchMove = (e: React.TouchEvent) => {
         setTouchEnd(e.targetTouches[0].clientX);
+        setTouchEndY(e.targetTouches[0].clientY);
     };
 
     const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return;
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
+        if (!touchStart || !touchEnd || !touchStartY || !touchEndY) return;
 
-        if (isLeftSwipe || isRightSwipe) {
+        const xDistance = touchStart - touchEnd;
+        const yDistance = touchStartY - touchEndY;
+
+        // Ensure movement is primarily horizontal and exceeds minimum distance
+        if (Math.abs(xDistance) > Math.abs(yDistance) * 1.5 && Math.abs(xDistance) > minSwipeDistance) {
             const tabs = ['personal', 'official', 'others'];
             const currentIndex = tabs.indexOf(activeTab);
 
-            if (isLeftSwipe && currentIndex < tabs.length - 1) {
+            if (xDistance > 0 && currentIndex < tabs.length - 1) {
                 setActiveTab(tabs[currentIndex + 1] as any);
-            }
-            if (isRightSwipe && currentIndex > 0) {
+            } else if (xDistance < 0 && currentIndex > 0) {
                 setActiveTab(tabs[currentIndex - 1] as any);
             }
         }
+    };
+
+    // Format date for display
+    const formatReadableDate = (dateValue: any): string => {
+        if (!dateValue) return 'N/A';
+
+        try {
+            let date: Date;
+
+            if (typeof dateValue === 'string') {
+                date = parseISO(dateValue);
+            } else if (dateValue?.toDate) {
+                date = dateValue.toDate();
+            } else if (dateValue instanceof Date) {
+                date = dateValue;
+            } else {
+                return 'N/A';
+            }
+
+            if (isValid(date)) {
+                return format(date, 'dd MMM yyyy');
+            }
+        } catch (error) {
+            console.error('Error formatting date:', error);
+        }
+
+        return 'N/A';
     };
 
     useEffect(() => {
@@ -211,14 +244,14 @@ export default function MobileProfilePage() {
         designation: employee.designation,
         code: employee.employeeCode,
         personal: [
-            { label: 'Date of Birth', value: formatDate(employee.dateOfBirth), icon: Calendar },
+            { label: 'Date of Birth', value: formatReadableDate(employee.dateOfBirth), icon: Calendar },
             { label: 'National ID', value: employee.nationalId || 'N/A', icon: CreditCard },
             { label: 'Nationality', value: employee.nationality || 'Bangladeshi', icon: Flag },
             { label: 'Email', value: employee.email, icon: Mail },
         ],
         official: [
             { label: 'Employee Code', value: employee.employeeCode, icon: FileBadge },
-            { label: 'Joining Date', value: formatDate(employee.joinedDate), icon: Calendar },
+            { label: 'Joining Date', value: formatReadableDate(employee.joinedDate), icon: Calendar },
             { label: 'Designation', value: employee.designation, icon: Briefcase },
             { label: 'Job Status', value: employee.jobStatus || 'Active', icon: Briefcase },
             { label: 'Branch', value: employee.branch || 'Not Defined', icon: Building2 },
@@ -283,11 +316,11 @@ export default function MobileProfilePage() {
                     </div>
                 </div>
 
-                {/* Contact Actions (Phone/Mail) */}
-                <div className="absolute top-6 right-6 flex gap-3">
+                {/* Contact Actions */}
+                <div className="absolute top-6 right-6 flex gap-2">
                     <a href={`tel:${employee.phone}`}>
-                        <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-12 w-12 shadow-sm border-none">
-                            <Phone className="h-6 w-6" />
+                        <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-11 w-11 shadow-sm">
+                            <Phone className="h-5 w-5" />
                         </Button>
                     </a>
                     <a
@@ -295,52 +328,75 @@ export default function MobileProfilePage() {
                         target="_blank"
                         rel="noopener noreferrer"
                     >
-                        <Button size="icon" className="bg-green-100 hover:bg-green-200 text-green-600 rounded-2xl h-12 w-12 shadow-sm border-none">
-                            <WhatsAppIcon className="h-8 w-8" />
+                        <Button size="icon" className="bg-green-100 hover:bg-green-200 text-green-600 rounded-2xl h-11 w-11 shadow-sm">
+                            <WhatsAppIcon className="h-6 w-6" />
                         </Button>
                     </a>
                     <a href={`mailto:${employee.email}`}>
-                        <Button size="icon" className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-2xl h-12 w-12 shadow-sm border-none">
-                            <Mail className="h-6 w-6" />
+                        <Button size="icon" className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-2xl h-11 w-11 shadow-sm">
+                            <Mail className="h-5 w-5" />
                         </Button>
                     </a>
                 </div>
 
                 {/* Name & Title */}
                 <div className="mt-16 mb-8">
-                    <h2 className="text-2xl font-black text-[#0a1e60] uppercase leading-tight mb-1 tracking-tight">
+                    <h2 className="text-xl font-bold text-[#0a1e60] uppercase leading-tight mb-1">
                         {profileData.name}
                     </h2>
-                    <div className="flex items-center flex-wrap gap-2 text-sm text-slate-500 font-semibold uppercase tracking-wider">
+                    <div className="flex items-center flex-wrap gap-2 text-sm text-slate-500 font-medium">
                         <span>{profileData.designation}</span>
-                        <span className="bg-purple-100 text-purple-600 px-2.5 py-1 rounded-lg text-[10px] font-black">
+                        <span className="bg-purple-100 text-purple-600 px-2 py-0.5 rounded text-xs font-bold">
                             {profileData.code}
                         </span>
                     </div>
+                    {/* Role Badges */}
+                    {employee.role && employee.role.length > 0 && (
+                        <div className="mt-2">
+                            <RoleBadge roles={employee.role} size="sm" />
+                        </div>
+                    )}
                 </div>
 
-                {/* Tabs */}
-                <div className="flex items-center gap-3 mb-6 bg-white/50 p-1.5 rounded-2xl border border-slate-100 shadow-sm">
-                    {(['personal', 'official', 'others'] as const).map((tab) => (
+                {/* Tabs - Horizontal Scrollable */}
+                <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 mb-6">
+                    <div className="flex gap-3 min-w-max">
                         <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-bold transition-all duration-300 ${activeTab === tab
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-[1.02]'
-                                : 'text-slate-500 hover:bg-white'
+                            onClick={() => setActiveTab('personal')}
+                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'personal'
+                                ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
+                                : 'bg-white text-slate-600 shadow-sm'
                                 }`}
                         >
-                            {tab === 'personal' && <User className="h-5 w-5" />}
-                            {tab === 'official' && <Briefcase className="h-5 w-5" />}
-                            {tab === 'others' && <LayoutGrid className="h-5 w-5" />}
-                            <span className="capitalize text-xs">{tab}</span>
+                            <User className="h-5 w-5" />
+                            <span>Personal</span>
                         </button>
-                    ))}
+                        <button
+                            onClick={() => setActiveTab('official')}
+                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'official'
+                                ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
+                                : 'bg-white text-slate-600 shadow-sm'
+                                }`}
+                        >
+                            <Briefcase className="h-5 w-5" />
+                            <span>Official</span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('others')}
+                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'others'
+                                ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
+                                : 'bg-white text-slate-600 shadow-sm'
+                                }`}
+                        >
+                            <LayoutGrid className="h-5 w-5" />
+                            <span>Others</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Info Card */}
-                <div className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-white/60 mb-8 backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-8">
+                <div className="bg-white rounded-3xl p-6 shadow-md mb-8 max-h-[calc(100vh-420px)] flex flex-col">
+                    <div className="flex items-center justify-between mb-6">
                         <h3 className="text-lg font-black text-[#0a1e60] tracking-tight">
                             {activeTab === 'personal' && 'Personal Information'}
                             {activeTab === 'official' && 'Official Records'}
@@ -349,7 +405,7 @@ export default function MobileProfilePage() {
                         <div className="h-1 w-12 bg-blue-600 rounded-full" />
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-6 overflow-y-auto pr-2">
                         {profileData[activeTab].map((item, index) => {
                             const Icon = item.icon;
                             return (

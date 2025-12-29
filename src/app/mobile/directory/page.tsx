@@ -18,23 +18,66 @@ import {
     Building2,
     SearchX
 } from 'lucide-react';
-import type { Employee } from '@/types';
+import type { Employee, UserDocumentForAdmin, UserRole } from '@/types';
+import { RoleRibbon } from '@/components/ui/RoleBadge';
 
 export default function MobileDirectoryPage() {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
 
-    const { data: employees, isLoading } = useFirestoreQuery<Employee[]>(
+    const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<Employee[]>(
         query(collection(firestore, 'employees'), orderBy('fullName', 'asc')),
         undefined,
         ['employees_directory']
     );
 
+    const { data: users, isLoading: isLoadingUsers } = useFirestoreQuery<UserDocumentForAdmin[]>(
+        query(collection(firestore, "users")),
+        undefined,
+        ['users_for_directory_roles']
+    );
+
+    const isLoading = isLoadingEmployees || isLoadingUsers;
+
     const handleBack = () => {
         router.back();
     };
 
-    const filteredEmployees = employees?.filter(emp =>
+    const processedEmployees = React.useMemo(() => {
+        if (!employees) return [];
+
+        // Create a map of email to user data for quick role lookup
+        const userRoleMap = new Map<string, UserRole[]>();
+        if (users) {
+            users.forEach(u => {
+                if (u.email && u.role) {
+                    const emailKey = u.email.toLowerCase().trim();
+                    const roles = Array.isArray(u.role) ? u.role : [u.role];
+                    userRoleMap.set(emailKey, roles);
+                }
+            });
+        }
+
+        return employees.map(emp => {
+            // Merge roles from the user collection if available
+            const emailKey = emp.email?.toLowerCase().trim();
+            const userRoles = emailKey ? userRoleMap.get(emailKey) : undefined;
+
+            // Combine employee.role and user.role, ensuring we don't have duplicates
+            const mergedRoles = Array.from(new Set([
+                ...((emp as any).role || []),
+                ...((emp as any).roles || []),
+                ...(userRoles || [])
+            ]));
+
+            return {
+                ...emp,
+                mergedRoles
+            };
+        });
+    }, [employees, users]);
+
+    const filteredEmployees = processedEmployees.filter(emp =>
         emp.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.employeeCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.designation?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -80,8 +123,11 @@ export default function MobileDirectoryPage() {
                             <div
                                 key={emp.id}
                                 onClick={() => router.push(`/mobile/profile/${emp.id}`)}
-                                className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 active:scale-[0.98] transition-all"
+                                className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 active:scale-[0.98] transition-all relative overflow-hidden"
                             >
+                                {/* Role Ribbon */}
+                                {emp.mergedRoles.length > 0 && <RoleRibbon roles={emp.mergedRoles} />}
+
                                 <div className="h-14 w-14 rounded-full overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
                                     <Avatar className="h-full w-full">
                                         <AvatarImage src={emp.photoURL || undefined} className="object-cover" />

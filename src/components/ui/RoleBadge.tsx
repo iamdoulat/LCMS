@@ -68,15 +68,33 @@ const sizeStyles = {
     md: 'px-2.5 py-1 text-xs rounded-md'
 };
 
+// Helper to normalize role names for style lookup
+const getNormalizedRole = (r: any): UserRole => {
+    if (typeof r !== 'string') return 'User';
+    const found = Object.keys(roleStyles).find(
+        key => key.toLowerCase() === r.toLowerCase()
+    );
+    return (found as UserRole) || 'User';
+};
+
 export function RoleBadge({ role, roles, size = 'sm', className }: RoleBadgeProps) {
-    const rolesToDisplay = role ? [role] : (roles || []);
+    // Collect all candidate roles from both 'role' and 'roles' props
+    const rawRoles: any[] = [];
+    if (role) rawRoles.push(role);
+    if (roles) {
+        if (Array.isArray(roles)) rawRoles.push(...roles);
+        else rawRoles.push(roles);
+    }
+
+    // Normalize case-insensitivity and remove duplicates
+    const rolesToDisplay = Array.from(new Set(rawRoles.map(getNormalizedRole)));
 
     if (rolesToDisplay.length === 0) return null;
 
     return (
         <div className={cn("flex flex-wrap gap-1", className)}>
             {rolesToDisplay.map((r) => {
-                const style = roleStyles[r] || roleStyles['User'];
+                const style = roleStyles[r];
                 return (
                     <span
                         key={r}
@@ -94,6 +112,37 @@ export function RoleBadge({ role, roles, size = 'sm', className }: RoleBadgeProp
                     </span>
                 );
             })}
+        </div>
+    );
+}
+
+export function RoleRibbon({ role, roles, className }: RoleBadgeProps) {
+    // Collect all candidate roles
+    const rawRoles: any[] = [];
+    if (role) rawRoles.push(role);
+    if (roles) {
+        if (Array.isArray(roles)) rawRoles.push(...roles);
+        else rawRoles.push(roles);
+    }
+
+    if (rawRoles.length === 0) return null;
+
+    // Use normalized primary role
+    const primaryRole = getNormalizedRole(rawRoles[0]);
+    const style = roleStyles[primaryRole];
+
+    return (
+        <div className={cn(
+            "absolute -top-[1px] -left-[1px] w-20 h-20 overflow-hidden z-[70] pointer-events-none",
+            className
+        )}>
+            <div className={cn(
+                "absolute top-4 -left-8 w-28 py-1 text-[8px] font-black text-center uppercase tracking-wider -rotate-45 shadow-lg border-b border-white/20",
+                style.bg,
+                style.text,
+            )}>
+                {primaryRole}
+            </div>
         </div>
     );
 }

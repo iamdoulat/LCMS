@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Swal from 'sweetalert2';
-import type { EmployeeDocument, DesignationDocument } from '@/types';
+import type { EmployeeDocument, DesignationDocument, UserDocumentForAdmin, UserRole } from '@/types';
 import { employeeStatusOptions } from '@/types';
 import { collection, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
@@ -86,13 +86,19 @@ export default function EmployeesListPage() {
     ['employees']
   );
 
+  const { data: users, isLoading: isLoadingUsers } = useFirestoreQuery<UserDocumentForAdmin[]>(
+    query(collection(firestore, "users")),
+    undefined,
+    ['users_for_employee_roles']
+  );
+
   const { data: designations, isLoading: isLoadingDesignations } = useFirestoreQuery<DesignationDocument[]>(
     query(collection(firestore, "designations"), orderBy("name", "asc")),
     undefined,
     ['designations_for_filter']
   );
 
-  const isLoading = isLoadingEmployees || isLoadingDesignations;
+  const isLoading = isLoadingEmployees || isLoadingDesignations || isLoadingUsers;
 
   const designationOptions = React.useMemo(() => {
     if (!designations) return [];
@@ -101,14 +107,43 @@ export default function EmployeesListPage() {
 
   const displayedEmployees = React.useMemo(() => {
     if (!employees) return [];
+
+    // Create a map of email to user data for quick role lookup
+    const userRoleMap = new Map<string, UserRole[]>();
+    if (users) {
+      users.forEach(u => {
+        if (u.email && u.role) {
+          const emailKey = u.email.toLowerCase().trim();
+          const roles = Array.isArray(u.role) ? u.role : [u.role];
+          userRoleMap.set(emailKey, roles);
+        }
+      });
+    }
+
     return employees.filter(emp => {
       const codeMatch = !filterEmployeeCode || emp.employeeCode?.toLowerCase().includes(filterEmployeeCode.toLowerCase());
       const nameMatch = !filterEmployeeName || emp.fullName?.toLowerCase().includes(filterEmployeeName.toLowerCase());
       const designationMatch = !filterDesignation || emp.designation === filterDesignation;
       const statusMatch = !filterStatus || emp.status === filterStatus;
       return codeMatch && nameMatch && designationMatch && statusMatch;
+    }).map(emp => {
+      // Merge roles from the user collection if available
+      const emailKey = emp.email?.toLowerCase().trim();
+      const userRoles = emailKey ? userRoleMap.get(emailKey) : undefined;
+
+      // Combine employee.role and user.role, ensuring we don't have duplicates
+      const mergedRoles = Array.from(new Set([
+        ...((emp as any).role || []),
+        ...((emp as any).roles || []),
+        ...(userRoles || [])
+      ]));
+
+      return {
+        ...emp,
+        mergedRoles
+      };
     });
-  }, [employees, filterEmployeeCode, filterEmployeeName, filterDesignation, filterStatus]);
+  }, [employees, users, filterEmployeeCode, filterEmployeeName, filterDesignation, filterStatus]);
 
 
   const handleDeleteEmployee = (employeeId: string, employeeName?: string) => {
@@ -254,7 +289,7 @@ export default function EmployeesListPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <RoleBadge roles={employee.role} size="xs" />
+                        <RoleBadge roles={employee.mergedRoles} size="xs" />
                       </TableCell>
                       <TableCell>{employee.designation}</TableCell>
                       <TableCell>{formatDisplayDate(employee.dateOfBirth)}</TableCell>

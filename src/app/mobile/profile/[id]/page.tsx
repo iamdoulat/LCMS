@@ -30,6 +30,17 @@ import type { Employee } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+    <svg
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        className={className}
+        xmlns="http://www.w3.org/2000/svg"
+    >
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884a9.89 9.89 0 019.884 9.89c-.001 5.45-4.437 9.884-9.889 9.884m0-21.667C6.014.118.118 6.015.118 13.337a13.15 13.15 0 001.767 6.64L.018 24l4.184-1.096c1.616.88 3.447 1.344 5.31 1.345h.005c7.322 0 13.22-5.9 13.223-13.222A13.24 13.24 0 0012.051.118z" />
+    </svg>
+);
+
 export default function MobileEmployeeProfilePage() {
     const router = useRouter();
     const params = useParams();
@@ -39,6 +50,44 @@ export default function MobileEmployeeProfilePage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'official' | 'others'>('personal');
+
+    // Swipe Handling
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const [touchStartY, setTouchStartY] = useState<number | null>(null);
+    const [touchEndY, setTouchEndY] = useState<number | null>(null);
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchEndY(null);
+        setTouchStart(e.targetTouches[0].clientX);
+        setTouchStartY(e.targetTouches[0].clientY);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+        setTouchEndY(e.targetTouches[0].clientY);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd || !touchStartY || !touchEndY) return;
+
+        const xDistance = touchStart - touchEnd;
+        const yDistance = touchStartY - touchEndY;
+
+        // Ensure movement is primarily horizontal and exceeds minimum distance
+        if (Math.abs(xDistance) > Math.abs(yDistance) * 1.5 && Math.abs(xDistance) > minSwipeDistance) {
+            const tabs = ['personal', 'official', 'others'];
+            const currentIndex = tabs.indexOf(activeTab);
+
+            if (xDistance > 0 && currentIndex < tabs.length - 1) {
+                setActiveTab(tabs[currentIndex + 1] as any);
+            } else if (xDistance < 0 && currentIndex > 0) {
+                setActiveTab(tabs[currentIndex - 1] as any);
+            }
+        }
+    };
 
     useEffect(() => {
         async function fetchEmployee() {
@@ -140,14 +189,19 @@ export default function MobileEmployeeProfilePage() {
             </header>
 
             {/* Main Content Container */}
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-8 relative mt-9">
+            <div
+                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-8 relative mt-9"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+            >
 
                 {/* Profile Header Avatar */}
-                <div className="absolute -top-16 left-6 z-50">
-                    <div className="h-32 w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-sm">
+                <div className="absolute -top-11 left-6 z-50">
+                    <div className="h-32 w-32 rounded-full border-4 border-white overflow-hidden bg-white shadow-md">
                         <Avatar className="h-full w-full">
                             <AvatarImage src={employee.photoURL || undefined} className="object-cover" />
-                            <AvatarFallback className="text-4xl text-slate-800 font-bold bg-slate-200">
+                            <AvatarFallback className="text-3xl text-slate-800 font-bold bg-slate-200">
                                 {employee.fullName?.charAt(0)}
                             </AvatarFallback>
                         </Avatar>
@@ -163,7 +217,7 @@ export default function MobileEmployeeProfilePage() {
                     </a>
                     <a href={`https://wa.me/${employee.phone?.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer">
                         <Button size="icon" className="bg-green-100 hover:bg-green-200 text-green-600 rounded-2xl h-11 w-11 shadow-sm">
-                            <MessageCircle className="h-5 w-5" />
+                            <WhatsAppIcon className="h-6 w-6" />
                         </Button>
                     </a>
                     <a href={`mailto:${employee.email}`}>
@@ -229,14 +283,14 @@ export default function MobileEmployeeProfilePage() {
                 </div>
 
                 {/* Info Card */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm min-h-[400px]">
+                <div className="bg-white rounded-2xl p-6 shadow-sm max-h-[calc(100vh-420px)] flex flex-col">
                     <h3 className="text-lg font-bold text-[#0a1e60] mb-6">
                         {activeTab === 'personal' && 'Personal Info'}
                         {activeTab === 'official' && 'Official Info'}
                         {activeTab === 'others' && 'Others Info'}
                     </h3>
 
-                    <div className="space-y-6">
+                    <div className="space-y-6 overflow-y-auto pr-2">
                         {profileData[activeTab].map((item, index) => {
                             const Icon = item.icon;
                             return (
