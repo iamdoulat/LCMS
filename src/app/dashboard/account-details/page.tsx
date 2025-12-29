@@ -855,7 +855,22 @@ export default function AccountDetailsPage() {
               const employeeDoc = querySnapshot.docs[0];
               setEmployeeData({ id: employeeDoc.id, ...employeeDoc.data() } as EmployeeDocument);
             } else {
-              setError("No detailed employee profile found for this user.");
+              // Fallback for non-employee roles (Admin, HR, etc.)
+              const fallbackEmployee: EmployeeDocument = {
+                id: user.uid,
+                uid: user.uid,
+                fullName: user.displayName || user.email.split('@')[0],
+                email: user.email,
+                phone: '',
+                employeeCode: `EMP-${user.uid.substring(0, 5).toUpperCase()}`,
+                designation: 'Staff',
+                status: 'Active',
+                joinedDate: new Date().toISOString(),
+                dateOfBirth: new Date(1990, 0, 1).toISOString(),
+                gender: 'Male',
+              };
+              setEmployeeData(fallbackEmployee);
+              console.warn("No detailed employee profile found. Using fallback data for attendance.");
             }
           } catch (err) {
             console.error("Error fetching employee data:", err);

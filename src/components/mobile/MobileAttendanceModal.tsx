@@ -232,11 +232,12 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
         try {
             // Fetch employee data
             const employeeDoc = await getDoc(doc(firestore, 'employees', user.uid));
-            if (!employeeDoc.exists()) {
-                throw new Error('Employee record not found');
-            }
-
-            const employeeData = employeeDoc.data();
+            const employeeData = employeeDoc.exists() ? employeeDoc.data() : {
+                fullName: user.displayName || 'Unknown',
+                employeeCode: `EMP-${user.uid.substring(0, 5).toUpperCase()}`,
+                email: user.email || '',
+                phone: ''
+            };
             const today = new Date();
             const dateKey = format(today, 'yyyy-MM-dd');
             const docId = `${user.uid}_${dateKey}`;
