@@ -221,7 +221,12 @@ export default function RemoteAttendanceApprovalPage() {
     };
 
     const handleAction = async (action: 'Approved' | 'Rejected') => {
-        if (!selectedRecord || !currentEmployeeId) return;
+        if (!selectedRecord) return;
+
+        if (!currentEmployeeId) {
+            Swal.fire("Error", "Could not identify your employee ID. Please try reloading.", "error");
+            return;
+        }
 
         setProcessingId(selectedRecord.id);
         try {
@@ -235,7 +240,8 @@ export default function RemoteAttendanceApprovalPage() {
                     const snap = await getDoc(docRef);
                     const inTime = snap.data()?.inTime;
                     const { determineAttendanceFlag } = await import('@/lib/firebase/utils');
-                    const flag = determineAttendanceFlag(inTime);
+                    const calculatedFlag = determineAttendanceFlag(inTime);
+                    const flag = calculatedFlag || 'P'; // Safety fallback
 
                     await updateDoc(docRef, {
                         approvalStatus: 'Approved',
@@ -257,7 +263,7 @@ export default function RemoteAttendanceApprovalPage() {
                 }
             } else if (selectedRecord.type === 'Out Time') {
                 const snap = await getDoc(docRef);
-                const currentData = snap.data();
+                const currentData = snap.data(); // Not strictly needed unless checking state
 
                 const updates: any = {
                     outTimeApprovalStatus: action,
@@ -292,11 +298,12 @@ export default function RemoteAttendanceApprovalPage() {
                 timer: 1500
             });
             setIsDialogOpen(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error updating status:", error);
-            Swal.fire("Error", "Failed to update status", "error");
+            Swal.fire("Error", `Failed to update status: ${error.message || 'Unknown error'}`, "error");
         } finally {
             setProcessingId(null);
+            setIsDialogOpen(false);
         }
     };
 
