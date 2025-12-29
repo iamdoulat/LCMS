@@ -89,7 +89,11 @@ export default function MobileAttendancePage() {
             const attendanceRecords = attendanceSnap.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as any))
                 .filter((record: any) => {
-                    return record.date && record.date >= startDateStr && record.date <= endDateStr;
+                    if (!record.date) return false;
+                    const rDatePrefix = (typeof record.date === 'string' && record.date.includes('T'))
+                        ? record.date.split('T')[0]
+                        : record.date;
+                    return rDatePrefix >= startDateStr && rDatePrefix <= endDateStr;
                 });
 
             console.log('[ATTENDANCE] Filtered attendance records:', attendanceRecords.length);
@@ -125,10 +129,15 @@ export default function MobileAttendancePage() {
                     const dateStr = format(day, 'yyyy-MM-dd');
 
                     // 1. Check Attendance Record (match by ID or UID)
-                    const record = attendanceRecords.find((r: any) =>
-                        (r.employeeId === emp.id || (emp.uid && r.employeeId === emp.uid)) &&
-                        r.date === dateStr
-                    );
+                    const record = attendanceRecords.find((r: any) => {
+                        const rEmployeeId = r.employeeId;
+                        const rDateStr = (typeof r.date === 'string' && r.date.includes('T'))
+                            ? r.date.split('T')[0]
+                            : r.date;
+
+                        return (rEmployeeId === emp.id || (emp.uid && rEmployeeId === emp.uid)) &&
+                            rDateStr === dateStr;
+                    });
                     if (record) {
                         if (record.flag === 'P' || record.flag === 'V') present++;
                         else if (record.flag === 'D') delay++;

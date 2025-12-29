@@ -2,7 +2,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export const checkInOutTypeOptions = ['Check In', 'Check Out'] as const;
+export const checkInOutTypeOptions = ['Check In', 'Check Out', 'In Time', 'Out Time'] as const;
 export type CheckInOutType = typeof checkInOutTypeOptions[number];
 
 export interface MultipleCheckInOutLocation {

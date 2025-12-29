@@ -69,7 +69,7 @@ export default function RemoteAttendanceApprovalPage() {
                             employeeId: data.employeeId || data.uid,
                             employeeName: data.employeeName || emp?.fullName || 'Unknown',
                             employeeCode: emp?.employeeCode || 'N/A',
-                            type: 'Check In', // Daily attendance approval is for check-in
+                            type: 'In Time', // Daily attendance approval is for check-in
                             timestamp: data.date,
                             location: {
                                 latitude: data.inTimeLocation?.latitude || 0,
@@ -78,6 +78,7 @@ export default function RemoteAttendanceApprovalPage() {
                             },
                             remarks: data.inTimeRemarks || '',
                             status: data.approvalStatus,
+                            imageURL: '', // daily attendance doesn't use imageURL
                             source: 'daily',
                             createdAt: data.createdAt,
                             updatedAt: data.updatedAt,
@@ -272,7 +273,7 @@ export default function RemoteAttendanceApprovalPage() {
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusColor(record.status)}`}>
                                             {record.status || 'Pending'}
                                         </span>
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${record.type === 'Check In' ? 'text-blue-600 bg-blue-50' : 'text-emerald-600 bg-emerald-50'
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${record.type === 'In Time' ? 'text-blue-600 bg-blue-50' : 'text-emerald-600 bg-emerald-50'
                                             }`}>
                                             {record.type}
                                         </span>

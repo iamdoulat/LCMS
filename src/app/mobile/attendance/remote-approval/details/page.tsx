@@ -77,7 +77,7 @@ export default function RemoteAttendanceDetailsPage() {
                         id: attSnap.id,
                         employeeId: data.employeeId,
                         employeeName: data.employeeName || 'Unknown',
-                        type: 'Check In',
+                        type: 'In Time',
                         timestamp: data.date,
                         location: {
                             latitude: data.inTimeLocation?.latitude || 0,
@@ -176,7 +176,7 @@ export default function RemoteAttendanceDetailsPage() {
                                 }`}>
                                 {record.status || 'Pending'}
                             </span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${record.type === 'Check In' ? 'text-blue-600 bg-blue-50' : 'text-emerald-600 bg-emerald-50'
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${record.type === 'In Time' ? 'text-blue-600 bg-blue-50' : 'text-emerald-600 bg-emerald-50'
                                 }`}>
                                 {record.type}
                             </span>
