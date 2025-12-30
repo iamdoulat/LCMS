@@ -38,7 +38,7 @@ const formatDisplayDate = (dateString?: string) => {
 export default function PayslipPreviewPage() {
     const authContext = useAuth();
     const companyName = authContext?.companyName || 'Company Name';
-    const address = (authContext as any)?.address || 'Company Address';
+    const address = authContext?.address || 'Company Address';
     const companyLogoUrl = authContext?.companyLogoUrl || '';
 
     const printContainerRef = React.useRef<HTMLDivElement>(null);

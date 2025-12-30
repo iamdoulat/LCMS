@@ -11,7 +11,7 @@ import { auth, firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp, query, where, getDocs, collection, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import type { UserRole, CompanyProfile, UserDocumentForAdmin, userRoles } from '@/types';
+import type { UserRole, CompanyProfile, UserDocumentForAdmin } from '@/types';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
@@ -49,8 +49,9 @@ interface AuthContextType {
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   companyName: string;
   companyLogoUrl: string;
+  address: string;
   invoiceLogoUrl: string;
-  updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl'>>) => void;
+  updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,6 +66,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [companyName, setCompanyName] = useState<string>(DEFAULT_COMPANY_NAME);
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const [invoiceLogoUrl, setInvoiceLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
+  const [address, setAddress] = useState<string>('');
   const router = useRouter();
 
   const fetchInitialCompanyProfile = useCallback(async () => {
@@ -76,10 +78,12 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const newName = profileData.companyName || DEFAULT_COMPANY_NAME;
         const newLogoUrl = profileData.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
         const newInvoiceLogoUrl = profileData.invoiceLogoUrl || newLogoUrl;
+        const newAddress = profileData.address || '';
 
         setCompanyName(newName);
         setCompanyLogoUrl(newLogoUrl);
         setInvoiceLogoUrl(newInvoiceLogoUrl);
+        setAddress(newAddress);
 
         if (typeof window !== 'undefined') {
           localStorage.setItem(COMPANY_NAME_STORAGE_KEY, newName);
@@ -322,7 +326,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [router]);
 
-  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl'>>) => {
+  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address'>>) => {
     let newName = companyName;
     let newLogoUrl = companyLogoUrl;
     let newInvoiceLogoUrl = invoiceLogoUrl;
@@ -343,10 +347,11 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setCompanyName(newName);
     setCompanyLogoUrl(newLogoUrl);
     setInvoiceLogoUrl(newInvoiceLogoUrl);
+    if (profile.address !== undefined) setAddress(profile.address || '');
   }, [companyName, companyLogoUrl, invoiceLogoUrl]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, register, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, invoiceLogoUrl, updateCompanyProfile }}>
+    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, register, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, address, invoiceLogoUrl, updateCompanyProfile }}>
       {children}
     </AuthContext.Provider>
   );
