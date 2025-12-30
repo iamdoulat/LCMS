@@ -330,15 +330,16 @@ export default function MobileDashboardPage() {
                     setStats(prev => ({ ...prev, missedAttendance: missedCount }));
                 });
 
-                // 5. Notices (Filtered by role)
+                // 5. Notices (Filtered by role and isEnabled)
                 const qNotices = query(collection(firestore, 'site_settings'), where('isEnabled', '==', true));
                 const unsubNotices = onSnapshot(qNotices, (snapshot) => {
                     const filtered = snapshot.docs.filter(doc => {
                         const data = doc.data();
-                        // If it's a notice (you might need to check a 'type' field if site_settings contains other things)
-                        // Assuming mostisEnabled items here are notices or relevant
-                        if (!data.targetRoles || data.targetRoles.length === 0) return true;
-                        return data.targetRoles.includes(localUserRole);
+                        // Filter by targetRoles if they exist
+                        if (!data.targetRoles || !Array.isArray(data.targetRoles) || data.targetRoles.length === 0) return true;
+                        // Use globalUserRole or localUserRole for matching
+                        const currentUserRole = globalUserRole || localUserRole;
+                        return data.targetRoles.some((role: string) => currentUserRole?.includes(role));
                     });
                     setStats(prev => ({ ...prev, noticesCount: filtered.length }));
                 });
@@ -710,6 +711,14 @@ export default function MobileDashboardPage() {
                                 if (item.id === 'pending') {
                                     return (
                                         <Link key={item.id} href="/mobile/approve" className="flex-shrink-0 transition-transform active:scale-95">
+                                            {content}
+                                        </Link>
+                                    );
+                                }
+
+                                if (item.id === 'notices') {
+                                    return (
+                                        <Link key={item.id} href="/mobile/notice-board" className="flex-shrink-0 transition-transform active:scale-95">
                                             {content}
                                         </Link>
                                     );
