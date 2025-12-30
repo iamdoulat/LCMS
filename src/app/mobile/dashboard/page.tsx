@@ -339,7 +339,7 @@ export default function MobileDashboardPage() {
                         if (!data.targetRoles || !Array.isArray(data.targetRoles) || data.targetRoles.length === 0) return true;
                         // Use globalUserRole or localUserRole for matching
                         const currentUserRole = globalUserRole || localUserRole;
-                        return data.targetRoles.some((role: string) => currentUserRole?.includes(role));
+                        return data.targetRoles.some((role: any) => currentUserRole?.includes(role));
                     });
                     setStats(prev => ({ ...prev, noticesCount: filtered.length }));
                 });
