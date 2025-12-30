@@ -18,11 +18,13 @@ import {
     format, isWithinInterval, parseISO, getMonth, getYear, getDaysInMonth, getDay,
     startOfMonth, isToday as isTodayFn
 } from 'date-fns';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import type { LeaveApplicationDocument, VisitApplicationDocument, EmployeeDocument, HolidayDocument } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import Swal from 'sweetalert2';
+import { cn } from '@/lib/utils';
 
 interface LeaveAction {
     label: string;
@@ -42,9 +44,9 @@ export default function MobileLeavePage() {
 
     // Fetch data from Firestore using the hook
     const { data: employees } = useFirestoreQuery<EmployeeDocument[]>(
-        collection(firestore, 'employees'),
+        query(collection(firestore, 'employees'), where('status', '!=', 'Terminated')),
         undefined,
-        ['mobile_leave_employees']
+        ['mobile_leave_employees_v2']
     );
     const { data: leaves } = useFirestoreQuery<LeaveApplicationDocument[]>(
         collection(firestore, 'leave_applications'),
@@ -125,19 +127,19 @@ export default function MobileLeavePage() {
             }) || [];
 
             // Check if this is a holiday
-            const isHoliday = holidays?.some(h =>
+            const holiday = holidays?.find(h =>
                 isWithinInterval(date, {
                     start: parseISO(h.fromDate),
                     end: parseISO(h.toDate || h.fromDate)
                 })
-            );
+            ) || null;
 
             return {
                 day,
                 isCurrentMonth,
                 date,
                 isToday: isTodayFn(date),
-                isHoliday: !!isHoliday,
+                holiday: holiday,
                 leaves: dayLeaves,
                 visits: dayVisits,
                 birthdays: dayBirthdays
@@ -278,18 +280,76 @@ export default function MobileLeavePage() {
                                     <div
                                         key={index}
                                         className={`
-                                            relative min-h-[60px] p-1 flex flex-col rounded-lg text-sm
-                                            ${dayObj.isCurrentMonth
+                                            relative min-h-[60px] p-1 flex flex-col rounded-lg text-sm transition-all duration-200
+                            ${dayObj.isCurrentMonth
                                                 ? dayObj.isToday
-                                                    ? 'bg-blue-600 text-white'
-                                                    : dayObj.isHoliday
-                                                        ? 'bg-rose-50 text-gray-600'
-                                                        : 'bg-white text-slate-700'
-                                                : 'bg-gray-50 text-slate-300'
+                                                    ? 'bg-blue-50/50 border-2 border-blue-500 shadow-sm z-10'
+                                                    : dayObj.holiday
+                                                        ? 'bg-rose-50/70 text-gray-700 border border-rose-100'
+                                                        : 'bg-white text-slate-700 border border-slate-100'
+                                                : 'bg-gray-50/50 text-slate-300'
                                             }
-`}
+                            ${dayObj.isCurrentMonth && (dayObj.holiday || dayObj.leaves.length > 0 || dayObj.birthdays.length > 0) ? 'cursor-pointer active:scale-95' : ''}
+                                        `}
+                                        onClick={() => {
+                                            if (!dayObj.isCurrentMonth) return;
+
+                                            let content = '';
+                                            if (dayObj.holiday) {
+                                                content += `<div class="mb-4 text-left p-3 bg-rose-50 rounded-lg border border-rose-100">
+                                                    <div class="font-bold text-rose-700 flex items-center gap-2">
+                                                        <span class="bg-rose-500 text-white px-1.5 py-0.5 rounded text-[10px]">H</span>
+                                                        ${dayObj.holiday.name}
+                                                    </div>
+                                                    <div class="text-xs text-rose-600 mt-1">${dayObj.holiday.type} announcement</div>
+                                                </div>`;
+                                            }
+
+                                            if (dayObj.birthdays.length > 0) {
+                                                content += `<div class="mb-4 text-left p-3 bg-pink-50 rounded-lg border border-pink-100">
+                                                    <div class="font-bold text-pink-700 flex items-center gap-2">
+                                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                                        Birthdays
+                                                    </div>
+                                                    <div class="mt-2 space-y-1">
+                                                        ${dayObj.birthdays.map(b => `<div class="text-xs flex items-center gap-2">🎂 ${b.fullName}</div>`).join('')}
+                                                    </div>
+                                                </div>`;
+                                            }
+
+                                            if (dayObj.leaves.length > 0) {
+                                                content += `<div class="text-left p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                                                    <div class="font-bold text-emerald-700">Employees on Leave</div>
+                                                    <div class="mt-2 space-y-2">
+                                                        ${dayObj.leaves.map(l => `<div class="text-xs flex items-center gap-2">
+                                                            <div class="w-2 h-2 rounded-full ${l.status === 'Approved' ? 'bg-emerald-500' : 'bg-amber-500'}"></div>
+                                                            <span class="font-medium">${l.employee?.fullName}</span>
+                                                            <span class="text-[10px] text-slate-500">(${l.leaveType})</span>
+                                                        </div>`).join('')}
+                                                    </div>
+                                                </div>`;
+                                            }
+
+                                            if (content) {
+                                                Swal.fire({
+                                                    title: format(dayObj.date, 'PPPP'),
+                                                    html: `<div class="mt-4">${content}</div>`,
+                                                    showConfirmButton: false,
+                                                    showCloseButton: true,
+                                                    customClass: {
+                                                        popup: 'rounded-2xl',
+                                                        title: 'text-lg font-bold text-blue-600 border-b pb-3 pt-4'
+                                                    }
+                                                });
+                                            }
+                                        }}
                                     >
-                                        <div className="font-semibold text-xs">{dayObj.day}</div>
+                                        <div className="flex justify-between items-start">
+                                            <div className={cn("font-semibold text-xs", dayObj.isToday ? "text-blue-600" : "text-slate-500")}>{dayObj.day}</div>
+                                            {dayObj.holiday && (
+                                                <span className="bg-rose-500 text-white text-[8px] px-1 rounded font-bold">H</span>
+                                            )}
+                                        </div>
 
                                         {dayObj.isCurrentMonth && (
                                             <div className="flex-1 flex flex-col gap-0.5 mt-0.5 overflow-hidden">
@@ -302,22 +362,34 @@ export default function MobileLeavePage() {
 
                                                 {/* Leave avatars */}
                                                 {dayObj.leaves.slice(0, 2).map((leave, idx) => (
-                                                    <Avatar key={`leave-${idx}`} className="h-4 w-4">
-                                                        <AvatarImage src={leave.employee?.photoURL} />
-                                                        <AvatarFallback className="text-[8px] bg-emerald-100 text-emerald-700">
-                                                            {getInitials(leave.employee?.fullName)}
-                                                        </AvatarFallback>
-                                                    </Avatar>
+                                                    <div key={`leave-${idx}`} className="relative">
+                                                        <Avatar className="h-4 w-4 border border-white shadow-sm">
+                                                            <AvatarImage src={leave.employee?.photoURL} />
+                                                            <AvatarFallback className="text-[6px] bg-emerald-100 text-emerald-700 uppercase">
+                                                                {getInitials(leave.employee?.fullName)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className={cn(
+                                                            "absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full border-[0.5px] border-white",
+                                                            leave.status === 'Approved' ? "bg-emerald-500" : "bg-amber-500"
+                                                        )} />
+                                                    </div>
                                                 ))}
 
                                                 {/* Visit avatars */}
                                                 {dayObj.visits.slice(0, 2 - dayObj.leaves.length).map((visit, idx) => (
-                                                    <Avatar key={`visit-${idx}`} className="h-4 w-4">
-                                                        <AvatarImage src={visit.employee?.photoURL} />
-                                                        <AvatarFallback className="text-[8px] bg-blue-100 text-blue-700">
-                                                            {getInitials(visit.employee?.fullName)}
-                                                        </AvatarFallback>
-                                                    </Avatar>
+                                                    <div key={`visit-${idx}`} className="relative">
+                                                        <Avatar className="h-4 w-4 border border-white shadow-sm">
+                                                            <AvatarImage src={visit.employee?.photoURL} />
+                                                            <AvatarFallback className="text-[6px] bg-blue-100 text-blue-700 uppercase">
+                                                                {getInitials(visit.employee?.fullName)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div className={cn(
+                                                            "absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full border-[0.5px] border-white",
+                                                            visit.status === 'Approved' ? "bg-emerald-500" : "bg-amber-500"
+                                                        )} />
+                                                    </div>
                                                 ))}
 
                                                 {/* Show count if more people */}
@@ -332,22 +404,26 @@ export default function MobileLeavePage() {
                         </div>
 
                         {/* Legend */}
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-4 text-[10px] text-slate-600">
-                            <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 text-[10px] text-slate-500 font-medium">
+                            <div className="flex items-center gap-1.5">
                                 <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                <span>Leave</span>
+                                <span>Approved</span>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-2 w-2 rounded-full bg-amber-500" />
+                                <span>Pending</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
                                 <div className="h-2 w-2 rounded-full bg-blue-500" />
-                                <span>Visit</span>
+                                <span>Today</span>
                             </div>
-                            <div className="flex items-center gap-1">
-                                <Cake className="h-2.5 w-2.5 text-pink-500" />
-                                <span>Birthday</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <div className="h-2 w-2 rounded-full bg-rose-400" />
+                            <div className="flex items-center gap-1.5">
+                                <span className="bg-rose-500 text-white text-[8px] px-1 rounded font-bold">H</span>
                                 <span>Holiday</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Cake className="h-3 w-3 text-pink-500" />
+                                <span>Birthday</span>
                             </div>
                         </div>
                     </div>
@@ -387,6 +463,6 @@ export default function MobileLeavePage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

@@ -94,11 +94,6 @@ export default function MobileNoticeDetailPage({ params }: { params: { id: strin
                             dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                         />
 
-                        {/* Footer / Signature placeholder based on image */}
-                        <div className="mt-8 mb-6">
-                            <p className="text-slate-900 font-semibold text-sm">HR Department</p>
-                            <p className="text-slate-500 text-sm">Smart Solution</p>
-                        </div>
 
                         <div className="border-t border-slate-100 pt-4">
                             <div className="bg-slate-50 text-slate-600 text-xs font-medium px-3 py-1.5 rounded-lg inline-flex items-center gap-2">

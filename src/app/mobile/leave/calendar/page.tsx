@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Cake } from 'lucide-react';
+import Swal from 'sweetalert2';
 import {
     format,
     startOfMonth,
@@ -19,7 +20,7 @@ import {
     isSameDay,
     parseISO
 } from 'date-fns';
-import type { LeaveApplicationDocument, EmployeeDocument } from '@/types';
+import type { LeaveApplicationDocument, EmployeeDocument, HolidayDocument } from '@/types';
 import { cn } from '@/lib/utils';
 
 export default function LeaveCalendarPage() {
@@ -29,6 +30,8 @@ export default function LeaveCalendarPage() {
     const [loading, setLoading] = useState(true);
     const [employeeData, setEmployeeData] = useState<EmployeeDocument | null>(null);
     const [leaveApplications, setLeaveApplications] = useState<LeaveApplicationDocument[]>([]);
+    const [holidays, setHolidays] = useState<HolidayDocument[]>([]);
+    const [allEmployees, setAllEmployees] = useState<EmployeeDocument[]>([]);
 
     useEffect(() => {
         const fetchEmployeeData = async () => {
@@ -48,31 +51,36 @@ export default function LeaveCalendarPage() {
     }, [user?.email]);
 
     useEffect(() => {
-        const fetchLeaves = async () => {
-            if (!employeeData?.id) return;
-
+        const fetchData = async () => {
             setLoading(true);
             try {
-                const q = query(
-                    collection(firestore, 'leave_applications'),
-                    where('employeeId', '==', employeeData.id),
-                    where('status', '==', 'Approved')
-                );
-                const snapshot = await getDocs(q);
-                const leaves = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as LeaveApplicationDocument[];
+                // Fetch user's approved leaves
+                if (employeeData?.id) {
+                    const leavesQ = query(
+                        collection(firestore, 'leave_applications'),
+                        where('employeeId', '==', employeeData.id)
+                    );
+                    const leavesSnapshot = await getDocs(leavesQ);
+                    setLeaveApplications(leavesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument)));
+                }
 
-                setLeaveApplications(leaves);
+                // Fetch holidays
+                const holidaysSnapshot = await getDocs(collection(firestore, 'holidays'));
+                setHolidays(holidaysSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HolidayDocument)));
+
+                // Fetch birthdays (all active employees)
+                const employeesQ = query(collection(firestore, 'employees'), where('status', '!=', 'Terminated'));
+                const employeesSnapshot = await getDocs(employeesQ);
+                setAllEmployees(employeesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmployeeDocument)));
+
             } catch (error) {
-                console.error("Error fetching leave applications:", error);
+                console.error("Error fetching calendar data:", error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchLeaves();
+        fetchData();
     }, [employeeData?.id]);
 
     const goToPreviousMonth = () => {
@@ -91,12 +99,33 @@ export default function LeaveCalendarPage() {
     const firstDayOfMonth = getDay(startOfMonth(currentMonth));
     const paddingDays = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
-    const isDateOnLeave = (date: Date) => {
-        return leaveApplications.some(leave => {
+    const getLeaveStatus = (date: Date) => {
+        return leaveApplications.find(leave => {
             const start = parseISO(leave.fromDate);
             const end = parseISO(leave.toDate);
-            return date >= start && date <= end;
+            return isWithinInterval(date, { start, end });
         });
+    };
+
+    const isBirthday = (date: Date) => {
+        return allEmployees.some(emp => {
+            if (!emp.dateOfBirth) return false;
+            try {
+                const dob = parseISO(emp.dateOfBirth);
+                return format(dob, 'MM-dd') === format(date, 'MM-dd');
+            } catch { return false; }
+        });
+    };
+
+    const getHoliday = (date: Date) => {
+        return holidays.find(h => isWithinInterval(date, {
+            start: parseISO(h.fromDate),
+            end: parseISO(h.toDate || h.fromDate)
+        }));
+    };
+
+    const isWithinInterval = (date: Date, interval: { start: Date; end: Date }) => {
+        return date >= interval.start && date <= interval.end;
     };
 
     const weekDays = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -158,25 +187,54 @@ export default function LeaveCalendarPage() {
                         {daysInMonth.map((day) => {
                             const isCurrentDay = isToday(day);
                             const isCurrentMonth = isSameMonth(day, currentMonth);
-                            const onLeave = isDateOnLeave(day);
+                            const leave = getLeaveStatus(day);
+                            const holiday = getHoliday(day);
+                            const birthday = isBirthday(day);
 
                             return (
                                 <div
                                     key={day.toISOString()}
                                     className={cn(
-                                        "aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all relative",
+                                        "aspect-square flex flex-col items-center justify-center rounded-lg text-sm font-medium transition-all relative overflow-hidden",
                                         isCurrentMonth
                                             ? isCurrentDay
-                                                ? 'bg-blue-500 text-white shadow-md'
-                                                : onLeave
-                                                    ? 'bg-emerald-100 text-emerald-700 font-bold'
-                                                    : 'text-slate-700 hover:bg-slate-50'
+                                                ? 'bg-blue-500 text-white shadow-md z-10'
+                                                : holiday
+                                                    ? 'bg-rose-50 text-rose-700 font-bold border border-rose-100'
+                                                    : leave
+                                                        ? 'bg-emerald-50 text-emerald-700'
+                                                        : 'text-slate-700 hover:bg-slate-50'
                                             : 'text-slate-300'
                                     )}
+                                    onClick={() => {
+                                        if (holiday) {
+                                            Swal.fire({
+                                                title: holiday.name,
+                                                text: `${holiday.type} announcement.`,
+                                                icon: 'info',
+                                                confirmButtonColor: '#3b82f6'
+                                            });
+                                        }
+                                    }}
                                 >
-                                    {format(day, 'd')}
-                                    {onLeave && !isCurrentDay && (
-                                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-500" />
+                                    <span className="relative z-10">{format(day, 'd')}</span>
+
+                                    <div className="flex gap-0.5 mt-0.5 relative z-10">
+                                        {leave && (
+                                            <div className={cn(
+                                                "w-1.5 h-1.5 rounded-full shadow-sm",
+                                                leave.status === 'Approved' ? "bg-emerald-500" : "bg-amber-500"
+                                            )} />
+                                        )}
+                                        {birthday && (
+                                            <Cake className={cn("h-3 w-3", isCurrentDay ? "text-white" : "text-pink-500")} />
+                                        )}
+                                    </div>
+
+                                    {holiday && (
+                                        <div className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-rose-500 rounded-full flex items-center justify-center border border-white z-20">
+                                            <span className="text-[8px] text-white font-bold leading-none">H</span>
+                                        </div>
                                     )}
                                 </div>
                             );
@@ -184,14 +242,26 @@ export default function LeaveCalendarPage() {
                     </div>
 
                     {/* Legend */}
-                    <div className="flex items-center gap-4 mt-6 pt-4 border-t border-slate-100">
+                    <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-slate-100">
                         <div className="flex items-center gap-2">
                             <div className="w-4 h-4 rounded bg-blue-500" />
-                            <span className="text-xs text-slate-600">Today</span>
+                            <span className="text-xs text-slate-600 font-medium">Today</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded bg-emerald-100 border border-emerald-200" />
-                            <span className="text-xs text-slate-600">On Leave</span>
+                            <div className="w-4 h-4 rounded-full bg-emerald-500" />
+                            <span className="text-xs text-slate-600 font-medium">Leave (Approved)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full bg-amber-500" />
+                            <span className="text-xs text-slate-600 font-medium">Leave (Pending)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded bg-rose-50 border border-rose-100" />
+                            <span className="text-xs text-slate-600 font-medium">Holiday</span>
+                        </div>
+                        <div className="flex items-center gap-2 col-span-2">
+                            <Cake className="h-4 w-4 text-pink-500" />
+                            <span className="text-xs text-slate-600 font-medium">Birthday</span>
                         </div>
                     </div>
                 </div>

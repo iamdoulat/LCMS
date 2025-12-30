@@ -16,6 +16,7 @@ import { ChevronLeft, ChevronRight, Cake, Calendar as CalendarIcon } from 'lucid
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { cn } from '@/lib/utils';
+import Swal from 'sweetalert2';
 
 const ALL_BRANCHES = '__ALL_BRANCHES_LEAVE_CALENDAR__';
 const ALL_DEPTS = '__ALL_DEPTS_LEAVE_CALENDAR__';
@@ -24,7 +25,7 @@ const ALL_LEAVE_TYPES = '__ALL_LEAVE_TYPES_LEAVE_CALENDAR__';
 interface DayWithLeaves {
   date: Date;
   isToday: boolean;
-  isHoliday: boolean;
+  holiday: HolidayDocument | null;
   isWeekend: boolean;
   leaves: (LeaveApplicationDocument & { employee?: EmployeeDocument })[];
   birthdays: EmployeeDocument[];
@@ -45,7 +46,11 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
   const [filterDept, setFilterDept] = React.useState(ALL_DEPTS);
   const [filterLeaveType, setFilterLeaveType] = React.useState<LeaveType | '' | typeof ALL_LEAVE_TYPES>(ALL_LEAVE_TYPES);
 
-  const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_for_leave_calendar']);
+  const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(
+    query(collection(firestore, 'employees'), where('status', '!=', 'Terminated')),
+    undefined,
+    ['employees_for_leave_calendar']
+  );
   const { data: leaves, isLoading: isLoadingLeaves } = useFirestoreQuery<LeaveApplicationDocument[]>(collection(firestore, 'leave_applications'), undefined, ['leaves_for_leave_calendar']);
   const { data: branches, isLoading: isLoadingBranches } = useFirestoreQuery<BranchDocument[]>(collection(firestore, 'branches'), undefined, ['branches_for_leave_calendar']);
   const { data: departments, isLoading: isLoadingDepts } = useFirestoreQuery<DepartmentDocument[]>(collection(firestore, 'departments'), undefined, ['departments_for_leave_calendar']);
@@ -79,7 +84,7 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
         employee: employees?.find(e => e.id === leave.employeeId)
       }));
 
-      const dayBirthdays = birthdays.filter(emp => {
+      const dayBirthdays = filteredEmployees.filter(emp => {
         if (!emp.dateOfBirth) return false;
         try {
           const dob = parseISO(emp.dateOfBirth);
@@ -87,16 +92,16 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
         } catch { return false; }
       });
 
-      const isHoliday = holidays?.some(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+      const holiday = holidays?.find(h => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })) || null;
       const isWeekend = day.getDay() === 5; // Friday
 
       return {
         date: day,
         isToday: isToday(day),
-        isHoliday: !!isHoliday,
+        holiday: holiday,
         isWeekend: isWeekend,
         leaves: dayLeaves || [],
-        birthdays: dayBirthdays || [],
+        birthdays: dayBirthdays,
       };
     });
   }, [currentMonth, employees, leaves, holidays, filterBranch, filterDept, filterLeaveType, isLoading, birthdays]);
@@ -149,8 +154,33 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
               <div key={day} className="text-center font-medium text-xs sm:text-sm py-2 bg-muted/50 text-muted-foreground">{day}</div>
             ))}
             {monthData.map(dayInfo => (
-              <div key={dayInfo.date.toString()} className="relative bg-card p-1.5 min-h-[100px] h-auto flex flex-col">
-                <time dateTime={format(dayInfo.date, 'yyyy-MM-dd')} className="text-xs font-semibold">{format(dayInfo.date, 'd')}</time>
+              <div
+                key={dayInfo.date.toString()}
+                className={cn(
+                  "relative bg-card p-1.5 min-h-[100px] h-auto flex flex-col transition-colors",
+                  dayInfo.isToday && "bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800 border-2 z-10",
+                  dayInfo.holiday && "bg-rose-50/70 dark:bg-rose-900/10 cursor-pointer hover:bg-rose-100 dark:hover:bg-rose-900/20"
+                )}
+                onClick={() => {
+                  if (dayInfo.holiday) {
+                    Swal.fire({
+                      title: dayInfo.holiday.name,
+                      text: `${dayInfo.holiday.type} announcement.`,
+                      icon: 'info',
+                      confirmButtonColor: 'hsl(var(--primary))'
+                    });
+                  }
+                }}
+              >
+                <div className="flex justify-between items-start">
+                  <time dateTime={format(dayInfo.date, 'yyyy-MM-dd')} className={cn("text-xs font-semibold", dayInfo.isToday && "text-blue-600 dark:text-blue-400 font-bold")}>
+                    {format(dayInfo.date, 'd')}
+                  </time>
+                  <div className="flex gap-1 items-center">
+                    {dayInfo.holiday && <span className="text-[10px] bg-rose-500 text-white px-1 rounded font-bold">H</span>}
+                    {dayInfo.isToday && <span className="text-[10px] bg-blue-500 text-white px-1 rounded font-bold">TODAY</span>}
+                  </div>
+                </div>
                 <div className="flex-grow mt-1 space-y-1">
                   {dayInfo.birthdays.map(emp => (
                     <TooltipProvider key={emp.id}>
@@ -172,9 +202,13 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1.5 cursor-pointer">
-                            <Avatar className="h-8 w-8 flex-shrink-0">
+                            <Avatar className="h-8 w-8 flex-shrink-0 relative">
                               <AvatarImage src={leave.employee?.photoURL} alt={leave.employee?.fullName} />
                               <AvatarFallback className="text-xs font-semibold">{getInitials(leave.employee?.fullName)}</AvatarFallback>
+                              <div className={cn(
+                                "absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background",
+                                leave.status === 'Approved' ? 'bg-emerald-500' : 'bg-amber-500'
+                              )} />
                             </Avatar>
                             <span className="hidden sm:inline text-xs truncate text-muted-foreground">{leave.employee?.fullName}</span>
                           </div>
@@ -193,9 +227,9 @@ export function LeaveCalendar({ birthdays = [] }: LeaveCalendarProps) {
             ))}
           </div>
         </div>
-        <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-4">
-          <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-green-500 mr-2"></span>Approved</div>
-          <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-yellow-500 mr-2"></span>Pending</div>
+        <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-4 flex-wrap gap-y-2">
+          <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-emerald-500 mr-2"></span>Approved</div>
+          <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-amber-500 mr-2"></span>Pending</div>
           <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-blue-500 mr-2"></span>Today</div>
           <div className="flex items-center"><span className="h-3 w-3 rounded-full bg-gray-400 mr-2"></span>Holiday</div>
           <div className="flex items-center"><Cake className="h-4 w-4 text-pink-500 mr-1" />Birthday</div>

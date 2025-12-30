@@ -68,8 +68,8 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
           holidayId: docRef.id,
           holidayData: {
             title: data.name,
-            fromDate: data.fromDate.toISOString(),
-            toDate: data.toDate ? data.toDate.toISOString() : undefined,
+            fromDate: format(data.fromDate, 'PPPP'),
+            toDate: data.toDate ? format(data.toDate, 'PPPP') : undefined,
             type: data.type,
             description: data.message || '',
           }

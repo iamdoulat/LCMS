@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { User, LogOut, Settings, Loader2, Search } from 'lucide-react';
+import { User, LogOut, Settings, Loader2, Search, Smartphone } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
@@ -131,9 +131,15 @@ export function AppHeader() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <Link href="/dashboard/account-details" passHref>
-                <DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   <span>Account Details</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/mobile/dashboard" passHref>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Smartphone className="mr-2 h-4 w-4" />
+                  <span>Mobile Mode</span>
                 </DropdownMenuItem>
               </Link>
               <DropdownMenuSeparator />

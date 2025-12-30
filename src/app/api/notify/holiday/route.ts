@@ -36,15 +36,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'No active employees with emails or phones found' });
         }
 
-        // 3. Send emails & WhatsApp
-        const holidayFromDate = new Date(holidayData.fromDate);
-        const formattedFromDate = format(holidayFromDate, 'PPPP');
+        // 3. Prepare dates for notification
+        const formattedFromDate = holidayData.fromDate;
 
-        let formattedToDate = 'N/A';
-        if (holidayData.toDate) {
-            const holidayToDate = new Date(holidayData.toDate);
-            formattedToDate = format(holidayToDate, 'PPPP');
-        }
+        // If toDate is missing, use fromDate as fallback to avoid "N/A"
+        let formattedToDate = holidayData.toDate || formattedFromDate;
 
         // Dynamically import to avoid top-level issues if any
         const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
