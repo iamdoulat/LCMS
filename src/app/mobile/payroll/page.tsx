@@ -26,14 +26,14 @@ export default function MobilePayrollPage() {
     const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
     const pdfRef = useRef<HTMLDivElement>(null);
 
-    const { data: payslips, isLoading } = useFirestoreQuery<any[]>(
+    const { data: payslips, isLoading, error } = useFirestoreQuery<any[]>(
         currentEmployeeId ? query(
             collection(firestore, 'payslips'),
             where('employeeId', '==', currentEmployeeId),
             orderBy('createdAt', 'desc')
         ) : null,
         undefined, // transformer
-        ['mobile_payslips', currentEmployeeId || ''], // queryKey
+        ['mobile_payslips', currentEmployeeId || 'none'], // queryKey
         !!currentEmployeeId // enabled
     );
 
@@ -52,39 +52,68 @@ export default function MobilePayrollPage() {
                 },
                 allowOutsideClick: false,
                 showConfirmButton: false,
+                heightAuto: false
             });
 
             // Temporarily style for PDF generation to ensure it looks like a paper payslip
             const element = pdfRef.current;
-            const originalStyle = element.style.cssText;
-            // element.style.width = '210mm'; // A4 width
-            // element.style.padding = '20mm';
+
+            // html2canvas fails on display:none. We use an off-screen container instead.
+            // But we also need to ensure it's "visible" to the library
 
             const canvas = await html2canvas(element, {
-                scale: 2,
+                scale: 2, // Reduced from 3 to 2 for better mobile performance/avoid freezing
                 useCORS: true,
+                allowTaint: true,
                 logging: false,
-                backgroundColor: '#ffffff'
+                backgroundColor: '#ffffff',
+                windowWidth: 800,
             });
 
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+            const imgX = (pdfWidth - imgWidth * ratio) / 2;
+            const imgY = 10;
 
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
             pdf.save(`Payslip_${selectedSlip.employeeName}_${selectedSlip.payPeriod}.pdf`);
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: 'Payslip downloaded successfully.',
-                timer: 2000,
-                showConfirmButton: false
-            });
-        } catch (error) {
+            // Explicitly close any previous Swal before showing success
+            Swal.close();
+
+            setTimeout(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: 'Payslip downloaded successfully.',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    heightAuto: false // Prevent layout shift on mobile
+                });
+            }, 100);
+
+        } catch (error: any) {
             console.error('PDF generation error:', error);
-            Swal.fire('Error', 'Failed to generate PDF. Please try again.', 'error');
+            Swal.close();
+
+            setTimeout(() => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: `Failed to generate PDF: ${error.message || 'Unknown error'}. Please try again.`,
+                    confirmButtonText: 'OK',
+                    allowOutsideClick: true,
+                    heightAuto: false,
+                    customClass: {
+                        container: 'z-[9999]' // Ensure it's above any other modals
+                    }
+                });
+            }, 100);
         }
     };
 
@@ -113,8 +142,8 @@ export default function MobilePayrollPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
-                    {/* PDF Wrapper (Hidden visually but used for capture) */}
-                    <div className="hidden">
+                    {/* PDF Wrapper (Rendered off-screen for capture) */}
+                    <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0, pointerEvents: 'none' }}>
                         <div ref={pdfRef} className="bg-white p-8 text-slate-900" style={{ width: '800px' }}>
                             <div className="flex justify-between items-start mb-8 border-b-2 pb-4">
                                 <div>
@@ -270,6 +299,21 @@ export default function MobilePayrollPage() {
                         <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-4" />
                         <p className="text-slate-500 font-medium">Loading your payslips...</p>
                     </div>
+                ) : error ? (
+                    <div className="flex flex-col items-center justify-center pt-20 px-6 text-center">
+                        <div className="h-20 w-20 rounded-full bg-rose-50 flex items-center justify-center mb-6">
+                            <X className="h-10 w-10 text-rose-500" />
+                        </div>
+                        <p className="font-bold text-rose-800 text-lg mb-2">Query Failed</p>
+                        <p className="text-slate-500 text-sm mb-6">{error.message}</p>
+                        <Button onClick={() => window.location.reload()} variant="outline" className="rounded-full border-rose-200 text-rose-700 hover:bg-rose-50">
+                            Retry
+                        </Button>
+                        <div className="mt-8 pt-8 border-t border-slate-100 w-full">
+                            <p className="text-[10px] text-slate-300 uppercase tracking-widest font-bold mb-2">Diagnostic Info</p>
+                            <p className="text-xs text-slate-400">ID: {currentEmployeeId || 'Not Found'}</p>
+                        </div>
+                    </div>
                 ) : !payslips || payslips.length === 0 ? (
                     <div className="flex flex-col items-center justify-center pt-32 text-slate-400">
                         <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center mb-6">
@@ -277,6 +321,10 @@ export default function MobilePayrollPage() {
                         </div>
                         <p className="font-bold text-lg mb-1">No Payslips Yet</p>
                         <p className="text-sm">Your generated payslips will appear here.</p>
+                        <div className="mt-12 pt-8 border-t border-slate-100 w-full text-center">
+                            <p className="text-[10px] text-slate-200 uppercase tracking-widest font-bold mb-2">Diagnostic Info</p>
+                            <p className="text-xs text-slate-300">ID: {currentEmployeeId || 'Not Found'}</p>
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-4">

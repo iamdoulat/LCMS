@@ -41,10 +41,23 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
 
             try {
                 // Fetch current user's employee record if it exists
-                const q = query(collection(firestore, 'employees'), where('email', '==', userEmail));
-                const snapshot = await getDocs(q);
+                // Standardize on lowercase for search, but try original in case it was saved differently
+                const emailToLower = userEmail.toLowerCase().trim();
+                const qLower = query(collection(firestore, 'employees'), where('email', '==', emailToLower));
+                const snapshotLower = await getDocs(qLower);
 
-                let employeeId = snapshot.empty ? (user?.uid || null) : snapshot.docs[0].id;
+                let employeeId = null;
+                if (!snapshotLower.empty) {
+                    employeeId = snapshotLower.docs[0].id;
+                } else {
+                    const qOrig = query(collection(firestore, 'employees'), where('email', '==', userEmail.trim()));
+                    const snapshotOrig = await getDocs(qOrig);
+                    if (!snapshotOrig.empty) {
+                        employeeId = snapshotOrig.docs[0].id;
+                    } else {
+                        employeeId = user?.uid || null;
+                    }
+                }
                 let subordinateIds: string[] = [];
                 let supervisedEmployees: SupervisedEmployee[] = [];
 
@@ -109,7 +122,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                     return;
                 }
 
-                if (!snapshot.empty) {
+                if (employeeId) {
                     // Standard supervisor logic based on supervisorId/leaveApproverId
                     // Check if this employee is a supervisor by querying for subordinates
                     const subordinatesQuery = query(
