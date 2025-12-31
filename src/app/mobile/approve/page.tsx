@@ -36,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format, parseISO, isValid, differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
@@ -181,116 +182,60 @@ export default function ApproveApplicationsPage() {
     }, [supervisedEmployeeIds, filters.status]);
 
     const handleApproveLeave = async (appId: string) => {
-        Swal.fire({
-            title: 'Approve Leave?',
-            text: "Are you sure you want to approve this leave application?",
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, approve'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await updateDoc(doc(firestore, 'leave_applications', appId), {
-                        status: 'Approved',
-                        updatedAt: serverTimestamp(),
-                        approvedBy: currentEmployeeId
-                    });
-                    setIsLeaveModalOpen(false);
-                    Swal.fire('Approved!', 'The application has been approved.', 'success');
-                } catch (error) {
-                    console.error("Error approving leave:", error);
-                    Swal.fire('Error', 'Failed to approve application', 'error');
-                }
-            }
-        });
+        try {
+            await updateDoc(doc(firestore, 'leave_applications', appId), {
+                status: 'Approved',
+                updatedAt: serverTimestamp(),
+                approvedBy: currentEmployeeId
+            });
+            setIsLeaveModalOpen(false);
+        } catch (error) {
+            console.error("Error approving leave:", error);
+            Swal.fire({ title: 'Error', text: 'Failed to approve application', icon: 'error', timer: 3000, showConfirmButton: false });
+        }
     };
 
-    const handleRejectLeave = async (appId: string) => {
-        const { value: reason } = await Swal.fire({
-            title: 'Reject Leave',
-            input: 'textarea',
-            inputLabel: 'Reason for rejection',
-            inputPlaceholder: 'Type your reason here...',
-            inputAttributes: {
-                'aria-label': 'Type your reason here'
-            },
-            showCancelButton: true,
-            confirmButtonColor: '#d33'
-        });
-
-        if (reason) {
-            try {
-                await updateDoc(doc(firestore, 'leave_applications', appId), {
-                    status: 'Rejected',
-                    updatedAt: serverTimestamp(),
-                    approverComment: reason,
-                    rejectedBy: currentEmployeeId
-                });
-                setIsLeaveModalOpen(false);
-                Swal.fire('Rejected', 'The application has been rejected.', 'info');
-            } catch (error) {
-                console.error("Error rejecting leave:", error);
-                Swal.fire('Error', 'Failed to reject application', 'error');
-            }
+    const handleRejectLeave = async (appId: string, reason?: string) => {
+        try {
+            await updateDoc(doc(firestore, 'leave_applications', appId), {
+                status: 'Rejected',
+                updatedAt: serverTimestamp(),
+                approverComment: reason || 'No reason provided',
+                rejectedBy: currentEmployeeId
+            });
+            setIsLeaveModalOpen(false);
+        } catch (error) {
+            console.error("Error rejecting leave:", error);
+            Swal.fire({ title: 'Error', text: 'Failed to reject application', icon: 'error', timer: 3000, showConfirmButton: false });
         }
     };
 
     const handleApproveVisit = async (appId: string) => {
-        Swal.fire({
-            title: 'Approve Visit?',
-            text: "Are you sure you want to approve this visit application?",
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, approve'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await updateDoc(doc(firestore, 'visit_applications', appId), {
-                        status: 'Approved',
-                        updatedAt: serverTimestamp(),
-                        approvedBy: currentEmployeeId
-                    });
-                    setIsVisitModalOpen(false);
-                    Swal.fire('Approved!', 'The application has been approved.', 'success');
-                } catch (error) {
-                    console.error("Error approving visit:", error);
-                    Swal.fire('Error', 'Failed to approve application', 'error');
-                }
-            }
-        });
+        try {
+            await updateDoc(doc(firestore, 'visit_applications', appId), {
+                status: 'Approved',
+                updatedAt: serverTimestamp(),
+                approvedBy: currentEmployeeId
+            });
+            setIsVisitModalOpen(false);
+        } catch (error) {
+            console.error("Error approving visit:", error);
+            Swal.fire({ title: 'Error', text: 'Failed to approve application', icon: 'error', timer: 3000, showConfirmButton: false });
+        }
     };
 
-    const handleRejectVisit = async (appId: string) => {
-        const { value: reason } = await Swal.fire({
-            title: 'Reject Visit',
-            input: 'textarea',
-            inputLabel: 'Reason for rejection',
-            inputPlaceholder: 'Type your reason here...',
-            inputAttributes: {
-                'aria-label': 'Type your reason here'
-            },
-            showCancelButton: true,
-            confirmButtonColor: '#d33'
-        });
-
-        if (reason) {
-            try {
-                await updateDoc(doc(firestore, 'visit_applications', appId), {
-                    status: 'Rejected',
-                    updatedAt: serverTimestamp(),
-                    approverComment: reason,
-                    rejectedBy: currentEmployeeId
-                });
-                setIsVisitModalOpen(false);
-                Swal.fire('Rejected', 'The application has been rejected.', 'info');
-            } catch (error) {
-                console.error("Error rejecting visit:", error);
-                Swal.fire('Error', 'Failed to reject application', 'error');
-            }
+    const handleRejectVisit = async (appId: string, reason?: string) => {
+        try {
+            await updateDoc(doc(firestore, 'visit_applications', appId), {
+                status: 'Rejected',
+                updatedAt: serverTimestamp(),
+                approverComment: reason || 'No reason provided',
+                rejectedBy: currentEmployeeId
+            });
+            setIsVisitModalOpen(false);
+        } catch (error) {
+            console.error("Error rejecting visit:", error);
+            Swal.fire({ title: 'Error', text: 'Failed to reject application', icon: 'error', timer: 3000, showConfirmButton: false });
         }
     };
 
@@ -509,12 +454,11 @@ export default function ApproveApplicationsPage() {
             </div>
 
             {/* Leave Detail Modal */}
-            <Sheet open={isLeaveModalOpen} onOpenChange={setIsLeaveModalOpen}>
-                <SheetContent side="bottom" className="p-0 border-none bg-white max-h-[90vh] rounded-t-[2rem] overflow-y-auto outline-none">
-                    <div className="p-6 pb-10">
+            <Dialog open={isLeaveModalOpen} onOpenChange={setIsLeaveModalOpen}>
+                <DialogContent className="p-0 border-none bg-white max-h-[85vh] max-w-[90vw] rounded-3xl overflow-y-auto">
+                    <div className="p-6 pb-8">
                         <div className="flex justify-between items-start mb-6">
                             <Badge className="bg-amber-100 text-amber-700 font-bold uppercase text-[10px]">Pending</Badge>
-                            {/* Sheet usually has a close button, but we can keep custom one or rely on default */}
                         </div>
 
                         <div className="flex gap-4 mb-6">
@@ -597,16 +541,15 @@ export default function ApproveApplicationsPage() {
                             Applied on {selectedLeave?.createdAt ? format(selectedLeave.createdAt.toDate(), 'dd-MM-yyyy') : '--'}
                         </div>
                     </div>
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
 
             {/* Visit Detail Modal (similar to Leave) */}
-            <Sheet open={isVisitModalOpen} onOpenChange={setIsVisitModalOpen}>
-                <SheetContent side="bottom" className="p-0 border-none bg-white max-h-[90vh] rounded-t-[2rem] overflow-y-auto outline-none">
-                    <div className="p-6 pb-10">
+            <Dialog open={isVisitModalOpen} onOpenChange={setIsVisitModalOpen}>
+                <DialogContent className="p-0 border-none bg-white max-h-[85vh] max-w-[90vw] rounded-3xl overflow-y-auto">
+                    <div className="p-6 pb-8">
                         <div className="flex justify-between items-start mb-6">
                             <Badge className="bg-amber-100 text-amber-700 font-bold uppercase text-[10px]">Pending</Badge>
-                            {/* Sheet usually has a close button */}
                         </div>
 
                         <div className="flex gap-4 mb-6">
@@ -703,20 +646,20 @@ export default function ApproveApplicationsPage() {
                             Applied on {selectedVisit?.createdAt ? format(selectedVisit.createdAt.toDate(), 'dd-MM-yyyy') : '--'}
                         </div>
                     </div>
-                </SheetContent>
-                {/* Filter Sheet */}
-                <MobileFilterSheet
-                    open={isFilterOpen}
-                    onOpenChange={setIsFilterOpen}
-                    onApply={setFilters}
-                    onReset={() => setFilters({ status: 'Pending' })}
-                    showDateRange
-                    showStatus
-                    statusOptions={['All', 'Pending', 'Approved', 'Rejected']}
-                    currentFilters={filters}
-                />
+                </DialogContent>
+            </Dialog>
 
-            </Sheet>
+            {/* Filter Sheet */}
+            <MobileFilterSheet
+                open={isFilterOpen}
+                onOpenChange={setIsFilterOpen}
+                onApply={setFilters}
+                onReset={() => setFilters({ status: 'Pending' })}
+                showDateRange
+                showStatus
+                statusOptions={['All', 'Pending', 'Approved', 'Rejected']}
+                currentFilters={filters}
+            />
         </div>
     );
 }
