@@ -67,10 +67,10 @@ export function InstallPrompt() {
                     </div>
                     <div className="flex-1">
                         <h3 className="text-white font-bold text-base mb-1">
-                            Install NextSEW
+                            Install NextSeW App
                         </h3>
                         <p className="text-white/90 text-sm">
-                            Add to your home screen for quick access
+                            Install to your home screen for quick access
                         </p>
                     </div>
                 </div>

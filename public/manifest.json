@@ -1,7 +1,7 @@
 {
-  "name": "NextSEW HR",
-  "short_name": "NextSEW",
-  "description": "NextSEW HR Management System - Employee Portal",
+  "name": "NextSeW",
+  "short_name": "NextSeW",
+  "description": "NextSeW LC & HR Management System - Employee Portal",
   "start_url": "/mobile/dashboard",
   "display": "standalone",
   "background_color": "#0a1e60",
