@@ -48,6 +48,25 @@ export default function MobilePayrollPage() {
     // Filter State
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState<FilterState>({});
+    const [logoBase64, setLogoBase64] = useState<string | null>(null);
+
+    // Pre-fetch logo as Base64 to avoid CORS issues in PDF generation
+    React.useEffect(() => {
+        if (companyLogoUrl) {
+            const fetchLogo = async () => {
+                try {
+                    const response = await fetch(companyLogoUrl); // Try simple fetch first
+                    const blob = await response.blob();
+                    const reader = new FileReader();
+                    reader.onloadend = () => setLogoBase64(reader.result as string);
+                    reader.readAsDataURL(blob);
+                } catch (error) {
+                    console.error("Error pre-loading logo for PDF:", error);
+                }
+            };
+            fetchLogo();
+        }
+    }, [companyLogoUrl]);
 
     // --- Queries ---
 
@@ -177,7 +196,7 @@ export default function MobilePayrollPage() {
 
             const element = pdfRef.current;
             const canvas = await html2canvas(element, {
-                scale: 2,
+                scale: 1.5,
                 useCORS: true,
                 allowTaint: true,
                 logging: false,
@@ -229,7 +248,7 @@ export default function MobilePayrollPage() {
 
             const element = pdfRef.current;
             const canvas = await html2canvas(element, {
-                scale: 2,
+                scale: 1.5,
                 useCORS: true,
                 allowTaint: true,
                 logging: false,
@@ -520,7 +539,14 @@ export default function MobilePayrollPage() {
                             <div className="flex justify-between items-start mb-8 border-b-2 pb-4">
                                 <div>
                                     <div className="flex items-center gap-3 mb-2">
-                                        {companyLogoUrl && <img src={companyLogoUrl} alt="Logo" crossOrigin="anonymous" className="h-8 w-8 object-contain" />}
+                                        {(logoBase64 || companyLogoUrl) && (
+                                            <img
+                                                src={logoBase64 || companyLogoUrl}
+                                                alt="Logo"
+                                                className="h-8 w-8 object-contain"
+                                                crossOrigin="anonymous"
+                                            />
+                                        )}
                                         <h1 className="text-2xl font-bold">{companyName}</h1>
                                     </div>
                                     <p className="text-sm text-slate-500 max-w-xs">{address}</p>
