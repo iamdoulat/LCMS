@@ -1,15 +1,16 @@
 "use client";
 
-import { AnimatePresence, motion, PanInfo } from 'framer-motion';
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, where, orderBy, addDoc, serverTimestamp, limit } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { ArrowLeft, Banknote, Calendar, Loader2, Download, Eye, Wallet, TrendingUp, TrendingDown, Clock, Printer, X, Plus } from 'lucide-react';
+import { ArrowLeft, Banknote, Calendar, Loader2, Download, Eye, Wallet, TrendingUp, TrendingDown, Clock, Printer, X, Plus, Filter as FilterIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { format } from 'date-fns';
+import { format, getYear, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
+import { DateRange } from 'react-day-picker';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
+import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 export default function MobilePayrollPage() {
     const router = useRouter();
@@ -43,10 +45,14 @@ export default function MobilePayrollPage() {
     const [paymentMethod, setPaymentMethod] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Filter State
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filters, setFilters] = useState<FilterState>({});
+
     // --- Queries ---
 
     // 1. Payslips Query
-    const { data: payslips, isLoading: isLoadingPayslips, error: errorPayslips } = useFirestoreQuery<any[]>(
+    const { data: payslips, isLoading: isLoadingPayslips, error: errorPayslips, refetch: refetchPayslips } = useFirestoreQuery<any[]>(
         currentEmployeeId ? query(
             collection(firestore, 'payslips'),
             where('employeeId', '==', currentEmployeeId),
@@ -81,9 +87,81 @@ export default function MobilePayrollPage() {
         !!user?.uid
     );
 
+    // Filtered Lists Logic (after queries)
+    const filteredPayslips = React.useMemo(() => {
+        if (!payslips) return [];
+        return payslips.filter(slip => {
+            if (filters.year) {
+                let slipYear: number | undefined;
+                if (slip.createdAt?.toDate) {
+                    slipYear = getYear(slip.createdAt.toDate());
+                } else if (slip.payPeriod) {
+                    const parts = slip.payPeriod.split(' ');
+                    if (parts.length > 1) slipYear = parseInt(parts[1]);
+                }
+                if (slipYear && slipYear.toString() !== filters.year) return false;
+            }
+            return true;
+        });
+    }, [payslips, filters.year]);
+
+    const filteredAdvanceRequests = React.useMemo(() => {
+        if (!advanceRequests) return [];
+        return advanceRequests.filter(req => {
+            if (filters.status && filters.status !== 'All') {
+                if (Array.isArray(filters.status)) {
+                    if (!filters.status.includes(req.status)) return false;
+                } else {
+                    if (req.status !== filters.status) return false;
+                }
+            }
+            if (filters.dateRange?.from) {
+                const reqDate = req.applyDate ? parseISO(req.applyDate) : null;
+                if (!reqDate) return false;
+                if (reqDate < startOfDay(filters.dateRange.from)) return false;
+                if (filters.dateRange.to && reqDate > endOfDay(filters.dateRange.to)) return false;
+            }
+            return true;
+        });
+    }, [advanceRequests, filters.status, filters.dateRange]);
+
     const formatMoney = (val: number) => {
         return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(val);
     };
+
+    const refreshData = async () => {
+        await Promise.all([refetchPayslips(), refetchAdvances()]);
+    };
+
+    // Swipe Handling
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe && activeTab === 'salary') {
+            setActiveTab('advance');
+        }
+        if (isRightSwipe && activeTab === 'advance') {
+            setActiveTab('salary');
+        }
+    };
+
+    const containerRef = usePullToRefresh(refreshData);
 
     const handleDownloadPdf = async () => {
         if (!pdfRef.current || !selectedSlip) return;
@@ -208,21 +286,21 @@ export default function MobilePayrollPage() {
             );
         }
         if (errorPayslips) return <div className="p-8 text-center text-rose-500">Failed to load payslips.</div>;
-        if (!payslips || payslips.length === 0) {
+        if (!filteredPayslips || filteredPayslips.length === 0) {
             return (
                 <div className="flex flex-col items-center justify-center pt-32 text-slate-400">
                     <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center mb-6">
                         <Banknote className="h-10 w-10 opacity-30" />
                     </div>
-                    <p className="font-bold text-lg mb-1">No Payslips Yet</p>
-                    <p className="text-sm">generated payslips will appear here.</p>
+                    <p className="font-bold text-lg mb-1">No Payslips Found</p>
+                    <p className="text-sm">Try changing filters or check later.</p>
                 </div>
             );
         }
 
         return (
             <div className="space-y-4">
-                {payslips.map((slip: any) => (
+                {filteredPayslips.map((slip: any) => (
                     <Card
                         key={slip.id}
                         onClick={() => { setSelectedSlip(slip); setIsQuickViewOpen(true); }}
@@ -261,7 +339,7 @@ export default function MobilePayrollPage() {
         }
         if (errorAdvances) return <div className="p-8 text-center text-rose-500">Failed to load payload.</div>;
 
-        if (!advanceRequests || advanceRequests.length === 0) {
+        if (!filteredAdvanceRequests || filteredAdvanceRequests.length === 0) {
             return (
                 <div className="flex flex-col items-center justify-center pt-32 text-slate-400">
                     <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center mb-6">
@@ -275,7 +353,7 @@ export default function MobilePayrollPage() {
 
         return (
             <div className="space-y-4 pb-20">
-                {advanceRequests.map((req: any) => (
+                {filteredAdvanceRequests.map((req: any) => (
                     <Card key={req.id} className="p-4 rounded-3xl border-none shadow-[0_4px_12px_rgb(0,0,0,0.03)] bg-white relative overflow-hidden">
                         <div className="flex justify-between items-start mb-2">
                             <div>
@@ -476,97 +554,92 @@ export default function MobilePayrollPage() {
         );
     };
 
-    // Helper for swipe logic
-    const swipeConfidenceThreshold = 2000; // Reduced from 10000 for easier trigger
-    const swipePower = (offset: number, velocity: number) => {
-        return Math.abs(offset) * velocity;
-    };
-
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
-            {/* Header */}
+            {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 pt-4 pb-2">
-                    <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors text-white">
-                        <ArrowLeft className="h-6 w-6" />
-                    </button>
-                    <h1 className="text-xl font-bold text-white ml-2">Payroll & Advance</h1>
-                </div>
-
-                {/* Tabs Switcher */}
-                <div className="flex items-center px-4 pb-0 mt-2">
+                <div className="flex items-center justify-between px-4 pt-1 pb-6">
+                    <div className="flex items-center">
+                        <button
+                            onClick={() => router.back()}
+                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <ArrowLeft className="h-6 w-6" />
+                        </button>
+                        <h1 className="text-xl font-bold text-white ml-2">Payroll & Advance</h1>
+                    </div>
                     <button
-                        onClick={() => setActiveTab('salary')}
-                        className={cn("flex-1 pb-3 text-sm font-medium transition-all relative",
-                            activeTab === 'salary' ? "text-white" : "text-slate-400 hover:text-slate-200"
+                        onClick={() => setIsFilterOpen(true)}
+                        className={cn(
+                            "p-2 rounded-full transition-all relative",
+                            hasActiveFilters(filters) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
                         )}
                     >
-                        Salary
-                        {activeTab === 'salary' && <motion.span layoutId="activeTab" className="absolute bottom-0 left-0 w-full h-[3px] bg-white rounded-t-full" />}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('advance')}
-                        className={cn("flex-1 pb-3 text-sm font-medium transition-all relative",
-                            activeTab === 'advance' ? "text-white" : "text-slate-400 hover:text-slate-200"
+                        <FilterIcon className="h-5 w-5" />
+                        {hasActiveFilters(filters) && (
+                            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 border-2 border-[#0a1e60]"></span>
                         )}
-                    >
-                        Advance Salary
-                        {activeTab === 'advance' && <motion.span layoutId="activeTab" className="absolute bottom-0 left-0 w-full h-[3px] bg-white rounded-t-full" />}
                     </button>
                 </div>
             </div>
 
-            {/* Content Area with Swipe */}
-            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-hidden relative shadow-[0_-8px_30px_rgb(0,0,0,0.12)]">
-                <AnimatePresence mode="wait" initial={false}>
-                    <motion.div
-                        key={activeTab}
-                        initial={{ x: activeTab === 'advance' ? 300 : -300, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: activeTab === 'advance' ? -300 : 300, opacity: 0 }}
-                        transition={{ ease: "easeInOut", duration: 0.25 }}
-                        className="h-full w-full overflow-y-auto overscroll-contain px-4 py-6 pb-24"
-                        drag="x"
-                        dragConstraints={{ left: 0, right: 0 }}
-                        dragElastic={0.5}
-                        onDragEnd={(e: any, { offset, velocity }: PanInfo) => {
-                            const swipe = swipePower(offset.x, velocity.x);
+            {/* Main White Container - Non-scrollable wrapper */}
+            <div className="flex-1 bg-slate-50 rounded-t-[2rem] flex flex-col overflow-hidden relative">
 
-                            if (swipe < -swipeConfidenceThreshold) {
-                                // Swipe left -> Go to Advance
-                                if (activeTab === 'salary') setActiveTab('advance');
-                            } else if (swipe > swipeConfidenceThreshold) {
-                                // Swipe right -> Go to Salary
-                                if (activeTab === 'advance') setActiveTab('salary');
-                            }
-                        }}
-                    >
-                        {activeTab === 'salary' ? (
-                            <PayslipList />
-                        ) : (
-                            <AdvanceList />
-                        )}
-                    </motion.div>
-                </AnimatePresence>
-
-                {/* FAB for Advance Request */}
-                <AnimatePresence>
-                    {activeTab === 'advance' && (
-                        <motion.div
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0, opacity: 0 }}
-                            className="fixed bottom-24 right-5 z-40"
+                {/* Tabs - Sticky/Fixed at top of white area */}
+                <div className="bg-white px-6 pt-6 pb-2 shrink-0 z-20">
+                    <div className="flex items-center justify-between p-1 bg-slate-50 rounded-full mb-2 shadow-inner">
+                        <button
+                            onClick={() => setActiveTab('salary')}
+                            className={`flex-1 py-3 text-sm font-bold rounded-full transition-all duration-200 ${activeTab === 'salary'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-600'
+                                }`}
                         >
+                            <span className="flex items-center justify-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${activeTab === 'salary' ? 'bg-yellow-400' : 'bg-transparent'}`}></span>
+                                Salary
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('advance')}
+                            className={`flex-1 py-3 text-sm font-bold rounded-full transition-all duration-200 ${activeTab === 'advance'
+                                ? 'bg-white text-blue-600 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                        >
+                            <span className="flex items-center justify-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${activeTab === 'advance' ? 'bg-yellow-400' : 'bg-transparent'}`}></span>
+                                Advance
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Scrollable Content Area */}
+                <div
+                    ref={containerRef}
+                    className="flex-1 overflow-y-auto overscroll-contain px-6 py-4 space-y-4 pb-24" // Added padding-bottom for content visibility behind FAB
+                    onTouchStart={onTouchStart}
+                    onTouchMove={onTouchMove}
+                    onTouchEnd={onTouchEnd}
+                >
+                    {activeTab === 'salary' ? <PayslipList /> : <AdvanceList />}
+                </div>
+
+                {/* FAB for Advance Request - Only shows when activeTab is advance */}
+                {activeTab === 'advance' && (
+                    <div className="absolute bottom-6 right-6 z-40">
+                        <div className="h-14 w-14">
                             <Button
                                 onClick={() => setIsAdvanceRequestOpen(true)}
-                                className="h-14 w-14 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center p-0"
+                                className="h-full w-full rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center p-0"
                             >
                                 <Plus className="h-6 w-6" />
                             </Button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Quick View Sheet (Payslip) */}
@@ -658,6 +731,39 @@ export default function MobilePayrollPage() {
                     </form>
                 </SheetContent>
             </Sheet>
+
+            {/* Filter Sheet */}
+            <MobileFilterSheet
+                open={isFilterOpen}
+                onOpenChange={setIsFilterOpen}
+                onApply={setFilters}
+                onReset={() => setFilters({})}
+                showDateRange={activeTab === 'advance'}
+                showStatus={activeTab === 'advance'}
+                statusOptions={['Pending', 'Approved', 'Rejected']}
+                currentFilters={filters}
+                title={activeTab === 'salary' ? "Filter Payslips" : "Filter Requests"}
+            >
+                {activeTab === 'salary' && (
+                    <div className="space-y-3">
+                        <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Year</h4>
+                        <Select
+                            value={filters.year}
+                            onValueChange={(val) => setFilters(prev => ({ ...prev, year: val }))}
+                        >
+                            <SelectTrigger className="w-full h-12 rounded-xl border-slate-200">
+                                <SelectValue placeholder="Select Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {[0, 1, 2, 3].map(i => {
+                                    const y = new Date().getFullYear() - i;
+                                    return <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                                })}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+            </MobileFilterSheet>
         </div>
     );
 }

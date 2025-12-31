@@ -6,6 +6,9 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, onSnapshot, orderBy, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { format, parseISO } from 'date-fns';
+import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
+import { DateRange } from 'react-day-picker';
+import { startOfDay, endOfDay } from 'date-fns';
 import {
     ArrowLeft,
     Plus,
@@ -18,11 +21,11 @@ import {
     CheckCircle2,
     Timer,
     Users,
-    MessageSquare
+    MessageSquare,
+    Filter as FilterIcon
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
 import { MobileVisitForm } from '@/components/mobile/MobileVisitForm';
+import { cn } from '@/lib/utils';
 import type { VisitApplicationDocument } from '@/types';
 
 export default function MobileVisitApplicationsPage() {
@@ -31,6 +34,35 @@ export default function MobileVisitApplicationsPage() {
     const [visits, setVisits] = useState<VisitApplicationDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [isFormOpen, setIsFormOpen] = useState(false);
+
+    // Filter State
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filters, setFilters] = useState<FilterState>({});
+
+    // Filter Logic
+    const filteredVisits = React.useMemo(() => {
+        return visits.filter(visit => {
+            // Status Filter
+            if (filters.status && filters.status !== 'All') {
+                if (Array.isArray(filters.status)) {
+                    if (!filters.status.includes(visit.status)) return false;
+                } else {
+                    if (visit.status !== filters.status) return false;
+                }
+            }
+
+            // Date Range Filter
+            if (filters.dateRange?.from) {
+                const visitDate = visit.fromDate ? parseISO(visit.fromDate) : null;
+                if (!visitDate) return false;
+
+                if (visitDate < startOfDay(filters.dateRange.from)) return false;
+                if (filters.dateRange.to && visitDate > endOfDay(filters.dateRange.to)) return false;
+            }
+
+            return true;
+        });
+    }, [visits, filters]);
 
     const fetchData = async () => {
         if (!user?.email) return;
@@ -137,21 +169,35 @@ export default function MobileVisitApplicationsPage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden relative">
             {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 pt-1 pb-6">
+                <div className="flex items-center justify-between px-4 pt-1 pb-6">
+                    <div className="flex items-center">
+                        <button
+                            onClick={() => router.back()}
+                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <ArrowLeft className="h-6 w-6" />
+                        </button>
+                        <h1 className="text-xl font-bold text-white ml-2">Visit Applications</h1>
+                    </div>
                     <button
-                        onClick={() => router.back()}
-                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                        onClick={() => setIsFilterOpen(true)}
+                        className={cn(
+                            "p-2 rounded-full transition-all relative",
+                            hasActiveFilters(filters) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                        )}
                     >
-                        <ArrowLeft className="h-6 w-6" />
+                        <FilterIcon className="h-5 w-5" />
+                        {hasActiveFilters(filters) && (
+                            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 border-2 border-[#0a1e60]"></span>
+                        )}
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2">Visit Applications</h1>
                 </div>
             </div>
 
             <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative">
                 <div className="px-6 pt-8 pb-32 space-y-4">
-                    {visits.length > 0 ? (
-                        visits.map((visit) => {
+                    {filteredVisits.length > 0 ? (
+                        filteredVisits.map((visit) => {
                             const isApproved = visit.status === 'Approved';
                             const isPending = visit.status === 'Pending';
                             const isRejected = visit.status === 'Rejected';
@@ -249,6 +295,18 @@ export default function MobileVisitApplicationsPage() {
             >
                 <Plus className="h-8 w-8" />
             </button>
+
+            {/* Filter Sheet */}
+            <MobileFilterSheet
+                open={isFilterOpen}
+                onOpenChange={setIsFilterOpen}
+                onApply={setFilters}
+                onReset={() => setFilters({})}
+                showDateRange
+                showStatus
+                statusOptions={['Pending', 'Approved', 'Rejected']}
+                currentFilters={filters}
+            />
 
             {/* Application Form Modal */}
             <MobileVisitForm

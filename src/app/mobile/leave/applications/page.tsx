@@ -5,14 +5,16 @@ import { useRouter } from 'next/navigation';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Plus, Calendar as CalendarIcon, Info } from 'lucide-react';
+import { ArrowLeft, Plus, Calendar as CalendarIcon, Info, Filter as FilterIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { format, parseISO, differenceInCalendarDays } from 'date-fns';
+import { format, parseISO, differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
 import type { LeaveApplicationDocument, EmployeeDocument } from '@/types';
 import { cn } from '@/lib/utils';
+import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
+import { DateRange } from 'react-day-picker';
 
 export default function MyLeaveApplicationsPage() {
     const router = useRouter();
@@ -22,6 +24,10 @@ export default function MyLeaveApplicationsPage() {
     const [employeeData, setEmployeeData] = useState<EmployeeDocument | null>(null);
     const [selectedApp, setSelectedApp] = useState<LeaveApplicationDocument | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Filter State
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filters, setFilters] = useState<FilterState>({});
 
     useEffect(() => {
         const fetchEmployeeData = async () => {
@@ -118,18 +124,59 @@ export default function MyLeaveApplicationsPage() {
         }
     };
 
+    // Filter Logic
+    const filteredApplications = React.useMemo(() => {
+        return applications.filter(app => {
+            // Status Filter
+            if (filters.status && filters.status !== 'All') {
+                // Handle array or string status
+                if (Array.isArray(filters.status)) {
+                    if (!filters.status.includes(app.status)) return false;
+                } else {
+                    if (app.status !== filters.status) return false;
+                }
+            }
+
+            // Date Range Filter
+            if (filters.dateRange?.from) {
+                const appDate = app.fromDate ? parseISO(app.fromDate) : null;
+                if (!appDate) return false;
+
+                if (appDate < startOfDay(filters.dateRange.from)) return false;
+                if (filters.dateRange.to && appDate > endOfDay(filters.dateRange.to)) return false;
+            }
+
+            return true;
+        });
+    }, [applications, filters]);
+
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 pt-1 pb-6">
+                <div className="flex items-center justify-between px-4 pt-1 pb-6">
+                    <div className="flex items-center">
+                        <button
+                            onClick={() => router.back()}
+                            className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors text-white"
+                        >
+                            <ArrowLeft className="h-6 w-6" />
+                        </button>
+                        <h1 className="text-xl font-bold text-white ml-2">My Leave Applications</h1>
+                    </div>
+
                     <button
-                        onClick={() => router.back()}
-                        className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors text-white"
+                        onClick={() => setIsFilterOpen(true)}
+                        className={cn(
+                            "p-2 rounded-full transition-all relative",
+                            hasActiveFilters(filters) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                        )}
                     >
-                        <ArrowLeft className="h-6 w-6" />
+                        <FilterIcon className="h-5 w-5" />
+                        {hasActiveFilters(filters) && (
+                            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 border-2 border-[#0a1e60]"></span>
+                        )}
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2">My Leave Applications</h1>
                 </div>
             </div>
 
@@ -149,8 +196,8 @@ export default function MyLeaveApplicationsPage() {
                             </div>
                         </Card>
                     ))
-                ) : applications.length > 0 ? (
-                    applications.map(app => (
+                ) : filteredApplications.length > 0 ? (
+                    filteredApplications.map(app => (
                         <Card
                             key={app.id}
                             className={cn(
@@ -209,6 +256,18 @@ export default function MyLeaveApplicationsPage() {
             >
                 <Plus className="h-6 w-6" />
             </button>
+
+            {/* Filter Sheet */}
+            <MobileFilterSheet
+                open={isFilterOpen}
+                onOpenChange={setIsFilterOpen}
+                onApply={setFilters}
+                onReset={() => setFilters({})}
+                showDateRange
+                showStatus
+                statusOptions={['Pending', 'Approved', 'Rejected']}
+                currentFilters={filters}
+            />
 
             {/* Quick View Modal */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

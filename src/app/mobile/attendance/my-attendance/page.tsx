@@ -6,11 +6,14 @@ import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { format, parseISO } from 'date-fns';
-import { Edit2, Clock, Coffee, AlertCircle, ArrowLeft } from 'lucide-react';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { Edit2, Clock, Coffee, AlertCircle, ArrowLeft, Filter as FilterIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
+import { DateRange } from 'react-day-picker';
+import { cn } from '@/lib/utils';
 
 interface AttendanceRecord {
     id: string;
@@ -42,6 +45,10 @@ export default function MyAttendancePage() {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
+    // Filter State
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filters, setFilters] = useState<FilterState>({});
+
     const fetchAttendance = async () => {
         const queryIds = [currentEmployeeId, user?.uid].filter((id): id is string => !!id);
         if (queryIds.length === 0) return;
@@ -49,10 +56,23 @@ export default function MyAttendancePage() {
         setLoading(true);
         try {
             // Use 'in' operator to pick up records saved under either UID or doc ID
-            const q = query(
+            let q = query(
                 collection(firestore, 'attendance'),
                 where('employeeId', 'in', queryIds)
             );
+
+            // Date Range Filter
+            if (filters.dateRange?.from) {
+                // Assuming date is stored as YYYY-MM-DD string
+                const fromStr = format(filters.dateRange.from, 'yyyy-MM-dd');
+                q = query(q, where('date', '>=', fromStr));
+
+                if (filters.dateRange.to) {
+                    const toStr = format(filters.dateRange.to, 'yyyy-MM-dd');
+                    q = query(q, where('date', '<=', toStr));
+                }
+            }
+
             const snapshot = await getDocs(q);
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
 
@@ -78,10 +98,32 @@ export default function MyAttendancePage() {
         setLoading(true);
         try {
             // Fetch records for employee using 'in' operator for resilience
-            const q = query(
+            // Fetch records for employee using 'in' operator for resilience
+            let q = query(
                 collection(firestore, 'break_time'),
                 where('employeeId', 'in', queryIds)
             );
+
+            // Date Range Filter (Assuming break records also have 'date' field YYYY-MM-DD or similar logic)
+            if (filters.dateRange?.from) {
+                const fromStr = format(filters.dateRange.from, 'yyyy-MM-dd');
+                q = query(q, where('date', '>=', fromStr));
+
+                if (filters.dateRange.to) {
+                    const toStr = format(filters.dateRange.to, 'yyyy-MM-dd');
+                    q = query(q, where('date', '<=', toStr));
+                }
+            }
+
+            // Status Filter
+            if (filters.status && filters.status !== 'All') {
+                if (Array.isArray(filters.status)) {
+                    q = query(q, where('status', 'in', filters.status));
+                } else {
+                    q = query(q, where('status', '==', filters.status));
+                }
+            }
+
             const snapshot = await getDocs(q);
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BreakRecord));
 
@@ -106,7 +148,7 @@ export default function MyAttendancePage() {
             if (activeTab === 'attendance') fetchAttendance();
             else fetchBreaks();
         }
-    }, [currentEmployeeId, activeTab]);
+    }, [currentEmployeeId, activeTab, filters]);
 
     const refreshData = async () => {
         if (currentEmployeeId) {
@@ -180,14 +222,28 @@ export default function MyAttendancePage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 pt-1 pb-6">
+                <div className="flex items-center justify-between px-4 pt-1 pb-6">
+                    <div className="flex items-center">
+                        <button
+                            onClick={() => router.back()}
+                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <ArrowLeft className="h-6 w-6" />
+                        </button>
+                        <h1 className="text-xl font-bold text-white ml-2">My Attendance</h1>
+                    </div>
                     <button
-                        onClick={() => router.back()}
-                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                        onClick={() => setIsFilterOpen(true)}
+                        className={cn(
+                            "p-2 rounded-full transition-all relative",
+                            hasActiveFilters(filters) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                        )}
                     >
-                        <ArrowLeft className="h-6 w-6" />
+                        <FilterIcon className="h-5 w-5" />
+                        {hasActiveFilters(filters) && (
+                            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 border-2 border-[#0a1e60]"></span>
+                        )}
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2">My Attendance</h1>
                 </div>
             </div>
 
@@ -339,6 +395,18 @@ export default function MyAttendancePage() {
                     )}
                 </div>
             </div>
+
+            {/* Filter Sheet */}
+            <MobileFilterSheet
+                open={isFilterOpen}
+                onOpenChange={setIsFilterOpen}
+                onApply={setFilters}
+                onReset={() => setFilters({})}
+                showDateRange={true}
+                showStatus={activeTab === 'break'}
+                statusOptions={['pending', 'approved', 'rejected']}
+                currentFilters={filters}
+            />
         </div>
     );
 }

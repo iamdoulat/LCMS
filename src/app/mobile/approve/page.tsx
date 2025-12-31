@@ -35,18 +35,13 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-    DialogFooter
-} from '@/components/ui/dialog';
-import { format, parseISO, isValid, differenceInCalendarDays } from 'date-fns';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { format, parseISO, isValid, differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
+import { DateRange } from 'react-day-picker';
 import type {
     LeaveApplicationDocument,
     VisitApplicationDocument,
@@ -69,6 +64,35 @@ export default function ApproveApplicationsPage() {
     const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
     const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
 
+    // Filter State - Default to Pending
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filters, setFilters] = useState<FilterState>({ status: 'Pending' });
+
+    // Computed filtered lists (Date Range Logic)
+    const filteredLeaveApps = React.useMemo(() => {
+        return leaveApps.filter(app => {
+            if (filters.dateRange?.from) {
+                const appDate = app.fromDate ? parseISO(app.fromDate) : null;
+                if (!appDate) return false;
+                if (appDate < startOfDay(filters.dateRange.from)) return false;
+                if (filters.dateRange.to && appDate > endOfDay(filters.dateRange.to)) return false;
+            }
+            return true;
+        });
+    }, [leaveApps, filters.dateRange]);
+
+    const filteredVisitApps = React.useMemo(() => {
+        return visitApps.filter(app => {
+            if (filters.dateRange?.from) {
+                const appDate = app.fromDate ? parseISO(app.fromDate) : null;
+                if (!appDate) return false;
+                if (appDate < startOfDay(filters.dateRange.from)) return false;
+                if (filters.dateRange.to && appDate > endOfDay(filters.dateRange.to)) return false;
+            }
+            return true;
+        });
+    }, [visitApps, filters.dateRange]);
+
     // Fetch team applications
     useEffect(() => {
         if (!supervisedEmployeeIds.length) {
@@ -79,16 +103,18 @@ export default function ApproveApplicationsPage() {
         setLoading(true);
 
         // Fetch Leave Applications
-        const qLeave = query(
-            collection(firestore, 'leave_applications'),
-            where('status', '==', 'Pending')
-        );
+        let qLeave = collection(firestore, 'leave_applications') as any; // Cast for flexibility
 
-        const unsubLeave = onSnapshot(qLeave, (snapshot) => {
+        const targetStatus = filters.status || 'Pending';
+        if (targetStatus !== 'All') {
+            qLeave = query(qLeave, where('status', '==', targetStatus));
+        }
+
+        const unsubLeave = onSnapshot(qLeave, (snapshot: any) => {
             console.log("ApprovePage: Leave snapshot received, size:", snapshot.size);
             const apps = snapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument))
-                .filter(app => supervisedEmployeeIds.includes(app.employeeId));
+                .map((doc: any) => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument))
+                .filter((app: LeaveApplicationDocument) => supervisedEmployeeIds.includes(app.employeeId));
 
             // Client-side sort
             const sortedApps = [...apps].sort((a, b) => {
@@ -100,22 +126,23 @@ export default function ApproveApplicationsPage() {
             console.log("ApprovePage: Filtered & sorted leave apps:", sortedApps.length);
             setLeaveApps(sortedApps);
             setLoading(false);
-        }, (error) => {
+        }, (error: any) => {
             console.error("ApprovePage: Error fetching leave apps:", error);
             setLoading(false);
         });
 
         // Fetch Visit Applications
-        const qVisit = query(
-            collection(firestore, 'visit_applications'),
-            where('status', '==', 'Pending')
-        );
+        let qVisit = collection(firestore, 'visit_applications') as any;
 
-        const unsubVisit = onSnapshot(qVisit, (snapshot) => {
+        if (targetStatus !== 'All') {
+            qVisit = query(qVisit, where('status', '==', targetStatus));
+        }
+
+        const unsubVisit = onSnapshot(qVisit, (snapshot: any) => {
             console.log("ApprovePage: Visit snapshot received, size:", snapshot.size);
             const apps = snapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument))
-                .filter(app => supervisedEmployeeIds.includes(app.employeeId));
+                .map((doc: any) => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument))
+                .filter((app: VisitApplicationDocument) => supervisedEmployeeIds.includes(app.employeeId));
 
             // Client-side sort
             const sortedApps = [...apps].sort((a, b) => {
@@ -126,7 +153,7 @@ export default function ApproveApplicationsPage() {
 
             console.log("ApprovePage: Filtered & sorted visit apps:", sortedApps.length);
             setVisitApps(sortedApps);
-        }, (error) => {
+        }, (error: any) => {
             console.error("ApprovePage: Error fetching visit apps:", error);
         });
 
@@ -151,7 +178,7 @@ export default function ApproveApplicationsPage() {
             unsubLeave();
             unsubVisit();
         };
-    }, [supervisedEmployeeIds]);
+    }, [supervisedEmployeeIds, filters.status]);
 
     const handleApproveLeave = async (appId: string) => {
         Swal.fire({
@@ -388,14 +415,29 @@ export default function ApproveApplicationsPage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 pt-1 pb-6">
+                <div className="flex items-center justify-between px-4 pt-1 pb-6">
+                    <div className="flex items-center">
+                        <button
+                            onClick={() => router.back()}
+                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <ArrowLeft className="h-6 w-6" />
+                        </button>
+                        <h1 className="text-xl font-bold text-white ml-2">Approve Applications</h1>
+                    </div>
                     <button
-                        onClick={() => router.back()}
-                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                        onClick={() => setIsFilterOpen(true)}
+                        className={cn(
+                            "p-2 rounded-full transition-all relative",
+                            /* Since default is Pending, only show active dot if DateRange is set or status is NOT Pending (i.e. user modified default) */
+                            (filters.dateRange?.from || (filters.status && filters.status !== 'Pending')) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                        )}
                     >
-                        <ArrowLeft className="h-6 w-6" />
+                        <Filter className="h-5 w-5" />
+                        {(filters.dateRange?.from || (filters.status && filters.status !== 'Pending')) && (
+                            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 border-2 border-[#0a1e60]"></span>
+                        )}
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2">Approve Applications</h1>
                 </div>
             </div>
 
@@ -451,8 +493,8 @@ export default function ApproveApplicationsPage() {
                                 </div>
                             </Card>
                         ))
-                    ) : (activeTab === 'leave' ? leaveApps : visitApps).length > 0 ? (
-                        (activeTab === 'leave' ? leaveApps : visitApps).map(app => (
+                    ) : (activeTab === 'leave' ? filteredLeaveApps : filteredVisitApps).length > 0 ? (
+                        (activeTab === 'leave' ? filteredLeaveApps : filteredVisitApps).map(app => (
                             <ApplicationCard key={app.id} app={app} type={activeTab} />
                         ))
                     ) : (
@@ -467,14 +509,12 @@ export default function ApproveApplicationsPage() {
             </div>
 
             {/* Leave Detail Modal */}
-            <Dialog open={isLeaveModalOpen} onOpenChange={setIsLeaveModalOpen}>
-                <DialogContent className="p-0 border-none bg-white max-w-[90vw] rounded-[2rem] overflow-hidden">
-                    <div className="p-6">
+            <Sheet open={isLeaveModalOpen} onOpenChange={setIsLeaveModalOpen}>
+                <SheetContent side="bottom" className="p-0 border-none bg-white max-h-[90vh] rounded-t-[2rem] overflow-y-auto outline-none">
+                    <div className="p-6 pb-10">
                         <div className="flex justify-between items-start mb-6">
                             <Badge className="bg-amber-100 text-amber-700 font-bold uppercase text-[10px]">Pending</Badge>
-                            <button onClick={() => setIsLeaveModalOpen(false)} className="text-slate-400 p-1">
-                                <XCircle className="h-6 w-6" />
-                            </button>
+                            {/* Sheet usually has a close button, but we can keep custom one or rely on default */}
                         </div>
 
                         <div className="flex gap-4 mb-6">
@@ -557,18 +597,16 @@ export default function ApproveApplicationsPage() {
                             Applied on {selectedLeave?.createdAt ? format(selectedLeave.createdAt.toDate(), 'dd-MM-yyyy') : '--'}
                         </div>
                     </div>
-                </DialogContent>
-            </Dialog>
+                </SheetContent>
+            </Sheet>
 
             {/* Visit Detail Modal (similar to Leave) */}
-            <Dialog open={isVisitModalOpen} onOpenChange={setIsVisitModalOpen}>
-                <DialogContent className="p-0 border-none bg-white max-w-[90vw] rounded-[2rem] overflow-hidden">
-                    <div className="p-6">
+            <Sheet open={isVisitModalOpen} onOpenChange={setIsVisitModalOpen}>
+                <SheetContent side="bottom" className="p-0 border-none bg-white max-h-[90vh] rounded-t-[2rem] overflow-y-auto outline-none">
+                    <div className="p-6 pb-10">
                         <div className="flex justify-between items-start mb-6">
                             <Badge className="bg-amber-100 text-amber-700 font-bold uppercase text-[10px]">Pending</Badge>
-                            <button onClick={() => setIsVisitModalOpen(false)} className="text-slate-400 p-1">
-                                <XCircle className="h-6 w-6" />
-                            </button>
+                            {/* Sheet usually has a close button */}
                         </div>
 
                         <div className="flex gap-4 mb-6">
@@ -665,8 +703,20 @@ export default function ApproveApplicationsPage() {
                             Applied on {selectedVisit?.createdAt ? format(selectedVisit.createdAt.toDate(), 'dd-MM-yyyy') : '--'}
                         </div>
                     </div>
-                </DialogContent>
-            </Dialog>
+                </SheetContent>
+                {/* Filter Sheet */}
+                <MobileFilterSheet
+                    open={isFilterOpen}
+                    onOpenChange={setIsFilterOpen}
+                    onApply={setFilters}
+                    onReset={() => setFilters({ status: 'Pending' })}
+                    showDateRange
+                    showStatus
+                    statusOptions={['All', 'Pending', 'Approved', 'Rejected']}
+                    currentFilters={filters}
+                />
+
+            </Sheet>
         </div>
     );
 }

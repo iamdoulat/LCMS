@@ -17,13 +17,17 @@ import { firestore } from '@/lib/firebase/config';
 import {
     startOfWeek,
     endOfWeek,
+    startOfMonth,
+    endOfMonth,
     eachDayOfInterval,
     format,
     isSameDay,
     isFriday,
     isBefore,
     isAfter,
-    startOfDay
+    startOfDay,
+    isWithinInterval,
+    parseISO
 } from 'date-fns';
 
 export default function MobileAttendancePage() {
@@ -37,14 +41,16 @@ export default function MobileAttendancePage() {
         present: 0,
         delay: 0,
         weekend: 0,
+        holiday: 0,
         leave: 0,
         absent: 0
     });
     const [loading, setLoading] = useState(true);
+    const [periodFilter, setPeriodFilter] = useState<'weekly' | 'monthly'>('weekly');
 
-    const fetchWeeklySummary = async () => {
+    const fetchAttendanceSummary = async (period: 'weekly' | 'monthly' = 'weekly') => {
         if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) {
-            setAttendanceData({ present: 0, delay: 0, weekend: 0, leave: 0, absent: 0 });
+            setAttendanceData({ present: 0, delay: 0, weekend: 0, holiday: 0, leave: 0, absent: 0 });
             setLoading(false);
             return;
         }
@@ -52,8 +58,15 @@ export default function MobileAttendancePage() {
         setLoading(true);
         try {
             const today = new Date();
-            const start = startOfWeek(today, { weekStartsOn: 6 }); // Week starts on Saturday
-            const end = endOfWeek(today, { weekStartsOn: 6 });
+            let start, end;
+
+            if (period === 'weekly') {
+                start = startOfWeek(today, { weekStartsOn: 6 }); // Week starts on Saturday
+                end = endOfWeek(today, { weekStartsOn: 6 });
+            } else {
+                start = startOfMonth(today);
+                end = endOfMonth(today);
+            }
             const weekDays = eachDayOfInterval({ start, end });
 
             // 1. Fetch Attendance Records for supervised employees
@@ -101,6 +114,7 @@ export default function MobileAttendancePage() {
             let present = 0;
             let delay = 0;
             let weekend = 0;
+            let holiday = 0;
             let leave = 0;
             let absent = 0;
 
@@ -138,30 +152,43 @@ export default function MobileAttendancePage() {
                         return;
                     }
 
-                    // 3. Check Holiday/Weekend
+                    // 3. Check Holiday (separate from weekend)
+                    // Holidays use fromDate and toDate (ISO strings)
                     const isHoliday = holidays.some((h: any) => {
-                        const holidayDate = h.date?.toDate ? format(h.date.toDate(), 'yyyy-MM-dd') : h.date;
-                        return holidayDate === dateStr;
+                        try {
+                            const holidayStart = parseISO(h.fromDate);
+                            const holidayEnd = h.toDate ? parseISO(h.toDate) : holidayStart;
+                            return isWithinInterval(day, { start: holidayStart, end: holidayEnd });
+                        } catch (error) {
+                            console.error('Error parsing holiday date:', h, error);
+                            return false;
+                        }
                     });
-                    const isWeekend = isFriday(day);
 
-                    if (isHoliday || isWeekend) {
+                    if (isHoliday) {
+                        holiday++;
+                        return;
+                    }
+
+                    // 4. Check Weekend (only Friday)
+                    const isWeekend = isFriday(day);
+                    if (isWeekend) {
                         weekend++;
                         return;
                     }
 
-                    // 4. Default to Absent if day is <= today
+                    // 5. Default to Absent if day is <= today
                     if (!isAfter(startOfDay(day), startOfDay(today))) {
                         absent++;
                     }
                 });
             });
 
-            setAttendanceData({ present, delay, weekend, leave, absent });
+            setAttendanceData({ present, delay, weekend, holiday, leave, absent });
 
         } catch (error) {
-            console.error("[ATTENDANCE] Error fetching weekly summary:", error);
-            setAttendanceData({ present: 0, delay: 0, weekend: 0, leave: 0, absent: 0 });
+            console.error("[ATTENDANCE] Error fetching attendance summary:", error);
+            setAttendanceData({ present: 0, delay: 0, weekend: 0, holiday: 0, leave: 0, absent: 0 });
         } finally {
             setLoading(false);
         }
@@ -169,12 +196,12 @@ export default function MobileAttendancePage() {
 
     useEffect(() => {
         if (supervisedEmployeeIds && supervisedEmployeeIds.length > 0) {
-            fetchWeeklySummary();
+            fetchAttendanceSummary(periodFilter);
         } else {
             setLoading(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [supervisedEmployeeIds.length]);
+    }, [supervisedEmployeeIds.length, periodFilter]);
 
 
     const handleRefresh = async () => {
@@ -186,18 +213,19 @@ export default function MobileAttendancePage() {
         } catch (err) {
         }
 
-        await fetchWeeklySummary();
+        await fetchAttendanceSummary(periodFilter);
         setIsRefreshing(false);
         setPullDistance(0);
     };
 
     // Calculate donut chart segments
-    const total = attendanceData.present + attendanceData.delay + attendanceData.weekend + attendanceData.leave + attendanceData.absent;
+    const total = attendanceData.present + attendanceData.delay + attendanceData.weekend + attendanceData.holiday + attendanceData.leave + attendanceData.absent;
     const safeTotal = total === 0 ? 1 : total; // Prevent division by zero
 
     const presentAngle = (attendanceData.present / safeTotal) * 360;
     const delayAngle = (attendanceData.delay / safeTotal) * 360;
     const weekendAngle = (attendanceData.weekend / safeTotal) * 360;
+    const holidayAngle = (attendanceData.holiday / safeTotal) * 360;
     const leaveAngle = (attendanceData.leave / safeTotal) * 360;
     const absentAngle = (attendanceData.absent / safeTotal) * 360;
 
@@ -267,9 +295,34 @@ export default function MobileAttendancePage() {
                 </div>
 
                 <div className="px-6 pt-6 pb-24 space-y-6">
-                    {/* Subordinate's Weekly Summary */}
+                    {/* Subordinate's Summary with Period Filter */}
                     <div className="bg-white rounded-2xl p-6 shadow-sm">
-                        <h2 className="text-lg font-bold text-slate-800 mb-6">Subordinate's Weekly Summary</h2>
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-lg font-bold text-slate-800">
+                                Subordinate's {periodFilter === 'weekly' ? 'Weekly' : 'Monthly'} Summary
+                            </h2>
+
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setPeriodFilter('weekly')}
+                                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${periodFilter === 'weekly'
+                                        ? 'bg-blue-600 text-white shadow-sm'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                >
+                                    Weekly
+                                </button>
+                                <button
+                                    onClick={() => setPeriodFilter('monthly')}
+                                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${periodFilter === 'monthly'
+                                        ? 'bg-blue-600 text-white shadow-sm'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                >
+                                    Monthly
+                                </button>
+                            </div>
+                        </div>
 
                         {loading ? (
                             <div className="flex justify-center py-10">
@@ -342,6 +395,19 @@ export default function MobileAttendancePage() {
                                                 className="transition-all duration-500"
                                             />
 
+                                            {/* Holiday segment (pink) */}
+                                            <circle
+                                                cx="50"
+                                                cy="50"
+                                                r={radius}
+                                                fill="none"
+                                                stroke="#ec4899"
+                                                strokeWidth="15"
+                                                strokeDasharray={`${(holidayAngle / 360) * circumference} ${circumference}`}
+                                                strokeDashoffset={`-${((presentAngle + delayAngle + weekendAngle) / 360) * circumference}`}
+                                                className="transition-all duration-500"
+                                            />
+
                                             {/* Leave segment (cyan) */}
                                             <circle
                                                 cx="50"
@@ -351,7 +417,7 @@ export default function MobileAttendancePage() {
                                                 stroke="#06b6d4"
                                                 strokeWidth="15"
                                                 strokeDasharray={`${(leaveAngle / 360) * circumference} ${circumference}`}
-                                                strokeDashoffset={`-${((presentAngle + delayAngle + weekendAngle) / 360) * circumference}`}
+                                                strokeDashoffset={`-${((presentAngle + delayAngle + weekendAngle + holidayAngle) / 360) * circumference}`}
                                                 className="transition-all duration-500"
                                             />
 
@@ -364,7 +430,7 @@ export default function MobileAttendancePage() {
                                                 stroke="#ef4444"
                                                 strokeWidth="15"
                                                 strokeDasharray={`${(absentAngle / 360) * circumference} ${circumference}`}
-                                                strokeDashoffset={`-${((presentAngle + delayAngle + weekendAngle + leaveAngle) / 360) * circumference}`}
+                                                strokeDashoffset={`-${((presentAngle + delayAngle + weekendAngle + holidayAngle + leaveAngle) / 360) * circumference}`}
                                                 className="transition-all duration-500"
                                             />
                                         </svg>
@@ -399,6 +465,13 @@ export default function MobileAttendancePage() {
                                             <span className="text-sm font-medium text-slate-700">Weekend</span>
                                         </div>
                                         <span className="text-sm font-bold text-slate-700">{attendanceData.weekend}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+                                            <span className="text-sm font-medium text-slate-700">Holiday</span>
+                                        </div>
+                                        <span className="text-sm font-bold text-slate-700">{attendanceData.holiday}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">

@@ -33,7 +33,7 @@ import type { CheckInOutType, MultipleCheckInOutRecord, MultipleCheckInOutLocati
 import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord, reverseGeocode, getCheckInOutRecords } from '@/lib/firebase/checkInOut';
 import { startBreak, stopBreak } from '@/lib/firebase/breakTime';
 import type { BreakTimeRecord } from '@/types/breakTime';
-import { format, isWithinInterval, parseISO, startOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min, getDate, isSameMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
+import { format, isWithinInterval, parseISO, startOfDay, endOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min, getDate, isSameMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
@@ -263,6 +263,34 @@ export default function AccountDetailsPage() {
   const [activeBreakRecord, setActiveBreakRecord] = useState<BreakTimeRecord | null>(null);
   const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
 
+  // Filters State
+  const [leaveFilter, setLeaveFilter] = useState({
+    dateRange: {
+      from: startOfYear(new Date()),
+      to: endOfYear(new Date())
+    } as DateRange | undefined,
+    status: 'All'
+  });
+
+  const [visitFilter, setVisitFilter] = useState({
+    dateRange: {
+      from: startOfYear(new Date()),
+      to: endOfYear(new Date())
+    } as DateRange | undefined,
+    status: 'All'
+  });
+
+  const [advanceFilter, setAdvanceFilter] = useState({
+    dateRange: {
+      from: startOfYear(new Date()),
+      to: endOfYear(new Date())
+    } as DateRange | undefined,
+    status: 'All'
+  });
+
+  const [payslipYear, setPayslipYear] = useState<string>(new Date().getFullYear().toString());
+  const [leaveStatusYear, setLeaveStatusYear] = useState<string>(new Date().getFullYear().toString());
+
   // Fetch Branch Data
   useEffect(() => {
     const fetchBranch = async () => {
@@ -327,8 +355,10 @@ export default function AccountDetailsPage() {
     if (!leaveGroup) return [];
 
     const today = new Date();
-    const startOfCurrentYear = startOfYear(today);
-    const endOfCurrentYear = endOfYear(today);
+    // Use selected year for balance calculation
+    const selectedYearDate = new Date(parseInt(leaveStatusYear), 0, 1);
+    const startOfCurrentYear = startOfYear(selectedYearDate);
+    const endOfCurrentYear = endOfYear(selectedYearDate);
 
     return leaveGroup.policies.map(policy => {
       let usedDays = 0;
@@ -356,7 +386,7 @@ export default function AccountDetailsPage() {
         balance: policy.allowedBalance - usedDays
       };
     });
-  }, [leaveGroup, leaves]);
+  }, [leaveGroup, leaves, leaveStatusYear]);
 
 
   // Fetch reconciliations when employee data is loaded
@@ -2591,6 +2621,19 @@ export default function AccountDetailsPage() {
                   />
                   <Label htmlFor="view-mode" className={cn("text-sm font-medium", viewMode === 'graph' ? "text-primary" : "text-muted-foreground")}>Graph</Label>
                 </div>
+                <div className="ml-4 w-[120px]">
+                  <Select value={leaveStatusYear} onValueChange={setLeaveStatusYear}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 5 }, (_, i) => {
+                        const year = (new Date().getFullYear() - i).toString();
+                        return <SelectItem key={year} value={year}>{year}</SelectItem>;
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -2690,141 +2733,277 @@ export default function AccountDetailsPage() {
         )}
 
         <Card className="shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <Plane className="h-6 w-6 text-primary" />
-                Leave Applications
-              </CardTitle>
-              <CardDescription>Your recent leave applications.</CardDescription>
+          <CardHeader className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                  <Plane className="h-6 w-6 text-primary" />
+                  Leave Applications
+                </CardTitle>
+                <CardDescription>Your recent leave applications.</CardDescription>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                <Select value={leaveFilter.status} onValueChange={(val) => setLeaveFilter(prev => ({ ...prev, status: val }))}>
+                  <SelectTrigger className="w-full sm:w-[130px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Status</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <DatePickerWithRange
+                  date={leaveFilter.dateRange}
+                  onDateChange={(range) => setLeaveFilter(prev => ({ ...prev, dateRange: range }))}
+                  className="w-full sm:w-auto"
+                />
+                <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/leaves/add")}>
+                  <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/leaves/add"}>
+                    <PlusCircle className="mr-2 h-4 w-4" />Apply
+                  </Link>
+                </Button>
+              </div>
             </div>
-            <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/leaves/add")}>
-              <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/leaves/add"}>
-                <PlusCircle className="mr-2 h-4 w-4" />Apply
-              </Link>
-            </Button>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto w-full">
               <Table><TableHeader><TableRow><TableHead>Type</TableHead><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Days</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {leaves.length > 0 ? leaves.slice(0, 3).map(leave => (
-                    <TableRow key={leave.id}>
-                      <TableCell>{leave.leaveType}</TableCell>
-                      <TableCell>{formatDisplayDate(leave.fromDate)}</TableCell>
-                      <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
-                      <TableCell>{differenceInCalendarDays(parseISO(leave.toDate), parseISO(leave.fromDate)) + 1}</TableCell>
-                      <TableCell>{leave.reason}</TableCell>
-                      <TableCell><Badge variant={leave.status === 'Approved' ? 'default' : 'secondary'}>{leave.status}</Badge></TableCell>
-                    </TableRow>
-                  )) : <TableRow><TableCell colSpan={6} className="text-center">No leave applications found.</TableCell></TableRow>}
+                  {(() => {
+                    const filteredLeaves = leaves.filter(leave => {
+                      if (leaveFilter.status !== 'All' && leave.status !== leaveFilter.status) return false;
+                      if (leaveFilter.dateRange?.from) {
+                        const leaveDate = parseISO(leave.fromDate);
+                        if (leaveDate < startOfDay(leaveFilter.dateRange.from)) return false;
+                      }
+                      if (leaveFilter.dateRange?.to) {
+                        const leaveDate = parseISO(leave.fromDate);
+                        if (leaveDate > endOfDay(leaveFilter.dateRange.to)) return false;
+                      }
+                      return true;
+                    }).sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
+
+                    return filteredLeaves.length > 0 ? filteredLeaves.map(leave => (
+                      <TableRow key={leave.id}>
+                        <TableCell>{leave.leaveType}</TableCell>
+                        <TableCell>{formatDisplayDate(leave.fromDate)}</TableCell>
+                        <TableCell>{formatDisplayDate(leave.toDate)}</TableCell>
+                        <TableCell>{differenceInCalendarDays(parseISO(leave.toDate), parseISO(leave.fromDate)) + 1}</TableCell>
+                        <TableCell>{leave.reason}</TableCell>
+                        <TableCell><Badge variant={leave.status === 'Approved' ? 'default' : 'secondary'}>{leave.status}</Badge></TableCell>
+                      </TableRow>
+                    )) : <TableRow><TableCell colSpan={6} className="text-center">No leave applications found.</TableCell></TableRow>;
+                  })()}
                 </TableBody></Table>
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <Briefcase className="h-6 w-6 text-primary" />
-                Visit Applications
-              </CardTitle>
-              <CardDescription>Your recent official visit applications.</CardDescription>
+          <CardHeader className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                  <Briefcase className="h-6 w-6 text-primary" />
+                  Visit Applications
+                </CardTitle>
+                <CardDescription>Your recent official visit applications.</CardDescription>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                <Select value={visitFilter.status} onValueChange={(val) => setVisitFilter(prev => ({ ...prev, status: val }))}>
+                  <SelectTrigger className="w-full sm:w-[130px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Status</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <DatePickerWithRange
+                  date={visitFilter.dateRange}
+                  onDateChange={(range) => setVisitFilter(prev => ({ ...prev, dateRange: range }))}
+                  className="w-full sm:w-auto"
+                />
+                <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/visit-applications/add")}>
+                  <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/visit-applications/add"}>
+                    <PlusCircle className="mr-2 h-4 w-4" />Apply
+                  </Link>
+                </Button>
+              </div>
             </div>
-            <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/visit-applications/add")}>
-              <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/visit-applications/add"}>
-                <PlusCircle className="mr-2 h-4 w-4" />Apply
-              </Link>
-            </Button>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto w-full">
               <Table><TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Days</TableHead><TableHead>Remarks</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {visits.length > 0 ? visits.slice(0, 3).map(visit => (
-                    <TableRow key={visit.id}>
-                      <TableCell>{formatDisplayDate(visit.fromDate)}</TableCell>
-                      <TableCell>{formatDisplayDate(visit.toDate)}</TableCell>
-                      <TableCell>{visit.day}</TableCell>
-                      <TableCell>{visit.remarks}</TableCell>
-                      <TableCell><Badge variant={visit.status === 'Approved' ? 'default' : 'secondary'}>{visit.status}</Badge></TableCell>
-                    </TableRow>
-                  )) : <TableRow><TableCell colSpan={5} className="text-center">No visit applications found.</TableCell></TableRow>}
+                  {(() => {
+                    const filteredVisits = visits.filter(visit => {
+                      if (visitFilter.status !== 'All' && visit.status !== visitFilter.status) return false;
+                      if (visitFilter.dateRange?.from) {
+                        const visitDate = parseISO(visit.fromDate);
+                        if (visitDate < startOfDay(visitFilter.dateRange.from)) return false;
+                      }
+                      if (visitFilter.dateRange?.to) {
+                        const visitDate = parseISO(visit.fromDate);
+                        if (visitDate > endOfDay(visitFilter.dateRange.to)) return false;
+                      }
+                      return true;
+                    }).sort((a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime());
+
+                    return filteredVisits.length > 0 ? filteredVisits.map(visit => (
+                      <TableRow key={visit.id}>
+                        <TableCell>{formatDisplayDate(visit.fromDate)}</TableCell>
+                        <TableCell>{formatDisplayDate(visit.toDate)}</TableCell>
+                        <TableCell>{visit.day}</TableCell>
+                        <TableCell>{visit.remarks}</TableCell>
+                        <TableCell><Badge variant={visit.status === 'Approved' ? 'default' : 'secondary'}>{visit.status}</Badge></TableCell>
+                      </TableRow>
+                    )) : <TableRow><TableCell colSpan={5} className="text-center">No visit applications found.</TableCell></TableRow>;
+                  })()}
                 </TableBody></Table>
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <Wallet className="h-6 w-6 text-primary" />
-                Advance Salary Requests
-              </CardTitle>
-              <CardDescription>Your recent advance salary applications.</CardDescription>
+          <CardHeader className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                  <Wallet className="h-6 w-6 text-primary" />
+                  Advance Salary Requests
+                </CardTitle>
+                <CardDescription>Your recent advance salary applications.</CardDescription>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                <Select value={advanceFilter.status} onValueChange={(val) => setAdvanceFilter(prev => ({ ...prev, status: val }))}>
+                  <SelectTrigger className="w-full sm:w-[130px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Status</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <DatePickerWithRange
+                  date={advanceFilter.dateRange}
+                  onDateChange={(range) => setAdvanceFilter(prev => ({ ...prev, dateRange: range }))}
+                  className="w-full sm:w-auto"
+                />
+                <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/payroll/advance-salary/add")}>
+                  <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/payroll/advance-salary/add"}>
+                    <PlusCircle className="mr-2 h-4 w-4" />Apply
+                  </Link>
+                </Button>
+              </div>
             </div>
-            <Button asChild onClick={(e) => handleBlockedAction(e, "/dashboard/hr/payroll/advance-salary/add")}>
-              <Link href={employeeData?.status === 'Terminated' ? "#" : "/dashboard/hr/payroll/advance-salary/add"}>
-                <PlusCircle className="mr-2 h-4 w-4" />Apply
-              </Link>
-            </Button>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto w-full">
-              <Table><TableHeader><TableRow><TableHead>Apply Date</TableHead><TableHead>Amount</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+              <Table><TableHeader><TableRow><TableHead>Apply Date</TableHead><TableHead>Amount</TableHead><TableHead>Payment Method</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {userAdvanceSalary.length > 0 ? userAdvanceSalary.slice(0, 3).map(req => (
-                    <TableRow key={req.id}><TableCell>{formatDisplayDate(req.applyDate)}</TableCell><TableCell>{formatCurrency(req.advanceAmount)}</TableCell><TableCell>{req.reason}</TableCell><TableCell><Badge variant={req.status === 'Approved' ? 'default' : 'secondary'}>{req.status}</Badge></TableCell></TableRow>
-                  )) : <TableRow><TableCell colSpan={4} className="text-center">No advance salary requests found.</TableCell></TableRow>}
+                  {(() => {
+                    const filteredAdvance = userAdvanceSalary.filter(req => {
+                      if (advanceFilter.status !== 'All' && req.status !== advanceFilter.status) return false;
+                      if (advanceFilter.dateRange?.from) {
+                        const applyDate = parseISO(req.applyDate);
+                        if (applyDate < startOfDay(advanceFilter.dateRange.from)) return false;
+                      }
+                      if (advanceFilter.dateRange?.to) {
+                        const applyDate = parseISO(req.applyDate);
+                        if (applyDate > endOfDay(advanceFilter.dateRange.to)) return false;
+                      }
+                      return true;
+                    }).sort((a, b) => new Date(b.applyDate).getTime() - new Date(a.applyDate).getTime());
+
+                    return filteredAdvance.length > 0 ? filteredAdvance.map(req => (
+                      <TableRow key={req.id}><TableCell>{formatDisplayDate(req.applyDate)}</TableCell><TableCell>{formatCurrency(req.advanceAmount)}</TableCell><TableCell>{req.paymentMethod}</TableCell><TableCell>{req.reason}</TableCell><TableCell><Badge variant={req.status === 'Approved' ? 'default' : 'secondary'}>{req.status}</Badge></TableCell></TableRow>
+                    )) : <TableRow><TableCell colSpan={5} className="text-center">No advance salary requests found.</TableCell></TableRow>;
+                  })()}
                 </TableBody></Table>
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-              <FileDigit className="h-6 w-6 text-primary" />
-              Monthly Payslip Summary
-            </CardTitle>
-            <CardDescription>
-              A summary of your generated payslips.
-            </CardDescription>
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <FileDigit className="h-6 w-6 text-primary" />
+                Monthly Payslip Summary
+              </CardTitle>
+              <CardDescription>
+                A summary of your generated payslips.
+              </CardDescription>
+            </div>
+            <div className="w-[120px]">
+              <Select value={payslipYear} onValueChange={setPayslipYear}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }, (_, i) => {
+                    const year = (new Date().getFullYear() - i).toString();
+                    return <SelectItem key={year} value={year}>{year}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoadingPayslips ? (
               <div className="flex justify-center items-center h-24">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
-            ) : payslips.length === 0 ? (
-              <p className="text-muted-foreground text-center">No payslip data found for this account.</p>
             ) : (
-              <div className="overflow-x-auto w-full">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Month</TableHead>
-                      <TableHead>Gross Salary</TableHead>
-                      <TableHead>Advance Paid</TableHead>
-                      <TableHead>Total Deductions</TableHead>
-                      <TableHead className="font-bold">Net Salary</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payslips.map((payslip) => (
-                      <TableRow key={payslip.id}>
-                        <TableCell>{payslip.payPeriod}</TableCell>
-                        <TableCell>{formatCurrency(payslip.grossSalary)}</TableCell>
-                        <TableCell>{formatCurrency(payslip.advanceDeduction)}</TableCell>
-                        <TableCell>{formatCurrency(payslip.totalDeductions)}</TableCell>
-                        <TableCell className="font-semibold">{formatCurrency(payslip.netSalary)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              (() => {
+                // Payslips matching year
+                const filteredPayslips = payslips.filter(p => {
+                  if (!p.payPeriod) return false;
+                  // Assuming payPeriod is "Month Year" or "yyyy-MM", let's check format
+                  // Default format usually "January 2024" or similar.
+                  // We can try to parse date or just string match if it contains Year.
+                  return p.payPeriod.includes(payslipYear);
+                });
+
+                if (filteredPayslips.length === 0) {
+                  return <p className="text-muted-foreground text-center">No payslip data found for this year.</p>;
+                }
+
+                return (
+                  <div className="overflow-x-auto w-full">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Month</TableHead>
+                          <TableHead>Gross Salary</TableHead>
+                          <TableHead>Advance Paid</TableHead>
+                          <TableHead>Total Deductions</TableHead>
+                          <TableHead className="font-bold">Net Salary</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredPayslips.map((payslip) => (
+                          <TableRow key={payslip.id}>
+                            <TableCell>{payslip.payPeriod}</TableCell>
+                            <TableCell>{formatCurrency(payslip.grossSalary)}</TableCell>
+                            <TableCell>{formatCurrency(payslip.advanceDeduction)}</TableCell>
+                            <TableCell>{formatCurrency(payslip.totalDeductions)}</TableCell>
+                            <TableCell className="font-semibold">{formatCurrency(payslip.netSalary)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                );
+              })()
             )}
           </CardContent>
         </Card>
