@@ -11,7 +11,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import {
     Home, Coffee, Bell, Contact, QrCode, User,
-    MessageSquare, Lock, LogOut
+    MessageSquare, Lock, LogOut, Trash2
 } from 'lucide-react';
 import { Switch } from "@/components/ui/switch"
 import { Button } from '@/components/ui/button';
@@ -108,6 +108,45 @@ export function MobileDrawerSidebar() {
                 <span className={cn("text-xs px-2 font-medium cursor-pointer transition-colors", !pathname.includes('/mobile') ? "text-white" : "text-white/50")}>Web</span>
             </div>
 
+            {/* Clear Cache Button */}
+            <Button
+                onClick={async () => {
+                    try {
+                        // Clear all caches
+                        if ('caches' in window) {
+                            const cacheNames = await caches.keys();
+                            await Promise.all(
+                                cacheNames.map(cacheName => caches.delete(cacheName))
+                            );
+                        }
+
+                        // Clear localStorage
+                        localStorage.clear();
+
+                        // Clear sessionStorage
+                        sessionStorage.clear();
+
+                        // Unregister service workers
+                        if ('serviceWorker' in navigator) {
+                            const registrations = await navigator.serviceWorker.getRegistrations();
+                            await Promise.all(
+                                registrations.map(registration => registration.unregister())
+                            );
+                        }
+
+                        // Show success message and reload
+                        alert('Cache cleared successfully! The app will reload.');
+                        window.location.reload();
+                    } catch (error) {
+                        console.error('Error clearing cache:', error);
+                        alert('Failed to clear cache. Please try again.');
+                    }
+                }}
+                className="bg-white/10 text-white hover:bg-white/20 w-full rounded-xl flex items-center justify-start gap-3 h-12 px-4 mb-3"
+            >
+                <Trash2 className="h-5 w-5" />
+                <span className="font-bold">Clear Cache</span>
+            </Button>
 
             {/* Logout Button */}
             <Button
