@@ -249,7 +249,15 @@ export default function MobilePayrollPage() {
 
             pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
 
-            const pdfDataUri = pdf.output('datauristring');
+            // Use Blob -> FileReader approach to avoid "The string did not match the expected pattern" DOMException
+            const pdfBlob = pdf.output('blob');
+
+            const pdfDataUri = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(pdfBlob);
+            });
 
             const response = await fetch('/api/email/send-payslip', {
                 method: 'POST',
@@ -512,7 +520,7 @@ export default function MobilePayrollPage() {
                             <div className="flex justify-between items-start mb-8 border-b-2 pb-4">
                                 <div>
                                     <div className="flex items-center gap-3 mb-2">
-                                        {companyLogoUrl && <img src={companyLogoUrl} alt="Logo" className="h-8 w-8 object-contain" />}
+                                        {companyLogoUrl && <img src={companyLogoUrl} alt="Logo" crossOrigin="anonymous" className="h-8 w-8 object-contain" />}
                                         <h1 className="text-2xl font-bold">{companyName}</h1>
                                     </div>
                                     <p className="text-sm text-slate-500 max-w-xs">{address}</p>
