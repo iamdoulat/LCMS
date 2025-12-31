@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, where, orderBy, addDoc, serverTimestamp, limit } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { ArrowLeft, Banknote, Calendar, Loader2, Download, Eye, Wallet, TrendingUp, TrendingDown, Clock, Printer, X, Plus, Filter as FilterIcon } from 'lucide-react';
+import { ArrowLeft, Banknote, Calendar, Loader2, Download, Eye, Wallet, TrendingUp, TrendingDown, Clock, Printer, X, Plus, Filter as FilterIcon, Mail } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { format, getYear, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
@@ -208,6 +208,77 @@ export default function MobilePayrollPage() {
             Swal.close();
             setTimeout(() => {
                 Swal.fire({ icon: 'error', title: 'Error', text: `Failed to generate PDF: ${error.message}.`, heightAuto: false });
+            }, 100);
+        }
+    };
+
+    const handleEmailPdf = async () => {
+        if (!pdfRef.current || !selectedSlip || !user?.email) {
+            if (!user?.email) Swal.fire('Error', 'No email address found for user.', 'error');
+            return;
+        }
+
+        try {
+            Swal.fire({
+                title: 'Sending Email...',
+                didOpen: () => { Swal.showLoading(); },
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                heightAuto: false
+            });
+
+            const element = pdfRef.current;
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+                windowWidth: 800,
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+            const imgX = (pdfWidth - imgWidth * ratio) / 2;
+            const imgY = 10;
+
+            pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+
+            const pdfDataUri = pdf.output('datauristring');
+
+            const response = await fetch('/api/email/send-payslip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pdfBase64: pdfDataUri,
+                    employeeEmail: user.email,
+                    employeeName: selectedSlip.employeeName,
+                    payPeriod: selectedSlip.payPeriod
+                })
+            });
+
+            const result = await response.json();
+
+            Swal.close();
+
+            if (result.success) {
+                setTimeout(() => {
+                    Swal.fire({ icon: 'success', title: 'Sent!', text: 'Payslip emailed successfully.', timer: 2000, showConfirmButton: false, heightAuto: false });
+                }, 100);
+            } else {
+                throw new Error(result.error || 'Failed to send');
+            }
+
+        } catch (error: any) {
+            console.error('Email sending error:', error);
+            Swal.close();
+            setTimeout(() => {
+                Swal.fire({ icon: 'error', title: 'Error', text: `Failed to email payslip: ${error.message}.`, heightAuto: false });
             }, 100);
         }
     };
@@ -424,8 +495,11 @@ export default function MobilePayrollPage() {
                         </Button>
                     </div>
                     <h2 className="font-bold text-slate-800 text-center flex-1">Payslip Details</h2>
-                    <div className="w-10 flex justify-end">
-                        <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="rounded-full text-blue-600">
+                    <div className="flex gap-2 justify-end">
+                        <Button variant="ghost" size="icon" onClick={handleEmailPdf} className="rounded-full text-indigo-600" title="Email PDF">
+                            <Mail className="h-5 w-5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={handleDownloadPdf} className="rounded-full text-blue-600" title="Download PDF">
                             <Download className="h-5 w-5" />
                         </Button>
                     </div>

@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { User, LogOut, Settings, Loader2, Search, Smartphone } from 'lucide-react';
+import { User, LogOut, Settings, Loader2, Search, Smartphone, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
@@ -136,6 +136,31 @@ export function AppHeader() {
                   <span>Account Details</span>
                 </DropdownMenuItem>
               </Link>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  try {
+                    if ('caches' in window) {
+                      const cacheNames = await caches.keys();
+                      await Promise.all(cacheNames.map((n) => caches.delete(n)));
+                    }
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    if ('serviceWorker' in navigator) {
+                      const regs = await navigator.serviceWorker.getRegistrations();
+                      await Promise.all(regs.map((r) => r.unregister()));
+                    }
+                    alert('Cache cleared successfully! The app will reload.');
+                    window.location.reload();
+                  } catch (error) {
+                    console.error('Error clearing cache:', error);
+                  }
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Clear Cache</span>
+              </DropdownMenuItem>
               <Link href="/mobile/dashboard" passHref>
                 <DropdownMenuItem className="cursor-pointer">
                   <Smartphone className="mr-2 h-4 w-4" />

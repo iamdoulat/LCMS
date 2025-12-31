@@ -25,6 +25,11 @@ interface SendEmailOptions {
     subject?: string;
     body?: string; // HTML content
     data?: Record<string, string>;
+    attachments?: Array<{
+        filename: string;
+        content: string; // Base64 string or buffer content
+        encoding?: string; // 'base64' | 'utf-8' etc.
+    }>;
 }
 
 
@@ -116,7 +121,7 @@ const getEmailTemplate = async (slug: string) => {
     }
 }
 
-export async function sendEmail({ to, templateSlug, subject: overrideSubject, body: overrideBody, data }: SendEmailOptions) {
+export async function sendEmail({ to, templateSlug, subject: overrideSubject, body: overrideBody, data, attachments }: SendEmailOptions) {
     try {
         // 1. Fetch Active SMTP Config
         const config = await getSmtpConfig();
@@ -175,11 +180,18 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
             const resend = new Resend(config.resendApiKey);
 
             try {
+                // Map attachments for Resend (expects content as Buffer/string)
+                const resendAttachments = attachments?.map(att => ({
+                    filename: att.filename,
+                    content: Buffer.from(att.content, 'base64'),
+                }));
+
                 const { data: res, error } = await resend.emails.send({
                     from: config.fromEmail,
                     to: toAddresses,
                     subject: subject,
                     html: body,
+                    attachments: resendAttachments
                 });
 
                 if (error) throw error;
@@ -232,6 +244,11 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
                     to: toAddresses.join(','),
                     subject: subject,
                     html: body,
+                    attachments: attachments?.map(att => ({
+                        filename: att.filename,
+                        content: att.content,
+                        encoding: att.encoding || 'base64'
+                    }))
                 });
 
                 // Log success
