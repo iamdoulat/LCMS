@@ -1,12 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-// Import the animation JSON directly
-import animationData from '../../../public/animations/no_internet_connection.json';
 
-// Dynamic import for Lottie to disable SSR
-const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 
 export default function OfflineStatus() {
     const [isOnline, setIsOnline] = useState(true);
@@ -34,12 +29,14 @@ export default function OfflineStatus() {
 
     return (
         <div className="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 transition-all duration-300">
-            <div className="w-full max-w-md aspect-square flex items-center justify-center">
-                <Lottie
-                    animationData={animationData}
-                    loop={true}
-                    autoplay={true}
-                    style={{ width: '100%', height: '100%' }}
+            <div className="w-full max-w-md aspect-video flex items-center justify-center bg-transparent">
+                <video
+                    src="/animations/no_internet_connection.webm"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-contain"
                 />
             </div>
             <form className="mt-8 text-center" onSubmit={(e) => { e.preventDefault(); window.location.reload(); }}>
