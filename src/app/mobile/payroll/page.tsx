@@ -5,7 +5,7 @@ import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, where, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, addDoc, serverTimestamp, limit } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { ArrowLeft, Banknote, Calendar, Loader2, Download, Eye, Wallet, TrendingUp, TrendingDown, Clock, Printer, X, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -66,6 +66,18 @@ export default function MobilePayrollPage() {
         ) : null,
         undefined,
         ['mobile_advance_salary', user?.uid || 'none'],
+        !!user?.uid
+    );
+
+    // 3. Employee Profile Query (to get readable ID)
+    const { data: employeeProfile } = useFirestoreQuery<any[]>(
+        user?.uid ? query(
+            collection(firestore, 'employees'),
+            where('uid', '==', user.uid),
+            limit(1)
+        ) : null,
+        undefined,
+        ['mobile_employee_profile', user?.uid || 'none'],
         !!user?.uid
     );
 
@@ -135,13 +147,13 @@ export default function MobilePayrollPage() {
             const numericDuration = parseInt(duration);
             const dueAmount = numericAmount; // Initially due amount is full amount
 
-            // Assuming user is employee, get some basic profile info if needed or rely on AuthContext
-            // For now using user from AuthContext
+            // Get the readable employee code from the fetched profile, fallback to N/A
+            const fetchedEmployeeCode = employeeProfile && employeeProfile.length > 0 ? employeeProfile[0].employeeCode : 'N/A';
 
             await addDoc(collection(firestore, 'advance_salary'), {
                 employeeId: user.uid,
                 employeeName: user.displayName || 'Unknown',
-                employeeCode: currentEmployeeId || 'N/A', // Using currentEmployeeId from logic check
+                employeeCode: fetchedEmployeeCode, // Using the correct readable ID
                 email: user.email,
                 advanceAmount: numericAmount,
                 paymentStartsFrom: paymentStartsFrom, // string YYYY-MM-DD
@@ -465,7 +477,7 @@ export default function MobilePayrollPage() {
     };
 
     // Helper for swipe logic
-    const swipeConfidenceThreshold = 10000;
+    const swipeConfidenceThreshold = 2000; // Reduced from 10000 for easier trigger
     const swipePower = (offset: number, velocity: number) => {
         return Math.abs(offset) * velocity;
     };
@@ -512,11 +524,11 @@ export default function MobilePayrollPage() {
                         initial={{ x: activeTab === 'advance' ? 300 : -300, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: activeTab === 'advance' ? -300 : 300, opacity: 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        transition={{ ease: "easeInOut", duration: 0.25 }}
                         className="h-full w-full overflow-y-auto overscroll-contain px-4 py-6 pb-24"
                         drag="x"
                         dragConstraints={{ left: 0, right: 0 }}
-                        dragElastic={0.2}
+                        dragElastic={0.5}
                         onDragEnd={(e: any, { offset, velocity }: PanInfo) => {
                             const swipe = swipePower(offset.x, velocity.x);
 
