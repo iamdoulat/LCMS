@@ -207,7 +207,7 @@ export default function MobilePayrollPage() {
             console.error('PDF generation error:', error);
             Swal.close();
             setTimeout(() => {
-                Swal.fire({ icon: 'error', title: 'Error', text: `Failed to generate PDF: ${error.message}.`, heightAuto: false });
+                Swal.fire({ icon: 'error', title: 'Error', text: `Failed to generate PDF: ${error.message}.`, heightAuto: false, timer: 3000, showConfirmButton: false });
             }, 100);
         }
     };
@@ -286,7 +286,7 @@ export default function MobilePayrollPage() {
             console.error('Email sending error:', error);
             Swal.close();
             setTimeout(() => {
-                Swal.fire({ icon: 'error', title: 'Error', text: `Failed to email payslip: ${error.message}.`, heightAuto: false });
+                Swal.fire({ icon: 'error', title: 'Error', text: `Failed to email payslip: ${error.message}.`, heightAuto: false, timer: 3000, showConfirmButton: false });
             }, 100);
         }
     };
