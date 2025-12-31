@@ -27,7 +27,9 @@ import {
     isAfter,
     startOfDay,
     isWithinInterval,
-    parseISO
+    parseISO,
+    subDays,
+    getDaysInMonth
 } from 'date-fns';
 
 export default function MobileAttendancePage() {
@@ -61,11 +63,14 @@ export default function MobileAttendancePage() {
             let start, end;
 
             if (period === 'weekly') {
-                start = startOfWeek(today, { weekStartsOn: 6 }); // Week starts on Saturday
-                end = endOfWeek(today, { weekStartsOn: 6 });
+                // Last 7 days including today (today - 6 days to today)
+                start = subDays(today, 6);
+                end = today;
             } else {
-                start = startOfMonth(today);
-                end = endOfMonth(today);
+                // Monthly: Use actual days in current month (28-31 days)
+                const daysInMonth = getDaysInMonth(today);
+                start = subDays(today, daysInMonth - 1);
+                end = today;
             }
             const weekDays = eachDayOfInterval({ start, end });
 

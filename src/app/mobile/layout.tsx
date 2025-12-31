@@ -5,6 +5,7 @@ import { MobileSidebarProvider, useMobileSidebar } from '@/context/MobileSidebar
 import { BreakTimeProvider } from '@/context/BreakTimeContext';
 import { MobileDrawerSidebar } from '@/components/mobile/MobileDrawerSidebar';
 import { MobileNavbar } from '@/components/mobile/MobileNavbar';
+import { InstallPrompt } from '@/components/mobile/InstallPrompt';
 import { cn } from '@/lib/utils';
 import { usePathname } from 'next/navigation';
 
@@ -103,6 +104,9 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
                     <MobileNavbar />
                 </div>
             </div>
+
+            {/* PWA Install Prompt */}
+            <InstallPrompt />
 
             {/* Overlay to darken/disable interaction if desired, but 3D effect usually just slides. 
             The pointer-events-none on the active content handles the "don't click links while open" part.
