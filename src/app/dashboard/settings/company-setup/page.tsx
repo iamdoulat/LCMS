@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Building } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+// import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CompanySetupForm } from '@/components/forms/common';
 
 export default function CompanySetupPage() {
@@ -40,21 +40,18 @@ export default function CompanySetupPage() {
   }
 
   return (
-    <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
-      <Card className="max-w-3xl mx-auto shadow-xl">
-        <CardHeader>
-          <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <Building className="h-7 w-7 text-primary" />
-            Company Setup
-          </CardTitle>
-          <CardDescription>
-            Configure your company&apos;s core information. This data may be used across the application.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CompanySetupForm />
-        </CardContent>
-      </Card>
+    <div className="mx-[25px] max-w-none py-8 space-y-8">
+      <div className="flex flex-col gap-2">
+        <h2 className={cn("flex items-center gap-2 font-bold text-3xl", "bg-gradient-to-r from-primary to-rose-500 text-transparent bg-clip-text")}>
+          <Building className="h-8 w-8 text-primary" />
+          Company Setup
+        </h2>
+        <p className="text-muted-foreground text-lg">
+          Configure your company&apos;s core profile, location, and branding settings.
+        </p>
+      </div>
+
+      <CompanySetupForm />
     </div>
   );
 }

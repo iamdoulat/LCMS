@@ -23,6 +23,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCroppedImg } from '@/lib/image-utils';
 import { Separator } from '@/components/ui/separator';
 
@@ -38,7 +39,7 @@ interface FinancialSettingsProfile {
   emailId?: string;
   cellNumber?: string;
   hideCompanyName?: boolean;
-  hideCompanyLogo?: boolean; 
+  hideCompanyLogo?: boolean;
   hideInvoiceLogo?: boolean;
   contactPerson?: string;
   binNumber?: string;
@@ -76,7 +77,7 @@ export function CompanySetupForm() {
   const [isLoadingData, setIsLoadingData] = React.useState(true);
   const { user: authUser, loading: authLoading, companyName: contextCompanyName, companyLogoUrl: contextCompanyLogoUrl, updateCompanyProfile, userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
-  
+
   // States for general company logo
   const [companyLogoSrc, setCompanyLogoSrc] = React.useState('');
   const [companyLogoCrop, setCompanyLogoCrop] = React.useState<Crop>();
@@ -85,7 +86,7 @@ export function CompanySetupForm() {
   const [isCompanyLogoCropping, setIsCompanyLogoCropping] = React.useState(false);
   const [companyLogoUrl, setCompanyLogoUrl] = React.useState<string | undefined>(contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL);
   const companyLogoImgRef = React.useRef<HTMLImageElement>(null);
-  
+
   // States for invoice logo
   const [invoiceLogoSrc, setInvoiceLogoSrc] = React.useState('');
   const [invoiceLogoCrop, setInvoiceLogoCrop] = React.useState<Crop>();
@@ -122,8 +123,8 @@ export function CompanySetupForm() {
       try {
         const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
         const profileDocSnap = await getDoc(profileDocRef);
-        
-        let initialProfileData: FinancialSettingsProfile & {companyName: string} = {
+
+        let initialProfileData: FinancialSettingsProfile & { companyName: string } = {
           companyName: contextCompanyName || DEFAULT_COMPANY_NAME,
           address: DEFAULT_ADDRESS,
           emailId: DEFAULT_EMAIL,
@@ -191,53 +192,53 @@ export function CompanySetupForm() {
 
   async function onSubmit(data: FinancialSettingsFormValues) {
     setIsSubmitting(true);
-    
+
     let newCompanyLogoUrl = companyLogoUrl;
     let newInvoiceLogoUrl = invoiceLogoUrl;
 
     try {
-        if(companyLogoSelectedFile){
-            newCompanyLogoUrl = await handleLogoUpload(companyLogoSelectedFile, 'companyLogos/main_logo.jpg');
-        } else if (data.companyLogoUrl) {
-            newCompanyLogoUrl = data.companyLogoUrl;
+      if (companyLogoSelectedFile) {
+        newCompanyLogoUrl = await handleLogoUpload(companyLogoSelectedFile, 'companyLogos/main_logo.jpg');
+      } else if (data.companyLogoUrl) {
+        newCompanyLogoUrl = data.companyLogoUrl;
+      }
+
+      if (invoiceLogoSelectedFile) {
+        newInvoiceLogoUrl = await handleLogoUpload(invoiceLogoSelectedFile, 'companyLogos/invoice_logo.jpg');
+      } else if (data.invoiceLogoUrl) {
+        newInvoiceLogoUrl = data.invoiceLogoUrl;
+      }
+
+      const dataToSave: FinancialSettingsProfile = {
+        ...data,
+        companyLogoUrl: newCompanyLogoUrl,
+        invoiceLogoUrl: newInvoiceLogoUrl,
+        updatedAt: serverTimestamp(),
+      };
+
+      Object.keys(dataToSave).forEach(key => {
+        const typedKey = key as keyof FinancialSettingsProfile;
+        if (dataToSave[typedKey] === undefined) {
+          delete dataToSave[typedKey];
         }
+      });
 
-        if(invoiceLogoSelectedFile){
-            newInvoiceLogoUrl = await handleLogoUpload(invoiceLogoSelectedFile, 'companyLogos/invoice_logo.jpg');
-        } else if (data.invoiceLogoUrl) {
-            newInvoiceLogoUrl = data.invoiceLogoUrl;
-        }
-    
-        const dataToSave: FinancialSettingsProfile = {
-            ...data,
-            companyLogoUrl: newCompanyLogoUrl,
-            invoiceLogoUrl: newInvoiceLogoUrl,
-            updatedAt: serverTimestamp(),
-        };
-        
-        Object.keys(dataToSave).forEach(key => {
-          const typedKey = key as keyof FinancialSettingsProfile;
-          if (dataToSave[typedKey] === undefined) {
-            delete dataToSave[typedKey];
-          }
-        });
+      const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
+      await setDoc(profileDocRef, dataToSave, { merge: true });
 
-        const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
-        await setDoc(profileDocRef, dataToSave, { merge: true });
-        
-        updateCompanyProfile({ companyName: data.companyName, companyLogoUrl: newCompanyLogoUrl, invoiceLogoUrl: newInvoiceLogoUrl });
-        setCompanyLogoUrl(newCompanyLogoUrl);
-        setInvoiceLogoUrl(newInvoiceLogoUrl);
-        setCompanyLogoSelectedFile(null);
-        setInvoiceLogoSelectedFile(null);
+      updateCompanyProfile({ companyName: data.companyName, companyLogoUrl: newCompanyLogoUrl, invoiceLogoUrl: newInvoiceLogoUrl });
+      setCompanyLogoUrl(newCompanyLogoUrl);
+      setInvoiceLogoUrl(newInvoiceLogoUrl);
+      setCompanyLogoSelectedFile(null);
+      setInvoiceLogoSelectedFile(null);
 
-        Swal.fire({
-            title: "Settings Saved!",
-            text: "Company settings have been successfully updated.",
-            icon: "success",
-            timer: 1000,
-            showConfirmButton: true,
-        });
+      Swal.fire({
+        title: "Settings Saved!",
+        text: "Company settings have been successfully updated.",
+        icon: "success",
+        timer: 1000,
+        showConfirmButton: true,
+      });
 
     } catch (error) {
       console.error("Error saving settings: ", error);
@@ -256,37 +257,37 @@ export function CompanySetupForm() {
     setCropping: React.Dispatch<React.SetStateAction<boolean>>
   ) => {
     if (!completedCrop || !imgRefParam.current || !selectedFileParam) {
-        Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
-        return;
+      Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
+      return;
     }
     setIsUploading(true);
     try {
-        const croppedImageBlob = await getCroppedImg(
-            imgRefParam.current,
-            completedCrop,
-            selectedFileParam.name
-        );
-        if (!croppedImageBlob) {
-            throw new Error("Failed to create cropped image blob.");
-        }
-        
-        const tempUrl = URL.createObjectURL(croppedImageBlob);
-        setUrl(tempUrl);
-        setFile(croppedImageBlob);
-        setCropping(false);
-        
-        Swal.fire({
-            title: "Logo Staged",
-            text: "Your new logo is ready. Click 'Save Settings' to apply it.",
-            icon: "success",
-            timer: 1000,
-            showConfirmButton: false,
-        });
+      const croppedImageBlob = await getCroppedImg(
+        imgRefParam.current,
+        completedCrop,
+        selectedFileParam.name
+      );
+      if (!croppedImageBlob) {
+        throw new Error("Failed to create cropped image blob.");
+      }
+
+      const tempUrl = URL.createObjectURL(croppedImageBlob);
+      setUrl(tempUrl);
+      setFile(croppedImageBlob);
+      setCropping(false);
+
+      Swal.fire({
+        title: "Logo Staged",
+        text: "Your new logo is ready. Click 'Save Settings' to apply it.",
+        icon: "success",
+        timer: 1000,
+        showConfirmButton: false,
+      });
     } catch (err: any) {
-        console.error("Error handling crop and upload:", err);
-        Swal.fire("Upload Failed", `Failed to prepare image: ${err.message}`, "error");
+      console.error("Error handling crop and upload:", err);
+      Swal.fire("Upload Failed", `Failed to prepare image: ${err.message}`, "error");
     } finally {
-        setIsUploading(false);
+      setIsUploading(false);
     }
   };
 
@@ -302,102 +303,232 @@ export function CompanySetupForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <FormField control={form.control} name="companyName" render={({ field }) => (<FormItem><FormLabel>Company Name</FormLabel><FormControl><Input placeholder="Your company's name" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormDescription>This name will appear on all financial documents.</FormDescription><FormMessage /></FormItem>)} />
-             <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Company Address</FormLabel><FormControl><Textarea placeholder={DEFAULT_ADDRESS} {...field} value={field.value || ""} rows={3} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-             <FormField control={form.control} name="emailId" render={({ field }) => (<FormItem><FormLabel>Email ID</FormLabel><FormControl><Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-            <FormField control={form.control} name="cellNumber" render={({ field }) => (<FormItem><FormLabel>Cell Number</FormLabel><FormControl><Input type="tel" placeholder="e.g., +1 123 456 7890" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-          </div>
-          <div className="space-y-6">
-            <FormField control={form.control} name="hideCompanyName" render={({ field }) => (<FormItem className="flex items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="hideCompanyName" disabled={isReadOnly} /></FormControl><div className="space-y-1 leading-none"><FormLabel htmlFor="hideCompanyName" className="text-sm font-medium hover:cursor-pointer">Hide Company Name on Documents</FormLabel><FormDescription className="text-xs">If checked, the company name will not be printed.</FormDescription></div></FormItem>)}/>
-            <FormField control={form.control} name="hideInvoiceLogo" render={({ field }) => (<FormItem className="flex items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="hideInvoiceLogo" disabled={isReadOnly} /></FormControl><div className="space-y-1 leading-none"><FormLabel htmlFor="hideInvoiceLogo" className="text-sm font-medium hover:cursor-pointer">Hide Invoice Logo on Documents</FormLabel><FormDescription className="text-xs">If checked, the invoice logo will not be printed.</FormDescription></div></FormItem>)}/>
-            <FormItem>
-              <Label>Invoice Logo</Label>
-               <div className="flex items-center gap-4">
-                <div className="w-24 h-auto aspect-[396/58] rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                  {invoiceLogoUrl ? <Image src={invoiceLogoUrl} alt="Invoice Logo" width={96} height={14} className="object-contain" data-ai-hint="invoice logo"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
-                </div>
-                <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setInvoiceLogoSrc, setInvoiceLogoSelectedFile, setIsInvoiceLogoCropping)} className="flex-1" disabled={isReadOnly} />
-              </div>
-              <FormDescription>Specific logo for quotes, invoices, etc.</FormDescription>
-            </FormItem>
-             <FormField control={form.control} name="invoiceLogoUrl" render={({ field }) => (<FormItem><FormLabel>External Invoice Logo URL</FormLabel><FormControl><Input placeholder="https://example.com/logo.png" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormDescription>Use this URL if no file is uploaded for the invoice logo.</FormDescription><FormMessage /></FormItem>)} />
-          </div>
-        </div>
-        
-        <Separator />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-6">
-                <FormField control={form.control} name="hideCompanyLogo" render={({ field }) => (<FormItem className="flex items-center space-x-3 space-y-0 rounded-md border p-3 shadow-sm bg-card"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="hideCompanyLogo" disabled={isReadOnly} /></FormControl><div className="space-y-1 leading-none"><FormLabel htmlFor="hideCompanyLogo" className="text-sm font-medium hover:cursor-pointer">Hide Company Logo on Sidebar</FormLabel><FormDescription className="text-xs">If checked, the logo will be hidden from the main sidebar.</FormDescription></div></FormItem>)}/>
-                 <FormItem>
-                    <Label>Company Logo (for sidebar)</Label>
-                    <div className="flex items-center gap-4">
-                    <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                        {companyLogoUrl ? <Image src={companyLogoUrl} alt="Company Logo" width={96} height={96} className="object-contain" data-ai-hint="company logo"/> : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
-                    </div>
-                    <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setCompanyLogoSrc, setCompanyLogoSelectedFile, setIsCompanyLogoCropping)} className="flex-1" disabled={isReadOnly} />
-                    </div>
-                    <FormDescription>Upload a square logo (e.g., 256x256) for the main sidebar.</FormDescription>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Section 1: General Information */}
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="text-xl">General Information</CardTitle>
+              <CardDescription>Basic details about your company structure and contact points.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-6">
+              <FormField control={form.control} name="companyName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Name</FormLabel>
+                  <FormControl><Input placeholder="Your company's name" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                  <FormDescription>Appears on all official documents.</FormDescription>
+                  <FormMessage />
                 </FormItem>
-                <FormField control={form.control} name="companyLogoUrl" render={({ field }) => (<FormItem><FormLabel>External Company Logo URL</FormLabel><FormControl><Input placeholder="https://example.com/logo.png" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormDescription>Use this URL if no file is uploaded. Overrides uploaded logo.</FormDescription><FormMessage /></FormItem>)} />
-            </div>
-             <div className="space-y-6">
-                 <FormField control={form.control} name="contactPerson" render={({ field }) => (<FormItem><FormLabel>Contact Person</FormLabel><FormControl><Input placeholder="Primary contact" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-                <FormField control={form.control} name="binNumber" render={({ field }) => (<FormItem><FormLabel>BIN No.</FormLabel><FormControl><Input placeholder="Business Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-                <FormField control={form.control} name="tinNumber" render={({ field }) => (<FormItem><FormLabel>TIN No.</FormLabel><FormControl><Input placeholder="Taxpayer Identification Number" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>)}/>
-             </div>
+              )} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name="contactPerson" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact Person</FormLabel>
+                    <FormControl><Input placeholder="Primary contact name" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="emailId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email Address</FormLabel>
+                    <FormControl><Input type="email" placeholder="contact@company.com" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <FormField control={form.control} name="cellNumber" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl><Input type="tel" placeholder="e.g., +1 234 567 890" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </CardContent>
+          </Card>
+
+          {/* Section 2: legal & Address */}
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="text-xl">Location & Legal Identity</CardTitle>
+              <CardDescription>Manage your registered address and tax identification.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+
+              <FormField control={form.control} name="address" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Registered Address</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder={DEFAULT_ADDRESS} className="min-h-[120px] resize-none" {...field} value={field.value || ""} disabled={isReadOnly} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField control={form.control} name="binNumber" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>BIN Number</FormLabel>
+                    <FormControl><Input placeholder="Business ID No." {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="tinNumber" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>TIN Number</FormLabel>
+                    <FormControl><Input placeholder="Tax ID No." {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Button type="submit" className="w-full md:w-auto" disabled={isSubmitting || isLoadingData || isReadOnly}>
-          {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Settings</>}
-        </Button>
+        {/* Section 3: Branding & Documents */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Branding & Documents</CardTitle>
+            <CardDescription>Customize how your company appears in the app and on generated invoices.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-8">
+
+            {/* Logo Layout Container */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+              {/* Sidebar Logo Section */}
+              <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 h-full">
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <Label className="text-base font-semibold">Sidebar Logo</Label>
+                    <p className="text-sm text-muted-foreground">Used in the main navigation sidebar. Recommended size: 256x256.</p>
+                    <FormField control={form.control} name="hideCompanyLogo" render={({ field }) => (
+                      <FormItem className="flex items-center space-x-2 mt-2">
+                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="hideCompanyLogo" disabled={isReadOnly} /></FormControl>
+                        <FormLabel htmlFor="hideCompanyLogo" className="text-sm font-normal cursor-pointer">Hide this logo in sidebar</FormLabel>
+                      </FormItem>
+                    )} />
+                  </div>
+
+                  <div className="w-full space-y-4">
+                    <div className="flex flex-col gap-4">
+                      <div className="h-32 w-32 shrink-0 overflow-hidden rounded-md border border-dashed bg-muted/30 flex items-center justify-center self-center md:self-start">
+                        {companyLogoUrl ?
+                          <Image src={companyLogoUrl} alt="Company Logo" width={128} height={128} className="h-full w-full object-contain" />
+                          : <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                        }
+                      </div>
+                      <div className="space-y-3">
+                        <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setCompanyLogoSrc, setCompanyLogoSelectedFile, setIsCompanyLogoCropping)} disabled={isReadOnly} />
+                        <FormField control={form.control} name="companyLogoUrl" render={({ field }) => (
+                          <FormItem>
+                            <FormControl><Input placeholder="Or enter external URL..." {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Invoice Logo Section */}
+              <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 h-full">
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <Label className="text-base font-semibold">Invoice & Document Logo</Label>
+                    <p className="text-sm text-muted-foreground">Used on printable documents like invoices, payslips, etc.</p>
+                    <div className="space-y-1 mt-2">
+                      <FormField control={form.control} name="hideInvoiceLogo" render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="hideInvoiceLogo" disabled={isReadOnly} /></FormControl>
+                          <FormLabel htmlFor="hideInvoiceLogo" className="text-sm font-normal cursor-pointer">Hide logo on docs</FormLabel>
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="hideCompanyName" render={({ field }) => (
+                        <FormItem className="flex items-center space-x-2">
+                          <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} id="hideCompanyName" disabled={isReadOnly} /></FormControl>
+                          <FormLabel htmlFor="hideCompanyName" className="text-sm font-normal cursor-pointer">Hide company name on docs</FormLabel>
+                        </FormItem>
+                      )} />
+                    </div>
+                  </div>
+
+                  <div className="w-full space-y-4">
+                    <div className="flex flex-col gap-4">
+                      <div className="h-[64px] w-full max-w-[240px] shrink-0 overflow-hidden rounded-md border border-dashed bg-muted/30 flex items-center justify-center self-center md:self-start">
+                        {invoiceLogoUrl ?
+                          <Image src={invoiceLogoUrl} alt="Invoice Logo" width={240} height={64} className="h-full w-full object-contain" />
+                          : <ImageIcon className="h-10 w-10 text-muted-foreground" />
+                        }
+                      </div>
+                      <div className="space-y-3">
+                        <Input type="file" accept="image/png, image/jpeg" onChange={(e) => onFileSelect(e, setInvoiceLogoSrc, setInvoiceLogoSelectedFile, setIsInvoiceLogoCropping)} disabled={isReadOnly} />
+                        <FormField control={form.control} name="invoiceLogoUrl" render={({ field }) => (
+                          <FormItem>
+                            <FormControl><Input placeholder="Or enter external URL..." {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end pt-4">
+          <Button type="submit" size="lg" className="w-full md:w-auto min-w-[150px]" disabled={isSubmitting || isLoadingData || isReadOnly}>
+            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save All Changes</>}
+          </Button>
+        </div>
       </form>
-      
+
       {/* Company Logo Cropping Dialog */}
       <Dialog open={isCompanyLogoCropping} onOpenChange={setIsCompanyLogoCropping}>
         <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Crop Company Logo (Sidebar)</DialogTitle></DialogHeader>
-            {companyLogoSrc && (
-                <ReactCrop crop={companyLogoCrop} onChange={(_, c) => setCompanyLogoCrop(c)} onComplete={(c) => setCompanyLogoCompletedCrop(c)} aspect={1} minWidth={100}>
-                    <img ref={companyLogoImgRef} src={companyLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setCompanyLogoCrop)} style={{ maxHeight: '70vh' }}/>
-                </ReactCrop>
-            )}
-            <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                <Button onClick={() => handleCropAndUpload(companyLogoImgRef, companyLogoCompletedCrop, companyLogoSelectedFile, setCompanyLogoSelectedFile, (url) => setCompanyLogoUrl(url), setIsCompanyLogoCropping)}>
-                    <CropIcon className="mr-2 h-4 w-4"/>Set Logo
-                </Button>
-            </DialogFooter>
+          <DialogHeader><DialogTitle>Crop Company Logo (Sidebar)</DialogTitle></DialogHeader>
+          {companyLogoSrc && (
+            <ReactCrop crop={companyLogoCrop} onChange={(_, c) => setCompanyLogoCrop(c)} onComplete={(c) => setCompanyLogoCompletedCrop(c)} aspect={1} minWidth={100}>
+              <img ref={companyLogoImgRef} src={companyLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setCompanyLogoCrop)} style={{ maxHeight: '70vh' }} />
+            </ReactCrop>
+          )}
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+            <Button onClick={() => handleCropAndUpload(companyLogoImgRef, companyLogoCompletedCrop, companyLogoSelectedFile, setCompanyLogoSelectedFile, (url) => setCompanyLogoUrl(url), setIsCompanyLogoCropping)}>
+              <CropIcon className="mr-2 h-4 w-4" />Set Logo
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Invoice Logo Cropping Dialog */}
-       <Dialog open={isInvoiceLogoCropping} onOpenChange={setIsInvoiceLogoCropping}>
+      <Dialog open={isInvoiceLogoCropping} onOpenChange={setIsInvoiceLogoCropping}>
         <DialogContent className="max-w-xl">
-            <DialogHeader><DialogTitle>Crop Invoice Logo</DialogTitle></DialogHeader>
-            {invoiceLogoSrc && (
-                <ReactCrop crop={invoiceLogoCrop} onChange={(_, c) => setInvoiceLogoCrop(c)} onComplete={(c) => setInvoiceLogoCompletedCrop(c)} aspect={396 / 58}>
-                    <img ref={invoiceLogoImgRef} src={invoiceLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 396 / 58, setInvoiceLogoCrop)} style={{ maxHeight: '70vh' }}/>
-                </ReactCrop>
-            )}
-            <DialogFooter>
-                <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
-                <Button onClick={() => handleCropAndUpload(invoiceLogoImgRef, invoiceLogoCompletedCrop, invoiceLogoSelectedFile, setInvoiceLogoSelectedFile, setInvoiceLogoUrl, setIsInvoiceLogoCropping)} disabled={isUploading || !invoiceLogoCompletedCrop?.width}>
-                    {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4"/>Set Logo</>}
-                </Button>
-            </DialogFooter>
+          <DialogHeader><DialogTitle>Crop Invoice Logo</DialogTitle></DialogHeader>
+          {invoiceLogoSrc && (
+            <ReactCrop crop={invoiceLogoCrop} onChange={(_, c) => setInvoiceLogoCrop(c)} onComplete={(c) => setInvoiceLogoCompletedCrop(c)} aspect={396 / 58}>
+              <img ref={invoiceLogoImgRef} src={invoiceLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 396 / 58, setInvoiceLogoCrop)} style={{ maxHeight: '70vh' }} />
+            </ReactCrop>
+          )}
+          <DialogFooter>
+            <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
+            <Button onClick={() => handleCropAndUpload(invoiceLogoImgRef, invoiceLogoCompletedCrop, invoiceLogoSelectedFile, setInvoiceLogoSelectedFile, setInvoiceLogoUrl, setIsInvoiceLogoCropping)} disabled={isUploading || !invoiceLogoCompletedCrop?.width}>
+              {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Set Logo</>}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Form>
   );
 
-    function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>, aspect: number, setCropFn: React.Dispatch<React.SetStateAction<Crop | undefined>>) {
-        const { width, height } = e.currentTarget;
-        setCropFn(centerCrop(makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height), width, height));
-    }
+  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>, aspect: number, setCropFn: React.Dispatch<React.SetStateAction<Crop | undefined>>) {
+    const { width, height } = e.currentTarget;
+    setCropFn(centerCrop(makeAspectCrop({ unit: '%', width: 90 }, aspect, width, height), width, height));
+  }
 }
 
-    
