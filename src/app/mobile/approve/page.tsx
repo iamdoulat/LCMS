@@ -37,6 +37,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import { format, parseISO, isValid, differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
@@ -53,6 +54,7 @@ export default function ApproveApplicationsPage() {
     const router = useRouter();
     const { user } = useAuth();
     const { isSupervisor, supervisedEmployeeIds, currentEmployeeId } = useSupervisorCheck(user?.email);
+    const { toast } = useToast();
 
     const [activeTab, setActiveTab] = useState<'leave' | 'visit'>('leave');
     const [loading, setLoading] = useState(true);
@@ -65,9 +67,9 @@ export default function ApproveApplicationsPage() {
     const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
     const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
 
-    // Filter State - Default to Pending
+    // Filter State - Default to All
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [filters, setFilters] = useState<FilterState>({ status: 'Pending' });
+    const [filters, setFilters] = useState<FilterState>({ status: 'All' });
 
     // Computed filtered lists (Date Range Logic)
     const filteredLeaveApps = React.useMemo(() => {
@@ -106,7 +108,7 @@ export default function ApproveApplicationsPage() {
         // Fetch Leave Applications
         let qLeave = collection(firestore, 'leave_applications') as any; // Cast for flexibility
 
-        const targetStatus = filters.status || 'Pending';
+        const targetStatus = filters.status || 'All';
         if (targetStatus !== 'All') {
             qLeave = query(qLeave, where('status', '==', targetStatus));
         }
@@ -189,6 +191,11 @@ export default function ApproveApplicationsPage() {
                 approvedBy: currentEmployeeId
             });
             setIsLeaveModalOpen(false);
+            toast({
+                title: "Approved!",
+                description: "Leave application has been approved successfully.",
+                duration: 3000,
+            });
         } catch (error) {
             console.error("Error approving leave:", error);
             Swal.fire({ title: 'Error', text: 'Failed to approve application', icon: 'error', timer: 3000, showConfirmButton: false });
@@ -204,6 +211,11 @@ export default function ApproveApplicationsPage() {
                 rejectedBy: currentEmployeeId
             });
             setIsLeaveModalOpen(false);
+            toast({
+                title: "Rejected",
+                description: "Leave application has been rejected.",
+                duration: 3000,
+            });
         } catch (error) {
             console.error("Error rejecting leave:", error);
             Swal.fire({ title: 'Error', text: 'Failed to reject application', icon: 'error', timer: 3000, showConfirmButton: false });
@@ -218,6 +230,11 @@ export default function ApproveApplicationsPage() {
                 approvedBy: currentEmployeeId
             });
             setIsVisitModalOpen(false);
+            toast({
+                title: "Approved!",
+                description: "Visit application has been approved successfully.",
+                duration: 3000,
+            });
         } catch (error) {
             console.error("Error approving visit:", error);
             Swal.fire({ title: 'Error', text: 'Failed to approve application', icon: 'error', timer: 3000, showConfirmButton: false });
@@ -233,6 +250,11 @@ export default function ApproveApplicationsPage() {
                 rejectedBy: currentEmployeeId
             });
             setIsVisitModalOpen(false);
+            toast({
+                title: "Rejected",
+                description: "Visit application has been rejected.",
+                duration: 3000,
+            });
         } catch (error) {
             console.error("Error rejecting visit:", error);
             Swal.fire({ title: 'Error', text: 'Failed to reject application', icon: 'error', timer: 3000, showConfirmButton: false });
@@ -286,8 +308,16 @@ export default function ApproveApplicationsPage() {
                             </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-[9px] px-2 py-0 h-5 font-bold uppercase">
-                                Pending
+                            <Badge
+                                variant="secondary"
+                                className={cn(
+                                    "text-[9px] px-2 py-0 h-5 font-bold uppercase",
+                                    app.status === 'Pending' && "bg-amber-100 text-amber-700",
+                                    app.status === 'Approved' && "bg-green-100 text-green-700",
+                                    app.status === 'Rejected' && "bg-red-100 text-red-700"
+                                )}
+                            >
+                                {app.status || 'Pending'}
                             </Badge>
                             <button className="p-1 text-slate-400">
                                 <MoreHorizontal className="h-5 w-5" />
@@ -654,7 +684,7 @@ export default function ApproveApplicationsPage() {
                 open={isFilterOpen}
                 onOpenChange={setIsFilterOpen}
                 onApply={setFilters}
-                onReset={() => setFilters({ status: 'Pending' })}
+                onReset={() => setFilters({ status: 'All' })}
                 showDateRange
                 showStatus
                 statusOptions={['All', 'Pending', 'Approved', 'Rejected']}
