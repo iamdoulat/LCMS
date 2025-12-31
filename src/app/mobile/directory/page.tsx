@@ -64,9 +64,12 @@ export default function MobileDirectoryPage() {
             const userRoles = emailKey ? userRoleMap.get(emailKey) : undefined;
 
             // Combine employee.role and user.role, ensuring we don't have duplicates
+            // Combine employee.role and user.role, ensuring we don't have duplicates
+            const empRole = (emp as any).role;
+            const empRolesArray = Array.isArray(empRole) ? empRole : (empRole ? [empRole] : []);
+
             const mergedRoles = Array.from(new Set([
-                ...((emp as any).role || []),
-                ...((emp as any).roles || []),
+                ...empRolesArray,
                 ...(userRoles || [])
             ]));
 
