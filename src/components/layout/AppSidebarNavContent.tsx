@@ -241,7 +241,7 @@ export function AppSidebarNavContent() {
   const sidebar = useSidebar();
 
   const companyLogoUrlFromSettings = companyLogoUrl || "/icons/icon-192x192.png";
-  const displayCompanyNameFromSettings = companyName || "Smart Solution";
+  const displayCompanyNameFromSettings = companyName || "LCMS";
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === href;
@@ -290,16 +290,14 @@ export function AppSidebarNavContent() {
                   data-ai-hint="company logo"
                 />
               )}
-              {!hideCompanyName && (
-                <span
-                  className={cn(
-                    "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
-                    "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-                  )}
-                >
-                  {displayCompanyNameFromSettings}
-                </span>
-              )}
+              <span
+                className={cn(
+                  "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
+                  "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                )}
+              >
+                {displayCompanyNameFromSettings}
+              </span>
             </Link>
           )}
           {!sidebar.isMobile && (
