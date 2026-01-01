@@ -604,7 +604,7 @@ export default function MobileAddDemoApplicationPage() {
                                     if (!machine && watchedAppliedMachines[index]?.demoMachineId) return null;
 
                                     if (!machine) { // Empty placeholder
-                                        if (fields.length === 1) return <p className="text-sm text-slate-400 italic text-center py-4">No machines selected yet.</p>;
+                                        if (fields.length === 1) return <p key={field.id} className="text-sm text-slate-400 italic text-center py-4">No machines selected yet.</p>;
                                         return null;
                                     }
 
