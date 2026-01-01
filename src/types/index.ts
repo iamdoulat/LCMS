@@ -446,6 +446,15 @@ export interface CompanyProfile {
   cellNumber?: string;
   invoiceLogoUrl?: string;
   companyLogoUrl?: string;
+  faviconUrl?: string;
+  pwaAppName?: string;
+  pwaShortName?: string;
+  pwaDescription?: string;
+  pwaIcon192Url?: string;
+  pwaIcon512Url?: string;
+  pwaIcon144Url?: string;
+  pwaIconMaskableUrl?: string;
+  pwaScreenshotUrl?: string;
   hideCompanyName?: boolean;
   logoWidth?: number;
   logoHeight?: number;
