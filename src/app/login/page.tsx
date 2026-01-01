@@ -349,13 +349,13 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+          <div className="mx-auto mb-4 flex h-24 w-full items-center justify-center">
             <Image
-              src={companyLogoUrl || "/icons/icon-192x192.png"}
-              alt="LC Management System Logo"
-              width={56}
-              height={56}
-              className="rounded-sm"
+              src={companyLogoUrl}
+              alt="Company Logo"
+              width={200}
+              height={80}
+              className="h-full w-auto object-contain max-h-20"
               priority
               data-ai-hint="logo company"
             />

@@ -18,7 +18,7 @@ const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
 const COMPANY_NAME_STORAGE_KEY = 'appCompanyName';
 const COMPANY_LOGO_URL_STORAGE_KEY = 'appCompanyLogoUrl';
 const INVOICE_LOGO_URL_STORAGE_KEY = 'appInvoiceLogoUrl';
-const DEFAULT_COMPANY_NAME = 'Nextsew';
+const DEFAULT_COMPANY_NAME = 'LCMS';
 const DEFAULT_COMPANY_LOGO_URL = "/icons/icon-192x192.png";
 
 // Helper function to parse emails from environment variables

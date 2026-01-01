@@ -84,10 +84,13 @@ const financialSettingsSchema = z.object({
 type FinancialSettingsFormValues = z.infer<typeof financialSettingsSchema>;
 
 
-const DEFAULT_COMPANY_NAME = 'Smart Solution';
-const DEFAULT_ADDRESS = 'House#50, Road#10, Sector#10, Uttara Model Town, Dhaka-1230';
-const DEFAULT_EMAIL = 'info@smartsolution-bd.com';
-const DEFAULT_COMPANY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+const DEFAULT_COMPANY_NAME = 'LCMS';
+const DEFAULT_ADDRESS = 'House#50/A, Road#10, Sector#10, Uttara Model Town, Dhaka-1230';
+const DEFAULT_EMAIL = 'info@uddoktasoft.com';
+const DEFAULT_COMPANY_LOGO_URL = "/icons/icon-192x192.png";
+const DEFAULT_PWA_APP_NAME = 'LCMS';
+const DEFAULT_PWA_SHORT_NAME = 'LCMS';
+const DEFAULT_PWA_DESCRIPTION = 'LCMS - LC & HR Management System - Employee Portal';
 
 
 export function CompanySetupForm() {
@@ -185,9 +188,9 @@ export function CompanySetupForm() {
       companyLogoUrl: '',
       invoiceLogoUrl: '',
       faviconUrl: '',
-      pwaAppName: 'NextSew',
-      pwaShortName: 'NextSew',
-      pwaDescription: 'App Name - LC & HR Management System - Employee Portal',
+      pwaAppName: DEFAULT_PWA_APP_NAME,
+      pwaShortName: DEFAULT_PWA_SHORT_NAME,
+      pwaDescription: DEFAULT_PWA_DESCRIPTION,
       pwaIcon192Url: '',
       pwaIcon512Url: '',
       pwaScreenshotUrl: '',
@@ -211,9 +214,9 @@ export function CompanySetupForm() {
           companyLogoUrl: contextCompanyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
           invoiceLogoUrl: DEFAULT_COMPANY_LOGO_URL,
           faviconUrl: '',
-          pwaAppName: 'NextSew',
-          pwaShortName: 'NextSew',
-          pwaDescription: 'App Name - LC & HR Management System - Employee Portal',
+          pwaAppName: DEFAULT_PWA_APP_NAME,
+          pwaShortName: DEFAULT_PWA_SHORT_NAME,
+          pwaDescription: DEFAULT_PWA_DESCRIPTION,
           pwaIcon192Url: '',
           pwaIcon512Url: '',
           pwaScreenshotUrl: '',
