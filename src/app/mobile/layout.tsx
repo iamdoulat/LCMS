@@ -55,7 +55,7 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
         '/mobile/leave/applications',
         '/mobile/leave/subordinate',
         '/mobile/approve',
-        '/mobile/provident-fund',
+        '/mobile/service',
         '/mobile/qrcode',
         '/mobile/payroll',
         '/mobile/profile'

@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Home, ClipboardList, Calendar, Wallet, Banknote } from 'lucide-react';
+import { Home, ClipboardList, Calendar, Wallet, Banknote, Wrench } from 'lucide-react';
 
 export function MobileNavbar() {
     const pathname = usePathname();
@@ -14,7 +14,7 @@ export function MobileNavbar() {
         { href: '/mobile/attendance', label: 'Attendance', icon: ClipboardList },
         { href: '/mobile/leave', label: 'Leave', icon: Calendar },
         { href: '/mobile/payroll', label: 'Payroll', icon: Banknote },
-        { href: '/mobile/provident-fund', label: 'P. Fund', icon: Wallet },
+        { href: '/mobile/service', label: 'Service', icon: Wrench },
     ];
 
     return (
