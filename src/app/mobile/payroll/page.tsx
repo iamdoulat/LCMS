@@ -720,7 +720,7 @@ export default function MobilePayrollPage() {
                         >
                             <span className="flex items-center justify-center gap-2">
                                 <span className={`w-2 h-2 rounded-full ${activeTab === 'advance' ? 'bg-yellow-400' : 'bg-transparent'}`}></span>
-                                Advance
+                                Advance Salary
                             </span>
                         </button>
                     </div>
@@ -739,7 +739,7 @@ export default function MobilePayrollPage() {
 
                 {/* FAB for Advance Request - Only shows when activeTab is advance */}
                 {activeTab === 'advance' && (
-                    <div className="absolute bottom-6 right-6 z-40">
+                    <div className="absolute bottom-32 right-6 z-40">
                         <div className="h-14 w-14">
                             <Button
                                 onClick={() => setIsAdvanceRequestOpen(true)}

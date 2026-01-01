@@ -7,6 +7,8 @@ import { ArrowLeft, Laptop, Search, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { SummaryStats } from '@/components/mobile/service/SummaryStats';
+import { ServiceModules } from '@/components/mobile/service/ServiceModules';
+import { DemoModules } from '@/components/mobile/service/DemoModules';
 
 export default function ServicePage() {
     const router = useRouter();
@@ -183,8 +185,13 @@ export default function ServicePage() {
                     </AnimatePresence>
                 </div>
 
+                {/* Modules Section (Conditional) */}
+                <div className="w-full max-w-sm">
+                    {searchType === 'warranty' ? <ServiceModules /> : <DemoModules />}
+                </div>
+
                 {/* Yearly Statistics Section */}
-                <div className="w-full max-w-sm mt-10">
+                <div className="w-full max-w-sm mt-6">
                     <SummaryStats type={searchType} />
                 </div>
 
