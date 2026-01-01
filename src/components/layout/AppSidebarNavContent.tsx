@@ -237,10 +237,10 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
 
 export function AppSidebarNavContent() {
   const pathname = usePathname();
-  const { user, userRole, logout, loading: authLoading, companyName, companyLogoUrl } = useAuth();
+  const { user, userRole, logout, loading: authLoading, companyName, companyLogoUrl, hideCompanyLogo, hideCompanyName } = useAuth();
   const sidebar = useSidebar();
 
-  const companyLogoUrlFromSettings = companyLogoUrl || "https://firebasestorage.googleapis.com/v0/b/lc-vision.firebasestorage.app/o/logoa%20(1)%20(1).png?alt=media&token=b5be1b22-2d2b-4951-b433-df2e3ea7eb6e";
+  const companyLogoUrlFromSettings = companyLogoUrl || "/icons/icon-192x192.png";
   const displayCompanyNameFromSettings = companyName || "Smart Solution";
 
   const isActive = (href: string) => {
@@ -279,23 +279,27 @@ export function AppSidebarNavContent() {
         <div className="flex items-center justify-between p-2 gap-2">
           {user && ( // Only show the link and logo if a user is logged in
             <Link href="/dashboard" className="flex items-center gap-2 min-w-0 flex-1">
-              <Image
-                src={companyLogoUrlFromSettings}
-                alt="Company Logo"
-                width={32}
-                height={32}
-                className="rounded-sm object-contain flex-shrink-0"
-                priority
-                data-ai-hint="company logo"
-              />
-              <span
-                className={cn(
-                  "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
-                  "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
-                )}
-              >
-                {displayCompanyNameFromSettings}
-              </span>
+              {!hideCompanyLogo && (
+                <Image
+                  src={companyLogoUrlFromSettings}
+                  alt="Company Logo"
+                  width={32}
+                  height={32}
+                  className="rounded-sm object-contain flex-shrink-0"
+                  priority
+                  data-ai-hint="company logo"
+                />
+              )}
+              {!hideCompanyName && (
+                <span
+                  className={cn(
+                    "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
+                    "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                  )}
+                >
+                  {displayCompanyNameFromSettings}
+                </span>
+              )}
             </Link>
           )}
           {!sidebar.isMobile && (

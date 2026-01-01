@@ -455,6 +455,7 @@ export interface CompanyProfile {
   pwaIcon144Url?: string;
   pwaIconMaskableUrl?: string;
   pwaScreenshotUrl?: string;
+  hideCompanyLogo?: boolean;
   hideCompanyName?: boolean;
   logoWidth?: number;
   logoHeight?: number;

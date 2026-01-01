@@ -370,7 +370,13 @@ export function CompanySetupForm() {
       const profileDocRef = doc(firestore, FINANCIAL_SETTINGS_COLLECTION, COMPANY_PROFILE_DOC_ID);
       await setDoc(profileDocRef, dataToSave, { merge: true });
 
-      updateCompanyProfile({ companyName: data.companyName, companyLogoUrl: newCompanyLogoUrl, invoiceLogoUrl: newInvoiceLogoUrl });
+      updateCompanyProfile({
+        companyName: data.companyName,
+        companyLogoUrl: newCompanyLogoUrl,
+        invoiceLogoUrl: newInvoiceLogoUrl,
+        hideCompanyLogo: data.hideCompanyLogo,
+        hideCompanyName: data.hideCompanyName
+      });
       setCompanyLogoUrl(newCompanyLogoUrl);
       setInvoiceLogoUrl(newInvoiceLogoUrl);
       setFaviconUrl(newFaviconUrl);

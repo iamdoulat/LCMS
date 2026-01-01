@@ -51,7 +51,9 @@ interface AuthContextType {
   companyLogoUrl: string;
   address: string;
   invoiceLogoUrl: string;
-  updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address'>>) => void;
+  hideCompanyLogo: boolean;
+  hideCompanyName: boolean;
+  updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address' | 'hideCompanyLogo' | 'hideCompanyName'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,6 +69,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const [invoiceLogoUrl, setInvoiceLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const [address, setAddress] = useState<string>('');
+  const [hideCompanyLogo, setHideCompanyLogo] = useState<boolean>(false);
+  const [hideCompanyName, setHideCompanyName] = useState<boolean>(false);
   const router = useRouter();
 
   const fetchInitialCompanyProfile = useCallback(async () => {
@@ -79,11 +83,15 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const newLogoUrl = profileData.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
         const newInvoiceLogoUrl = profileData.invoiceLogoUrl || newLogoUrl;
         const newAddress = profileData.address || '';
+        const newHideLogo = !!profileData.hideCompanyLogo;
+        const newHideName = !!profileData.hideCompanyName;
 
         setCompanyName(newName);
         setCompanyLogoUrl(newLogoUrl);
         setInvoiceLogoUrl(newInvoiceLogoUrl);
         setAddress(newAddress);
+        setHideCompanyLogo(newHideLogo);
+        setHideCompanyName(newHideName);
 
         if (typeof window !== 'undefined') {
           localStorage.setItem(COMPANY_NAME_STORAGE_KEY, newName);
@@ -326,10 +334,12 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [router]);
 
-  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address'>>) => {
+  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address' | 'hideCompanyLogo' | 'hideCompanyName'>>) => {
     let newName = companyName;
     let newLogoUrl = companyLogoUrl;
     let newInvoiceLogoUrl = invoiceLogoUrl;
+    let newHideLogo = hideCompanyLogo;
+    let newHideName = hideCompanyName;
 
     if (profile.companyName !== undefined) {
       newName = profile.companyName || DEFAULT_COMPANY_NAME;
@@ -343,15 +353,19 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       newInvoiceLogoUrl = profile.invoiceLogoUrl || newLogoUrl; // Fallback to main logo if cleared
       if (typeof window !== 'undefined') localStorage.setItem(INVOICE_LOGO_URL_STORAGE_KEY, newInvoiceLogoUrl);
     }
+    if (profile.hideCompanyLogo !== undefined) newHideLogo = !!profile.hideCompanyLogo;
+    if (profile.hideCompanyName !== undefined) newHideName = !!profile.hideCompanyName;
 
     setCompanyName(newName);
     setCompanyLogoUrl(newLogoUrl);
     setInvoiceLogoUrl(newInvoiceLogoUrl);
+    setHideCompanyLogo(newHideLogo);
+    setHideCompanyName(newHideName);
     if (profile.address !== undefined) setAddress(profile.address || '');
-  }, [companyName, companyLogoUrl, invoiceLogoUrl]);
+  }, [companyName, companyLogoUrl, invoiceLogoUrl, hideCompanyLogo, hideCompanyName]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, register, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, address, invoiceLogoUrl, updateCompanyProfile }}>
+    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, register, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, address, invoiceLogoUrl, hideCompanyLogo, hideCompanyName, updateCompanyProfile }}>
       {children}
     </AuthContext.Provider>
   );
