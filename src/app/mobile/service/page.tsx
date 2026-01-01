@@ -59,7 +59,7 @@ export default function ServicePage() {
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2">Service Engine</h1>
+                    <h1 className="text-xl font-bold text-white ml-2">Service & Demo Search Engine</h1>
                 </div>
             </div>
 

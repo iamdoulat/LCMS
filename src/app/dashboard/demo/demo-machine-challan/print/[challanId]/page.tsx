@@ -11,6 +11,7 @@ import { Loader2, Printer, AlertTriangle, Share2, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { format, parseISO, isValid } from 'date-fns';
+import { DemoChallanPrintTemplate } from '@/components/print/DemoChallanPrintTemplate';
 
 import Swal from 'sweetalert2';
 import jsPDF from 'jspdf';
@@ -50,14 +51,29 @@ export default function PrintDemoMachineChallanPage() {
 
       try {
         const settingsDocRef = doc(firestore, 'financial_settings', 'main_settings');
+        const piSettingsDocRef = doc(firestore, 'pi_layout_settings', 'main_settings');
         const challanDocRef = doc(firestore, "demo_machine_challans", challanId);
-        const [settingsSnap, challanSnap] = await Promise.all([getDoc(settingsDocRef), getDoc(challanDocRef)]);
+        const [settingsSnap, piSettingsSnap, challanSnap] = await Promise.all([
+          getDoc(settingsDocRef),
+          getDoc(piSettingsDocRef),
+          getDoc(challanDocRef)
+        ]);
 
         if (settingsSnap.exists()) {
           setCompanySettings(settingsSnap.data() as CompanyProfile);
         } else {
           console.warn("Financial settings not found, using defaults.");
           setCompanySettings({}); // Use empty object if no settings found
+        }
+
+        let piSettings = { logoWidth: 328.9, logoHeight: 48.3, piName: '' };
+        if (piSettingsSnap.exists()) {
+          const data = piSettingsSnap.data();
+          piSettings = {
+            logoWidth: data.logoWidth || 328.9,
+            logoHeight: data.logoHeight || 48.3,
+            piName: data.name || ''
+          };
         }
 
         if (challanSnap.exists()) {
@@ -75,14 +91,22 @@ export default function PrintDemoMachineChallanPage() {
           setError("Demo Machine Challan not found.");
         }
 
+        // Return piSettings to be used in render (hacky since I can't change state definition easily here without full replace)
+        return piSettings;
+
       } catch (err: any) {
         setError(`Failed to fetch data: ${err.message}`);
+        return null;
       } finally {
         setIsLoading(false);
       }
     };
-    loadAllData();
+    loadAllData().then((piSettings) => {
+      if (piSettings) setLocalPiSettings(piSettings);
+    });
   }, [challanId]);
+
+  const [localPiSettings, setLocalPiSettings] = useState<{ logoWidth: number, logoHeight: number, piName: string }>({ logoWidth: 328.9, logoHeight: 48.3, piName: '' });
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -109,7 +133,21 @@ export default function PrintDemoMachineChallanPage() {
     }
   };
 
-  const handleDownloadPdf = async () => {
+
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const autoDownload = searchParams ? searchParams.get('download') === 'true' : false;
+
+  useEffect(() => {
+    if (autoDownload && !isLoading && challanData) {
+      // Small delay to ensure rendering is complete
+      const timer = setTimeout(() => {
+        handleDownloadPdf(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, challanData, autoDownload]);
+
+  const handleDownloadPdf = async (shouldClose = false) => {
     const input = printContainerRef.current;
     if (!input) {
       Swal.fire("Error", "Could not find the content to download.", "error");
@@ -132,6 +170,10 @@ export default function PrintDemoMachineChallanPage() {
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, height);
       pdf.save(`Demo_Challan_${challanId}.pdf`);
+
+      if (shouldClose) {
+        window.close();
+      }
 
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -167,140 +209,23 @@ export default function PrintDemoMachineChallanPage() {
   const displayCompanyLogo = invoiceLogoUrl || 'https://placehold.co/400x100.png';
   const displayCompanyAddress = address || 'Your Company Address';
 
-
-
   return (
-    <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
-      <div className="p-4 flex flex-col flex-grow">
-        <div className="print-header">
-          <div className="flex justify-between items-center mb-2">
-            <div className="w-2/3 pr-8">
-              {displayCompanyLogo && (
-                <Image
-                  src={displayCompanyLogo}
-                  alt={`${displayCompanyName} Logo`}
-                  width={328.9}
-                  height={48.3}
-                  className="object-contain mb-2"
-                  priority
-                  data-ai-hint="company logo"
-                />
-              )}
-              {!hideCompanyName && (
-                <h1 className="text-xl font-bold text-gray-900">{displayCompanyName}</h1>
-              )}
-              <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
-              {emailId && <p className="text-xs text-gray-600">Email: {emailId}</p>}
-              {cellNumber && <p className="text-xs text-gray-600">Phone: {cellNumber}</p>}
-            </div>
+    <div className="bg-white min-h-screen">
+      {/* Template Rendering for Print/Capture */}
+      <DemoChallanPrintTemplate
+        challanData={challanData}
+        applicationData={applicationData}
+        companySettings={companySettings}
+        piSettings={localPiSettings}
+        containerRef={printContainerRef}
+      />
 
-            <div className="text-right w-1/3">
-              <h2 className="text-xl font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap">DEMO M/C CHALLAN</h2>
-              <div className="flex justify-end items-baseline gap-2 text-xs">
-                <span className="font-semibold">Challan No :</span>
-                <span>{challanData.id}</span>
-              </div>
-              <div className="flex justify-end items-baseline gap-2 text-xs">
-                <span className="font-semibold">Date :</span>
-                <span>{formatDisplayDate(challanData.challanDate)}</span>
-              </div>
-              <div className="flex justify-end items-baseline gap-2 text-xs">
-                <span className="font-semibold">Application No :</span>
-                <span>{challanData.linkedApplicationId || 'N/A'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mb-2">
-            <div className="border p-2 rounded-md text-xs">
-              <h3 className="font-semibold text-gray-700 mb-1 uppercase">M/S:</h3>
-              <p className="font-medium text-gray-900">{challanData.factoryName || 'N/A'}</p>
-              <p className="text-gray-600 whitespace-pre-line">{challanData.deliveryAddress || 'N/A'}</p>
-            </div>
-            <div className="border p-2 rounded-md text-xs">
-              <h3 className="font-semibold text-gray-700 mb-1 uppercase">DELIVER TO:</h3>
-              <p className="font-medium text-gray-900">{challanData.factoryName || 'N/A'}</p>
-              <p className="text-gray-600 whitespace-pre-line">{challanData.deliveryAddress || 'N/A'}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-4 gap-4 mb-2 text-xs">
-            <div className="border p-2 rounded-md">
-              <span className="font-semibold text-gray-700">Delivery Person:</span>
-              <p className="font-medium text-gray-900">{challanData.deliveryPerson || 'N/A'}</p>
-            </div>
-            <div className="border p-2 rounded-md">
-              <span className="font-semibold text-gray-700">Vehicle No:</span>
-              <p className="font-medium text-gray-900">{challanData.vehicleNo || 'N/A'}</p>
-            </div>
-            {applicationData?.deliveryDate && (
-              <div className="border p-2 rounded-md">
-                <span className="font-semibold text-gray-700">Delivery Date:</span>
-                <p className="font-medium text-gray-900">{formatDisplayDate(applicationData.deliveryDate)}</p>
-              </div>
-            )}
-            {applicationData?.estReturnDate && (
-              <div className="border p-2 rounded-md">
-                <span className="font-semibold text-gray-700">Est. Return Date:</span>
-                <p className="font-medium text-gray-900">{formatDisplayDate(applicationData.estReturnDate)}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-grow mt-4">
-          <table className="w-full text-sm border-collapse table-fixed">
-            <thead className="bg-gray-100 text-gray-700">
-              <tr>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{ width: '6%' }}>#</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{ width: '60%' }}>Description of Goods</th>
-                <th className="p-2 border border-gray-300 text-left font-semibold" style={{ width: '12%' }}>Brand</th>
-                <th className="p-2 border border-gray-300 text-center font-semibold" style={{ width: '20%' }}>Quantity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {challanData.lineItems.map((item, index) => (
-                <tr key={`${item.demoMachineId}-${index}`} className="border-b border-gray-200">
-                  <td className="p-2 border border-gray-300 text-center align-top">{index + 1}</td>
-                  <td className="p-2 border border-gray-300 align-top break-words">
-                    <p className="font-medium text-gray-900">{item.description}</p>
-                  </td>
-                  <td className="p-2 border border-gray-300 align-top">{applicationData?.appliedMachines.find(m => m.demoMachineId === item.demoMachineId)?.machineBrand || 'N/A'}</td>
-                  <td className="p-2 border border-gray-300 text-center align-top">{item.qty}</td>
-                </tr>
-              ))}
-              {Array.from({ length: Math.max(0, 15 - challanData.lineItems.length) }).map((_, i) => (
-                <tr key={`empty-${i}`} className="border-b border-gray-200 h-9"><td className="p-2 border border-gray-300"></td><td className="p-2 border border-gray-300"></td><td className="p-2 border border-gray-300"></td><td className="p-2 border border-gray-300"></td></tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="print-footer pb-4 px-4 mt-auto">
-        <section className="flex justify-between items-end mb-2 pt-2">
-          <div className="w-1/3 text-center">
-            <div className="border-t border-dotted border-gray-400 pt-1"></div>
-            <p className="pt-1 text-xs font-semibold text-gray-800">Receiver&apos;s Signature</p>
-            <p className="pt-1 text-xs text-gray-800">Mobile:</p>
-          </div>
-          <div className="w-1/3 text-center">
-            <div className="border-t border-dotted border-gray-400 pt-1"></div>
-            <p className="pt-1 text-xs font-semibold text-gray-800">Store In-Charge Signature</p>
-            <p className="pt-1 text-xs text-gray-800">Mobile:</p>
-          </div>
-          <div className="w-1/3 text-center">
-            <div className="border-t border-dotted border-gray-400 pt-1"></div>
-            <p className="pt-1 text-xs font-semibold text-gray-800">Authorized Signature</p>
-            <p className="pt-1 text-xs text-gray-800">Mobile:</p>
-          </div>
-        </section>
-      </div>
-
-      <div className="print-only-utility-buttons mt-8 text-center noprint flex justify-center items-center gap-2">
+      {/* Utility Buttons */}
+      <div className="print-only-utility-buttons mt-8 text-center noprint flex justify-center items-center gap-2 pb-8">
         <Button onClick={handleShare} variant="outline">
           <Share2 className="mr-2 h-4 w-4" /> Share
         </Button>
-        <Button onClick={handleDownloadPdf} variant="outline">
+        <Button onClick={() => handleDownloadPdf(false)} variant="outline">
           <Download className="mr-2 h-4 w-4" /> PDF Download
         </Button>
         <Button onClick={() => window.print()} variant="default" className="bg-blue-600 hover:bg-blue-700">

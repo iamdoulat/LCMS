@@ -242,10 +242,10 @@ export default function ServiceReportsPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-[#042f2e] overflow-hidden">
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Header */}
-            <div className="sticky top-0 z-50 px-4 pt-4 pb-6 bg-[#042f2e]">
-                <div className="absolute inset-0 bg-gradient-to-b from-teal-950/50 to-transparent pointer-events-none" />
+            <div className="sticky top-0 z-50 px-4 pt-4 pb-6 bg-[#0a1e60]">
+                <div className="absolute inset-0 bg-gradient-to-b from-blue-950/50 to-transparent pointer-events-none" />
                 <div className="relative flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
                         <button
@@ -256,7 +256,7 @@ export default function ServiceReportsPage() {
                         </button>
                         <div>
                             <h1 className="text-2xl font-black text-white tracking-tight">Service Reports</h1>
-                            <p className="text-[10px] font-bold text-teal-400/80 uppercase tracking-[0.2em]">Installation & Warranty</p>
+                            <p className="text-[10px] font-bold text-blue-400/80 uppercase tracking-[0.2em]">Installation & Warranty</p>
                         </div>
                     </div>
 
@@ -358,14 +358,14 @@ export default function ServiceReportsPage() {
 
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-teal-400/50" />
+                        <Search className="h-5 w-5 text-blue-400/50" />
                     </div>
                     <input
                         type="text"
                         placeholder="Search CI or LC number..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-14 bg-white/10 border border-white/10 rounded-[1.25rem] pl-12 pr-4 text-white placeholder:text-teal-400/30 focus:ring-2 focus:ring-teal-500/50 transition-all outline-none backdrop-blur-md text-sm font-medium"
+                        className="w-full h-14 bg-white/10 border border-white/10 rounded-[1.25rem] pl-12 pr-4 text-white placeholder:text-blue-400/30 focus:ring-2 focus:ring-blue-500/50 transition-all outline-none backdrop-blur-md text-sm font-medium"
                     />
                 </div>
             </div>
@@ -374,7 +374,7 @@ export default function ServiceReportsPage() {
             <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto pb-24 shadow-inner">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-                        <Loader2 className="h-10 w-10 animate-spin text-teal-600" />
+                        <Loader2 className="h-10 w-10 animate-spin text-[#0a1e60]" />
                         <p className="font-bold text-sm">Fetching reports...</p>
                     </div>
                 ) : filteredReports.length === 0 ? (
@@ -406,15 +406,15 @@ export default function ServiceReportsPage() {
                                     className="bg-white p-5 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200 hover:border-slate-400 active:scale-[0.98] transition-all group relative overflow-hidden"
                                 >
                                     {/* Subtle highlight */}
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-teal-500/20" />
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-[#0a1e60]/20" />
 
                                     <div className="flex justify-between items-start mb-4" onClick={() => report.packingListUrl && window.open(report.packingListUrl, '_blank')}>
                                         <div className="flex items-center gap-3">
-                                            <div className="p-3 bg-teal-50 rounded-2xl">
-                                                <FileText className="h-6 w-6 text-teal-600" />
+                                            <div className="p-3 bg-blue-50 rounded-2xl">
+                                                <FileText className="h-6 w-6 text-[#0a1e60]" />
                                             </div>
                                             <div>
-                                                <h3 className="font-black text-[#042f2e] text-base leading-tight">
+                                                <h3 className="font-black text-[#0a1e60] text-base leading-tight">
                                                     CI: {report.commercialInvoiceNumber || 'N/A'}
                                                 </h3>
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
@@ -445,13 +445,13 @@ export default function ServiceReportsPage() {
 
                                     <div className="space-y-2 pt-3 border-t border-dashed border-slate-200">
                                         <div className="grid grid-cols-3 gap-2 py-3 bg-white rounded-3xl px-3 mt-1 border border-slate-200 shadow-[0_4px_12px_rgb(0,0,0,0.03)]">
-                                            <div className="text-center border-r border-teal-400 last:border-0">
+                                            <div className="text-center border-r border-blue-400 last:border-0">
                                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">Total Qty</p>
-                                                <p className="text-sm font-black text-[#042f2e]">{report.totalMachineQtyFromLC || 0}</p>
+                                                <p className="text-sm font-black text-[#0a1e60]">{report.totalMachineQtyFromLC || 0}</p>
                                             </div>
-                                            <div className="text-center border-r border-teal-400 last:border-0">
-                                                <p className="text-[10px] font-black text-teal-700 uppercase tracking-tighter mb-0.5">Installed</p>
-                                                <p className="text-sm font-black text-teal-600">{report.totalInstalledQty || 0}</p>
+                                            <div className="text-center border-r border-blue-400 last:border-0">
+                                                <p className="text-[10px] font-black text-blue-700 uppercase tracking-tighter mb-0.5">Installed</p>
+                                                <p className="text-sm font-black text-blue-600">{report.totalInstalledQty || 0}</p>
                                             </div>
                                             <div className="text-center">
                                                 <p className="text-[10px] font-black text-rose-700 uppercase tracking-tighter mb-0.5">Pending</p>
@@ -492,13 +492,13 @@ export default function ServiceReportsPage() {
 
                                             <Button
                                                 variant="outline"
-                                                className="flex-1 h-12 rounded-2xl border-emerald-600 text-slate-900 bg-white font-black gap-2 hover:bg-emerald-50 hover:border-emerald-700 hover:text-emerald-700 active:scale-[0.98] transition-all shadow-[0_4px_12px_rgba(0,0,0,0.1)] group"
+                                                className="flex-1 h-12 rounded-2xl border-blue-600 text-slate-900 bg-white font-black gap-2 hover:bg-blue-50 hover:border-blue-700 hover:text-blue-700 active:scale-[0.98] transition-all shadow-[0_4px_12px_rgba(0,0,0,0.1)] group"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleDownloadPdfReport(report);
                                                 }}
                                             >
-                                                <FileDown className="h-4 w-4 text-emerald-600 shadow-sm group-hover:text-emerald-700" />
+                                                <FileDown className="h-4 w-4 text-blue-600 shadow-sm group-hover:text-blue-700" />
                                                 PDF Details
                                             </Button>
                                         </div>
@@ -513,7 +513,7 @@ export default function ServiceReportsPage() {
                                 <Button
                                     onClick={() => fetchReports(true)}
                                     disabled={isPaginating}
-                                    className="h-14 px-8 rounded-2xl bg-[#042f2e] text-white font-black shadow-lg hover:bg-teal-900 active:scale-95 transition-all gap-3"
+                                    className="h-14 px-8 rounded-2xl bg-[#0a1e60] text-white font-black shadow-lg hover:bg-blue-900 active:scale-95 transition-all gap-3"
                                 >
                                     {isPaginating ? (
                                         <>

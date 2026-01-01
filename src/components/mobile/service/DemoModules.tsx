@@ -70,15 +70,6 @@ const ALL_MODULES: Module[] = [
         description: 'Manage demo challans',
         href: '/mobile/service/demo-challan'
     },
-    {
-        id: 'mc_overdue',
-        label: 'M/C Overdue',
-        icon: History,
-        color: 'text-indigo-600',
-        bgColor: 'bg-indigo-50',
-        description: 'Track overdue machines',
-        href: '/mobile/service/mc-overdue'
-    },
 ];
 
 const STORAGE_KEY = 'demo_modules_visibility';
