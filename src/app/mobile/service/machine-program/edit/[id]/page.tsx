@@ -131,8 +131,8 @@ export default function MobileEditDemoApplicationPage() {
                     const appData = {
                         id: docSnap.id,
                         ...data,
-                        deliveryDate: isTimestamp(data.deliveryDate) ? data.deliveryDate.toDate().toISOString() : data.deliveryDate,
-                        estReturnDate: isTimestamp(data.estReturnDate) ? data.estReturnDate.toDate().toISOString() : data.estReturnDate,
+                        deliveryDate: isTimestamp(data.deliveryDate) ? (data.deliveryDate as any).toDate().toISOString() : data.deliveryDate,
+                        estReturnDate: isTimestamp(data.estReturnDate) ? (data.estReturnDate as any).toDate().toISOString() : data.estReturnDate,
                     } as DemoMachineApplicationDocument;
 
                     setInitialData(appData);
