@@ -2221,6 +2221,7 @@ export interface Asset {
   createdAt?: any;
   updatedAt?: any;
 }
+export type AssetDocument = Asset & { id: string; createdAt: any; updatedAt: any; };
 
 export const assetDistributionStatusOptions = ["Pending For Acknowledgement", "Occupied", "Returned"] as const;
 export type AssetDistributionStatus = typeof assetDistributionStatusOptions[number];
