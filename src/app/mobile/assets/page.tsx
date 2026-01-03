@@ -37,8 +37,9 @@ export default function AssetsPage() {
             collection(firestore, "asset_distributions"),
             where("employeeId", "==", user?.uid || 'dummy')
         ),
-        { enabled: !!user?.uid },
-        ['my_assigned_assets']
+        undefined,
+        ['my_assigned_assets'],
+        !!user?.uid
     );
 
     // 2. My Requested Assets (Requisitions)
@@ -47,8 +48,9 @@ export default function AssetsPage() {
             collection(firestore, "asset_requisitions"),
             where("employeeId", "==", user?.uid || 'dummy')
         ),
-        { enabled: !!user?.uid },
-        ['my_asset_requests']
+        undefined,
+        ['my_asset_requests'],
+        !!user?.uid
     );
 
     // Debug logging
@@ -77,8 +79,9 @@ export default function AssetsPage() {
             collection(firestore, "asset_requisitions"),
             where("status", "==", "Pending")
         ),
-        { enabled: !!user?.uid && !!isAdminOrHR },
-        ['pending_asset_requisitions']
+        undefined,
+        ['pending_asset_requisitions'],
+        !!user?.uid && !!isAdminOrHR
     );
 
     const sortedPendingRequisitions = React.useMemo(() => {
