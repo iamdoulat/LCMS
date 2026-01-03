@@ -261,16 +261,15 @@ export default function ClaimManagementPage() {
                                 </Select>
                             </div>
 
-                            <AddClaimModal
-                                trigger={
-                                    <Button className="bg-[#2B59FF] hover:bg-[#2B59FF]/90 text-white">
-                                        <Plus className="mr-2 h-4 w-4" /> Add New
-                                    </Button>
-                                }
-                                onSuccess={() => {
-                                    console.log("Claim saved");
+                            <Button
+                                className="bg-[#2B59FF] hover:bg-[#2B59FF]/90 text-white"
+                                onClick={() => {
+                                    setEditingClaim(null);
+                                    setIsEditModalOpen(true);
                                 }}
-                            />
+                            >
+                                <Plus className="mr-2 h-4 w-4" /> Add New
+                            </Button>
                         </div>
 
                         {/* Table */}
@@ -361,9 +360,10 @@ export default function ClaimManagementPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Action</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem onClick={() => {
+                                                            <DropdownMenuItem onSelect={(e) => {
+                                                                e.preventDefault();
                                                                 setEditingClaim(claim);
-                                                                setIsEditModalOpen(true);
+                                                                setTimeout(() => setIsEditModalOpen(true), 100);
                                                             }}>
                                                                 <FileEdit className="mr-2 h-4 w-4" /> Edit
                                                             </DropdownMenuItem>

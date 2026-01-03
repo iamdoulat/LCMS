@@ -3893,7 +3893,7 @@ export default function AccountDetailsPage() {
         setOpen={setIsClaimModalOpen}
         editingClaim={editingClaim}
         defaultEmployeeId={user?.uid}
-        defaultEmployeeName={employeeData?.name}
+        defaultEmployeeName={employeeData?.fullName}
         onSuccess={() => {
           setIsClaimModalOpen(false);
           refetchClaims();

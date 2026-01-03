@@ -78,6 +78,7 @@ const claimFormSchema = z.object({
 
     // Added editable fields
     sanctionedAmount: z.coerce.number().optional(),
+    branch: z.string().optional(),
 });
 
 type ClaimFormValues = z.infer<typeof claimFormSchema>;
@@ -119,6 +120,7 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                 description: editingClaim.description,
                 status: editingClaim.status,
                 sanctionedAmount: editingClaim.sanctionedAmount || 0,
+                branch: editingClaim.branch || '',
             });
 
             // First check if details exist in the document object
@@ -215,6 +217,10 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
             const emp = employees.find(e => e.id === selectedEmployeeId);
             if (emp) {
                 form.setValue('employeeName', emp.name);
+                // Auto-fill branch if available
+                if (emp.branch && !form.getValues('branch')) {
+                    form.setValue('branch', emp.branch);
+                }
             }
         }
     }, [selectedEmployeeId, employees, form]);
@@ -337,8 +343,8 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                 userId: data.employeeId,
                 employeeId: data.employeeId,
                 employeeName: employees.find(e => e.id === data.employeeId)?.name || 'Unknown',
-                employeeCode: employees.find(e => e.id === data.employeeId)?.employeeCode || '',
-                branch: employees.find(e => e.id === data.employeeId)?.branch || '',
+                employeeCode: employees.find(e => e.id === data.employeeId)?.employeeCode || editingClaim?.employeeCode || '',
+                branch: data.branch || employees.find(e => e.id === data.employeeId)?.branch || editingClaim?.branch || '',
                 claimNo,
                 claimDate: data.claimDate,
                 advancedDate: data.advancedDate || null,
@@ -393,9 +399,11 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {trigger || <Button><Plus className="mr-2 h-4 w-4" /> Add New</Button>}
-            </DialogTrigger>
+            {trigger && (
+                <DialogTrigger asChild>
+                    {trigger}
+                </DialogTrigger>
+            )}
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
                 <DialogHeader>
                     <DialogTitle>{editingClaim ? 'Edit Claim' : 'New Claim'}</DialogTitle>
@@ -424,6 +432,24 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                                                 ))}
                                             </SelectContent>
                                         </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="branch"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-red-500 font-bold">Branch Address:</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                {...field}
+                                                placeholder="Branch address will appear here..."
+                                                className="border-red-200 focus:border-red-400"
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}

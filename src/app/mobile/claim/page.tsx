@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Loader2, FileSpreadsheet, Filter, Calendar as CalendarIcon, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, ArrowLeft, Loader2, FileSpreadsheet, Filter, Calendar as CalendarIcon, CheckCircle2, XCircle, Edit2, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
-import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, Timestamp, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, Timestamp, limit, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { HRClaim } from '@/types';
+import { HRClaim, Employee } from '@/types';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,10 +21,11 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import { generateClaimPDF } from '@/components/reports/hr/ClaimReportPDF';
 
-export default function MobileClaimPage() {
+export default function ClaimListPage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, companyName, address, invoiceLogoUrl, companyLogoUrl } = useAuth();
     const { supervisedEmployeeIds, isSupervisor } = useSupervisorCheck(user?.email);
     const [activeTab, setActiveTab] = useState<'My Claims' | 'Claim Requests'>('My Claims');
     const [claims, setClaims] = useState<HRClaim[]>([]);
@@ -50,6 +51,14 @@ export default function MobileClaimPage() {
         }
         return result;
     }, [claims, statusFilter, dateRange]);
+
+    const totals = React.useMemo(() => {
+        return filteredClaims.reduce((acc, c) => ({
+            claimed: acc.claimed + (c.claimAmount || 0),
+            approved: acc.approved + (c.approvedAmount || 0),
+            disbursed: acc.disbursed + (c.sanctionedAmount || 0)
+        }), { claimed: 0, approved: 0, disbursed: 0 });
+    }, [filteredClaims]);
 
     const paginatedClaims = React.useMemo(() => {
         return filteredClaims.slice(0, displayLimit);
@@ -243,7 +252,26 @@ export default function MobileClaimPage() {
                             </button>
                         ))}
                     </div>
+
+                    {/* Stats Summary Area */}
+                    {!loading && filteredClaims.length > 0 && (
+                        <div className="grid grid-cols-3 gap-3 mb-2 px-1">
+                            <div className="bg-blue-50/50 p-2 rounded-xl flex flex-col items-center border border-blue-100/50 shadow-sm">
+                                <span className="text-[9px] font-bold text-blue-500 uppercase tracking-wider">Claimed</span>
+                                <span className="text-xs font-bold text-blue-700 font-mono">৳{totals.claimed.toLocaleString()}</span>
+                            </div>
+                            <div className="bg-emerald-50/50 p-2 rounded-xl flex flex-col items-center border border-emerald-100/50 shadow-sm">
+                                <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">Disbursed</span>
+                                <span className="text-xs font-bold text-emerald-700 font-mono">৳{totals.disbursed.toLocaleString()}</span>
+                            </div>
+                            <div className="bg-green-50/50 p-2 rounded-xl flex flex-col items-center border border-green-100/50 shadow-sm">
+                                <span className="text-[9px] font-bold text-green-500 uppercase tracking-wider">Approved</span>
+                                <span className="text-xs font-bold text-green-700 font-mono">৳{totals.approved.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
+
 
                 {/* Main Content */}
                 <div className="flex-1 overflow-y-auto px-5 py-4 pb-24 overscroll-contain">
@@ -260,13 +288,67 @@ export default function MobileClaimPage() {
                     ) : (
                         <div className="space-y-4">
                             {paginatedClaims.map((claim: HRClaim) => (
-                                <Card key={claim.id} className="p-4 border-none shadow-sm rounded-xl bg-white relative overflow-hidden">
-                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
+                                <Card
+                                    key={claim.id}
+                                    onClick={() => {
+                                        if (claim.status === 'Claimed' && activeTab === 'My Claims') {
+                                            router.push(`/mobile/claim/create?id=${claim.id}`);
+                                        }
+                                    }}
+                                    className={cn(
+                                        "p-4 border-none shadow-sm rounded-xl bg-white relative overflow-hidden transition-all active:scale-[0.98] select-none",
+                                        claim.status === 'Claimed' && activeTab === 'My Claims' ? "cursor-pointer hover:shadow-md border-l-4 border-l-blue-500" : "border-l-4 border-l-blue-400"
+                                    )}
+                                >
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-blue-600">{claim.claimNo}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold text-blue-600">{claim.claimNo}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    {claim.status === 'Claimed' && activeTab === 'My Claims' && (
+                                                        <Edit2 className="h-3 w-3 text-blue-400" />
+                                                    )}
+                                                    <button
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            Swal.fire({
+                                                                title: 'Preparing PDF...',
+                                                                text: 'Please wait while we generate your report.',
+                                                                allowOutsideClick: false,
+                                                                didOpen: () => {
+                                                                    Swal.showLoading();
+                                                                }
+                                                            });
+
+                                                            try {
+                                                                const companyProfile = {
+                                                                    companyName: companyName || '',
+                                                                    address: address || '',
+                                                                    companyLogoUrl: companyLogoUrl || '',
+                                                                    invoiceLogoUrl: invoiceLogoUrl || ''
+                                                                };
+
+                                                                // Fetch full employee data for better report
+                                                                const empSnap = await getDoc(doc(firestore, 'employees', claim.employeeId));
+                                                                const employee = empSnap.exists() ? empSnap.data() as Employee : undefined;
+
+                                                                await generateClaimPDF(claim, employee, companyProfile, true);
+                                                                Swal.close();
+                                                            } catch (err) {
+                                                                console.error("PDF download failed", err);
+                                                                Swal.fire('Error', 'Failed to generate PDF report', 'error');
+                                                            }
+                                                        }}
+                                                        className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-all border border-blue-100/50 shadow-sm flex items-center gap-1"
+                                                        title="Download Double Page PDF"
+                                                    >
+                                                        <Download className="h-3 w-3" />
+                                                        <span className="text-[10px] font-bold">PDF</span>
+                                                    </button>
+                                                </div>
+                                            </div>
                                             <span className="text-sm font-bold text-slate-800">{claim.employeeName}</span>
-                                            <span className="text-[10px] text-slate-400">{claim.employeeCode}</span>
+                                            <span className="text-[10px] font-bold text-slate-400">{claim.employeeCode}</span>
                                         </div>
                                         <Badge className={cn(
                                             "text-[10px] font-bold px-2 py-0.5",
@@ -289,14 +371,40 @@ export default function MobileClaimPage() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-50">
-                                        <div className="flex flex-col">
+                                    <div className="flex flex-row items-end justify-between gap-4 mt-2 pt-2 border-t border-slate-50 overflow-x-auto no-scrollbar">
+                                        <div className="flex flex-col items-start min-w-[90px]">
                                             <span className="text-[10px] text-slate-400">Claim Amount</span>
-                                            <span className="text-sm font-bold text-blue-600">৳{claim.claimAmount}</span>
+                                            <span className="text-sm font-bold text-blue-600">৳{claim.claimAmount.toLocaleString()}</span>
+                                            {(claim.advancedAmount || 0) > 0 ? (
+                                                <span className="text-[8px] text-slate-400 mt-0.5">(Net Case)</span>
+                                            ) : null}
                                         </div>
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[10px] text-slate-400">Approved</span>
-                                            <span className="text-sm font-bold text-green-600">৳{claim.approvedAmount || 0}</span>
+
+                                        <div className="flex flex-row items-end gap-3 ml-auto">
+                                            {(claim.advancedAmount || 0) > 0 && (
+                                                <div className="flex flex-col items-center min-w-fit">
+                                                    <span className="text-[10px] text-amber-600 font-bold mb-0.5">Advance</span>
+                                                    <div className="bg-amber-500 text-white px-2.5 py-1 rounded-full shadow-sm shadow-amber-100 flex items-center justify-center min-w-[60px]">
+                                                        <span className="text-xs font-bold">৳{claim.advancedAmount?.toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {(claim.sanctionedAmount || 0) > 0 && (
+                                                <div className="flex flex-col items-center min-w-fit">
+                                                    <span className="text-[10px] text-emerald-600 font-bold mb-0.5">Disbursed</span>
+                                                    <div className="bg-emerald-500 text-white px-2.5 py-1 rounded-full shadow-sm shadow-emerald-100 flex items-center justify-center min-w-[60px]">
+                                                        <span className="text-xs font-bold">৳{claim.sanctionedAmount?.toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <div className="flex flex-col items-center min-w-fit">
+                                                <span className="text-[10px] text-slate-400">Approved</span>
+                                                <div className="bg-emerald-500 text-white px-2.5 py-1 rounded-full shadow-sm shadow-emerald-100 flex items-center justify-center min-w-[60px] mt-0.5">
+                                                    <span className="text-xs font-bold">৳{(claim.approvedAmount || 0).toLocaleString()}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
