@@ -32,8 +32,9 @@ export function AssetHistorySheet({ assetId, isOpen, onClose, assetName }: Asset
             where("assetId", "==", assetId),
             orderBy("startDate", "desc")
         ) : null,
-        { enabled: !!assetId },
-        ['asset_distributions_history', assetId]
+        undefined,
+        ['asset_distributions_history', assetId],
+        !!assetId
     );
 
     return (
