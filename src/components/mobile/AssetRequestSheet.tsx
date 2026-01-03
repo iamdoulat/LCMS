@@ -44,8 +44,9 @@ export function AssetRequestSheet({ isOpen, onClose }: AssetRequestSheetProps) {
             collection(firestore, "assets"),
             where("categoryName", "==", category || 'dummy')
         ),
-        { enabled: !!category },
-        [`assets_by_category_${category}`]
+        undefined,
+        [`assets_by_category_${category}`],
+        !!category
     );
 
     // Filter for available assets client-side to avoid composite index requirement
