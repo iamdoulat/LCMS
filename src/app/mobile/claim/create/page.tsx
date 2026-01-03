@@ -140,7 +140,7 @@ function CreateClaimContent() {
             };
 
             // Clean data of undefined values
-            const finalData = Object.fromEntries(
+            const finalData: any = Object.fromEntries(
                 Object.entries(claimData).filter(([_, v]) => v !== undefined)
             );
 
