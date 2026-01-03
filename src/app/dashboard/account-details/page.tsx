@@ -163,6 +163,11 @@ export default function AccountDetailsPage() {
     !!user?.uid
   );
 
+  // Asset Table State
+  const [assetFilterStatus, setAssetFilterStatus] = useState<string>('All');
+  const [assetPage, setAssetPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 10;
+
   const handleAssetAcknowledge = async (id: string, status: 'Occupied' | 'Rejected') => {
     try {
       if (employeeData?.status === 'Terminated') {
@@ -1961,6 +1966,13 @@ export default function AccountDetailsPage() {
                 description="Total break time this month"
                 className="bg-orange-500"
               />
+              <StatCard
+                title="Occupied Assets"
+                value={myDistributions.filter(d => d.status === 'Occupied').length}
+                icon={<Monitor />}
+                description={`Total Assets Assigned: ${myDistributions.length}`}
+                className="bg-teal-500"
+              />
             </div>
           </CardContent>
         </Card>
@@ -3051,19 +3063,36 @@ export default function AccountDetailsPage() {
 
         {/* Asset Distribution Card */}
         <Card className="shadow-xl">
-          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                <Monitor className="h-6 w-6 text-primary" />
-                Asset Distribution
-              </CardTitle>
-              <CardDescription>
-                Manage your assigned assets and requests.
-              </CardDescription>
+          <CardHeader className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                  <Monitor className="h-6 w-6 text-primary" />
+                  Asset Distribution
+                </CardTitle>
+                <CardDescription>
+                  Manage your assigned assets and requests.
+                </CardDescription>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto items-center">
+                <Select value={assetFilterStatus} onValueChange={(val) => { setAssetFilterStatus(val); setAssetPage(1); }}>
+                  <SelectTrigger className="w-full sm:w-[150px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Status</SelectItem>
+                    <SelectItem value="Occupied">Occupied</SelectItem>
+                    <SelectItem value="Assigned">Assigned</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => setIsAssetModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Apply Asset
+                </Button>
+              </div>
             </div>
-            <Button onClick={() => setIsAssetModalOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-              <PlusCircle className="mr-2 h-4 w-4" /> Apply Asset
-            </Button>
           </CardHeader>
           <CardContent>
             {isLoadingDistributions || isLoadingRequisitions ? (
@@ -3071,93 +3100,178 @@ export default function AccountDetailsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : (
-              <div className="overflow-x-auto w-full">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Asset Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {/* Combine Distributions and Requisitions */}
-                    {[
-                      ...myDistributions.map(d => ({ ...d, entryType: 'Assigned' })),
-                      ...myRequisitions.map(r => ({ ...r, entryType: 'Requested' }))
-                    ].sort((a, b) => {
-                      const dateA = a.createdAt?.seconds || 0;
-                      const dateB = b.createdAt?.seconds || 0;
-                      return dateB - dateA;
-                    }).length === 0 ? (
+              <div className="space-y-4">
+                <div className="overflow-x-auto w-full">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
-                          No assets or requests found.
-                        </TableCell>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Asset Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ) : (
-                      [
-                        ...myDistributions.map(d => ({ ...d, entryType: 'Assigned' })),
-                        ...myRequisitions.map(r => ({ ...r, entryType: 'Requested' }))
-                      ].sort((a, b) => {
-                        const dateA = a.createdAt?.seconds || 0;
-                        const dateB = b.createdAt?.seconds || 0;
-                        return dateB - dateA;
-                      }).map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <Badge variant={item.entryType === 'Assigned' ? 'default' : 'outline'}>
-                              {item.entryType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {item.assetName || item.preferredAssetName || 'General Request'}
-                          </TableCell>
-                          <TableCell>{item.assetCategoryName || '-'}</TableCell>
-                          <TableCell>
-                            {item.createdAt ? format(new Date(item.createdAt.seconds * 1000), 'PPP') : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={
-                              item.status === 'Occupied' ? 'default' :
-                                item.status === 'Pending' || item.status === 'Pending For Acknowledgement' ? 'secondary' :
-                                  item.status === 'Rejected' ? 'destructive' : 'outline'
-                            }>
-                              {item.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {item.entryType === 'Assigned' && item.status === 'Pending For Acknowledgement' && (
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700 h-8"
-                                  onClick={() => handleAssetAcknowledge(item.id, 'Occupied')}
-                                >
-                                  Accept
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  className="h-8"
-                                  onClick={() => handleAssetAcknowledge(item.id, 'Rejected')}
-                                >
-                                  Reject
-                                </Button>
-                              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {/* Combine Distributions and Requisitions */}
+                      {(() => {
+                        // 1. Merge lists
+                        let combinedList = [
+                          ...myDistributions.map(d => ({ ...d, entryType: 'Assigned' })),
+                          ...myRequisitions.map(r => ({ ...r, entryType: 'Requested' }))
+                        ];
+
+                        // 2. Filter
+                        if (assetFilterStatus !== 'All') {
+                          combinedList = combinedList.filter(item => {
+                            if (assetFilterStatus === 'Assigned' && item.entryType === 'Assigned' && item.status !== 'Occupied' && item.status !== 'Rejected') return true;
+                            // Pending matches both "Pending" and "Pending For Acknowledgement" ideally, or strict match?
+                            // Let's do strict match for now or partial.
+                            // If status is 'Pending', we might want 'Pending' and 'Pending For Acknowledgement'
+                            if (assetFilterStatus === 'Pending') return item.status.includes('Pending');
+                            return item.status === assetFilterStatus;
+                          });
+                        }
+
+                        // 3. Sort
+                        combinedList.sort((a, b) => {
+                          const dateA = a.createdAt?.seconds || 0;
+                          const dateB = b.createdAt?.seconds || 0;
+                          return dateB - dateA;
+                        });
+
+                        const totalItems = combinedList.length;
+                        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+                        const startIndex = (assetPage - 1) * ITEMS_PER_PAGE;
+                        const endIndex = startIndex + ITEMS_PER_PAGE;
+                        const currentItems = combinedList.slice(startIndex, endIndex);
+
+                        return (
+                          <>
+                            {currentItems.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
+                                  No assets or requests found.
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              currentItems.map((item) => (
+                                <TableRow key={item.id}>
+                                  <TableCell>
+                                    <Badge variant={item.entryType === 'Assigned' ? 'default' : 'outline'}>
+                                      {item.entryType}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="font-medium">
+                                    {item.assetName || item.preferredAssetName || 'General Request'}
+                                  </TableCell>
+                                  <TableCell>{item.assetCategoryName || '-'}</TableCell>
+                                  <TableCell>
+                                    {item.createdAt ? format(new Date(item.createdAt.seconds * 1000), 'PPP') : '-'}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant={
+                                      item.status === 'Occupied' ? 'default' :
+                                        item.status === 'Pending' || item.status === 'Pending For Acknowledgement' ? 'secondary' :
+                                          item.status === 'Rejected' ? 'destructive' : 'outline'
+                                    }>
+                                      {item.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {item.entryType === 'Assigned' && item.status === 'Pending For Acknowledgement' && (
+                                      <div className="flex justify-end gap-2">
+                                        <Button
+                                          size="sm"
+                                          className="bg-green-600 hover:bg-green-700 h-8"
+                                          onClick={() => handleAssetAcknowledge(item.id, 'Occupied')}
+                                        >
+                                          Accept
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          className="h-8"
+                                          onClick={() => handleAssetAcknowledge(item.id, 'Rejected')}
+                                        >
+                                          Reject
+                                        </Button>
+                                      </div>
+                                    )}
+                                    {item.entryType === 'Requested' && item.status === 'Pending' && (
+                                      <span className="text-xs text-muted-foreground italic">Waiting for approval</span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              ))
                             )}
-                            {item.entryType === 'Requested' && item.status === 'Pending' && (
-                              <span className="text-xs text-muted-foreground italic">Waiting for approval</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+
+                            {/* Pagination Controls inside the IIFE render prop or outside? Structure implies inside TableBody is wrong for controls. 
+                                We should render rows here and return pagination data or render controls after table. 
+                                React pattern: do calculation outside. 
+                                Refactoring to do calc inside return block but before table rows.
+                            */}
+                            {/* Wait, I can't put pagination OUTSIDE this conditional block easily because the list is derived inside.
+                                Let's break this out.
+                            */}
+                          </>
+                        );
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination Controls */}
+                {(() => {
+                  let combinedList = [
+                    ...myDistributions.map(d => ({ ...d, entryType: 'Assigned' })),
+                    ...myRequisitions.map(r => ({ ...r, entryType: 'Requested' }))
+                  ];
+
+                  if (assetFilterStatus !== 'All') {
+                    combinedList = combinedList.filter(item => {
+                      if (assetFilterStatus === 'Assigned' && item.entryType === 'Assigned' && item.status !== 'Occupied' && item.status !== 'Rejected') return true;
+                      if (assetFilterStatus === 'Pending') return item.status.includes('Pending');
+                      return item.status === assetFilterStatus;
+                    });
+                  }
+
+                  const totalItems = combinedList.length;
+                  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+                  if (totalPages > 1) {
+                    return (
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {Math.min((assetPage - 1) * ITEMS_PER_PAGE + 1, totalItems)} to {Math.min(assetPage * ITEMS_PER_PAGE, totalItems)} of {totalItems} entries
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAssetPage(p => Math.max(1, p - 1))}
+                            disabled={assetPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <div className="text-sm font-medium">
+                            Page {assetPage} of {totalPages}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAssetPage(p => Math.min(totalPages, p + 1))}
+                            disabled={assetPage === totalPages}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             )}
           </CardContent>

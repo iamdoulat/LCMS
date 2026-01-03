@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, CreditCard, Check, X, Building2, Calendar, FileText, User } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard, Check, X, Building2, Calendar, FileText, User, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,8 @@ export default function AssetsPage() {
     const router = useRouter();
     const { user, userRole, firestoreUser } = useAuth();
     const [activeTab, setActiveTab] = useState<'assigned' | 'requested' | 'requisition'>('assigned');
+    const [filterStatus, setFilterStatus] = useState<string>('All');
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [startX, setStartX] = useState(0);
     const [currentX, setCurrentX] = useState(0);
     const [isDistributionModalOpen, setIsDistributionModalOpen] = useState(false);
@@ -214,7 +216,15 @@ export default function AssetsPage() {
                     <ArrowLeft className="h-6 w-6" />
                 </button>
                 <h1 className="text-lg font-bold text-white absolute inset-0 flex items-center justify-center pointer-events-none pt-4 pb-5">Assets</h1>
-                <div className="w-10"></div>
+                <button
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    className={cn(
+                        "p-2 -mr-2 text-white hover:bg-white/10 rounded-full transition-colors z-10",
+                        isFilterOpen && "bg-white/20"
+                    )}
+                >
+                    <Filter className="h-6 w-6" />
+                </button>
             </div>
 
             {/* Content Area */}
@@ -224,7 +234,7 @@ export default function AssetsPage() {
                     {(['assigned', 'requested', 'requisition'] as const).map((tab) => (
                         <button
                             key={tab}
-                            onClick={() => setActiveTab(tab)}
+                            onClick={() => { setActiveTab(tab); setFilterStatus('All'); }}
                             className={cn(
                                 "pb-3 relative text-sm font-semibold transition-colors capitalize px-4 border-b-2",
                                 activeTab === tab ? "text-blue-600 border-blue-600" : "text-blue-200 border-transparent"
@@ -234,6 +244,26 @@ export default function AssetsPage() {
                         </button>
                     ))}
                 </div>
+
+                {/* Filter Chips */}
+                {(activeTab === 'assigned' || activeTab === 'requested') && isFilterOpen && (
+                    <div className="flex gap-2 px-4 py-3 bg-white/50 backdrop-blur-sm sticky top-0 z-10 overflow-x-auto no-scrollbar border-b border-slate-100 animate-in slide-in-from-top-2">
+                        {['All', 'Occupied', 'Assigned', 'Pending', 'Rejected'].map((status) => (
+                            <button
+                                key={status}
+                                onClick={() => setFilterStatus(status)}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all duration-200",
+                                    filterStatus === status
+                                        ? "bg-blue-600 text-white shadow-md shadow-blue-200 scale-105"
+                                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                )}
+                            >
+                                {status}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Tab Content */}
                 <div
@@ -247,7 +277,16 @@ export default function AssetsPage() {
                             {isLoadingAssigned ? (
                                 <p className="text-center text-slate-400 text-sm mt-10">Loading assets...</p>
                             ) : assignedAssets && assignedAssets.length > 0 ? (
-                                assignedAssets.slice().sort((a, b) => {
+
+                                assignedAssets.filter(dist => {
+                                    if (filterStatus === 'All') return true;
+                                    if (filterStatus === 'Pending') return dist.status.includes('Pending');
+                                    // 'Assigned' is the tab name, if selected as filter, show all? or maybe 'Occupied'?
+                                    // Let's treat 'Assigned' as 'Occupied' conceptually for this tab or just ignore it implies 'All' in this context
+                                    // Detailed:
+                                    if (filterStatus === 'Assigned') return true;
+                                    return dist.status === filterStatus;
+                                }).slice().sort((a, b) => {
                                     const dateA = a.createdAt?.seconds || 0;
                                     const dateB = b.createdAt?.seconds || 0;
                                     return dateB - dateA;
@@ -326,8 +365,14 @@ export default function AssetsPage() {
                             {isLoadingRequests ? (
                                 <p className="text-center text-slate-400 text-sm mt-10">Loading requests...</p>
                             ) : myRequests && myRequests.length > 0 ? (
+
                                 <div className="space-y-4 pb-20">
-                                    {myRequests.map(req => (
+                                    {myRequests.filter(req => {
+                                        if (filterStatus === 'All') return true;
+                                        if (filterStatus === 'Assigned' && req.status === 'Approved') return true; // Map Assigned -> Approved for requests
+                                        if (filterStatus === 'Occupied' && req.status === 'Approved') return true; // Map Occupied -> Approved
+                                        return req.status === filterStatus;
+                                    }).map(req => (
                                         <Card key={req.id} className="p-4 rounded-2xl border-none shadow-sm bg-white">
                                             <div className="flex justify-between items-start mb-2">
                                                 <Badge variant="outline" className={cn(
