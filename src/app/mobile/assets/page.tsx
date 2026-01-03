@@ -52,25 +52,13 @@ export default function AssetsPage() {
         ['my_asset_requests'],
         !!user?.uid
     );
-
-    // Debug logging
-    React.useEffect(() => {
-        console.log('DEBUG: Current user UID:', user?.uid);
-        console.log('DEBUG: Fetched requests raw length:', myRequestsRaw?.length);
-        console.log('DEBUG: Fetched requests raw data:', myRequestsRaw);
-        console.log('DEBUG: Fetched assigned length:', assignedAssets?.length);
-        console.log('DEBUG: Is loading requests:', isLoadingRequests);
-    }, [user?.uid, myRequestsRaw, assignedAssets, isLoadingRequests]);
-
     // Sort client-side to avoid composite index requirement
     const myRequests = React.useMemo(() => {
-        const sorted = myRequestsRaw?.slice().sort((a, b) => {
+        return myRequestsRaw?.slice().sort((a, b) => {
             const dateA = a.createdAt?.seconds || 0;
             const dateB = b.createdAt?.seconds || 0;
             return dateB - dateA;
         }) || [];
-        console.log('Sorted requests:', sorted);
-        return sorted;
     }, [myRequestsRaw]);
 
     // 3. Pending Requisitions (For Admin/HR)

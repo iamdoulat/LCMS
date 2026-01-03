@@ -114,7 +114,6 @@ export default function ApproveApplicationsPage() {
         }
 
         const unsubLeave = onSnapshot(qLeave, (snapshot: any) => {
-            console.log("ApprovePage: Leave snapshot received, size:", snapshot.size);
             const apps = snapshot.docs
                 .map((doc: any) => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument))
                 .filter((app: LeaveApplicationDocument) => supervisedEmployeeIds.includes(app.employeeId));
@@ -126,7 +125,6 @@ export default function ApproveApplicationsPage() {
                 return dateB - dateA;
             });
 
-            console.log("ApprovePage: Filtered & sorted leave apps:", sortedApps.length);
             setLeaveApps(sortedApps);
             setLoading(false);
         }, (error: any) => {
@@ -142,7 +140,6 @@ export default function ApproveApplicationsPage() {
         }
 
         const unsubVisit = onSnapshot(qVisit, (snapshot: any) => {
-            console.log("ApprovePage: Visit snapshot received, size:", snapshot.size);
             const apps = snapshot.docs
                 .map((doc: any) => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument))
                 .filter((app: VisitApplicationDocument) => supervisedEmployeeIds.includes(app.employeeId));
@@ -154,7 +151,6 @@ export default function ApproveApplicationsPage() {
                 return dateB - dateA;
             });
 
-            console.log("ApprovePage: Filtered & sorted visit apps:", sortedApps.length);
             setVisitApps(sortedApps);
         }, (error: any) => {
             console.error("ApprovePage: Error fetching visit apps:", error);

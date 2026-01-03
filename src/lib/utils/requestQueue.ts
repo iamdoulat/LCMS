@@ -62,8 +62,6 @@ class RequestQueue {
     async processQueue() {
         if (!navigator.onLine || this.queue.length === 0) return;
 
-        console.log(`Processing ${this.queue.length} queued requests...`);
-
         const requests = [...this.queue];
 
         for (const request of requests) {
@@ -77,7 +75,6 @@ class RequestQueue {
                 });
 
                 this.remove(request.id);
-                console.log('Processed queued request:', request.id);
             } catch (error) {
                 console.error('Failed to process queued request:', error);
             }
@@ -88,7 +85,6 @@ class RequestQueue {
         if (typeof window === 'undefined') return;
 
         window.addEventListener('online', () => {
-            console.log('Back online - processing queue');
             this.processQueue();
         });
     }

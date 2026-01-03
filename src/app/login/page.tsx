@@ -113,7 +113,6 @@ export default function LoginPage() {
       const userDocSnap = await getDoc(userDocRef);
 
       if (!userDocSnap.exists()) {
-        console.log("[verifyDevice] User document does not exist.");
         router.push(targetPath);
         return;
       }
@@ -124,12 +123,10 @@ export default function LoginPage() {
       const freshRole = userData.role;
 
       if (!shouldCheckDevice(freshRole)) {
-        console.log("[verifyDevice] Skipping device check (Role mismatch)");
         router.push(targetPath);
         return;
       }
 
-      console.log("[verifyDevice] Role matched. Proceeding to check devices...");
       const allowedDevices = (userData.allowedDevices || []) as AllowedDevice[];
       const deviceId = getDeviceId();
       const deviceName = getDeviceName();

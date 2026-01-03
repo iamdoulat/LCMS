@@ -9,10 +9,10 @@ export function ServiceWorkerRegistration() {
                 navigator.serviceWorker
                     .register('/sw.js')
                     .then((registration) => {
-                        console.log('SW registered:', registration);
+                        // Service worker registered successfully
                     })
                     .catch((error) => {
-                        console.log('SW registration failed:', error);
+                        // Service worker registration failed
                     });
             });
         }

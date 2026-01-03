@@ -51,9 +51,7 @@ export function AssetRequestSheet({ isOpen, onClose }: AssetRequestSheetProps) {
 
     // Filter for available assets client-side to avoid composite index requirement
     const availableAssets = useMemo(() => {
-        console.log('Fetched assets in category:', assetsInCategory);
         const filtered = assetsInCategory?.filter(asset => asset.status === 'Available') || [];
-        console.log('Available assets after filtering:', filtered);
         return filtered;
     }, [assetsInCategory]);
 
@@ -63,32 +61,24 @@ export function AssetRequestSheet({ isOpen, onClose }: AssetRequestSheetProps) {
             return;
         }
 
+
         setIsSubmitting(true);
         try {
 
             const selectedCategory = categories?.find(c => c.name === category);
             const preferredAsset = availableAssets?.find(a => a.id === selectedAssetId);
 
-            // Debug logging
-            console.log('==== ASSET REQUEST SUBMISSION DEBUG ====');
-            console.log('user:', user);
-            console.log('firestoreUser:', firestoreUser);
-            console.log('firestoreUser?.employeeId:', firestoreUser?.employeeId);
-            console.log('firestoreUser?.name:', firestoreUser?.name);
-
-            const employeeCode = firestoreUser?.employeeId || 'N/A';
-            const employeeName = firestoreUser?.name || user.displayName || 'Unknown';
+            const employeeCode = user.uid || 'N/A';
+            const employeeName = firestoreUser?.displayName || user.displayName || 'Unknown';
             const formattedEmployeeName = employeeCode !== 'N/A' ? `${employeeName} (${employeeCode})` : employeeName;
-
-            console.log('Formatted employeeName:', formattedEmployeeName);
 
             const docRef = await addDoc(collection(firestore, "asset_requisitions"), {
                 employeeId: user.uid,
                 employeeCode: employeeCode,
                 employeeName: formattedEmployeeName,
-                employeePhotoUrl: firestoreUser?.photoUrl || user.photoURL || '',
-                employeeDesignation: firestoreUser?.designation || 'N/A',
-                jobStatus: firestoreUser?.jobStatus || 'Active',
+                employeePhotoUrl: firestoreUser?.photoURL || user.photoURL || '',
+                employeeDesignation: 'N/A',
+                jobStatus: 'Active',
                 assetCategoryName: category,
                 assetCategoryId: selectedCategory?.id || '',
                 preferredAssetId: preferredAsset?.id || null,
@@ -99,8 +89,6 @@ export function AssetRequestSheet({ isOpen, onClose }: AssetRequestSheetProps) {
                 status: 'Pending',
                 createdAt: serverTimestamp(),
             });
-
-            console.log('Requisition saved with ID:', docRef.id);
 
             Swal.fire({
                 icon: 'success',

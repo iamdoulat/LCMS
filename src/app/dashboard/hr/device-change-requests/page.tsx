@@ -56,15 +56,10 @@ export default function DeviceChangeRequestsPage() {
         const q = query(collection(firestore, 'device_change_requests'));
 
         const unsubscribe = onSnapshot(q, async (snapshot) => {
-            console.log("DeviceChangeRequests: Snapshot received. Size:", snapshot.size);
             const reqs = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             })) as DeviceChangeRequest[];
-
-            if (reqs.length > 0) {
-                console.log("DeviceChangeRequests: First request status:", reqs[0].status);
-            }
 
             // Sort client-side
             const sortedReqs = [...reqs].sort((a, b) => {

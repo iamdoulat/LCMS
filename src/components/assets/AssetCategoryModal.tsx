@@ -81,16 +81,13 @@ export function AssetCategoryModal({ isOpen, onClose, categoryToEdit, onSuccess 
             let downloadUrl = existingImageUrl;
 
             if (file) {
-                console.log('Uploading file to storage...');
                 const fileRef = ref(storage, `asset-categories/${Date.now()}_${file.name}`);
                 await uploadBytes(fileRef, file);
                 downloadUrl = await getDownloadURL(fileRef);
-                console.log('File uploaded successfully:', downloadUrl);
             }
 
             if (categoryToEdit) {
                 // Update
-                console.log('Updating category:', categoryToEdit.id);
                 const categoryRef = doc(firestore, 'asset_categories', categoryToEdit.id);
                 await updateDoc(categoryRef, {
                     name: name.trim(),
@@ -107,7 +104,6 @@ export function AssetCategoryModal({ isOpen, onClose, categoryToEdit, onSuccess 
                 });
             } else {
                 // Create
-                console.log('Creating new category...');
                 await addDoc(collection(firestore, 'asset_categories'), {
                     name: name.trim(),
                     documentUrl: downloadUrl || '',
