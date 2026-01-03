@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { Loader2, Bell, FileEdit, Trash2, PlusCircle, MoreHorizontal, Eye } from 'lucide-react';
+import { Loader2, Bell, FileEdit, Trash2, PlusCircle, MoreHorizontal, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -60,8 +60,32 @@ export default function ManageNoticesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const isSuperAdmin = userRole?.includes('Super Admin');
+
   const isReadOnly = userRole?.includes('Viewer');
   const [viewingNotice, setViewingNotice] = React.useState<Notice | null>(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Pagination Logic
+  const totalPages = Math.ceil(notices.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = notices.slice(indexOfFirstItem, indexOfLastItem);
+
+  const nextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(curr => curr + 1);
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) setCurrentPage(curr => curr - 1);
+  };
+
+  // Reset page when notices change (optional, but good practice if filtering is added later)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [notices.length]); // Depend on length change mainly
 
   useEffect(() => {
     const canView = userRole?.some(role => ['Super Admin', 'Admin', 'HR', 'Viewer'].includes(role));
@@ -174,17 +198,18 @@ export default function ManageNoticesPage() {
                   <TableHead>Notice Content*</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Target Roles</TableHead>
+                  <TableHead>Periods</TableHead>
                   <TableHead>Last Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />Loading notices...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="h-6 w-6 animate-spin inline-block mr-2" />Loading notices...</TableCell></TableRow>
                 ) : notices.length === 0 && !fetchError ? (
-                  <TableRow><TableCell colSpan={6} className="h-24 text-center">No notices found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="h-24 text-center">No notices found.</TableCell></TableRow>
                 ) : (
-                  notices.map(notice => (
+                  currentItems.map(notice => (
                     <TableRow key={notice.id}>
                       <TableCell className="font-medium">{notice.title || '(No Title)'}</TableCell>
                       <TableCell className="max-w-[300px] text-sm text-muted-foreground whitespace-pre-wrap" title={notice.content}>
@@ -201,6 +226,22 @@ export default function ManageNoticesPage() {
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {notice.targetRoles?.map(role => <Badge key={role} variant="secondary" className="text-xs">{role}</Badge>) || 'N/A'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {notice.displayStartDate ? (
+                            <div className="flex flex-col">
+                              <span className="text-green-600 font-medium whitespace-nowrap">From: {formatDisplayDate(notice.displayStartDate)}</span>
+                              {notice.displayEndDate ? (
+                                <span className="text-red-500 font-medium whitespace-nowrap">To: {formatDisplayDate(notice.displayEndDate)}</span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">Until further notice</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Always</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{formatDisplayDate(notice.updatedAt)}</TableCell>
@@ -247,6 +288,35 @@ export default function ManageNoticesPage() {
               <TableCaption>A list of all site notices.</TableCaption>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          {notices.length > itemsPerPage && (
+            <div className="flex items-center justify-end space-x-2 py-4">
+              <div className="flex-1 text-sm text-muted-foreground">
+                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, notices.length)} of {notices.length} entries
+              </div>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={prevPage}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={nextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

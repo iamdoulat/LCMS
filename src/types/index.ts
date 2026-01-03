@@ -432,6 +432,8 @@ export const NoticeBoardSettingsSchema = z.object({
   isEnabled: z.boolean().default(false),
   isPopupEnabled: z.boolean().default(true),
   targetRoles: z.array(z.enum(userRoles)).min(1, "At least one target role must be selected."),
+  displayStartDate: z.date().optional().nullable(),
+  displayEndDate: z.date().optional().nullable(),
 });
 
 export type NoticeBoardSettings = z.infer<typeof NoticeBoardSettingsSchema> & {

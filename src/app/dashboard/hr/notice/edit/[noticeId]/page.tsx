@@ -23,6 +23,7 @@ import { Loader2, BellRing, Save, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import { DatePickerField } from '@/components/forms/common/DatePickerField';
 
 export default function EditNoticePage() {
   const { userRole, loading: authLoading } = useAuth();
@@ -40,7 +41,10 @@ export default function EditNoticePage() {
       content: '',
       isEnabled: false,
       isPopupEnabled: true,
+
       targetRoles: [],
+      displayStartDate: undefined,
+      displayEndDate: undefined,
     },
   });
 
@@ -75,6 +79,8 @@ export default function EditNoticePage() {
             isEnabled: data.isEnabled || false,
             isPopupEnabled: data.isPopupEnabled ?? true,
             targetRoles: Array.isArray(data.targetRoles) ? data.targetRoles : [],
+            displayStartDate: data.displayStartDate ? (data.displayStartDate as any).toDate() : undefined,
+            displayEndDate: data.displayEndDate ? (data.displayEndDate as any).toDate() : undefined,
           });
         } else {
           Swal.fire("Error", "Notice not found.", "error");
@@ -152,6 +158,35 @@ export default function EditNoticePage() {
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="displayStartDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Display Start Date</FormLabel>
+                      <DatePickerField field={field} placeholder="Select Start Date" />
+                      <FormDescription>Date when the notice starts showing.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="displayEndDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Display End Date</FormLabel>
+                      <DatePickerField field={field} placeholder="Select End Date" />
+                      <FormDescription>Date when the notice stops showing.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
                 name="content"
