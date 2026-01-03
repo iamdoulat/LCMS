@@ -32,7 +32,8 @@ interface AssetDistributionHistoryModalProps {
 }
 
 // Extends AssetDistributionDocument to include fetched employee details
-interface ExpandedDistribution extends AssetDistributionDocument {
+// Use Omit to exclude employeeCode since we're redefining it as optional
+interface ExpandedDistribution extends Omit<AssetDistributionDocument, 'employeeCode'> {
     employeeCode?: string;
     employeeBranch?: string;
     employeeDepartment?: string;
