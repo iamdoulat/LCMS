@@ -134,7 +134,7 @@ export default function MyAttendancePage() {
                 return timeB - timeA;
             });
 
-            console.log(`Fetched ${data.length} break records for ids:`, queryIds);
+            // data.sort((a, b)...
             setBreakRecords(data.slice(0, 30));
         } catch (error) {
             console.error("Error fetching breaks:", error);

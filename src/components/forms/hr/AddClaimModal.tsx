@@ -667,8 +667,7 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                                     )}
                                     <Button
                                         type="button"
-                                        onClick={detailForm.handleSubmit(handleAddDetail, (errors) => {
-                                            console.log("Sub-form validation errors:", errors);
+                                        onClick={detailForm.handleSubmit(handleAddDetail, () => {
                                             Swal.fire({
                                                 icon: 'error',
                                                 title: 'Validation Error',
@@ -769,7 +768,6 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                                 onClick={() => {
                                     const errors = form.formState.errors;
                                     if (Object.keys(errors).length > 0) {
-                                        console.log("Main form validation errors:", errors);
                                         const errorFields = Object.keys(errors).map(key => key).join(", ");
                                         Swal.fire({
                                             icon: 'error',
