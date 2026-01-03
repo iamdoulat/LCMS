@@ -203,6 +203,7 @@ const hrNavItems: NavItem[] = [
   { href: "/dashboard/hr/send-whatsapp", label: "Send WhatsApp", icon: Smartphone, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/send-email", label: "Send Email", icon: Mail, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/device-change-requests", label: "Device Change Requests", icon: Smartphone, iconColorClass: 'bg-icon-list' },
+  { href: "/dashboard/hr/assets", label: "Assets Management", icon: Package, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/hr/settings', label: 'HRM Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 

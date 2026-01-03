@@ -69,6 +69,8 @@ import {
   getEmployeeReconciliations
 } from '@/lib/firebase/reconciliation';
 import type { AttendanceReconciliation, CreateReconciliationData } from '@/types/reconciliation';
+import { AssetDistributionModal } from '@/components/assets/AssetDistributionModal';
+import { Monitor } from 'lucide-react';
 
 const accountDetailsSchema = z.object({
   displayName: z.string().min(1, "Display name cannot be empty.").max(50, "Display name is too long."),
@@ -144,6 +146,45 @@ export default function AccountDetailsPage() {
 
   const [payslips, setPayslips] = React.useState<Payslip[]>([]);
   const [isLoadingPayslips, setIsLoadingPayslips] = React.useState(true);
+
+  // Asset State
+  const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+  const { data: myRequisitions = [], isLoading: isLoadingRequisitions, refetch: refetchRequisitions } = useFirestoreQuery<any[]>(
+    query(collection(firestore, "asset_requisitions"), where("employeeId", "==", user?.uid || 'dummy')),
+    undefined,
+    ['my_asset_requisitions_dashboard'],
+    !!user?.uid
+  );
+
+  const { data: myDistributions = [], isLoading: isLoadingDistributions, refetch: refetchDistributions } = useFirestoreQuery<any[]>(
+    query(collection(firestore, "asset_distributions"), where("employeeId", "==", user?.uid || 'dummy')),
+    undefined,
+    ['my_asset_distributions_dashboard'],
+    !!user?.uid
+  );
+
+  const handleAssetAcknowledge = async (id: string, status: 'Occupied' | 'Rejected') => {
+    try {
+      if (employeeData?.status === 'Terminated') {
+        Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+        return;
+      }
+      await updateDoc(doc(firestore, "asset_distributions", id), {
+        status,
+        updatedAt: serverTimestamp()
+      });
+      Swal.fire({
+        icon: 'success',
+        title: status === 'Occupied' ? 'Accepted' : 'Rejected',
+        text: `Asset ${status === 'Occupied' ? 'accepted' : 'rejected'} successfully!`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+      refetchDistributions();
+    } catch (error: any) {
+      Swal.fire('Error', error.message, 'error');
+    }
+  };
 
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
     from: subDays(new Date(), 30),
@@ -3007,6 +3048,131 @@ export default function AccountDetailsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Asset Distribution Card */}
+        <Card className="shadow-xl">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <Monitor className="h-6 w-6 text-primary" />
+                Asset Distribution
+              </CardTitle>
+              <CardDescription>
+                Manage your assigned assets and requests.
+              </CardDescription>
+            </div>
+            <Button onClick={() => setIsAssetModalOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+              <PlusCircle className="mr-2 h-4 w-4" /> Apply Asset
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {isLoadingDistributions || isLoadingRequisitions ? (
+              <div className="flex justify-center items-center h-24">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto w-full">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Asset Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {/* Combine Distributions and Requisitions */}
+                    {[
+                      ...myDistributions.map(d => ({ ...d, entryType: 'Assigned' })),
+                      ...myRequisitions.map(r => ({ ...r, entryType: 'Requested' }))
+                    ].sort((a, b) => {
+                      const dateA = a.createdAt?.seconds || 0;
+                      const dateB = b.createdAt?.seconds || 0;
+                      return dateB - dateA;
+                    }).length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
+                          No assets or requests found.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      [
+                        ...myDistributions.map(d => ({ ...d, entryType: 'Assigned' })),
+                        ...myRequisitions.map(r => ({ ...r, entryType: 'Requested' }))
+                      ].sort((a, b) => {
+                        const dateA = a.createdAt?.seconds || 0;
+                        const dateB = b.createdAt?.seconds || 0;
+                        return dateB - dateA;
+                      }).map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <Badge variant={item.entryType === 'Assigned' ? 'default' : 'outline'}>
+                              {item.entryType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {item.assetName || item.preferredAssetName || 'General Request'}
+                          </TableCell>
+                          <TableCell>{item.assetCategoryName || '-'}</TableCell>
+                          <TableCell>
+                            {item.createdAt ? format(new Date(item.createdAt.seconds * 1000), 'PPP') : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              item.status === 'Occupied' ? 'default' :
+                                item.status === 'Pending' || item.status === 'Pending For Acknowledgement' ? 'secondary' :
+                                  item.status === 'Rejected' ? 'destructive' : 'outline'
+                            }>
+                              {item.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {item.entryType === 'Assigned' && item.status === 'Pending For Acknowledgement' && (
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 h-8"
+                                  onClick={() => handleAssetAcknowledge(item.id, 'Occupied')}
+                                >
+                                  Accept
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="h-8"
+                                  onClick={() => handleAssetAcknowledge(item.id, 'Rejected')}
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                            {item.entryType === 'Requested' && item.status === 'Pending' && (
+                              <span className="text-xs text-muted-foreground italic">Waiting for approval</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Asset Distribution Modal */}
+        <AssetDistributionModal
+          isOpen={isAssetModalOpen}
+          onClose={() => setIsAssetModalOpen(false)}
+          variant="requisition"
+          onSuccess={() => {
+            refetchRequisitions();
+            setIsAssetModalOpen(false);
+          }}
+        />
 
 
 

@@ -2188,3 +2188,86 @@ export type MultipleCheckInOutConfiguration = z.infer<typeof MultipleCheckInOutS
 // --- END HRM Settings Types ---
 
 
+
+// --- Asset Management Types ---
+export interface AssetCategory {
+  id?: string;
+  name: string;
+  documentUrl?: string; // For the attachment/image
+  createdAt?: any;
+  updatedAt?: any;
+}
+export type AssetCategoryDocument = AssetCategory & { id: string; createdAt: any; updatedAt: any; };
+
+export const assetStatusOptions = ["Available", "Assigned", "Damaged", "Lost", "Repair", "Sold"] as const;
+export type AssetStatus = typeof assetStatusOptions[number];
+
+export interface Asset {
+  id?: string;
+  title: string;
+  supplier?: string;
+  code: string;
+  manufacturer?: string;
+  categoryId: string;
+  categoryName: string; // Denormalized for easier display
+  price: number;
+  serialNumber?: string;
+  purchaseDate?: string; // ISO string
+  modelNumber?: string;
+  warrantyPeriod?: string;
+  status: AssetStatus;
+  description?: string;
+  documentUrl?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export const assetDistributionStatusOptions = ["Pending For Acknowledgement", "Occupied", "Returned"] as const;
+export type AssetDistributionStatus = typeof assetDistributionStatusOptions[number];
+
+export interface AssetDistribution {
+  id?: string;
+  assetId: string;
+  assetName: string;
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  employeeDesignation?: string;
+  employeePhotoUrl?: string; // For UI display
+  startDate: string; // ISO Date
+  endDate?: string; // ISO Date
+  status: AssetDistributionStatus;
+  createdAt?: any;
+  updatedAt?: any;
+}
+export type AssetDistributionDocument = AssetDistribution & { id: string; createdAt: any; updatedAt: any; };
+
+
+
+export type AssetRequisitionStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface AssetRequisition {
+  id?: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string; // e.g. "073"
+  employeeDesignation: string;
+  employeePhotoUrl?: string;
+  jobStatus?: string; // e.g. "Termination", "Active"
+
+  assetCategoryId: string;
+  assetCategoryName: string;
+
+  status: AssetRequisitionStatus;
+  details: string; // The reason/details
+  fromDate: string; // ISO
+  toDate: string; // ISO
+
+  preferredAssetId?: string;
+  preferredAssetName?: string;
+
+  createdAt?: any;
+  updatedAt?: any;
+}
+export type AssetRequisitionDocument = AssetRequisition & { id: string; createdAt: any; updatedAt: any; };
+
