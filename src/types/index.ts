@@ -2308,6 +2308,7 @@ export interface HRClaim {
   sanctionedAmount?: number;
   status: HRClaimStatus;
   description?: string;
+  categoryName?: string;
   details: ClaimDetail[];
   createdAt: any;
   updatedAt: any;

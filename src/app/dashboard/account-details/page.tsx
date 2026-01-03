@@ -3119,7 +3119,7 @@ export default function AccountDetailsPage() {
                           <TableRow key={claim.id}>
                             <TableCell>{formatDisplayDate(claim.claimDate)}</TableCell>
                             <TableCell className="font-mono text-xs">{claim.claimNo}</TableCell>
-                            <TableCell>{claim.categoryName || 'N/A'}</TableCell>
+                            <TableCell>{claim.categoryName || claim.claimCategories?.join(', ') || 'N/A'}</TableCell>
                             <TableCell className="text-right">{formatCurrency(claim.claimAmount)}</TableCell>
                             <TableCell className="text-right">{formatCurrency(claim.approvedAmount)}</TableCell>
                             <TableCell>

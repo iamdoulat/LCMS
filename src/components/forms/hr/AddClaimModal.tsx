@@ -328,7 +328,10 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
         setIsSubmitting(true);
         try {
             // Generate Claim No if not editing
-            const claimNo = editingClaim?.claimNo || `CLM-${Date.now().toString().slice(-6)}`;
+            const selectedEmp = employees.find(e => e.id === data.employeeId);
+            const empCode = selectedEmp?.employeeCode || '0000';
+            const randomNum = Math.floor(1000 + Math.random() * 9000); // 4 digit number
+            const claimNo = editingClaim?.claimNo || `CLM-${empCode}/${randomNum}`;
 
             const claimData = {
                 userId: data.employeeId,
@@ -347,6 +350,7 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                 claimAmount: calculateTotal(),
                 remainingAmount: calculateTotal() - details.reduce((sum, d) => sum + (d.approvedAmount || 0), 0),
                 claimCategories: Array.from(new Set(details.map(d => d.categoryName || 'Unknown'))),
+                categoryName: details.length > 0 ? details[0].categoryName : '',
                 details: details,
                 updatedAt: serverTimestamp(),
             };

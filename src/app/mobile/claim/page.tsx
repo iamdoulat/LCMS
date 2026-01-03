@@ -318,9 +318,8 @@ export default function MobileClaimPage() {
                                                     }).then(async (result) => {
                                                         if (result.isConfirmed) {
                                                             try {
-                                                                const nextStatus = claim.status === 'Approved by supervisor' ? 'Approved' : 'Approved by supervisor';
                                                                 await updateDoc(doc(firestore, 'hr_claims', claim.id), {
-                                                                    status: nextStatus,
+                                                                    status: 'Approved',
                                                                     updatedAt: Timestamp.now(),
                                                                     approvedAmount: claim.claimAmount // Default to full amount
                                                                 });
