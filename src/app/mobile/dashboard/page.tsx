@@ -182,8 +182,8 @@ export default function MobileDashboardPage() {
             case 'notices': return { ...item, value: stats.noticesCount.toString() };
             case 'checkin': return { ...item, value: todayAttendance?.inTime || '--:--' };
             case 'checkout': return { ...item, value: todayAttendance?.outTime || '--:--' };
-            case 'claim': return { ...item, value: stats.claimAmount.toString() };
-            case 'disbursed': return { ...item, value: stats.disbursedAmount.toString() };
+            case 'claim': return { ...item, value: `৳ ${stats.claimAmount.toLocaleString()}` };
+            case 'disbursed': return { ...item, value: `৳ ${stats.disbursedAmount.toLocaleString()}` };
             default: return item;
         }
     });
@@ -344,7 +344,24 @@ export default function MobileDashboardPage() {
                     setStats(prev => ({ ...prev, noticesCount: filtered.length }));
                 });
 
-                // 6. Break Time listener removed (handled by Context)
+                // 6. Claim Stats (Current Month)
+                const qClaims = query(
+                    collection(firestore, 'hr_claims'),
+                    where('employeeId', 'in', ids),
+                    where('claimDate', '>=', startOfMonth(new Date()).toISOString())
+                );
+                const unsubClaims = onSnapshot(qClaims, (snap) => {
+                    const totalClaimed = snap.docs.reduce((sum, doc) => sum + (doc.data().claimAmount || 0), 0);
+                    const totalDisbursed = snap.docs
+                        .filter(doc => doc.data().status === 'Disbursed')
+                        .reduce((sum, doc) => sum + (doc.data().approvedAmount || 0), 0);
+
+                    setStats(prev => ({
+                        ...prev,
+                        claimAmount: totalClaimed,
+                        disbursedAmount: totalDisbursed
+                    }));
+                });
 
                 return () => {
                     unsubLeave();
@@ -354,6 +371,7 @@ export default function MobileDashboardPage() {
                     unsubPendingAdvance();
                     unsubMissed();
                     unsubNotices();
+                    unsubClaims();
                 };
             } catch (err) {
                 console.error("Error setting up dashboard listeners:", err);
@@ -719,6 +737,14 @@ export default function MobileDashboardPage() {
                                 if (item.id === 'notices') {
                                     return (
                                         <Link key={item.id} href="/mobile/notice-board" className="flex-shrink-0 transition-transform active:scale-95">
+                                            {content}
+                                        </Link>
+                                    );
+                                }
+
+                                if (item.id === 'claim' || item.id === 'disbursed') {
+                                    return (
+                                        <Link key={item.id} href="/mobile/claim" className="flex-shrink-0 transition-transform active:scale-95">
                                             {content}
                                         </Link>
                                     );

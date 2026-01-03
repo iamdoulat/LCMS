@@ -565,7 +565,7 @@ export function CompanySetupForm() {
               <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6 h-full flex flex-col">
                 <div className="flex flex-col gap-6 flex-grow">
                   <div>
-                    <Label className="text-base font-semibold">Sidebar Logo</Label>
+                    <Label className="text-base font-semibold">Sidebar Logo (64*64) px</Label>
                     <p className="text-sm text-muted-foreground">Main navigation sidebar icon.</p>
                     <FormField control={form.control} name="hideCompanyLogo" render={({ field }) => (
                       <FormItem className="flex items-center space-x-2 mt-2">

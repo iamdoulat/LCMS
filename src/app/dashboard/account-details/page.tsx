@@ -4,7 +4,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Link2, Crop as CropIcon, Briefcase, Info, Clock, Check, MapPin, UserCheck, RefreshCw, XCircle, BarChart3, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle, Calendar as CalendarIcon, Camera, Coffee, Timer } from 'lucide-react';
+import { Loader2, UserCircle, Save, ShieldAlert, Link2, Crop as CropIcon, Briefcase, Info, Clock, Check, MapPin, UserCheck, RefreshCw, XCircle, BarChart3, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle, Calendar as CalendarIcon, Camera, Coffee, Timer, FileEdit } from 'lucide-react';
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -70,7 +70,10 @@ import {
 } from '@/lib/firebase/reconciliation';
 import type { AttendanceReconciliation, CreateReconciliationData } from '@/types/reconciliation';
 import { AssetDistributionModal } from '@/components/assets/AssetDistributionModal';
-import { Monitor } from 'lucide-react';
+import { Monitor, CreditCard, Printer, FileText } from 'lucide-react';
+import { AddClaimModal } from '@/components/forms/hr/AddClaimModal';
+import { generateClaimPDF } from '@/components/reports/hr/ClaimReportPDF';
+import type { HRClaim, CompanyProfile, Employee } from '@/types';
 
 const accountDetailsSchema = z.object({
   displayName: z.string().min(1, "Display name cannot be empty.").max(50, "Display name is too long."),
@@ -137,7 +140,7 @@ export default function AccountDetailsPage() {
   const [monthlyStats, setMonthlyStats] = useState({
     present: 0,
     absent: 0,
-    delayed: 0,
+    late: 0, // Changed from 'delayed' to 'late'
     leave: 0,
     visit: 0,
     advanceSalary: 0,
@@ -149,6 +152,10 @@ export default function AccountDetailsPage() {
 
   // Asset State
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+
+  // Claim Modal State
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
+  const [editingClaim, setEditingClaim] = useState<HRClaim | undefined>(undefined);
   const { data: myRequisitions = [], isLoading: isLoadingRequisitions, refetch: refetchRequisitions } = useFirestoreQuery<any[]>(
     query(collection(firestore, "asset_requisitions"), where("employeeId", "==", user?.uid || 'dummy')),
     undefined,
@@ -163,10 +170,60 @@ export default function AccountDetailsPage() {
     !!user?.uid
   );
 
+  // Claim State
+  const { data: myClaims = [], isLoading: isLoadingClaims, refetch: refetchClaims } = useFirestoreQuery<HRClaim[]>(
+    query(collection(firestore, "hr_claims"), where("employeeId", "==", user?.uid || 'dummy')),
+    undefined,
+    ['my_claims_dashboard'],
+    !!user?.uid
+  );
+
+  const [claimFilterStatus, setClaimFilterStatus] = useState<string>('All');
+  const [claimPage, setClaimPage] = useState<number>(1);
+
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState<string | null>(null);
+
+  // Fetch Company Profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const docRef = doc(firestore, 'financial_settings', 'main_settings');
+        const snap = await getDoc(docRef);
+        if (snap.exists()) setCompanyProfile(snap.data() as CompanyProfile);
+      } catch (error) {
+        console.error("Error fetching company profile", error);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const claimStats = useMemo(() => {
+    const now = new Date();
+    const currentMonth = startOfMonth(now);
+    const currentYear = startOfYear(now);
+
+    const thisMonthClaims = myClaims.filter(c => {
+      const claimDate = new Date(c.claimDate);
+      return claimDate >= currentMonth;
+    });
+
+    const thisYearClaims = myClaims.filter(c => {
+      const claimDate = new Date(c.claimDate);
+      return claimDate >= currentYear;
+    });
+
+    return {
+      thisMonthTotalClaimed: thisMonthClaims.reduce((sum, c) => sum + (c.claimAmount || 0), 0),
+      thisYearTotalClaimed: thisYearClaims.reduce((sum, c) => sum + (c.claimAmount || 0), 0)
+    };
+  }, [myClaims]);
+
   // Asset Table State
   const [assetFilterStatus, setAssetFilterStatus] = useState<string>('All');
   const [assetPage, setAssetPage] = useState<number>(1);
   const ITEMS_PER_PAGE = 10;
+  const CLAIM_ITEMS_PER_PAGE = 5;
 
   const handleAssetAcknowledge = async (id: string, status: 'Occupied' | 'Rejected') => {
     try {
@@ -994,7 +1051,7 @@ export default function AccountDetailsPage() {
           const monthlyAttendanceSnapshot = await getDocs(query(collection(firestore, 'attendance'), where('employeeId', 'in', employeeIds), where('date', '>=', fromDate), where('date', '<=', toDate)));
           const currentMonthlyAttendance = monthlyAttendanceSnapshot.docs.map(doc => doc.data() as AttendanceDocument);
 
-          let present = 0, delayed = 0, absent = 0, leaveDaysInMonth = 0, visitDaysInMonth = 0;
+          let present = 0, late = 0, absent = 0, leaveDaysInMonth = 0, visitDaysInMonth = 0;
           const daysInMonth = eachDayOfInterval({ start: startOfCurrentMonth, end: today }); // Only count up to today
 
           allLeaves.forEach(l => {
@@ -1020,7 +1077,7 @@ export default function AccountDetailsPage() {
                 present++;
               } else if (attendanceRecord.flag === 'D') {
                 present++; // Delayed is still present, just late
-                delayed++;
+                late++;
               } else if (attendanceRecord.flag === 'L') {
                 leaveDaysInMonth++; // Count attendance records marked as leave
               } else if (attendanceRecord.flag === 'V') {
@@ -1085,7 +1142,7 @@ export default function AccountDetailsPage() {
 
           setMonthlyStats({
             present: present,
-            delayed: delayed,
+            late: late,
             absent: absent,
             leave: leaveDaysInMonth,
             visit: visitDaysInMonth,
@@ -1955,7 +2012,7 @@ export default function AccountDetailsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
               <StatCard title="Total Present" value={monthlyStats.present} icon={<UserCheck />} description="Days present this month" className="bg-green-500" />
               <StatCard title="Total Absent" value={monthlyStats.absent} icon={<UserX />} description="Days absent this month" className="bg-red-500" />
-              <StatCard title="Total Delayed" value={monthlyStats.delayed} icon={<Clock />} description="Late arrivals this month" className="bg-yellow-500" />
+              <StatCard title="Total Delayed" value={monthlyStats.late} icon={<Clock />} description="Late arrivals this month" className="bg-yellow-500" />
               <StatCard title="Total On Leave" value={monthlyStats.leave} icon={<Plane />} description="Leave days this month" className="bg-blue-500" />
               <StatCard title="Total On Visit" value={monthlyStats.visit} icon={<Briefcase />} description="Visit days this month" className="bg-indigo-500" />
               <StatCard title="Advance Salary" value={formatCurrency(monthlyStats.advanceSalary)} icon={<Wallet />} description="Taken this month" className="bg-purple-500" />
@@ -1972,6 +2029,20 @@ export default function AccountDetailsPage() {
                 icon={<Monitor />}
                 description={`Total Assets Assigned: ${myDistributions.length}`}
                 className="bg-teal-500"
+              />
+              <StatCard
+                title="This Month Claim"
+                value={formatCurrency(claimStats.thisMonthTotalClaimed)}
+                icon={<CreditCard />}
+                description="This month Claim amount"
+                className="bg-rose-500"
+              />
+              <StatCard
+                title="This Year total Claimed"
+                value={formatCurrency(claimStats.thisYearTotalClaimed)}
+                icon={<CreditCard />}
+                description="This year total Claimed"
+                className="bg-orange-600"
               />
             </div>
           </CardContent>
@@ -2986,6 +3057,161 @@ export default function AccountDetailsPage() {
         </Card>
 
         <Card className="shadow-xl">
+          <CardHeader className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                  <CreditCard className="h-6 w-6 text-primary" />
+                  Claim Application
+                </CardTitle>
+                <CardDescription>Your recent claim applications.</CardDescription>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                <Select value={claimFilterStatus} onValueChange={(val) => { setClaimFilterStatus(val); setClaimPage(1); }}>
+                  <SelectTrigger className="w-full sm:w-[130px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Status</SelectItem>
+                    <SelectItem value="Approved">Approved</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => { setEditingClaim(undefined); setIsClaimModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+                  <PlusCircle className="mr-2 h-4 w-4" />Apply Claim
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Claim Date</TableHead>
+                    <TableHead>Claim #</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Claim Amount</TableHead>
+                    <TableHead className="text-right">Approved Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Pdf Report</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(() => {
+                    let filteredClaims = myClaims.filter(claim => {
+                      if (claimFilterStatus !== 'All' && claim.status !== claimFilterStatus) return false;
+                      return true;
+                    }).sort((a, b) => new Date(b.claimDate).getTime() - new Date(a.claimDate).getTime());
+
+                    const totalItems = filteredClaims.length;
+                    const totalPages = Math.ceil(totalItems / CLAIM_ITEMS_PER_PAGE);
+                    const startIndex = (claimPage - 1) * CLAIM_ITEMS_PER_PAGE;
+                    const endIndex = startIndex + CLAIM_ITEMS_PER_PAGE;
+                    const currentItems = filteredClaims.slice(startIndex, endIndex);
+
+                    return (
+                      <>
+                        {currentItems.length > 0 ? currentItems.map(claim => (
+                          <TableRow key={claim.id}>
+                            <TableCell>{formatDisplayDate(claim.claimDate)}</TableCell>
+                            <TableCell className="font-mono text-xs">{claim.claimNo}</TableCell>
+                            <TableCell>{claim.categoryName || 'N/A'}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(claim.claimAmount)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(claim.approvedAmount)}</TableCell>
+                            <TableCell>
+                              <Badge variant={
+                                claim.status === 'Approved' ? 'default' :
+                                  claim.status === 'Rejected' ? 'destructive' : 'secondary'
+                              }>
+                                {claim.status === 'Claimed' ? 'Pending' : claim.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                disabled={isGeneratingPdf === claim.id}
+                                onClick={async () => {
+                                  setIsGeneratingPdf(claim.id);
+                                  try {
+                                    const empSnap = await getDoc(doc(firestore, 'employees', claim.employeeId));
+                                    const empData = (empSnap.exists() ? { id: empSnap.id, ...empSnap.data() } : undefined) as Employee | undefined;
+                                    await generateClaimPDF(claim, empData, companyProfile || undefined, true);
+                                  } finally {
+                                    setIsGeneratingPdf(null);
+                                  }
+                                }}
+                              >
+                                {isGeneratingPdf === claim.id ? <Loader2 className="h-4 w-4 animate-spin text-blue-600" /> : <Printer className="h-4 w-4 text-blue-600" />}
+                              </Button>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => {
+                                  setEditingClaim(claim);
+                                  setIsClaimModalOpen(true);
+                                }}
+                                disabled={claim.status !== 'Claimed'}
+                                title="Edit Claim"
+                              >
+                                <FileEdit className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )) : (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center text-muted-foreground py-4">
+                              No claim applications found.
+                            </TableCell>
+                          </TableRow>
+                        )}
+
+                        {totalPages > 1 && (
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell colSpan={8}>
+                              <div className="flex items-center justify-between py-2 px-2">
+                                <div className="text-sm text-muted-foreground">
+                                  Page {claimPage} of {totalPages} ({totalItems} records)
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setClaimPage(prev => Math.max(1, prev - 1))}
+                                    disabled={claimPage === 1}
+                                  >
+                                    Previous
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setClaimPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={claimPage === totalPages}
+                                  >
+                                    Next
+                                  </Button>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    );
+                  })()}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <CardTitle className={cn("flex items-center gap-2", "font-bold text-xl lg:text-2xl text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
@@ -3021,7 +3247,6 @@ export default function AccountDetailsPage() {
                 const filteredPayslips = payslips.filter(p => {
                   if (!p.payPeriod) return false;
                   // Assuming payPeriod is "Month Year" or "yyyy-MM", let's check format
-                  // Default format usually "January 2024" or similar.
                   // We can try to parse date or just string match if it contains Year.
                   return p.payPeriod.includes(payslipYear);
                 });
@@ -3663,6 +3888,17 @@ export default function AccountDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AddClaimModal
+        open={isClaimModalOpen}
+        setOpen={setIsClaimModalOpen}
+        editingClaim={editingClaim}
+        defaultEmployeeId={user?.uid}
+        defaultEmployeeName={employeeData?.name}
+        onSuccess={() => {
+          setIsClaimModalOpen(false);
+          refetchClaims();
+        }}
+      />
     </div>
   );
 }

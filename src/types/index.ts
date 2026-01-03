@@ -2274,3 +2274,66 @@ export interface AssetRequisition {
 }
 export type AssetRequisitionDocument = AssetRequisition & { id: string; createdAt: any; updatedAt: any; };
 
+
+// --- HR Claim Types ---
+export const hrClaimStatusOptions = ["Claimed", "Under Process", "Approved by supervisor", "Approved", "Disbursed", "Rejected"] as const;
+export type HRClaimStatus = typeof hrClaimStatusOptions[number];
+
+export interface ClaimDetail {
+  id: string;
+  categoryId: string;
+  categoryName: string; // Store name for display
+  amount: number;
+  fromDate: string; // ISO
+  toDate: string; // ISO
+  approvedAmount?: number;
+  description?: string;
+  attachmentUrl?: string;
+}
+
+export interface HRClaim {
+  id: string;
+  claimNo: string;
+  employeeName: string;
+  employeeCode?: string; // Added for reference
+  employeeId: string; // Added for reference
+  branch?: string;
+  advancedDate?: string; // ISO string
+  claimDate: string; // ISO string
+  claimCategories: string[]; // Aggregated from details
+  advancedAmount?: number;
+  claimAmount: number; // Total of details
+  approvedAmount?: number;
+  remainingAmount?: number;
+  sanctionedAmount?: number;
+  status: HRClaimStatus;
+  description?: string;
+  details: ClaimDetail[];
+  createdAt: any;
+  updatedAt: any;
+}
+export type HRClaimDocument = HRClaim & { id: string; createdAt: any; updatedAt: any; };
+// --- END HR Claim Types ---
+
+// --- Claim Category Types ---
+export interface ClaimCategory {
+  id: string;
+  name: string;
+  maxLimit?: number;
+  createdAt: any;
+  updatedAt: any;
+}
+export type ClaimCategoryDocument = ClaimCategory & { id: string; createdAt: any; updatedAt: any; };
+// --- END Claim Category Types ---
+
+// --- Claim Settings Types ---
+export interface ClaimSettings {
+  limitDays: number;
+  requireApproval: boolean;
+  sanctionApprovedAmount: boolean;
+  updatedAt?: any;
+  updatedBy?: string;
+}
+export type ClaimSettingsDocument = ClaimSettings;
+// --- END Claim Settings Types ---
+

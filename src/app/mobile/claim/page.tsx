@@ -3,12 +3,96 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft } from 'lucide-react';
+import { Plus, ArrowLeft, Loader2, FileSpreadsheet, Filter, Calendar as CalendarIcon, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, Timestamp, limit } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase/config';
+import { HRClaim } from '@/types';
+import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import Swal from 'sweetalert2';
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/ui/sheet";
 
 export default function MobileClaimPage() {
     const router = useRouter();
+    const { user } = useAuth();
+    const { supervisedEmployeeIds, isSupervisor } = useSupervisorCheck(user?.email);
     const [activeTab, setActiveTab] = useState<'My Claims' | 'Claim Requests'>('My Claims');
+    const [claims, setClaims] = useState<HRClaim[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [statusFilter, setStatusFilter] = useState<string>('All');
+    const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+    const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
+    const [displayLimit, setDisplayLimit] = useState(12);
+
+    const filteredClaims = React.useMemo(() => {
+        let result = claims;
+        if (statusFilter !== 'All') {
+            result = result.filter(c => c.status === statusFilter);
+        }
+        if (dateRange.from && dateRange.to) {
+            result = result.filter(c => {
+                const claimDate = new Date(c.claimDate);
+                return isWithinInterval(claimDate, {
+                    start: startOfDay(dateRange.from!),
+                    end: endOfDay(dateRange.to!)
+                });
+            });
+        }
+        return result;
+    }, [claims, statusFilter, dateRange]);
+
+    const paginatedClaims = React.useMemo(() => {
+        return filteredClaims.slice(0, displayLimit);
+    }, [filteredClaims, displayLimit]);
+
+    React.useEffect(() => {
+        if (!user) return;
+
+        let q;
+        if (activeTab === 'My Claims') {
+            q = query(
+                collection(firestore, 'hr_claims'),
+                where('employeeId', '==', user.uid)
+            );
+        } else {
+            // "Claim Requests" tab for supervisors
+            if (supervisedEmployeeIds.length === 0) {
+                setClaims([]);
+                setLoading(false);
+                return;
+            }
+            // Firestore "in" query limited to 10/30 IDs usually, but let's assume team size is small or use chunks if needed.
+            // For now, simple "in" query.
+            q = query(
+                collection(firestore, 'hr_claims'),
+                where('employeeId', 'in', supervisedEmployeeIds)
+            );
+        }
+
+        setLoading(true);
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HRClaim));
+            items.sort((a, b) => {
+                const dateA = a.createdAt?.seconds || 0;
+                const dateB = b.createdAt?.seconds || 0;
+                return dateB - dateA;
+            });
+            setClaims(items);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user, activeTab, supervisedEmployeeIds]);
 
     // Swipe Handling
     const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -51,7 +135,83 @@ export default function MobileClaimPage() {
                         <ArrowLeft className="h-6 w-6" />
                     </button>
                     <h1 className="text-lg font-bold text-white absolute inset-0 flex items-center justify-center pointer-events-none pt-4 pb-6">Claim</h1>
-                    <div className="w-10" /> {/* Spacer for centering */}
+                    <div className="flex items-center">
+                        <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+                            <SheetTrigger asChild>
+                                <button className="p-2 text-white hover:bg-white/10 rounded-full transition-colors relative">
+                                    <Filter className="h-6 w-6" />
+                                    {statusFilter !== 'All' && (
+                                        <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-amber-400 border-2 border-[#0a1e60] rounded-full"></span>
+                                    )}
+                                </button>
+                            </SheetTrigger>
+                            <SheetContent side="bottom" className="rounded-t-[2rem] px-6 pb-12 bg-white">
+                                <SheetHeader className="mb-6">
+                                    <SheetTitle className="text-xl font-bold text-slate-800">Filter by Status</SheetTitle>
+                                </SheetHeader>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {['All', 'Claimed', 'Under Process', 'Approved by supervisor', 'Approved', 'Disbursed', 'Rejected'].map((status) => (
+                                        <button
+                                            key={status}
+                                            onClick={() => {
+                                                setStatusFilter(status);
+                                                setIsFilterSheetOpen(false);
+                                            }}
+                                            className={cn(
+                                                "w-full px-5 py-4 rounded-2xl text-left font-bold transition-all border flex items-center justify-between",
+                                                statusFilter === status
+                                                    ? "bg-blue-50 text-blue-600 border-blue-200"
+                                                    : "bg-white text-slate-500 border-slate-100"
+                                            )}
+                                        >
+                                            <span>{status === 'Claimed' ? 'Pending' : status}</span>
+                                            {statusFilter === status && (
+                                                <div className="w-2.5 h-2.5 rounded-full bg-blue-600"></div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </SheetContent>
+                        </Sheet>
+                        <button
+                            onClick={() => {
+                                // For now, simple date filter logic or show a prompt
+                                // In a real app, use a proper Mobile Date Range Picker
+                                Swal.fire({
+                                    title: 'Filter by Date',
+                                    html: `
+                                        <div class="flex flex-col gap-3">
+                                            <input type="date" id="from-date" class="swal2-input m-0 w-full" placeholder="From Date">
+                                            <input type="date" id="to-date" class="swal2-input m-0 w-full" placeholder="To Date">
+                                        </div>
+                                    `,
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Apply Filter',
+                                    confirmButtonColor: '#2563eb',
+                                    preConfirm: () => {
+                                        const from = (document.getElementById('from-date') as HTMLInputElement).value;
+                                        const to = (document.getElementById('to-date') as HTMLInputElement).value;
+                                        return { from, to };
+                                    }
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        const { from, to } = result.value;
+                                        if (from && to) {
+                                            setDateRange({ from: new Date(from), to: new Date(to) });
+                                        } else {
+                                            setDateRange({ from: null, to: null });
+                                        }
+                                    }
+                                });
+                            }}
+                            className="p-2 text-white hover:bg-white/10 rounded-full transition-colors relative"
+                        >
+                            <CalendarIcon className="h-6 w-6" />
+                            {dateRange.from && (
+                                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-amber-400 border-2 border-[#0a1e60] rounded-full"></span>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -86,20 +246,178 @@ export default function MobileClaimPage() {
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 pb-24 overscroll-contain flex flex-col items-center justify-center">
-                    <p className="text-slate-500">No data to show</p>
+                <div className="flex-1 overflow-y-auto px-5 py-4 pb-24 overscroll-contain">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                            <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                            <p>Loading claims...</p>
+                        </div>
+                    ) : filteredClaims.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                            <FileSpreadsheet className="h-16 w-16 mb-4 opacity-20" />
+                            <p className="text-lg font-medium">No {statusFilter !== 'All' ? statusFilter : ''} claims</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {paginatedClaims.map((claim: HRClaim) => (
+                                <Card key={claim.id} className="p-4 border-none shadow-sm rounded-xl bg-white relative overflow-hidden">
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold text-blue-600">{claim.claimNo}</span>
+                                            <span className="text-sm font-bold text-slate-800">{claim.employeeName}</span>
+                                            <span className="text-[10px] text-slate-400">{claim.employeeCode}</span>
+                                        </div>
+                                        <Badge className={cn(
+                                            "text-[10px] font-bold px-2 py-0.5",
+                                            claim.status === 'Approved' ? "bg-green-100 text-green-700" :
+                                                claim.status === 'Rejected' ? "bg-red-100 text-red-700" :
+                                                    "bg-blue-100 text-blue-700"
+                                        )}>
+                                            {claim.status}
+                                        </Badge>
+                                    </div>
+
+                                    <div className="flex items-center gap-4 text-[11px] text-slate-500 mb-3">
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-semibold text-slate-400">Date:</span>
+                                            <span>{format(new Date(claim.claimDate), 'dd MMM yyyy')}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-semibold text-slate-400">Branch:</span>
+                                            <span>{claim.branch || '-'}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-50">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] text-slate-400">Claim Amount</span>
+                                            <span className="text-sm font-bold text-blue-600">৳{claim.claimAmount}</span>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[10px] text-slate-400">Approved</span>
+                                            <span className="text-sm font-bold text-green-600">৳{claim.approvedAmount || 0}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Supervisor Actions */}
+                                    {activeTab === 'Claim Requests' && (claim.status === 'Claimed' || claim.status === 'Under Process' || claim.status === 'Approved by supervisor') && (
+                                        <div className="mt-4 pt-4 border-t border-dashed border-slate-100 flex gap-3">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    Swal.fire({
+                                                        title: 'Approve Claim?',
+                                                        text: `Approve claim ${claim.claimNo} for BDT ${claim.claimAmount}?`,
+                                                        icon: 'question',
+                                                        showCancelButton: true,
+                                                        confirmButtonText: 'Yes, Approve',
+                                                        confirmButtonColor: '#059669',
+                                                        cancelButtonColor: '#ef4444'
+                                                    }).then(async (result) => {
+                                                        if (result.isConfirmed) {
+                                                            try {
+                                                                const nextStatus = claim.status === 'Approved by supervisor' ? 'Approved' : 'Approved by supervisor';
+                                                                await updateDoc(doc(firestore, 'hr_claims', claim.id), {
+                                                                    status: nextStatus,
+                                                                    updatedAt: Timestamp.now(),
+                                                                    approvedAmount: claim.claimAmount // Default to full amount
+                                                                });
+                                                                Swal.fire({
+                                                                    title: 'Approved!',
+                                                                    icon: 'success',
+                                                                    timer: 2000,
+                                                                    showConfirmButton: false
+                                                                });
+                                                            } catch (err) {
+                                                                Swal.fire('Error', 'Failed to update claim status', 'error');
+                                                            }
+                                                        }
+                                                    });
+                                                }}
+                                                className="flex-1 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 rounded-xl h-10 font-bold"
+                                            >
+                                                <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                                                Approve
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    Swal.fire({
+                                                        title: 'Reject Claim?',
+                                                        text: `Reject claim ${claim.claimNo}?`,
+                                                        icon: 'warning',
+                                                        input: 'textarea',
+                                                        inputPlaceholder: 'Reason for rejection...',
+                                                        showCancelButton: true,
+                                                        confirmButtonText: 'Yes, Reject',
+                                                        confirmButtonColor: '#ef4444',
+                                                        preConfirm: (reason) => {
+                                                            if (!reason) {
+                                                                Swal.showValidationMessage('Please provide a reason');
+                                                                return false;
+                                                            }
+                                                            return reason;
+                                                        }
+                                                    }).then(async (result) => {
+                                                        if (result.isConfirmed) {
+                                                            try {
+                                                                await updateDoc(doc(firestore, 'hr_claims', claim.id), {
+                                                                    status: 'Rejected',
+                                                                    updatedAt: Timestamp.now(),
+                                                                    rejectionReason: result.value
+                                                                });
+                                                                Swal.fire({
+                                                                    title: 'Rejected!',
+                                                                    icon: 'info',
+                                                                    timer: 2000,
+                                                                    showConfirmButton: false
+                                                                });
+                                                            } catch (err) {
+                                                                Swal.fire('Error', 'Failed to reject claim', 'error');
+                                                            }
+                                                        }
+                                                    });
+                                                }}
+                                                className="flex-1 bg-red-50 border-red-200 text-red-700 hover:bg-red-100 rounded-xl h-10 font-bold"
+                                            >
+                                                <XCircle className="h-4 w-4 mr-1.5" />
+                                                Reject
+                                            </Button>
+                                        </div>
+                                    )}
+                                </Card>
+                            ))}
+
+                            {/* Load More Button */}
+                            {filteredClaims.length > displayLimit && (
+                                <div className="pt-2 pb-6 flex justify-center">
+                                    <Button
+                                        onClick={() => setDisplayLimit(prev => prev + 12)}
+                                        className="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold rounded-2xl px-10 h-12 shadow-sm"
+                                    >
+                                        Load More
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                {/* Floating Action Button - Positioned 20px above Navbar (approx 99px from bottom) */}
-                <Button
-                    className="absolute bottom-[99px] right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95 text-white"
-                    onClick={() => {
-                        router.push('/mobile/claim/create');
-                    }}
-                >
-                    <Plus className="h-8 w-8" />
-                </Button>
+                {/* Floating Action Button */}
+                {activeTab === 'My Claims' && (
+                    <Button
+                        className="absolute bottom-[99px] right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95 text-white"
+                        onClick={() => {
+                            router.push('/mobile/claim/create');
+                        }}
+                    >
+                        <Plus className="h-8 w-8" />
+                    </Button>
+                )}
             </div>
-        </div>
+        </div >
     );
 }
