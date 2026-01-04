@@ -10,6 +10,7 @@ export interface SupervisedEmployee {
     name: string;
     fullName: string;
     employeeCode: string;
+    designation?: string;
     photoURL?: string;
 }
 
@@ -109,6 +110,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                             name: data.fullName || 'Unknown',
                             fullName: data.fullName || 'Unknown',
                             employeeCode: data.employeeCode || 'N/A',
+                            designation: data.designation || undefined,
                             photoURL: data.photoURL || undefined
                         });
                     });
@@ -180,6 +182,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                                 name: data.fullName || 'Unknown',
                                 fullName: data.fullName || 'Unknown',
                                 employeeCode: data.employeeCode || 'N/A',
+                                designation: data.designation || undefined,
                                 photoURL: data.photoURL || undefined
                             });
                         }

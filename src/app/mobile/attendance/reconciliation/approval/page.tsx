@@ -134,6 +134,14 @@ export default function ReconApprovalPage() {
         fetchRequests();
     }, [user, isSupervisor, supervisedEmployees, activeTab, filterDays, statusFilter, selectedEmployee]);
 
+    const employeeMap = React.useMemo(() => {
+        const map: Record<string, { fullName: string; employeeCode: string; designation?: string }> = {};
+        supervisedEmployees.forEach(emp => {
+            map[emp.id] = { fullName: emp.fullName, employeeCode: emp.employeeCode, designation: emp.designation };
+        });
+        return map;
+    }, [supervisedEmployees]);
+
     const containerRef = usePullToRefresh(fetchRequests);
 
 
@@ -411,8 +419,8 @@ export default function ReconApprovalPage() {
                                                 <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Out Time</span>
                                             )}
                                         </div>
-                                        <div className="text-xs font-bold text-slate-400">
-                                            {req.employeeName.split(' ')[0]} {/* First Name */}
+                                        <div className="text-xs font-bold text-slate-500">
+                                            {employeeMap[req.employeeId]?.fullName || req.employeeName}
                                         </div>
                                     </div>
 
@@ -453,8 +461,17 @@ export default function ReconApprovalPage() {
                                     </div>
 
                                     {/* Timestamp if needed like image */}
-                                    <div className="mt-3 pt-3 border-t border-slate-50 flex justify-end text-[10px] bg-slate-50 -mx-5 -mb-5 p-3 text-slate-500 font-bold rounded-b-2xl">
-                                        {/* Mock time or created at */}
+                                    <div className="mt-3 pt-3 border-t border-slate-50 flex justify-between items-center text-[10px] bg-slate-50 -mx-5 -mb-5 p-3 text-slate-500 font-bold rounded-b-2xl">
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-blue-600 px-2 py-1 bg-blue-50/50 rounded border border-blue-100/50">
+                                                Emp: {employeeMap[req.employeeId]?.employeeCode || 'N/A'}
+                                            </div>
+                                            {employeeMap[req.employeeId]?.designation && (
+                                                <div className="text-slate-600 px-2 py-1 bg-slate-100/50 rounded border border-slate-200/50 truncate max-w-[120px]">
+                                                    {employeeMap[req.employeeId]?.designation}
+                                                </div>
+                                            )}
+                                        </div>
                                         {formatDate(req.attendanceDate)}
                                     </div>
                                 </div>

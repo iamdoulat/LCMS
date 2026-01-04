@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import {
     getAllBreakRecords,
     approveBreakRecord,
-    rejectBreakRecord
+    rejectBreakRecord,
+    updateBreakRecord,
+    deleteBreakRecord
 } from '@/lib/firebase/breakTime';
 import { BreakTimeRecord } from '@/types/breakTime';
 import { Button } from '@/components/ui/button';
@@ -16,10 +18,14 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { useSearchParams } from 'next/navigation';
-import Swal from 'sweetalert2';
-import { Loader2, Check, X, Search, MoreHorizontal, ChevronLeft, ChevronRight, Info, Coffee, Clock, MapPin } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { format, parseISO } from 'date-fns';
+import { Loader2, Check, X, Search, MoreHorizontal, ChevronLeft, ChevronRight, Info, Coffee, Clock, MapPin, Edit2, Trash2, Save } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import Swal from 'sweetalert2';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -28,7 +34,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format } from 'date-fns';
 
 const formatDisplayDate = (dateString?: string | null) => {
     if (!dateString) return 'N/A';
@@ -57,7 +62,7 @@ export default function BreakTimeReconciliationPage() {
     const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
     const searchParams = useSearchParams();
     const isTeamView = searchParams.get('view') === 'team';
-    const isHROrAdmin = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+    const isHROrAdmin = userRole?.some((role: string) => ['Super Admin', 'Admin', 'HR'].includes(role));
 
     const [records, setRecords] = useState<BreakTimeRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -65,6 +70,13 @@ export default function BreakTimeReconciliationPage() {
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'auto-approved'>('pending');
     const [searchTerm, setSearchTerm] = useState('');
     const [processing, setProcessing] = useState(false);
+
+    // Edit Dialog State
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editingRecord, setEditingRecord] = useState<BreakTimeRecord | null>(null);
+    const [editStartTime, setEditStartTime] = useState('');
+    const [editEndTime, setEditEndTime] = useState('');
+    const [editRemarks, setEditRemarks] = useState('');
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -124,13 +136,13 @@ export default function BreakTimeReconciliationPage() {
                 inputLabel: 'Reason for rejection',
                 inputPlaceholder: 'Enter reason...',
                 showCancelButton: true,
-                inputValidator: (value) => !value ? 'Reason is required!' : null
+                inputValidator: (value: string) => !value ? 'Reason is required!' : null
             });
 
             if (!reason) return;
 
             setProcessing(true);
-            await rejectBreakRecord(id, user.uid);
+            await rejectBreakRecord(id, user.uid, reason);
             // In a real app, we'd also save the reason, but for now just notify
             await Swal.fire({
                 title: "Rejected",
@@ -144,6 +156,81 @@ export default function BreakTimeReconciliationPage() {
             Swal.fire("Error", "Failed to reject break.", "error");
         } finally {
             setProcessing(false);
+        }
+    };
+
+    const handleEdit = (rec: BreakTimeRecord) => {
+        setEditingRecord(rec);
+        // Date formats for input type="datetime-local" are YYYY-MM-DDTHH:mm
+        const formatForInput = (iso?: string) => {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return format(d, "yyyy-MM-dd'T'HH:mm");
+        };
+        setEditStartTime(formatForInput(rec.startTime));
+        setEditEndTime(formatForInput(rec.endTime));
+        setEditRemarks(rec.remarks || '');
+        setEditDialogOpen(true);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingRecord?.id) return;
+        try {
+            setProcessing(true);
+            const startISO = new Date(editStartTime).toISOString();
+            const endISO = editEndTime ? new Date(editEndTime).toISOString() : undefined;
+
+            await updateBreakRecord(editingRecord.id, {
+                startTime: startISO,
+                endTime: endISO,
+                remarks: editRemarks
+            });
+
+            setEditDialogOpen(false);
+            await Swal.fire({
+                title: "Updated",
+                text: "Break record updated successfully.",
+                icon: "success",
+                timer: 1500,
+                showConfirmButton: false
+            });
+            fetchData();
+        } catch (error) {
+            console.error("Save error:", error);
+            Swal.fire("Error", "Failed to update record.", "error");
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "This will permanently delete this break record.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                setProcessing(true);
+                await deleteBreakRecord(id);
+                await Swal.fire({
+                    title: "Deleted!",
+                    text: "Record has been removed.",
+                    icon: "success",
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+                fetchData();
+            } catch (error) {
+                Swal.fire("Error", "Failed to delete record.", "error");
+            } finally {
+                setProcessing(false);
+            }
         }
     };
 
@@ -313,12 +400,23 @@ export default function BreakTimeReconciliationPage() {
                                             </TableCell>
                                             <TableCell>
                                                 {rec.status === 'pending' && !rec.onBreak && (
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-1">
                                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-green-600 hover:text-green-700" onClick={() => rec.id && handleApprove(rec.id)}>
                                                             <Check className="h-4 w-4" />
                                                         </Button>
                                                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-600 hover:text-red-700" onClick={() => rec.id && handleReject(rec.id)}>
                                                             <X className="h-4 w-4" />
+                                                        </Button>
+                                                        <Separator orientation="vertical" className="mx-1 h-4" />
+                                                    </div>
+                                                )}
+                                                {!rec.onBreak && (
+                                                    <div className="flex items-center gap-1">
+                                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700" onClick={() => handleEdit(rec)}>
+                                                            <Edit2 className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-red-700" onClick={() => rec.id && handleDelete(rec.id)}>
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 )}
@@ -344,6 +442,56 @@ export default function BreakTimeReconciliationPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Edit Dialog */}
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Edit Break Record</DialogTitle>
+                        <DialogDescription>
+                            Manually adjust break times for {editingRecord?.employeeName}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="startTime">Start Time</Label>
+                            <Input
+                                id="startTime"
+                                type="datetime-local"
+                                value={editStartTime}
+                                onChange={(e) => setEditStartTime(e.target.value)}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="endTime">End Time</Label>
+                            <Input
+                                id="endTime"
+                                type="datetime-local"
+                                value={editEndTime}
+                                onChange={(e) => setEditEndTime(e.target.value)}
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="remarks">Remarks</Label>
+                            <Input
+                                id="remarks"
+                                placeholder="Adjustment reason..."
+                                value={editRemarks}
+                                onChange={(e) => setEditRemarks(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={processing}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSaveEdit} disabled={processing}>
+                            {processing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save Changes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

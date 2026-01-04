@@ -9,7 +9,8 @@ import {
     serverTimestamp,
     onSnapshot,
     Timestamp,
-    orderBy
+    orderBy,
+    deleteDoc
 } from 'firebase/firestore';
 import { firestore } from './config';
 import { BreakTimeRecord, BreakStatus } from '@/types/breakTime';
@@ -164,4 +165,44 @@ export const rejectBreakRecord = async (breakId: string, reviewerId: string, com
         reviewComments: comments,
         updatedAt: serverTimestamp()
     });
+};
+
+export const updateBreakRecord = async (breakId: string, updates: Partial<BreakTimeRecord>) => {
+    try {
+        const breakRef = doc(firestore, BREAK_COLLECTION, breakId);
+
+        // If startTime and endTime are both present in updates, recalculate duration
+        // If one is present, we might need to fetch the other
+        let finalUpdates = { ...updates, updatedAt: serverTimestamp() };
+
+        if (updates.startTime || updates.endTime) {
+            const { getDoc } = await import('firebase/firestore');
+            const snapshot = await getDoc(breakRef);
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                const start = updates.startTime ? new Date(updates.startTime) : new Date(data.startTime);
+                const end = updates.endTime ? new Date(updates.endTime) : (data.endTime ? new Date(data.endTime) : null);
+
+                if (start && end) {
+                    const durationMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
+                    finalUpdates = { ...finalUpdates, durationMinutes: Math.max(0, durationMinutes) };
+                }
+            }
+        }
+
+        await updateDoc(breakRef, finalUpdates);
+    } catch (error) {
+        console.error('Error updating break record:', error);
+        throw error;
+    }
+};
+
+export const deleteBreakRecord = async (breakId: string) => {
+    try {
+        const breakRef = doc(firestore, BREAK_COLLECTION, breakId);
+        await deleteDoc(breakRef);
+    } catch (error) {
+        console.error('Error deleting break record:', error);
+        throw error;
+    }
 };
