@@ -839,12 +839,15 @@ export default function MobileDashboardPage() {
                             </button>
 
                             {/* Task */}
-                            <button className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group">
+                            <Link
+                                href="/mobile/project-management"
+                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
+                            >
                                 <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
                                     <ListTodo className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Task</span>
-                            </button>
+                            </Link>
 
                             {/* Check In/Out */}
                             <Link
