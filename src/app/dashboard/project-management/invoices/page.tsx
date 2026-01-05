@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-    Receipt,
     Plus,
     Search,
-    Filter,
     MoreVertical,
     Edit,
     Trash2,
     Eye,
-    Download
+    Download,
+    FilterX
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,31 +26,71 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { firestore } from '@/lib/firebase/config';
-import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { format } from 'date-fns';
-import { Invoice } from '@/types/projectManagement';
+import { collection, onSnapshot, query, orderBy as firestoreOrderBy, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { format, getYear } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { saleStatusOptions } from '@/types'; // Or define locally if not available
+
+interface Invoice {
+    id: string;
+    invoiceNo: string;
+    clientName: string;
+    projectTitle: string;
+    salesperson: string;
+    dueDate: string;
+    amount: number;
+    paymentStatus: string;
+    createdAt: any;
+    lineItems?: any[];
+}
 
 export default function ManageInvoicesPage() {
     const router = useRouter();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [searchQuery, setSearchQuery] = useState('');
+
+    // Filters
+    const [invoiceNoFilter, setInvoiceNoFilter] = useState('');
+    const [clientFilter, setClientFilter] = useState('');
+    const [salespersonFilter, setSalespersonFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('All');
+    const [yearFilter, setYearFilter] = useState<string>('All');
+
+    // Sorting
+    const [sortBy, setSortBy] = useState<string>('createdAt');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     useEffect(() => {
-        const q = query(collection(firestore, 'project_invoices'), orderBy('updatedAt', 'desc'));
+        const q = query(collection(firestore, 'project_invoices'), firestoreOrderBy('createdAt', 'desc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as Invoice[];
+            const data = snapshot.docs.map(doc => {
+                const docData = doc.data();
+                return {
+                    id: doc.id,
+                    invoiceNo: doc.id,
+                    clientName: docData.customerName || 'Unknown Client',
+                    projectTitle: docData.projectTitle || 'General Project',
+                    salesperson: docData.salesperson || '',
+                    dueDate: docData.invoiceDate || new Date().toISOString(),
+                    amount: docData.totalAmount || 0,
+                    paymentStatus: docData.status || 'Draft',
+                    createdAt: docData.createdAt,
+                    lineItems: docData.lineItems
+                };
+            }) as Invoice[];
             setInvoices(data);
         });
 
@@ -66,36 +105,36 @@ export default function ManageInvoicesPage() {
 
     const handleDownloadPDF = (invoice: Invoice) => {
         const doc = new jsPDF();
-
         doc.setFontSize(20);
         doc.text("INVOICE", 15, 20);
-
         doc.setFontSize(10);
         doc.text(`Invoice No: ${invoice.invoiceNo}`, 15, 30);
-        doc.text(`Date: ${format(new Date(invoice.createdAt.seconds * 1000), 'yyyy-MM-dd')}`, 15, 35);
-
+        const dateStr = invoice.createdAt instanceof Timestamp ?
+            format(invoice.createdAt.toDate(), 'yyyy-MM-dd') :
+            invoice.createdAt ? format(new Date(invoice.createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+        doc.text(`Date: ${dateStr}`, 15, 35);
         doc.text(`Bill To:`, 15, 50);
         doc.setFontSize(12);
         doc.text(invoice.clientName, 15, 55);
-
         doc.setFontSize(10);
         doc.text(`Project: ${invoice.projectTitle}`, 15, 65);
+        doc.text(`Salesperson: ${invoice.salesperson}`, 15, 70);
 
-        // Simple table content (replace with actual items if available)
+        const tableBody = invoice.lineItems?.map((item: any) => [
+            item.description || 'Item',
+            `$${Number(item.total || 0).toLocaleString()}`
+        ]) || [['Consulting Services', `$${invoice.amount.toLocaleString()}`]];
+
         autoTable(doc, {
             startY: 75,
             head: [['Description', 'Amount']],
-            body: [
-                ['Consulting Services', `$${invoice.amount.toLocaleString()}`],
-            ],
+            body: tableBody,
         });
 
         // @ts-ignore
         const finalY = doc.lastAutoTable.finalY || 75;
-
         doc.setFontSize(12);
         doc.text(`Total Due: $${invoice.amount.toLocaleString()}`, 130, finalY + 20);
-
         doc.save(`invoice_${invoice.invoiceNo}.pdf`);
     };
 
@@ -109,20 +148,73 @@ export default function ManageInvoicesPage() {
         }
     };
 
-    const filteredInvoices = invoices.filter(inv => {
-        return (
-            inv.invoiceNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            inv.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            inv.projectTitle.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    });
+    const clearFilters = () => {
+        setInvoiceNoFilter('');
+        setClientFilter('');
+        setSalespersonFilter('');
+        setStatusFilter('All');
+        setYearFilter('All');
+    };
+
+    const filteredAndSortedInvoices = useMemo(() => {
+        let filtered = invoices.filter(inv => {
+            // Invoice No Filter
+            if (invoiceNoFilter && !inv.invoiceNo.toLowerCase().includes(invoiceNoFilter.toLowerCase())) return false;
+
+            // Client Filter
+            if (clientFilter && !inv.clientName.toLowerCase().includes(clientFilter.toLowerCase())) return false;
+
+            // Salesperson Filter
+            if (salespersonFilter && !inv.salesperson.toLowerCase().includes(salespersonFilter.toLowerCase())) return false;
+
+            // Status Filter
+            if (statusFilter !== 'All' && inv.paymentStatus !== statusFilter) return false;
+
+            // Year Filter
+            if (yearFilter !== 'All') {
+                const date = inv.createdAt instanceof Timestamp ? inv.createdAt.toDate() : new Date(inv.createdAt);
+                if (getYear(date).toString() !== yearFilter) return false;
+            }
+
+            return true;
+        });
+
+        // Sorting
+        filtered.sort((a, b) => {
+            let valA: any = a[sortBy as keyof Invoice];
+            let valB: any = b[sortBy as keyof Invoice];
+
+            // Handle dates specifically if strictly needed, but string comparison works for ISO sorted, logic needed for Timestamp
+            if (sortBy === 'createdAt') {
+                valA = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : new Date(a.createdAt).getTime();
+                valB = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : new Date(b.createdAt).getTime();
+            } else if (sortBy === 'amount') {
+                valA = Number(valA);
+                valB = Number(valB);
+            } else if (typeof valA === 'string') {
+                valA = valA.toLowerCase();
+                valB = valB.toLowerCase();
+            }
+
+            if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+            if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        return filtered;
+    }, [invoices, invoiceNoFilter, clientFilter, salespersonFilter, statusFilter, yearFilter, sortBy, sortOrder]);
+
+    const years = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        return Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
+    }, []);
 
     return (
         <div className="p-6 space-y-6 min-h-screen bg-slate-50/50">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">Manage Invoices</h1>
+                    <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-teal-600 via-emerald-600 to-amber-600 text-transparent bg-clip-text">Manage Invoices</h1>
                     <p className="text-muted-foreground">Track and generate project invoices</p>
                 </div>
                 <Button onClick={() => router.push('/dashboard/project-management/invoices/new')} className="bg-primary hover:bg-primary/90 text-white shadow-md">
@@ -130,16 +222,86 @@ export default function ManageInvoicesPage() {
                 </Button>
             </div>
 
-            {/* Controls */}
-            <div className="bg-white dark:bg-card p-4 rounded-lg border shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div className="relative flex-1 md:max-w-sm w-full">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            {/* Filter Section */}
+            <div className="bg-white dark:bg-card p-4 rounded-lg border shadow-sm space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                    {/* Invoice No */}
                     <Input
-                        placeholder="Search invoices..."
-                        className="pl-8 bg-slate-50 border-slate-200"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Invoice No"
+                        value={invoiceNoFilter}
+                        onChange={(e) => setInvoiceNoFilter(e.target.value)}
+                        className="bg-slate-50"
                     />
+                    {/* Client Name */}
+                    <Input
+                        placeholder="Client Name"
+                        value={clientFilter}
+                        onChange={(e) => setClientFilter(e.target.value)}
+                        className="bg-slate-50"
+                    />
+                    {/* Salesperson */}
+                    <Input
+                        placeholder="Salesperson"
+                        value={salespersonFilter}
+                        onChange={(e) => setSalespersonFilter(e.target.value)}
+                        className="bg-slate-50"
+                    />
+                    {/* Year */}
+                    <Select value={yearFilter} onValueChange={setYearFilter}>
+                        <SelectTrigger className="bg-slate-50">
+                            <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="All">All Years</SelectItem>
+                            {years.map(year => (
+                                <SelectItem key={year} value={year}>{year}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {/* Status */}
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="bg-slate-50">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="All">All Statuses</SelectItem>
+                            {saleStatusOptions.map(status => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    <Button variant="ghost" onClick={clearFilters} className="text-muted-foreground">
+                        <FilterX className="h-4 w-4 mr-2" /> Clear
+                    </Button>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 border-t">
+                    <span className="text-sm text-muted-foreground font-medium">Sort By:</span>
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="w-[140px] h-8 text-xs">
+                            <SelectValue placeholder="Sort Field" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="createdAt">Date Created</SelectItem>
+                            <SelectItem value="invoiceNo">Invoice No</SelectItem>
+                            <SelectItem value="clientName">Client Name</SelectItem>
+                            <SelectItem value="amount">Amount</SelectItem>
+                            <SelectItem value="paymentStatus">Status</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={sortOrder} onValueChange={(val: any) => setSortOrder(val)}>
+                        <SelectTrigger className="w-[140px] h-8 text-xs">
+                            <SelectValue placeholder="Order" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="desc">Descending</SelectItem>
+                            <SelectItem value="asc">Ascending</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <div className="flex-1 text-right text-xs text-muted-foreground">
+                        Showing {filteredAndSortedInvoices.length} result(s)
+                    </div>
                 </div>
             </div>
 
@@ -151,25 +313,27 @@ export default function ManageInvoicesPage() {
                             <TableHead>Invoice No</TableHead>
                             <TableHead>Project</TableHead>
                             <TableHead>Client</TableHead>
-                            <TableHead>Due Date</TableHead>
+                            <TableHead>Salesperson</TableHead>
+                            <TableHead>Date</TableHead>
                             <TableHead>Amount</TableHead>
-                            <TableHead>Payment Status</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredInvoices.length === 0 ? (
+                        {filteredAndSortedInvoices.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="h-24 text-center">
+                                <TableCell colSpan={8} className="h-24 text-center">
                                     No invoices found.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredInvoices.map((invoice) => (
+                            filteredAndSortedInvoices.map((invoice) => (
                                 <TableRow key={invoice.id}>
                                     <TableCell className="font-medium text-blue-600">{invoice.invoiceNo}</TableCell>
                                     <TableCell>{invoice.projectTitle}</TableCell>
                                     <TableCell>{invoice.clientName}</TableCell>
+                                    <TableCell>{invoice.salesperson}</TableCell>
                                     <TableCell className="text-muted-foreground">
                                         {format(new Date(invoice.dueDate), 'MMM dd, yyyy')}
                                     </TableCell>
@@ -190,10 +354,7 @@ export default function ManageInvoicesPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/project-management/invoices/${invoice.id}`)}>
-                                                    <Eye className="mr-2 h-4 w-4" /> View
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/project-management/invoices/${invoice.id}/edit`)}>
+                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/project-management/invoices/edit/${invoice.id}`)}>
                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleDownloadPDF(invoice)}>

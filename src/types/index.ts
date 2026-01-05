@@ -1149,6 +1149,10 @@ export interface InvoiceDocument {
   customerName: string;
   billingAddress: string;
   shippingAddress: string;
+  projectId?: string;
+  projectTitle?: string;
+  taskId?: string;
+  taskTitle?: string;
   invoiceDate: string; // ISO string
   dueDate?: string; // ISO string
   paymentTerms?: string;

@@ -190,7 +190,7 @@ const projectManagementNavItems: NavItem[] = [
   { href: '/dashboard/project-management', label: 'Project Dashboard', icon: LayoutDashboard, iconColorClass: 'bg-icon-dashboard' },
   { href: '/dashboard/project-management/projects', label: 'Manage Project', icon: FolderOpen, iconColorClass: 'bg-icon-project' },
   { href: '/dashboard/project-management/tasks', label: 'Manage Tasks', icon: ListChecks, iconColorClass: 'bg-icon-list' },
-  { href: '/dashboard/project-management/quotations', label: 'Manage Quotations', icon: FileText, iconColorClass: 'bg-icon-reports' },
+
   { href: '/dashboard/project-management/invoices', label: 'Manage Invoices', icon: Receipt, iconColorClass: 'bg-icon-sale' },
   { href: '/dashboard/project-management/settings', label: 'Project Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
