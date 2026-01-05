@@ -522,7 +522,7 @@ export default function MobileTaskDetailsPage() {
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     placeholder="Text your message..."
                                     rows={1}
-                                    className="w-full bg-transparent border-none focus:ring-0 text-sm font-bold text-slate-700 placeholder:text-slate-300 resize-none no-scrollbar"
+                                    className="w-full bg-transparent border-none focus:ring-0 text-base font-bold text-slate-700 placeholder:text-slate-300 resize-none no-scrollbar"
                                     onInput={(e) => {
                                         const target = e.target as HTMLTextAreaElement;
                                         target.style.height = 'auto';

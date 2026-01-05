@@ -232,13 +232,15 @@ export default function MobileTaskManagementPage() {
                         <button
                             onClick={() => setIsFilterOpen(true)}
                             className={cn(
-                                "p-2 rounded-full transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)]",
-                                hasActiveFilters(filters) ? "bg-blue-600 text-white" : "bg-white/10 text-white"
+                                "h-10 w-10 text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all",
+                                hasActiveFilters(filters)
+                                    ? "bg-[#3b82f6] shadow-blue-500/30"
+                                    : "bg-white/10 shadow-black/5"
                             )}
                         >
                             <Filter className="h-5 w-5" />
                         </button>
-                        <button className="p-2 text-white bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)]">
+                        <button className="h-10 w-10 bg-white/10 text-white rounded-full flex items-center justify-center shadow-lg shadow-black/5 active:scale-95 transition-all">
                             <Search className="h-5 w-5" />
                         </button>
                     </div>
@@ -302,6 +304,25 @@ export default function MobileTaskManagementPage() {
                                 onClick={() => handleTaskClick(task)}
                                 className="bg-white p-5 rounded-[2rem] shadow-md border border-slate-100 flex gap-4 active:scale-[0.98] transition-all"
                             >
+                                {/* Vertical Acceptance Badge */}
+                                {task.acceptanceStatuses?.[user?.uid || ''] && (
+                                    <div className={cn(
+                                        "w-6 rounded-full flex items-center justify-center py-2 shadow-sm border",
+                                        task.acceptanceStatuses[user?.uid || ''] === 'Accepted'
+                                            ? "bg-emerald-50 border-emerald-100 text-emerald-600"
+                                            : task.acceptanceStatuses[user?.uid || ''] === 'Rejected'
+                                                ? "bg-rose-50 border-rose-100 text-rose-600"
+                                                : "hidden"
+                                    )}>
+                                        <span
+                                            className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
+                                            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                                        >
+                                            {task.acceptanceStatuses[user?.uid || '']}
+                                        </span>
+                                    </div>
+                                )}
+
                                 {/* Task Completion Progress Bar (Pipe Line) */}
                                 <div className="w-1.5 bg-slate-100 rounded-full my-1 overflow-hidden relative shadow-inner">
                                     <motion.div
@@ -409,9 +430,9 @@ export default function MobileTaskManagementPage() {
             {/* FAB */}
             <button
                 onClick={() => router.push('/mobile/project-management/new')}
-                className="fixed bottom-[100px] right-6 h-14 w-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-90 transition-transform z-50 border border-blue-100"
+                className="fixed bottom-[100px] right-6 h-11 w-11 bg-[#3b82f6] rounded-full flex items-center justify-center text-white shadow-lg shadow-blue-500/30 active:scale-90 transition-all z-50 border border-white/10"
             >
-                <Plus className="h-7 w-7" />
+                <Plus className="h-[22px] w-[22px]" />
             </button>
 
             <MobileFilterSheet

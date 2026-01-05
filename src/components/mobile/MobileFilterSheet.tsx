@@ -153,7 +153,7 @@ export function MobileFilterSheet({
                 </div>
 
                 <div className="p-6 bg-white border-t border-slate-100 shrink-0 shadow-lg z-10">
-                    <Button onClick={handleApply} className="w-full h-12 rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-blue-200 shadow-lg">
+                    <Button onClick={handleApply} className="w-full h-12 rounded-xl text-base font-bold bg-[#3b82f6] hover:bg-blue-600 shadow-lg shadow-blue-500/20 border border-white/10">
                         Apply Filters
                     </Button>
                 </div>
