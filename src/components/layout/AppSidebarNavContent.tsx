@@ -186,6 +186,15 @@ const serviceNavItems: NavItem[] = [
   { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff, iconColorClass: 'bg-icon-no-warranty' },
 ];
 
+const projectManagementNavItems: NavItem[] = [
+  { href: '/dashboard/project-management', label: 'Project Dashboard', icon: LayoutDashboard, iconColorClass: 'bg-icon-dashboard' },
+  { href: '/dashboard/project-management/projects', label: 'Manage Project', icon: FolderOpen, iconColorClass: 'bg-icon-project' },
+  { href: '/dashboard/project-management/tasks', label: 'Manage Tasks', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+  { href: '/dashboard/project-management/quotations', label: 'Manage Quotations', icon: FileText, iconColorClass: 'bg-icon-reports' },
+  { href: '/dashboard/project-management/invoices', label: 'Manage Invoices', icon: Receipt, iconColorClass: 'bg-icon-sale' },
+  { href: '/dashboard/project-management/settings', label: 'Project Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
+];
+
 const hrNavItems: NavItem[] = [
   { href: '/dashboard/hr/dashboard', label: 'HRM Dashboard', icon: LayoutDashboard, iconColorClass: 'bg-icon-dashboard' },
   { href: '/dashboard/hr/employees', label: 'Employee List', icon: UsersIcon, iconColorClass: 'bg-icon-users' },
@@ -234,6 +243,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
   { groupLabel: "Suppliers / Applicants", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial", "Accounts", "Service", "DemoManager"] },
   { groupLabel: 'Demo M/C Management', icon: Laptop, iconColorClass: 'bg-icon-dashboard', subLinks: demoNavItems, allowedRoles: ["Super Admin", "Admin", "DemoManager", "Viewer", "Commercial"] },
   { groupLabel: 'Warranty Management', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty', subLinks: serviceNavItems, allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial"] },
+  { groupLabel: 'Project Management', icon: Briefcase, iconColorClass: 'bg-icon-project', subLinks: projectManagementNavItems, allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial", "Employee"] },
   { groupLabel: 'General Settings', icon: Settings, iconColorClass: 'bg-icon-settings', subLinks: settingsNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer"] },
 ];
 

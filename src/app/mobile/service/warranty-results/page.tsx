@@ -2,7 +2,7 @@
 
 import React, { Suspense, useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Loader2, Info, User, Tag, Hash, Wrench, Search, ChevronRight, Calendar, Settings2, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, Info, User, Tag, Hash, Wrench, Search, ChevronRight, Calendar, Settings2, FileText, Download } from 'lucide-react';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 import type { InstallationReportDocument } from '@/types';
@@ -11,6 +11,8 @@ import { format, parseISO, isValid, addDays, isBefore, differenceInDays, startOf
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 function WarrantyResultsContent() {
     const router = useRouter();
@@ -96,6 +98,40 @@ function WarrantyResultsContent() {
         load();
     }, [q, fetchWarrantyResults]);
 
+    const handleDownloadPdf = (item: any) => {
+        const doc = new jsPDF();
+
+        // Header
+        doc.setFontSize(22);
+        doc.setTextColor(10, 30, 96); // #0a1e60
+        doc.text("WARRANTY STATUS REPORT", 105, 20, { align: "center" });
+
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 105, 28, { align: "center" });
+
+        // Machine Info Table
+        autoTable(doc, {
+            startY: 40,
+            head: [['Field', 'Details']],
+            body: [
+                ['Applicant Name', item.applicant],
+                ['Machine Model', item.model],
+                ['Machine S/N', item.serialNo],
+                ['Control Box Model', item.ctlBoxModel],
+                ['Control Box S/N', item.ctlBoxSerial],
+                ['Installation Date', item.date ? (isValid(parseISO(item.date)) ? format(parseISO(item.date), 'dd MMM yyyy') : 'N/A') : 'N/A'],
+                ['Warranty Status', item.status],
+            ],
+            theme: 'striped',
+            headStyles: { fillColor: [10, 30, 96], textColor: [255, 255, 255], fontStyle: 'bold' },
+            styles: { fontSize: 10, cellPadding: 5 },
+            columnStyles: { 0: { cellWidth: 50, fontStyle: 'bold' } }
+        });
+
+        doc.save(`Warranty_Report_${item.serialNo}.pdf`);
+    };
+
     return (
         <div className="flex flex-col h-screen bg-slate-50">
             {/* Header */}
@@ -128,7 +164,7 @@ function WarrantyResultsContent() {
                             Showing {results.length} matching machine/control box entries
                         </p>
                         {results.map((item) => (
-                            <Card key={item.id} className="border-none shadow-sm rounded-3xl overflow-hidden active:scale-[0.98] transition-all bg-white font-sans">
+                            <Card key={item.id} className="border-none shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] rounded-3xl overflow-hidden active:scale-[0.98] transition-all bg-white font-sans">
                                 <CardContent className="p-0">
                                     <div className="p-5 flex flex-col gap-5">
                                         {/* Top Row: Model & Warranty Status */}
@@ -145,13 +181,24 @@ function WarrantyResultsContent() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="text-right shrink-0">
+                                            <div className="flex flex-col items-end gap-3 shrink-0">
                                                 <span className={cn(
                                                     "text-[11px] font-black uppercase tracking-tight block leading-tight",
                                                     item.isExpired ? "text-rose-500" : "text-emerald-500"
                                                 )}>
                                                     {item.status}
                                                 </span>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDownloadPdf(item);
+                                                    }}
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         </div>
 
@@ -189,18 +236,7 @@ function WarrantyResultsContent() {
                                             </div>
                                         </div>
 
-                                        {/* Bottom Action Row */}
-                                        <div className="flex items-center justify-end pt-1">
-                                            <Button
-                                                variant="default"
-                                                size="sm"
-                                                className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs h-10 px-5 flex items-center gap-2 shadow-lg shadow-slate-200"
-                                                onClick={() => router.push(`/dashboard/warranty-management/edit-installation-report/${item.reportId}`)}
-                                            >
-                                                <FileText className="h-3.5 w-3.5" />
-                                                View Report
-                                            </Button>
-                                        </div>
+
                                     </div>
                                 </CardContent>
                             </Card>

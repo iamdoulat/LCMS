@@ -5,12 +5,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { Loader2, Users as UsersIcon, PlusCircle, FileEdit, Trash2, ShieldAlert, MoreHorizontal, UserCheck, UserX, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Users as UsersIcon, PlusCircle, FileEdit, Trash2, ShieldAlert, MoreHorizontal, UserCheck, UserX, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, getDocs, orderBy, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, deleteDoc, doc, updateDoc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 import type { UserDocumentForAdmin, UserRole } from '@/types';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,8 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -35,6 +37,8 @@ export default function UserListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [registrationEnabled, setRegistrationEnabled] = useState<boolean>(true);
+  const [isTogglingRegistration, setIsTogglingRegistration] = useState(false);
   const isAdminOrSuperAdmin = useMemo(() => userRole?.some(role => ['Super Admin', 'Admin'].includes(role)), [userRole]);
   const isSuperAdmin = useMemo(() => userRole?.includes('Super Admin'), [userRole]);
   const isReadOnly = useMemo(() => userRole?.includes('Viewer'), [userRole]);
@@ -61,10 +65,64 @@ export default function UserListPage() {
     }
   }, [isAdminOrSuperAdmin, isReadOnly]);
 
+  const fetchRegistrationStatus = React.useCallback(async () => {
+    try {
+      const settingsRef = doc(firestore, 'system_settings', 'registration_enabled');
+      const settingsSnap = await getDoc(settingsRef);
+      if (settingsSnap.exists()) {
+        setRegistrationEnabled(settingsSnap.data().enabled ?? true);
+      } else {
+        // Default to enabled if document doesn't exist
+        setRegistrationEnabled(true);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch registration status:', error);
+      // Default to enabled on error
+      setRegistrationEnabled(true);
+    }
+  }, []);
+
+  const handleRegistrationToggle = async (checked: boolean) => {
+    if (!isAdminOrSuperAdmin) {
+      Swal.fire("Permission Denied", "Only Admins can modify registration settings.", "error");
+      return;
+    }
+
+    setIsTogglingRegistration(true);
+    try {
+      const settingsRef = doc(firestore, 'system_settings', 'registration_enabled');
+      await setDoc(settingsRef, {
+        enabled: checked,
+        updatedAt: serverTimestamp(),
+        updatedBy: user?.uid || 'unknown'
+      }, { merge: true });
+
+      setRegistrationEnabled(checked);
+      Swal.fire({
+        title: 'Success',
+        text: `Registration has been ${checked ? 'enabled' : 'disabled'}.`,
+        icon: 'success',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      });
+    } catch (error: any) {
+      console.error('Failed to update registration status:', error);
+      Swal.fire('Error', `Failed to update registration setting: ${error.message}`, 'error');
+      // Revert the toggle on error
+      await fetchRegistrationStatus();
+    } finally {
+      setIsTogglingRegistration(false);
+    }
+  };
+
   useEffect(() => {
     if (!authLoading) {
       if (isAdminOrSuperAdmin || isReadOnly) {
         fetchUsers();
+        fetchRegistrationStatus();
       } else {
         Swal.fire({
           title: 'Access Denied',
@@ -77,7 +135,7 @@ export default function UserListPage() {
         });
       }
     }
-  }, [userRole, authLoading, router, isAdminOrSuperAdmin, isReadOnly, fetchUsers]);
+  }, [userRole, authLoading, router, isAdminOrSuperAdmin, isReadOnly, fetchUsers, fetchRegistrationStatus]);
 
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     if (!isSuperAdmin) {
@@ -197,7 +255,7 @@ export default function UserListPage() {
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
+            <div className="flex-1">
               <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2")}>
                 <UsersIcon className="h-7 w-7 text-primary" />
                 User Management
@@ -206,11 +264,26 @@ export default function UserListPage() {
                 View and manage user accounts and roles.
               </CardDescription>
             </div>
-            <Button asChild disabled={!isAdminOrSuperAdmin || isReadOnly}>
-              <Link href="/dashboard/settings/users/add">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New User
-              </Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              {/* Registration Toggle */}
+              <div className="flex items-center space-x-3 px-4 py-2 bg-muted/50 rounded-lg border">
+                <Settings className="h-4 w-4 text-muted-foreground" />
+                <Label htmlFor="registration-toggle" className="text-sm font-medium cursor-pointer">
+                  Registration
+                </Label>
+                <Switch
+                  id="registration-toggle"
+                  checked={registrationEnabled}
+                  onCheckedChange={handleRegistrationToggle}
+                  disabled={!isAdminOrSuperAdmin || isReadOnly || isTogglingRegistration}
+                />
+              </div>
+              <Button asChild disabled={!isAdminOrSuperAdmin || isReadOnly}>
+                <Link href="/dashboard/settings/users/add">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add New User
+                </Link>
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

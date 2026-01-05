@@ -19,6 +19,9 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types';
+import { firestore } from '@/lib/firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
+import { RegistrationDisabled } from '@/components/auth/RegistrationDisabled';
 
 const registerSchema = z.object({
   displayName: z.string().min(3, "Display name must be at least 3 characters long"),
@@ -34,6 +37,8 @@ export default function RegisterPage() {
   const { user, loading: authLoading, register, companyLogoUrl } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(true);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -49,6 +54,38 @@ export default function RegisterPage() {
       router.push('/dashboard');
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    const checkRegistrationStatus = async () => {
+      try {
+        const settingsRef = doc(firestore, 'system_settings', 'registration_enabled');
+        const settingsSnap = await getDoc(settingsRef);
+
+        console.log('🔍 Registration Status Check:', {
+          documentExists: settingsSnap.exists(),
+          data: settingsSnap.exists() ? settingsSnap.data() : null
+        });
+
+        if (settingsSnap.exists()) {
+          const enabled = settingsSnap.data().enabled ?? true;
+          console.log('✅ Registration enabled from Firestore:', enabled);
+          setRegistrationEnabled(enabled);
+        } else {
+          // Default to enabled if document doesn't exist
+          console.log('⚠️ No registration_enabled document found, defaulting to enabled');
+          setRegistrationEnabled(true);
+        }
+      } catch (error) {
+        console.error('❌ Failed to check registration status:', error);
+        // Default to enabled on error
+        setRegistrationEnabled(true);
+      } finally {
+        setCheckingStatus(false);
+      }
+    };
+
+    checkRegistrationStatus();
+  }, []);
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
@@ -69,12 +106,17 @@ export default function RegisterPage() {
     }
   };
 
-  if (authLoading || (!authLoading && user)) {
+  if (authLoading || checkingStatus || (!authLoading && user)) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
+  }
+
+  // Show disabled registration page if registration is turned off
+  if (registrationEnabled === false) {
+    return <RegistrationDisabled />;
   }
 
   return (

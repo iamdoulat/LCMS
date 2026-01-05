@@ -27,16 +27,51 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
       if (!noticeId) return;
 
       const userHasTargetRole = userRole.some(role => notice.targetRoles?.includes(role));
-      
+
       if (!userHasTargetRole) {
         setIsOpen(false);
         return;
       }
-      
+
+      // Check if current date is within the display date range
+      const now = new Date();
+
+      // Check start date
+      if (notice.displayStartDate) {
+        const startDate = notice.displayStartDate instanceof Date
+          ? notice.displayStartDate
+          : (notice.displayStartDate as Timestamp).toDate();
+
+        // Set to start of day for comparison
+        startDate.setHours(0, 0, 0, 0);
+        const nowStartOfDay = new Date(now);
+        nowStartOfDay.setHours(0, 0, 0, 0);
+
+        if (nowStartOfDay < startDate) {
+          setIsOpen(false);
+          return;
+        }
+      }
+
+      // Check end date
+      if (notice.displayEndDate) {
+        const endDate = notice.displayEndDate instanceof Date
+          ? notice.displayEndDate
+          : (notice.displayEndDate as Timestamp).toDate();
+
+        // Set to end of day for comparison
+        endDate.setHours(23, 59, 59, 999);
+
+        if (now > endDate) {
+          setIsOpen(false);
+          return;
+        }
+      }
+
       const noticeTimestamp = (notice.updatedAt as Timestamp).seconds;
       const dismissedTimestampString = localStorage.getItem(`${NOTICE_DISMISSED_KEY_PREFIX}${noticeId}`);
       const lastDismissedTimestamp = dismissedTimestampString ? parseInt(dismissedTimestampString, 10) : 0;
-      
+
       if (noticeTimestamp > lastDismissedTimestamp) {
         setIsOpen(true);
       } else {
@@ -58,8 +93,8 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
     if (notice && notice.updatedAt) {
       const noticeId = notice.id;
       if (noticeId) {
-          const timestampToStore = (notice.updatedAt as Timestamp).seconds;
-          localStorage.setItem(`${NOTICE_DISMISSED_KEY_PREFIX}${noticeId}`, timestampToStore.toString());
+        const timestampToStore = (notice.updatedAt as Timestamp).seconds;
+        localStorage.setItem(`${NOTICE_DISMISSED_KEY_PREFIX}${noticeId}`, timestampToStore.toString());
       }
     }
     setIsOpen(false);
@@ -80,7 +115,7 @@ export function NoticeBoardDialog({ notice }: NoticeBoardDialogProps) {
             Please review the following information.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div 
+        <div
           className="prose prose-sm dark:prose-invert max-h-[60vh] overflow-y-auto p-1"
           dangerouslySetInnerHTML={{ __html: sanitizedContent }}
         />

@@ -17,7 +17,8 @@ import {
     Clock,
     Check,
     X,
-    AlertTriangle
+    AlertTriangle,
+    Users
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -367,11 +368,16 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
 
     return (
         <Card className="shadow-xl">
-            <CardHeader>
+            <CardHeader className="pb-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex-1">
-                        <CardTitle className="text-xl font-bold">My Team Attendance</CardTitle>
-                        <CardDescription>Today's attendance at a glance for your team.</CardDescription>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-white border border-emerald-100 shadow-sm text-emerald-500">
+                            <Users className="h-7 w-7" />
+                        </div>
+                        <div className="flex-1">
+                            <CardTitle className="font-bold text-xl lg:text-2xl tracking-tight bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-transparent bg-clip-text w-fit">My Team Attendance</CardTitle>
+                            <CardDescription className="text-slate-500 font-medium">Today&apos;s attendance at a glance for your team.</CardDescription>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
                         <div className="relative w-full sm:w-48">

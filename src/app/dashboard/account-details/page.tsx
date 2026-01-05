@@ -4,7 +4,8 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { updateProfile } from 'firebase/auth';
-import { Loader2, UserCircle, Save, ShieldAlert, Link2, Crop as CropIcon, Briefcase, Info, Clock, Check, MapPin, UserCheck, RefreshCw, XCircle, BarChart3, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle, Calendar as CalendarIcon, Camera, Coffee, Timer, FileEdit } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Loader2, UserCircle, Save, ShieldAlert, Link2, Crop as CropIcon, Briefcase, Info, Clock, Check, MapPin, UserCheck, RefreshCw, XCircle, BarChart3, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle, Calendar as CalendarIcon, Camera, Coffee, Timer, FileEdit, Layout, Eye, CheckCircle2, AlertCircle, ArrowUpRight, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -13,6 +14,7 @@ import { doc, updateDoc, serverTimestamp, getDocs, query, where, collection, get
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { Task } from '@/types/projectManagement';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -104,6 +106,7 @@ const formatCurrency = (value?: number) => {
 
 export default function AccountDetailsPage() {
   const { user, userRole, loading: authLoading, setUser: setAuthUser } = useAuth();
+  const router = useRouter();
   const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
 
   const isPrivilegedRole = useMemo(() => {
@@ -115,6 +118,10 @@ export default function AccountDetailsPage() {
   const [isEmployeeDataLoading, setIsEmployeeDataLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [myProjectTasks, setMyProjectTasks] = useState<Task[]>([]);
+  const [isTasksLoading, setIsTasksLoading] = useState(true);
+  const [taskFilterStatus, setTaskFilterStatus] = useState<string>('All');
+  const [taskPage, setTaskPage] = useState<number>(1);
 
   const [imgSrc, setImgSrc] = useState('');
   const [crop, setCrop] = useState<Crop>();
@@ -218,6 +225,133 @@ export default function AccountDetailsPage() {
       thisYearTotalClaimed: thisYearClaims.reduce((sum, c) => sum + (c.claimAmount || 0), 0)
     };
   }, [myClaims]);
+
+  // Fetch Assigned Project Tasks
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const identifiers = [user.uid];
+    if (employeeData?.employeeCode) {
+      identifiers.push(employeeData.employeeCode);
+    }
+
+    const q = query(
+      collection(firestore, 'project_tasks'),
+      where('assignedUserIds', 'array-contains-any', identifiers)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+      setMyProjectTasks(tasksData);
+      setIsTasksLoading(false);
+    }, (error) => {
+      console.error("Error fetching project tasks:", error);
+      setIsTasksLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid, employeeData?.employeeCode]);
+
+  const taskStats = useMemo(() => {
+    const now = new Date();
+    const currentMonth = startOfMonth(now);
+
+    return {
+      totalTasks: myProjectTasks.length,
+      thisMonthTasks: myProjectTasks.filter(t => {
+        const createdDate = t.createdAt?.toDate ? t.createdAt.toDate() : new Date();
+        return createdDate >= currentMonth;
+      }).length
+    };
+  }, [myProjectTasks]);
+
+  const filteredTasks = useMemo(() => {
+    let tasks = [...myProjectTasks];
+    if (taskFilterStatus !== 'All') {
+      tasks = tasks.filter(t => t.status === taskFilterStatus);
+    }
+    return tasks;
+  }, [myProjectTasks, taskFilterStatus]);
+
+  const paginatedTasks = useMemo(() => {
+    const startIndex = (taskPage - 1) * 10;
+    return filteredTasks.slice(startIndex, startIndex + 10);
+  }, [filteredTasks, taskPage]);
+
+  const createSlug = (title: string) => title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]/g, '');
+
+  const handleAcceptTask = async (taskId: string) => {
+    try {
+      if (employeeData?.status === 'Terminated') {
+        Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+        return;
+      }
+      await updateDoc(doc(firestore, 'project_tasks', taskId), {
+        status: 'In Progress',
+        updatedAt: serverTimestamp()
+      });
+      Swal.fire({
+        icon: 'success',
+        title: 'Task Accepted',
+        text: 'You are now in progress with this task.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (err: any) {
+      Swal.fire('Error', err.message, 'error');
+    }
+  };
+
+  const handleRejectTask = async (taskId: string) => {
+    try {
+      if (employeeData?.status === 'Terminated') {
+        Swal.fire("Access Denied", "Your are Terminated. Please Contact with HR department.", "error");
+        return;
+      }
+      await updateDoc(doc(firestore, 'project_tasks', taskId), {
+        status: 'Rejected',
+        updatedAt: serverTimestamp()
+      });
+      Swal.fire({
+        icon: 'success',
+        title: 'Task Rejected',
+        text: 'The task status has been updated to Rejected.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (err: any) {
+      Swal.fire('Error', err.message, 'error');
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!isPrivilegedRole) return;
+
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "This will permanently delete the task from Firestore.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteDoc(doc(firestore, 'project_tasks', taskId));
+        Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'The task has been deleted from Firestore.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } catch (err: any) {
+        Swal.fire('Error', err.message, 'error');
+      }
+    }
+  };
 
   // Asset Table State
   const [assetFilterStatus, setAssetFilterStatus] = useState<string>('All');
@@ -2044,7 +2178,222 @@ export default function AccountDetailsPage() {
                 description="This year total Claimed"
                 className="bg-orange-600"
               />
+              <StatCard
+                title="Total Tasks"
+                value={taskStats.totalTasks}
+                icon={<Layout />}
+                description="Total assigned tasks"
+                className="bg-blue-600 shadow-blue-100"
+              />
+              <StatCard
+                title="This Month Tasks"
+                value={taskStats.thisMonthTasks}
+                icon={<BarChart3 />}
+                description="Tasks assigned this month"
+                className="bg-indigo-600 shadow-indigo-100"
+              />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-white border border-emerald-100 shadow-sm text-emerald-500">
+                <Layout className="h-7 w-7" />
+              </div>
+              <div className="space-y-1">
+                <CardTitle className={cn("font-bold text-xl lg:text-2xl tracking-tight bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-transparent bg-clip-text w-fit block")}>
+                  Project Tasks
+                </CardTitle>
+                <CardDescription className="text-slate-500 font-medium">
+                  Manage your assigned project tasks. Accept to start or Reject if needed.
+                </CardDescription>
+              </div>
+            </div>
+            <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">
+              {filteredTasks.length} {taskFilterStatus !== 'All' ? taskFilterStatus : 'Assigned'}
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {['All', 'Not Started', 'In Progress', 'Completed', 'Rejected'].map((status) => (
+                <Button
+                  key={status}
+                  variant={taskFilterStatus === status ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => { setTaskFilterStatus(status); setTaskPage(1); }}
+                  className={cn(
+                    "h-8 text-[11px] font-medium transition-all px-3",
+                    taskFilterStatus === status && status === 'Not Started' && "bg-slate-600 hover:bg-slate-700",
+                    taskFilterStatus === status && status === 'In Progress' && "bg-blue-600 hover:bg-blue-700",
+                    taskFilterStatus === status && status === 'Completed' && "bg-emerald-600 hover:bg-emerald-700",
+                    taskFilterStatus === status && status === 'Rejected' && "bg-rose-600 hover:bg-rose-700"
+                  )}
+                >
+                  {status}
+                </Button>
+              ))}
+            </div>
+
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-50/50 text-[11px] uppercase tracking-wider font-semibold text-slate-500">
+                  <TableRow>
+                    <TableHead className="w-[100px]">Task ID</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Project</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isTasksLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+                        <p className="text-xs text-muted-foreground mt-2">Loading tasks...</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedTasks.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">
+                        <div className="flex flex-col items-center gap-2">
+                          <Layout className="h-8 w-8 text-slate-200" />
+                          <p>No {taskFilterStatus !== 'All' ? taskFilterStatus.toLowerCase() : ''} tasks assigned to you.</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedTasks.map((task) => (
+                      <TableRow key={task.id} className="group hover:bg-slate-50/50 transition-colors">
+                        <TableCell className="font-mono text-xs text-slate-500">
+                          {task.taskId || task.id.slice(0, 6)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span
+                              className="font-bold text-sm cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-1 group/title"
+                              onClick={() => router.push(`/dashboard/project-management/tasks/${createSlug(task.taskTitle)}/${task.id}`)}
+                            >
+                              {task.taskTitle}
+                              <ArrowUpRight className="h-3 w-3 opacity-0 group-hover/title:opacity-100 transition-opacity" />
+                            </span>
+                            <span className="text-[10px] text-muted-foreground line-clamp-1">{task.description || 'No description'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs font-medium text-slate-600">
+                          {task.projectTitle}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              "text-[10px] px-2 py-0 h-5",
+                              task.priority === 'Urgency' ? "bg-red-100 text-red-700 hover:bg-red-200" :
+                                task.priority === 'High' ? "bg-orange-100 text-orange-700 hover:bg-orange-200" :
+                                  task.priority === 'Medium' ? "bg-blue-100 text-blue-700 hover:bg-blue-200" :
+                                    "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                            )}
+                          >
+                            {task.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] px-2 py-0 h-5 border shadow-sm",
+                              task.status === 'Completed' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                                task.status === 'In Progress' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                  task.status === 'Rejected' ? "bg-rose-50 text-rose-700 border-rose-200" :
+                                    "bg-slate-50 text-slate-700 border-slate-200"
+                            )}
+                          >
+                            {task.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                              onClick={() => router.push(`/dashboard/project-management/tasks/${createSlug(task.taskTitle)}/${task.id}`)}
+                              title="View & Chat"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {task.status === 'Not Started' && (
+                              <>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50"
+                                  onClick={() => handleAcceptTask(task.id)}
+                                  title="Accept Task"
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                                  onClick={() => handleRejectTask(task.id)}
+                                  title="Reject Task"
+                                >
+                                  <AlertCircle className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            {isPrivilegedRole && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                onClick={() => handleDeleteTask(task.id)}
+                                title="Delete Task"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {filteredTasks.length > 10 && (
+              <div className="flex items-center justify-between mt-4 px-2">
+                <p className="text-xs text-muted-foreground whitespace-nowrap">
+                  Showing {Math.min(filteredTasks.length, (taskPage - 1) * 10 + 1)} to {Math.min(filteredTasks.length, taskPage * 10)} of {filteredTasks.length} tasks
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={taskPage === 1}
+                    onClick={() => setTaskPage(prev => prev - 1)}
+                    className="h-8 flex gap-1 px-3 text-xs"
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={taskPage * 10 >= filteredTasks.length}
+                    onClick={() => setTaskPage(prev => prev + 1)}
+                    className="h-8 flex gap-1 px-3 text-xs"
+                  >
+                    Next <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -12,6 +12,28 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+const SewingMachine = ({ className }: { className?: string }) => (
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+    >
+        <path d="M3 21h18" />
+        <path d="M6 21V7c0-1.1.9-2 2-2h11a2 2 0 0 1 2 2v5" />
+        <path d="M10 5v4" />
+        <path d="M15 5v4" />
+        <path d="M12 12h5a2 2 0 0 1 2 2v3" />
+        <circle cx="9" cy="12" r="1" />
+    </svg>
+);
+
 function DemoResultsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -102,14 +124,14 @@ function DemoResultsContent() {
                             Showing {results.length} matching entries
                         </p>
                         {results.map((item) => (
-                            <Card key={item.id} className="border-none shadow-sm rounded-3xl overflow-hidden active:scale-[0.98] transition-all bg-white">
+                            <Card key={item.id} className="border-none shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] rounded-3xl overflow-hidden active:scale-[0.98] transition-all bg-white">
                                 <CardContent className="p-0">
                                     <div className="p-5 flex flex-col gap-5">
                                         {/* Top Row: Model & Status */}
                                         <div className="flex justify-between items-start gap-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600">
-                                                    <Laptop className="h-6 w-6" />
+                                                    <SewingMachine className="h-6 w-6" />
                                                 </div>
                                                 <div>
                                                     <h3 className="font-extrabold text-slate-900 text-lg leading-tight">{item.model}</h3>
@@ -173,7 +195,7 @@ function DemoResultsContent() {
                                                 variant="default"
                                                 size="sm"
                                                 className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs h-10 px-5 flex items-center gap-2 shadow-lg shadow-slate-200"
-                                                onClick={() => router.push(`/dashboard/demo/edit-demo-machine/${item.id}`)}
+                                                onClick={() => router.push(`/mobile/service/demo-list/edit/${item.id}`)}
                                             >
                                                 <FileEdit className="h-3.5 w-3.5" />
                                                 Edit Detail
