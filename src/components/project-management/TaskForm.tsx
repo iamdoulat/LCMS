@@ -45,7 +45,7 @@ import { MultiSelect } from '@/components/ui/multi-select';
 
 const taskSchema = z.object({
     taskTitle: z.string().min(1, "Task Title is required"),
-    status: z.enum(['Not Started', 'In Progress', 'On Hold', 'Completed']),
+    status: z.enum(['Pending', 'In Progress', 'On Hold', 'Completed']),
     priority: z.enum(['Low', 'Medium', 'High', 'Urgency']),
     projectId: z.string().min(1, "Project is required"),
     startDate: z.date().optional(),
@@ -65,9 +65,11 @@ interface TaskFormProps {
     initialData?: any;
     docId?: string;
     initialStatus?: string;
+    isMobile?: boolean;
+    backRoute?: string;
 }
 
-export function TaskForm({ initialData, docId, initialStatus }: TaskFormProps) {
+export function TaskForm({ initialData, docId, initialStatus, isMobile, backRoute }: TaskFormProps) {
     const router = useRouter();
     const { user } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,7 +84,7 @@ export function TaskForm({ initialData, docId, initialStatus }: TaskFormProps) {
         resolver: zodResolver(taskSchema),
         defaultValues: {
             taskTitle: initialData?.taskTitle || '',
-            status: (initialData?.status || initialStatus || 'Not Started') as any,
+            status: (initialData?.status || initialStatus || 'Pending') as any,
             priority: initialData?.priority || 'Medium',
             projectId: initialData?.projectId || '',
             assignedUserIds: initialData?.assignedUserIds || [],
@@ -289,6 +291,8 @@ export function TaskForm({ initialData, docId, initialStatus }: TaskFormProps) {
                         attachments: attachments,
                         createdAt: serverTimestamp(),
                         updatedAt: serverTimestamp(),
+                        createdByUid: user?.uid,
+                        createdByName: user?.displayName || 'System',
                     };
 
                     transaction.set(counterRef, { count: newCount }, { merge: true });
@@ -317,7 +321,7 @@ export function TaskForm({ initialData, docId, initialStatus }: TaskFormProps) {
                 });
             }
 
-            router.push('/dashboard/project-management/tasks');
+            router.push(backRoute || '/dashboard/project-management/tasks');
             router.refresh();
 
         } catch (error) {
@@ -329,7 +333,10 @@ export function TaskForm({ initialData, docId, initialStatus }: TaskFormProps) {
     }
 
     return (
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className={cn(
+            "bg-white rounded-lg",
+            !isMobile && "p-6 shadow-sm border"
+        )}>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -360,7 +367,7 @@ export function TaskForm({ initialData, docId, initialStatus }: TaskFormProps) {
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="Not Started">Not Started</SelectItem>
+                                            <SelectItem value="Pending">Pending</SelectItem>
                                             <SelectItem value="In Progress">In Progress</SelectItem>
                                             <SelectItem value="On Hold">On Hold</SelectItem>
                                             <SelectItem value="Completed">Completed</SelectItem>
@@ -738,16 +745,27 @@ export function TaskForm({ initialData, docId, initialStatus }: TaskFormProps) {
                         />
                     </div>
 
-                    <div className="flex gap-4 pt-4 justify-end">
+                    <div className={cn(
+                        "flex gap-4 pt-6 border-t mt-4",
+                        isMobile ? "flex-col-reverse" : "justify-end"
+                    )}>
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => router.back()}
                             disabled={isSubmitting}
+                            className={cn(isMobile && "h-12 rounded-xl text-base font-bold")}
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting || isLoadingData} className="min-w-[150px]">
+                        <Button
+                            type="submit"
+                            disabled={isSubmitting || isLoadingData}
+                            className={cn(
+                                !isMobile && "min-w-[150px]",
+                                isMobile && "w-full h-12 rounded-xl text-base font-bold bg-blue-600 hover:bg-blue-700 shadow-blue-200 shadow-lg"
+                            )}
+                        >
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

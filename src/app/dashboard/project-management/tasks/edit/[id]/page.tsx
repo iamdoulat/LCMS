@@ -50,7 +50,7 @@ export default function EditTaskPage() {
     }
 
     return (
-        <div className="p-6 max-w-4xl mx-auto space-y-6 bg-slate-50/50 min-h-screen">
+        <div className="p-6 pb-[120px] md:pb-6 max-w-4xl mx-auto space-y-6 bg-slate-50/50 min-h-screen">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ArrowLeft className="h-5 w-5" />

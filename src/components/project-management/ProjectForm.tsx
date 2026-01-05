@@ -79,7 +79,7 @@ export function ProjectForm({ initialData, docId }: ProjectFormProps) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             projectTitle: initialData?.projectTitle || '',
-            status: initialData?.status || 'Not Started',
+            status: initialData?.status || 'Pending',
             priority: initialData?.priority || 'Medium',
             budget: initialData?.budget?.toString() || '',
             startDate: initialData?.startDate ? new Date(initialData.startDate) : undefined,
@@ -244,7 +244,7 @@ export function ProjectForm({ initialData, docId }: ProjectFormProps) {
                                         <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                {['Not Started', 'In Progress', 'On Hold', 'Completed', 'Top Priority'].map((status) => (
+                                                {['Pending', 'In Progress', 'On Hold', 'Completed', 'Top Priority'].map((status) => (
                                                     <SelectItem key={status} value={status}>{status}</SelectItem>
                                                 ))}
                                             </SelectContent>

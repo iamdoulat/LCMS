@@ -154,14 +154,14 @@ export default function TeamAttendancePage() {
                     </div>
                 </div>
 
-                <div className="flex-1 p-6 space-y-4">
+                <div className="flex-1 px-6 pt-6 pb-[120px] space-y-4">
                     {loading ? (
                         <div className="flex justify-center py-10">
                             <Loader2 className="animate-spin text-blue-600 w-8 h-8" />
                         </div>
                     ) : filteredData.length > 0 ? (
                         filteredData.map((emp) => (
-                            <div key={emp.employeeId} className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-4">
+                            <div key={emp.employeeId} className="bg-white p-4 rounded-2xl shadow-md flex items-center gap-4">
                                 {/* Avatar with status indicator line/border */}
                                 <div className={`relative w-14 h-14 rounded-xl overflow-hidden border-l-4 ${getBorderColor(emp.flag)} pl-1 bg-white flex-shrink-0`}>
                                     {emp.photoURL ? (

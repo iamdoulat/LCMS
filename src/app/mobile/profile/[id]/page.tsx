@@ -190,7 +190,7 @@ export default function MobileEmployeeProfilePage() {
 
             {/* Main Content Container */}
             <div
-                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-8 relative mt-9"
+                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-[120px] relative mt-9"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}

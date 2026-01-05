@@ -55,7 +55,7 @@ export default function ServicePage() {
                 <div className="flex items-center px-4 pt-1 pb-6">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors text-white"
+                        className="p-2 -ml-2 rounded-full bg-white/10 active:bg-white/20 transition-all text-white shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
@@ -92,7 +92,7 @@ export default function ServicePage() {
                             }}
                             className="absolute top-0 left-0 right-0 h-full"
                         >
-                            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col items-center text-center w-full border border-slate-100 active:cursor-grabbing relative overflow-hidden">
+                            <div className="bg-white p-6 rounded-[2.5rem] shadow-md flex flex-col items-center text-center w-full border border-slate-100 active:cursor-grabbing relative overflow-hidden">
 
                                 {/* Refined Small Toggle - Positioned within the card top right */}
                                 <div className="absolute top-6 right-6 flex items-center bg-slate-100/80 p-1 rounded-xl border border-slate-100">
@@ -160,7 +160,7 @@ export default function ServicePage() {
                                         />
                                         <button
                                             type="submit"
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 p-2.5 rounded-xl text-white shadow-lg shadow-blue-200 active:scale-90 transition-all"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 p-2.5 rounded-xl text-white shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-90 transition-all"
                                         >
                                             <Search className="h-5 w-5" />
                                         </button>

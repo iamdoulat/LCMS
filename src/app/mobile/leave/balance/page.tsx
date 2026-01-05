@@ -208,10 +208,10 @@ export default function MyLeaveBalancePage() {
             </div>
 
             <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain">
-                <div className="px-6 pt-6 pb-24 space-y-6">
+                <div className="px-6 pt-6 pb-[120px] space-y-6">
 
                     {/* Charts Section */}
-                    <Card className="rounded-2xl border-none shadow-sm overflow-hidden">
+                    <Card className="rounded-2xl border-none shadow-md overflow-hidden">
                         <CardHeader className="pb-2 border-b">
                             <CardTitle className="text-lg font-bold text-slate-800">Visual Summary</CardTitle>
                             {/* Horizontal Tabs */}
@@ -290,7 +290,7 @@ export default function MyLeaveBalancePage() {
                         </h2>
                         <div className="grid grid-cols-1 gap-3">
                             {balanceData.map((item, index) => (
-                                <div key={index} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                                <div key={index} className="bg-white p-4 rounded-2xl shadow-md border border-slate-100 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
                                             <Calendar className="h-5 w-5 text-blue-600" />
@@ -325,7 +325,7 @@ export default function MyLeaveBalancePage() {
                                     }[leave.status] || 'text-slate-600 bg-slate-50 border-slate-100';
 
                                     return (
-                                        <div key={index} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+                                        <div key={index} className="bg-white p-4 rounded-2xl shadow-md border border-slate-100 space-y-3">
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <div className="text-sm font-bold text-slate-800">{leave.leaveType} Leave</div>

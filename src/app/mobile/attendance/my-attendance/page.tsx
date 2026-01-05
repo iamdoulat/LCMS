@@ -235,8 +235,8 @@ export default function MyAttendancePage() {
                     <button
                         onClick={() => setIsFilterOpen(true)}
                         className={cn(
-                            "p-2 rounded-full transition-all relative",
-                            hasActiveFilters(filters) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                            "p-2 rounded-full transition-all relative shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10",
+                            hasActiveFilters(filters) ? "text-white" : "text-white/70 hover:text-white"
                         )}
                     >
                         <FilterIcon className="h-5 w-5" />
@@ -285,7 +285,7 @@ export default function MyAttendancePage() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 px-6 py-4 space-y-4">
+                <div className="flex-1 px-6 pt-4 pb-[120px] space-y-4">
                     {loading ? (
                         <div className="flex justify-center py-10">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -296,43 +296,42 @@ export default function MyAttendancePage() {
                                 attendanceRecords.map((record) => {
                                     const dateInfo = formatDate(record.date);
                                     return (
-                                        <div key={record.id} className="bg-white rounded-2xl p-5 shadow-sm flex items-center justify-between group h-24">
-                                            <div className="flex-1 space-y-1 border-l-4 border-emerald-400 pl-4 h-full flex flex-col justify-center">
-                                                <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-                                                    Date ({dateInfo.day})
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-sm font-bold text-slate-800">{dateInfo.full}</span>
+                                        <div key={record.id} className="bg-white rounded-xl px-3 py-2.5 shadow-md border border-slate-100 flex items-center gap-3 active:scale-[0.98] transition-all">
+                                            <div className={cn("w-1 h-10 rounded-full shrink-0",
+                                                record.flag === 'P' ? 'bg-emerald-400' :
+                                                    record.flag === 'A' ? 'bg-red-400' :
+                                                        'bg-amber-400'
+                                            )}></div>
+
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[11px] font-bold text-slate-900">{dateInfo.full}</span>
+                                                    <span className="text-[10px] font-bold text-slate-400">({dateInfo.day})</span>
                                                     {record.flag && (
-                                                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getFlagColor(record.flag)}`}>
+                                                        <span className={cn("ml-auto px-2.5 py-1 rounded-lg text-[10px] font-black uppercase shadow-[0_2px_4px_rgba(0,0,0,0.1)] border border-white/20", getFlagColor(record.flag))}>
                                                             {record.flag}
                                                         </span>
                                                     )}
                                                 </div>
-                                            </div>
 
-                                            <div className="flex flex-col gap-1 text-sm mr-4">
-                                                <div className="flex justify-between w-32">
-                                                    <span className="text-blue-500 font-medium">In Time</span>
-                                                    <span className="text-slate-700 font-bold">{
-                                                        // Assuming inTime stored as full ISO string or just time? 
-                                                        // Based on current db usually full ISO or time string.
-                                                        // Let's assume full ISO or "HH:mm:ss". Implementation plan assumes standard.
-                                                        // The code above handles parseISO. If stored as '09:00 AM' it handles that too via fallback.
-                                                        formatTime(record.inTime)
-                                                    }</span>
-                                                </div>
-                                                <div className="flex justify-between w-32">
-                                                    <span className="text-blue-500 font-medium">Out Time</span>
-                                                    <span className="text-slate-700 font-bold">{formatTime(record.outTime)}</span>
+                                                <div className="flex items-center gap-4 text-slate-600">
+                                                    <div className="flex items-center gap-1">
+                                                        <Clock className="h-3 w-3 text-blue-500" />
+                                                        <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">IN</span>{formatTime(record.inTime)}</span>
+                                                    </div>
+                                                    <div className="w-px h-3 bg-slate-200"></div>
+                                                    <div className="flex items-center gap-1">
+                                                        <Clock className="h-3 w-3 text-indigo-500" />
+                                                        <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">OUT</span>{formatTime(record.outTime)}</span>
+                                                    </div>
                                                 </div>
                                             </div>
 
                                             <Link
                                                 href={`/mobile/attendance/reconciliation?date=${record.date}&employeeId=${currentEmployeeId}`}
-                                                className="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-600 hover:bg-yellow-100 transition-colors"
+                                                className="h-8 w-8 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-[0_3px_8px_rgba(5,150,105,0.4)] shrink-0 active:scale-90 transition-transform"
                                             >
-                                                <Edit2 className="w-5 h-5" />
+                                                <Edit2 className="w-3.5 h-3.5" />
                                             </Link>
                                         </div>
                                     );
@@ -346,37 +345,42 @@ export default function MyAttendancePage() {
                         ) : (
                             breakRecords.length > 0 ? (
                                 breakRecords.map((record) => (
-                                    <div key={record.id} className="bg-white rounded-2xl p-5 shadow-sm flex items-center justify-between">
-                                        <div className="flex-1 space-y-1 pl-2">
-                                            <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-                                                {formatDate(record.date).full}
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs text-slate-400">Start</span>
-                                                    <span className="font-bold text-slate-700">{formatTime(record.startTime)}</span>
+                                    <div key={record.id} className="bg-white rounded-xl px-3 py-2.5 shadow-md border border-slate-100 flex items-center gap-3 active:scale-[0.98] transition-all">
+                                        <div className={cn("w-1 h-10 rounded-full shrink-0",
+                                            record.status === 'approved' || record.status === 'auto-approved' ? 'bg-emerald-400' :
+                                                record.status === 'rejected' ? 'bg-red-400' : 'bg-orange-400'
+                                        )}></div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-[11px] font-bold text-slate-900">{formatDate(record.date).full}</span>
+                                                <div className={cn("px-2.5 py-1 rounded-lg text-[10px] font-black uppercase shadow-[0_2px_4px_rgba(0,0,0,0.1)] border border-white/20",
+                                                    record.status === 'approved' || record.status === 'auto-approved' ? 'bg-green-500 text-white' :
+                                                        record.status === 'rejected' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'
+                                                )}>
+                                                    {record.status}
                                                 </div>
-                                                <div className="w-px h-8 bg-slate-100"></div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs text-slate-400">End</span>
-                                                    <span className="font-bold text-slate-700">{formatTime(record.endTime)}</span>
+                                            </div>
+
+                                            <div className="flex items-center gap-4 text-slate-600">
+                                                <div className="flex items-center gap-1">
+                                                    <Clock className="h-3 w-3 text-indigo-500" />
+                                                    <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">START</span>{formatTime(record.startTime)}</span>
+                                                </div>
+                                                <div className="w-px h-3 bg-slate-200"></div>
+                                                <div className="flex items-center gap-1">
+                                                    <Clock className="h-3 w-3 text-rose-500" />
+                                                    <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">END</span>{formatTime(record.endTime)}</span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col items-end gap-1">
-                                            <div className={`px-2 py-1 rounded-lg text-xs font-bold ${record.status === 'approved' || record.status === 'auto-approved' ? 'bg-green-100 text-green-600' :
-                                                record.status === 'rejected' ? 'bg-red-100 text-red-600' :
-                                                    'bg-orange-100 text-orange-600'
-                                                }`}>
-                                                {record.status}
+                                        {record.durationMinutes && (
+                                            <div className="h-8 w-8 rounded-lg bg-slate-50 flex flex-col items-center justify-center border border-slate-100 shrink-0">
+                                                <span className="text-[10px] font-bold text-[#0a1e60] leading-none mb-0.5">{record.durationMinutes}</span>
+                                                <span className="text-[7px] font-bold text-slate-400 uppercase leading-none">Min</span>
                                             </div>
-                                            {record.durationMinutes && (
-                                                <span className="text-xs font-medium text-slate-500">
-                                                    {record.durationMinutes} min
-                                                </span>
-                                            )}
-                                        </div>
+                                        )}
                                     </div>
                                 ))
                             ) : (

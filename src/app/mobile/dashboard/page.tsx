@@ -587,7 +587,7 @@ export default function MobileDashboardPage() {
                     <div className={`animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 ${isRefreshing || pullDistance > 40 ? 'opacity-100' : 'opacity-0'}`}></div>
                 </div>
 
-                <div className="px-4 pt-6 pb-24 space-y-6">
+                <div className="px-4 pt-6 pb-[120px] space-y-6">
                     {/* Attendance Cards */}
                     <div className="grid grid-cols-2 gap-4">
                         {/* In Time Card */}

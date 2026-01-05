@@ -213,7 +213,7 @@ export default function ClaimListPage() {
                                     }
                                 });
                             }}
-                            className="p-2 text-white hover:bg-white/10 rounded-full transition-colors relative"
+                            className="p-2 text-white hover:bg-white/10 rounded-full transition-colors relative shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10"
                         >
                             <CalendarIcon className="h-6 w-6" />
                             {dateRange.from && (
@@ -274,7 +274,7 @@ export default function ClaimListPage() {
 
 
                 {/* Main Content */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 pb-24 overscroll-contain">
+                <div className="flex-1 overflow-y-auto px-5 py-4 pb-[120px] overscroll-contain">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400">
                             <Loader2 className="h-8 w-8 animate-spin mb-2" />
@@ -516,7 +516,7 @@ export default function ClaimListPage() {
                 {/* Floating Action Button */}
                 {activeTab === 'My Claims' && (
                     <Button
-                        className="absolute bottom-[99px] right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95 text-white"
+                        className="absolute bottom-[110px] right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95 text-white"
                         onClick={() => {
                             router.push('/mobile/claim/create');
                         }}

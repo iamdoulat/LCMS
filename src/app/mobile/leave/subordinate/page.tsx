@@ -157,10 +157,10 @@ export default function SubOrdinateLeaveBalancePage() {
             </div>
 
             {/* Employee Cards Container */}
-            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain px-5 pt-8 space-y-3">
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain px-5 pt-8 space-y-3 pb-[120px]">
                 {loading ? (
                     Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="bg-white rounded-2xl p-4 shadow-sm animate-pulse">
+                        <div key={i} className="bg-white rounded-2xl p-4 shadow-md animate-pulse">
                             <div className="flex items-center gap-3">
                                 <div className="h-14 w-14 rounded-full bg-slate-200" />
                                 <div className="flex-1 space-y-2">
@@ -175,7 +175,7 @@ export default function SubOrdinateLeaveBalancePage() {
                         const isExpanded = expandedIds.has(employee.id);
 
                         return (
-                            <div key={employee.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                            <div key={employee.id} className="bg-white rounded-2xl shadow-md overflow-hidden">
                                 {/* Employee Header */}
                                 <button
                                     onClick={() => toggleExpanded(employee.id)}
@@ -188,14 +188,19 @@ export default function SubOrdinateLeaveBalancePage() {
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 text-left">
-                                        <h3 className="font-bold text-[#0a1e60] text-base">
-                                            {employee.fullName}
-                                        </h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-[#0a1e60] text-base">
+                                                {employee.fullName}
+                                            </h3>
+                                            <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-md border border-blue-100 font-bold uppercase">
+                                                {employee.employeeCode || 'N/A'}
+                                            </span>
+                                        </div>
                                         <p className="text-sm text-slate-500 line-clamp-1">
                                             {employee.designation}
                                         </p>
                                     </div>
-                                    <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
+                                    <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100">
                                         {isExpanded ? (
                                             <ChevronUp className="h-5 w-5 text-blue-600" />
                                         ) : (
@@ -275,8 +280,6 @@ export default function SubOrdinateLeaveBalancePage() {
                         <p className="text-slate-500 font-medium">No subordinates found</p>
                     </div>
                 )}
-                {/* Spacer bottom */}
-                <div className="h-24" />
             </div>
         </div>
     );

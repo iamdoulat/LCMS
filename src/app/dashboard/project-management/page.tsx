@@ -116,7 +116,7 @@ export default function ProjectManagementDashboard() {
             // For now, let's just take the first 4 active projects for display
             const active = snap.docs
                 .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter((p: any) => p.status === 'In Progress' || p.status === 'Not Started')
+                .filter((p: any) => p.status === 'In Progress' || p.status === 'Pending')
                 .slice(0, 4);
             setMyProjects(active);
         });
@@ -126,7 +126,7 @@ export default function ProjectManagementDashboard() {
 
             const statusCounts: Record<string, number> = {};
             snap.docs.forEach(doc => {
-                const status = doc.data().status || 'Not Started';
+                const status = doc.data().status || 'Pending';
                 statusCounts[status] = (statusCounts[status] || 0) + 1;
             });
             setTaskStatusData(Object.entries(statusCounts).map(([name, value]) => ({ name, value })));
@@ -158,7 +158,7 @@ export default function ProjectManagementDashboard() {
 
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
     const TASK_COLORS: Record<string, string> = {
-        'Not Started': '#94a3b8',
+        'Pending': '#94a3b8',
         'In Progress': '#3b82f6',
         'On Hold': '#f59e0b',
         'Completed': '#10b981'
@@ -226,8 +226,8 @@ export default function ProjectManagementDashboard() {
                                     <div key={project.id} className="p-4 rounded-xl border bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push(`/dashboard/project-management/projects/${project.id}`)}>
                                         <div className="flex justify-between items-start mb-3">
                                             <div className={`p-2 rounded-lg ${project.priority === 'High' ? 'bg-orange-100 text-orange-600' :
-                                                    project.priority === 'Urgency' ? 'bg-red-100 text-red-600' :
-                                                        'bg-blue-100 text-blue-600'
+                                                project.priority === 'Urgency' ? 'bg-red-100 text-red-600' :
+                                                    'bg-blue-100 text-blue-600'
                                                 }`}>
                                                 <Activity className="h-5 w-5" />
                                             </div>

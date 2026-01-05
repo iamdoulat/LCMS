@@ -184,7 +184,7 @@ export default function ManageProjectsPage() {
             case 'Completed': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
             case 'In Progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
             case 'On Hold': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
-            case 'Not Started': return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400';
+            case 'Pending': return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400';
             default: return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400';
         }
     };
@@ -364,7 +364,7 @@ export default function ManageProjectsPage() {
     );
 
     const KanbanView = () => {
-        const statuses = ['Not Started', 'In Progress', 'On Hold', 'Completed'];
+        const statuses = ['Pending', 'In Progress', 'On Hold', 'Completed'];
 
         return (
             <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-250px)]">
@@ -423,7 +423,7 @@ export default function ManageProjectsPage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="Not Started">Not Started</SelectItem>
+                            <SelectItem value="Pending">Pending</SelectItem>
                             <SelectItem value="In Progress">In Progress</SelectItem>
                             <SelectItem value="On Hold">On Hold</SelectItem>
                             <SelectItem value="Completed">Completed</SelectItem>

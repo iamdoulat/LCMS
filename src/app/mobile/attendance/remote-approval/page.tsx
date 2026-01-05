@@ -6,7 +6,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import { ChevronLeft, MapPin, ArrowRight, Loader2, Calendar, Check, X, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, MapPin, Map as MapIcon, ArrowRight, Loader2, Calendar, Check, X, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { MultipleCheckInOutRecord } from '@/types/checkInOut';
 import { Button } from '@/components/ui/button';
@@ -337,7 +337,7 @@ export default function RemoteAttendanceApprovalPage() {
                     <div className="flex justify-end">
                         <button
                             onClick={handleToggleFilter}
-                            className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full"
+                            className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-colors shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
                         >
                             <Calendar className="w-3 h-3" />
                             {filterDays === 30 ? 'Last 30 Days' : 'Last 3 Months'}
@@ -345,7 +345,7 @@ export default function RemoteAttendanceApprovalPage() {
                     </div>
                 </div>
 
-                <div className="flex-1 px-6 pb-6 space-y-4">
+                <div className="flex-1 px-6 pb-[120px] space-y-4">
                     {loading ? (
                         <div className="flex justify-center py-10">
                             <Loader2 className="animate-spin text-blue-600 w-8 h-8" />
@@ -355,7 +355,7 @@ export default function RemoteAttendanceApprovalPage() {
                             <div
                                 key={record.id}
                                 onClick={() => handleCardClick(record)}
-                                className="bg-white p-4 rounded-2xl shadow-sm relative cursor-pointer active:scale-[0.98] transition-transform"
+                                className="bg-white p-4 rounded-2xl shadow-md relative cursor-pointer active:scale-[0.98] transition-transform"
                             >
                                 <div className={`absolute left-0 top-6 bottom-6 w-1 rounded-r-full ${record.status === 'Approved' ? 'bg-emerald-500' :
                                     record.status === 'Rejected' ? 'bg-red-500' : 'bg-blue-500'
@@ -407,9 +407,9 @@ export default function RemoteAttendanceApprovalPage() {
                                                 e.stopPropagation();
                                                 router.push(`/mobile/attendance/remote-approval/details?id=${record.id}`);
                                             }}
-                                            className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors"
+                                            className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100"
                                         >
-                                            <ArrowRight className="w-4 h-4" />
+                                            <MapIcon className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>

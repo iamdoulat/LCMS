@@ -277,7 +277,7 @@ export default function ApproveApplicationsPage() {
 
         return (
             <Card
-                className="mb-4 overflow-hidden border-none shadow-sm relative active:scale-95 transition-all"
+                className="mb-4 overflow-hidden border-none shadow-md relative active:scale-95 transition-all"
                 onClick={() => {
                     if (type === 'leave') {
                         setSelectedLeave(app);
@@ -390,7 +390,7 @@ export default function ApproveApplicationsPage() {
                     <div className="flex items-center">
                         <button
                             onClick={() => router.back()}
-                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                            className="p-2 -ml-2 text-white bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
                         >
                             <ArrowLeft className="h-6 w-6" />
                         </button>
@@ -399,9 +399,9 @@ export default function ApproveApplicationsPage() {
                     <button
                         onClick={() => setIsFilterOpen(true)}
                         className={cn(
-                            "p-2 rounded-full transition-all relative",
+                            "p-2 rounded-full transition-all relative shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10",
                             /* Since default is Pending, only show active dot if DateRange is set or status is NOT Pending (i.e. user modified default) */
-                            (filters.dateRange?.from || (filters.status && filters.status !== 'Pending')) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                            (filters.dateRange?.from || (filters.status && filters.status !== 'Pending')) ? "text-white" : "text-white/70 hover:text-white"
                         )}
                     >
                         <Filter className="h-5 w-5" />
@@ -413,7 +413,7 @@ export default function ApproveApplicationsPage() {
             </div>
 
             <div
-                className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative px-5 pt-8"
+                className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative px-5 pt-8 pb-[120px]"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
@@ -449,7 +449,7 @@ export default function ApproveApplicationsPage() {
                 <div className="space-y-4">
                     {loading ? (
                         Array.from({ length: 3 }).map((_, i) => (
-                            <Card key={i} className="p-4 border-none shadow-sm animate-pulse">
+                            <Card key={i} className="p-4 border-none shadow-md animate-pulse">
                                 <div className="flex gap-3 mb-4">
                                     <div className="h-12 w-12 rounded-full bg-slate-200" />
                                     <div className="flex-1 space-y-2">

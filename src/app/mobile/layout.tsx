@@ -58,7 +58,8 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
         '/mobile/service',
         '/mobile/qrcode',
         '/mobile/payroll',
-        '/mobile/profile'
+        '/mobile/profile',
+        '/mobile/project-management'
     ].some(path => pathname?.startsWith(path));
 
     if (isLoginPage) return <>{children}</>;

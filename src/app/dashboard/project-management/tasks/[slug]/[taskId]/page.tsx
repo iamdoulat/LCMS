@@ -185,7 +185,7 @@ export default function TaskDetailsPage() {
     const formatPercentage = (val?: number) => val ? `${val}%` : '0%';
 
     return (
-        <div className="p-6 bg-slate-50/50 min-h-screen space-y-6">
+        <div className="p-6 pb-[120px] md:pb-6 bg-slate-50/50 min-h-screen space-y-6">
             {/* Header / Nav */}
             <div className="flex items-center gap-4 mb-4">
                 <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => router.back()}>

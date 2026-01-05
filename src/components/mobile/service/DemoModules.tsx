@@ -117,7 +117,7 @@ export function DemoModules() {
                 </div>
                 <button
                     onClick={() => setIsSettingsOpen(true)}
-                    className="p-2 bg-blue-50 text-blue-600 rounded-xl active:scale-95 transition-all"
+                    className="p-2 bg-blue-50 text-blue-600 rounded-xl active:scale-95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100"
                 >
                     <Settings className="h-5 w-5" />
                 </button>
@@ -136,7 +136,7 @@ export function DemoModules() {
                                     exit={{ opacity: 0, scale: 0.8, x: -20 }}
                                     transition={{ duration: 0.3 }}
                                     className={cn(
-                                        "w-[140px] h-[160px] p-4 rounded-[2.5rem] flex flex-col justify-between shadow-sm border border-slate-100/50 relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95 cursor-pointer",
+                                        "w-[140px] h-[160px] p-4 rounded-[2.5rem] flex flex-col justify-between shadow-md border border-slate-100/50 relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-95 cursor-pointer",
                                         module.bgColor
                                     )}
                                 >

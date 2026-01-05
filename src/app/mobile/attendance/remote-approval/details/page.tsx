@@ -191,7 +191,7 @@ export default function RemoteAttendanceDetailsPage() {
             </div>
 
             {/* Bottom Card Overlay */}
-            <div className="absolute bottom-6 left-6 right-6 z-[1000]">
+            <div className="absolute bottom-[120px] left-6 right-6 z-[1000]">
                 <div className="bg-white p-5 rounded-2xl shadow-xl">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex gap-2">

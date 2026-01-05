@@ -29,7 +29,7 @@ export default function ProjectSettingsPage() {
     const [settings, setSettings] = useState<ProjectSettings>({
         id: 'global',
         statuses: [
-            { name: 'Not Started', color: '#94a3b8', isActive: true },
+            { name: 'Pending', color: '#94a3b8', isActive: true },
             { name: 'In Progress', color: '#3b82f6', isActive: true },
             { name: 'Completed', color: '#10b981', isActive: true },
             { name: 'On Hold', color: '#f59e0b', isActive: true },

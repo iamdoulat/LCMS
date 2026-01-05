@@ -168,8 +168,8 @@ export default function MyLeaveApplicationsPage() {
                     <button
                         onClick={() => setIsFilterOpen(true)}
                         className={cn(
-                            "p-2 rounded-full transition-all relative",
-                            hasActiveFilters(filters) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                            "p-2 rounded-full transition-all relative shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10",
+                            hasActiveFilters(filters) ? "text-white" : "text-white/70 hover:text-white"
                         )}
                     >
                         <FilterIcon className="h-5 w-5" />
@@ -181,10 +181,10 @@ export default function MyLeaveApplicationsPage() {
             </div>
 
             {/* Applications List */}
-            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative px-5 pt-8 space-y-4">
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative px-5 pt-8 space-y-4 pb-[120px]">
                 {loading ? (
                     Array.from({ length: 3 }).map((_, i) => (
-                        <Card key={i} className="p-4 border-none shadow-sm animate-pulse">
+                        <Card key={i} className="p-4 border-none shadow-md animate-pulse">
                             <div className="space-y-3">
                                 <div className="h-5 w-20 bg-slate-200 rounded" />
                                 <div className="h-4 w-full bg-slate-200 rounded" />
@@ -201,7 +201,7 @@ export default function MyLeaveApplicationsPage() {
                         <Card
                             key={app.id}
                             className={cn(
-                                "overflow-hidden border-none shadow-sm relative active:scale-95 transition-all cursor-pointer border-l-4",
+                                "overflow-hidden border-none shadow-md relative active:scale-95 transition-all cursor-pointer border-l-4",
                                 getBorderColor(app.status)
                             )}
                             onClick={() => {
@@ -245,14 +245,12 @@ export default function MyLeaveApplicationsPage() {
                     </div>
                 )}
 
-                {/* Spacer bottom */}
-                <div className="h-24" />
             </div>
 
             {/* Floating Action Button */}
             <button
                 onClick={() => router.push('/mobile/leave/apply')}
-                className="fixed bottom-6 right-6 h-14 w-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-all z-50"
+                className="fixed bottom-28 right-6 h-14 w-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-all z-50"
             >
                 <Plus className="h-6 w-6" />
             </button>

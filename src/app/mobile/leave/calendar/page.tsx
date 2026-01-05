@@ -146,13 +146,13 @@ export default function LeaveCalendarPage() {
             </div>
 
             {/* Calendar Container */}
-            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain px-5 pt-8">
-                <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain px-5 pt-8 pb-[120px]">
+                <div className="bg-white rounded-2xl p-6 shadow-md">
                     {/* Month Navigation */}
                     <div className="flex items-center justify-between mb-6">
                         <button
                             onClick={goToPreviousMonth}
-                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100"
                         >
                             <ChevronLeft className="h-5 w-5" />
                         </button>
@@ -161,7 +161,7 @@ export default function LeaveCalendarPage() {
                         </h2>
                         <button
                             onClick={goToNextMonth}
-                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-100 transition-colors"
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100"
                         >
                             <ChevronRight className="h-5 w-5" />
                         </button>
@@ -265,8 +265,7 @@ export default function LeaveCalendarPage() {
                         </div>
                     </div>
                 </div>
-                {/* Spacer bottom */}
-                <div className="h-24" />
+
             </div>
         </div>
     );

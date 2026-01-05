@@ -402,10 +402,10 @@ export default function MobilePayrollPage() {
                     <Card
                         key={slip.id}
                         onClick={() => { setSelectedSlip(slip); setIsQuickViewOpen(true); }}
-                        className="p-4 rounded-3xl border-none shadow-[0_4px_12px_rgb(0,0,0,0.03)] active:scale-[0.98] transition-all bg-white flex items-center justify-between"
+                        className="p-4 rounded-3xl border-none shadow-md active:scale-[0.98] transition-all bg-white flex items-center justify-between"
                     >
                         <div className="flex items-center gap-4">
-                            <div className="h-14 w-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                            <div className="h-14 w-14 rounded-2xl bg-white flex items-center justify-center text-blue-600 shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100">
                                 <Wallet className="h-7 w-7" />
                             </div>
                             <div>
@@ -417,8 +417,8 @@ export default function MobilePayrollPage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-slate-50 p-2 rounded-xl">
-                            <Eye className="h-5 w-5 text-slate-400" />
+                        <div className="bg-white p-2 rounded-xl shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100">
+                            <Eye className="h-5 w-5 text-blue-600" />
                         </div>
                     </Card>
                 ))}
@@ -452,7 +452,7 @@ export default function MobilePayrollPage() {
         return (
             <div className="space-y-4 pb-20">
                 {filteredAdvanceRequests.map((req: any) => (
-                    <Card key={req.id} className="p-4 rounded-3xl border-none shadow-[0_4px_12px_rgb(0,0,0,0.03)] bg-white relative overflow-hidden">
+                    <Card key={req.id} className="p-4 rounded-3xl border-none shadow-md bg-white relative overflow-hidden">
                         <div className="flex justify-between items-start mb-2">
                             <div>
                                 <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Applied On</p>
@@ -619,7 +619,7 @@ export default function MobilePayrollPage() {
                             <TrendingUp className="h-4 w-4 text-emerald-500" />
                             Earnings
                         </h3>
-                        <Card className="rounded-2xl border-none shadow-sm overflow-hidden bg-white">
+                        <Card className="rounded-2xl border-none shadow-md overflow-hidden bg-white">
                             <div className="divide-y divide-slate-50">
                                 {earnings.map((item: any, idx: number) => (
                                     <div key={idx} className="flex justify-between items-center p-4">
@@ -640,7 +640,7 @@ export default function MobilePayrollPage() {
                             <TrendingDown className="h-4 w-4 text-rose-500" />
                             Deductions
                         </h3>
-                        <Card className="rounded-2xl border-none shadow-sm overflow-hidden bg-white">
+                        <Card className="rounded-2xl border-none shadow-md overflow-hidden bg-white">
                             {deductions.length === 0 ? (
                                 <div className="p-8 text-center text-slate-400 text-sm italic">No deductions applied</div>
                             ) : (
@@ -672,7 +672,7 @@ export default function MobilePayrollPage() {
                     <div className="flex items-center">
                         <button
                             onClick={() => router.back()}
-                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                            className="p-2 -ml-2 text-white bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
                         >
                             <ArrowLeft className="h-6 w-6" />
                         </button>
@@ -681,8 +681,8 @@ export default function MobilePayrollPage() {
                     <button
                         onClick={() => setIsFilterOpen(true)}
                         className={cn(
-                            "p-2 rounded-full transition-all relative",
-                            hasActiveFilters(filters) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                            "p-2 rounded-full transition-all relative shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10",
+                            hasActiveFilters(filters) ? "text-white" : "text-white/70 hover:text-white"
                         )}
                     >
                         <FilterIcon className="h-5 w-5" />
@@ -729,7 +729,7 @@ export default function MobilePayrollPage() {
                 {/* Scrollable Content Area */}
                 <div
                     ref={containerRef}
-                    className="flex-1 overflow-y-auto overscroll-contain px-6 py-4 space-y-4 pb-24" // Added padding-bottom for content visibility behind FAB
+                    className="flex-1 overflow-y-auto overscroll-contain px-6 py-4 space-y-4 pb-[120px]" // Increased padding-bottom for navigation bar clearance
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
@@ -743,7 +743,7 @@ export default function MobilePayrollPage() {
                         <div className="h-14 w-14">
                             <Button
                                 onClick={() => setIsAdvanceRequestOpen(true)}
-                                className="h-full w-full rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center p-0"
+                                className="h-full w-full rounded-full shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center p-0"
                             >
                                 <Plus className="h-6 w-6" />
                             </Button>

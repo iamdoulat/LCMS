@@ -2217,7 +2217,7 @@ export default function AccountDetailsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2 mb-4">
-              {['All', 'Not Started', 'In Progress', 'Completed', 'Rejected'].map((status) => (
+              {['All', 'Pending', 'In Progress', 'Completed', 'Rejected'].map((status) => (
                 <Button
                   key={status}
                   variant={taskFilterStatus === status ? 'default' : 'outline'}
@@ -2225,7 +2225,7 @@ export default function AccountDetailsPage() {
                   onClick={() => { setTaskFilterStatus(status); setTaskPage(1); }}
                   className={cn(
                     "h-8 text-[11px] font-medium transition-all px-3",
-                    taskFilterStatus === status && status === 'Not Started' && "bg-slate-600 hover:bg-slate-700",
+                    taskFilterStatus === status && status === 'Pending' && "bg-slate-600 hover:bg-slate-700",
                     taskFilterStatus === status && status === 'In Progress' && "bg-blue-600 hover:bg-blue-700",
                     taskFilterStatus === status && status === 'Completed' && "bg-emerald-600 hover:bg-emerald-700",
                     taskFilterStatus === status && status === 'Rejected' && "bg-rose-600 hover:bg-rose-700"
@@ -2325,7 +2325,7 @@ export default function AccountDetailsPage() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {task.status === 'Not Started' && (
+                            {task.status === 'Pending' && (
                               <>
                                 <Button
                                   size="icon"

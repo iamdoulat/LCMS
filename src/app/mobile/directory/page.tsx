@@ -111,7 +111,7 @@ export default function MobileDirectoryPage() {
             </header>
 
             {/* Content Area */}
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] px-4 pt-8 pb-24 min-h-[500px]">
+            <div className="flex-1 bg-slate-50 rounded-t-[2rem] px-4 pt-8 pb-[120px] min-h-[500px]">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center pt-20">
                         <Loader2 className="h-8 w-8 text-[#0a1e60] animate-spin mb-4" />

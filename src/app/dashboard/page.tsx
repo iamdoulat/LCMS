@@ -547,7 +547,7 @@ export default function DashboardPage() {
 
   if (userRole && !userRole.some(r => ['Super Admin', 'Admin', 'Viewer', 'Commercial'].includes(r))) {
     return (
-      <div className="flex flex-col gap-8 max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 px-0">
+      <div className="flex flex-col gap-8 max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[120px] md:mb-0 px-0">
         {notice && <NoticeBoardDialog notice={notice} />}
         <div className="flex flex-row justify-between items-start gap-4 sm:items-center w-full">
           <div>
@@ -648,7 +648,7 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="flex flex-col gap-8 max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 px-0">
+    <div className="flex flex-col gap-8 max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[120px] md:mb-0 px-0">
       {notice && <NoticeBoardDialog notice={notice} />}
       <div className="flex flex-row justify-between items-start gap-4 sm:items-center">
         <div>

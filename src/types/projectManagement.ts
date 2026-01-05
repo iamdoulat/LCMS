@@ -3,7 +3,7 @@ import { Timestamp } from 'firebase/firestore';
 export type ProjectStatus =
     | 'Default'
     | 'Deferred'
-    | 'Not Started'
+    | 'Pending'
     | 'In Progress'
     | 'On Hold'
     | 'Completed'
@@ -50,10 +50,11 @@ export interface Task {
     projectTitle: string;
     taskTitle: string;
     description?: string;
-    status: 'Not Started' | 'In Progress' | 'On Hold' | 'Completed' | 'Rejected';
+    status: 'Pending' | 'In Progress' | 'On Hold' | 'Completed' | 'Rejected';
     priority: ProjectPriority;
     assignedUsers: ProjectAttendee[];
     assignedUserIds?: string[]; // IDs of assigned users for easier querying/rules
+    acceptanceStatuses?: Record<string, 'Pending' | 'Accepted' | 'Rejected'>; // Track per-user acceptance
     attachments?: { name: string; url: string; type: string }[];
     dueDate?: string; // ISO String (box "Ends At")
     startDate?: string; // ISO String
@@ -64,6 +65,8 @@ export interface Task {
     enableRecurring?: boolean;
     createdAt: Timestamp;
     updatedAt: Timestamp;
+    createdByUid?: string;
+    createdByName?: string;
 }
 
 export interface Quotation {

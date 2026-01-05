@@ -135,7 +135,7 @@ export function SummaryStats({ type }: SummaryStatsProps) {
     if (!hasAccess) return null;
 
     const StatCard = ({ title, value, subValue, icon: Icon, gradientClass }: any) => (
-        <Card className={cn("border-none shadow-lg rounded-[2rem] overflow-hidden mb-[30px] text-white transition-all duration-300 hover:scale-[1.02] w-full", gradientClass)}>
+        <Card className={cn("border-none shadow-md rounded-[2rem] overflow-hidden mb-[30px] text-white transition-all duration-300 hover:scale-[1.02] w-full", gradientClass)}>
             <CardContent className="p-6">
                 <div className="flex justify-between items-center text-white">
                     <div className="flex-1">
@@ -168,7 +168,7 @@ export function SummaryStats({ type }: SummaryStatsProps) {
                     <span className="text-[10px] font-bold text-slate-400 ml-3.5 uppercase tracking-widest -mt-0.5">Yearly Overview</span>
                 </div>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="w-[115px] h-9 rounded-xl border border-blue-200 bg-white shadow-sm font-bold text-[10px] text-blue-600 focus:ring-2 focus:ring-blue-500/20 flex items-center gap-2 px-3 transition-all">
+                    <SelectTrigger className="w-[115px] h-9 rounded-xl border border-blue-200 bg-white shadow-md font-bold text-[10px] text-blue-600 focus:ring-2 focus:ring-blue-500/20 flex items-center gap-2 px-3 transition-all">
                         <Calendar className="h-3.5 w-3.5" />
                         <SelectValue placeholder="Year" />
                     </SelectTrigger>

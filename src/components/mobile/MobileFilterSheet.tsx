@@ -14,6 +14,8 @@ export interface FilterState {
     status?: string | string[]; // Single status or array for multi-select
     year?: string;
     month?: string;
+    priority?: 'Low' | 'Medium' | 'High' | 'Urgency';
+    project?: string;
 }
 
 interface MobileFilterSheetProps {

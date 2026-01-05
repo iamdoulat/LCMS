@@ -240,7 +240,7 @@ export default function ManageTasksPage() {
 
     const BoardView = () => {
         const columns = [
-            { id: 'Not Started', title: 'Not Started', color: 'bg-slate-100/50' },
+            { id: 'Pending', title: 'Pending', color: 'bg-slate-100/50' },
             { id: 'In Progress', title: 'In Progress', color: 'bg-blue-50/50' },
             { id: 'On Hold', title: 'On Hold', color: 'bg-amber-50/50' },
             { id: 'Completed', title: 'Completed', color: 'bg-emerald-50/50' }
@@ -261,7 +261,7 @@ export default function ManageTasksPage() {
                         <div className="p-3 flex items-center justify-between font-semibold text-sm border-b border-slate-200/60 bg-white/50 backdrop-blur-sm rounded-t-xl sticky top-0 z-10">
                             <span className={cn(
                                 "flex items-center gap-2 font-bold bg-clip-text text-transparent bg-gradient-to-r transition-all duration-300",
-                                col.id === 'Not Started' ? "from-slate-700 to-slate-500" :
+                                col.id === 'Pending' ? "from-slate-700 to-slate-500" :
                                     col.id === 'In Progress' ? "from-blue-600 via-indigo-600 to-violet-600" :
                                         col.id === 'On Hold' ? "from-amber-600 to-orange-600" :
                                             "from-emerald-600 to-teal-600"
@@ -604,7 +604,7 @@ export default function ManageTasksPage() {
     };
 
     return (
-        <div className="p-6 h-[calc(100vh-64px)] flex flex-col bg-slate-50/50">
+        <div className="p-6 pb-[120px] md:pb-6 h-auto md:h-[calc(100vh-64px)] flex flex-col bg-slate-50/50">
             {/* Statistics Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <Card className="shadow-sm border-l-4 border-l-blue-500">

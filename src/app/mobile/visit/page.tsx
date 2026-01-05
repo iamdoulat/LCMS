@@ -182,8 +182,8 @@ export default function MobileVisitApplicationsPage() {
                     <button
                         onClick={() => setIsFilterOpen(true)}
                         className={cn(
-                            "p-2 rounded-full transition-all relative",
-                            hasActiveFilters(filters) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                            "p-2 rounded-full transition-all relative shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10",
+                            hasActiveFilters(filters) ? "text-white" : "text-white/70 hover:text-white"
                         )}
                     >
                         <FilterIcon className="h-5 w-5" />
