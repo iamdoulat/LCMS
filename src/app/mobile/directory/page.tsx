@@ -19,7 +19,8 @@ import {
     SearchX
 } from 'lucide-react';
 import type { Employee, UserDocumentForAdmin, UserRole } from '@/types';
-import { RoleRibbon } from '@/components/ui/RoleBadge';
+import { EmployeeCard } from '@/components/mobile/EmployeeCard';
+import { DirectorySkeleton } from '@/components/mobile/DirectorySkeleton';
 
 export default function MobileDirectoryPage() {
     const router = useRouter();
@@ -59,15 +60,13 @@ export default function MobileDirectoryPage() {
         }
 
         return employees.map(emp => {
-            // Merge roles from the user collection if available
             const emailKey = emp.email?.toLowerCase().trim();
             const userRoles = emailKey ? userRoleMap.get(emailKey) : undefined;
 
-            // Combine employee.role and user.role, ensuring we don't have duplicates
-            // Combine employee.role and user.role, ensuring we don't have duplicates
             const empRole = (emp as any).role;
             const empRolesArray = Array.isArray(empRole) ? empRole : (empRole ? [empRole] : []);
 
+            // Use a Set to merge roles efficiently
             const mergedRoles = Array.from(new Set([
                 ...empRolesArray,
                 ...(userRoles || [])
@@ -80,17 +79,21 @@ export default function MobileDirectoryPage() {
         });
     }, [employees, users]);
 
-    const filteredEmployees = processedEmployees.filter(emp =>
-        emp.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.employeeCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.designation?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Use a separate memo for filtered results to prevent re-calculating on every render
+    const filteredEmployees = React.useMemo(() => {
+        const search = searchTerm.toLowerCase();
+        return processedEmployees.filter(emp =>
+            emp.fullName?.toLowerCase().includes(search) ||
+            emp.employeeCode?.toLowerCase().includes(search) ||
+            emp.designation?.toLowerCase().includes(search)
+        );
+    }, [processedEmployees, searchTerm]);
 
     return (
         <div className="flex flex-col min-h-screen bg-[#0a1e60]">
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-[#0a1e60] flex flex-col px-4 pt-4 pb-6 text-white">
-                <div className="flex items-center justify-between mb-6">
+            <header className="sticky top-0 z-50 bg-[#0a1e60] flex flex-col px-4 pt-1 pb-4 text-white">
+                <div className="flex items-center justify-between mb-4">
                     <Button variant="ghost" size="icon" onClick={handleBack} className="text-white hover:bg-white/10 -ml-2">
                         <ChevronLeft className="h-6 w-6" />
                     </Button>
@@ -113,61 +116,14 @@ export default function MobileDirectoryPage() {
             {/* Content Area */}
             <div className="flex-1 bg-slate-50 rounded-t-[2rem] px-4 pt-8 pb-[120px] min-h-[500px]">
                 {isLoading ? (
-                    <div className="flex flex-col items-center justify-center pt-20">
-                        <Loader2 className="h-8 w-8 text-[#0a1e60] animate-spin mb-4" />
-                        <p className="text-slate-500 font-medium">Loading Directory...</p>
-                    </div>
+                    <DirectorySkeleton />
                 ) : filteredEmployees && filteredEmployees.length > 0 ? (
                     <div className="space-y-4">
                         <p className="text-xs font-bold text-slate-400 uppercase px-2 mb-2">
                             Total Employees ({filteredEmployees.length})
                         </p>
                         {filteredEmployees.map((emp) => (
-                            <div
-                                key={emp.id}
-                                onClick={() => router.push(`/mobile/profile/${emp.id}`)}
-                                className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 active:scale-[0.98] transition-all relative overflow-hidden"
-                            >
-                                {/* Role Ribbon */}
-                                {emp.mergedRoles.length > 0 && <RoleRibbon roles={emp.mergedRoles} />}
-
-                                <div className="h-14 w-14 rounded-full overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
-                                    <Avatar className="h-full w-full">
-                                        <AvatarImage src={emp.photoURL || undefined} className="object-cover" />
-                                        <AvatarFallback className="text-lg font-bold text-slate-700 bg-slate-200">
-                                            {emp.fullName?.charAt(0)}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-[#0a1e60] truncate">{emp.fullName}</h3>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-xs font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">
-                                            {emp.employeeCode}
-                                        </span>
-                                        <span className="text-[11px] text-slate-400 font-medium truncate">
-                                            {emp.designation}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3 mt-2 text-slate-400">
-                                        {emp.phone && (
-                                            <div className="flex items-center gap-1">
-                                                <Phone className="h-3 w-3" />
-                                                <span className="text-[10px]">{emp.phone}</span>
-                                            </div>
-                                        )}
-                                        {emp.branch && (
-                                            <div className="flex items-center gap-1">
-                                                <Building2 className="h-3 w-3" />
-                                                <span className="text-[10px] truncate">{emp.branch}</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <ChevronRight className="h-5 w-5 text-slate-300 flex-shrink-0" />
-                            </div>
+                            <EmployeeCard key={emp.id} emp={emp} />
                         ))}
                     </div>
                 ) : (
