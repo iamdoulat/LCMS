@@ -51,24 +51,32 @@ const UserLocationMarker = ({ position, address }: { position: L.LatLng; address
     );
 };
 
+// Helper component to capture the map instance
+const MapCapture = ({ setMap }: { setMap: (map: L.Map) => void }) => {
+    const map = useMap();
+    useEffect(() => {
+        setMap(map);
+    }, [map, setMap]);
+    return null;
+};
+
 interface LocateControlProps {
     targetLocation: { lat: number; lng: number } | null;
+    map: L.Map | null;
 }
 
-const LocateControl = ({ targetLocation }: LocateControlProps) => {
-    const map = useMap();
-
+const LocateControl = ({ targetLocation, map }: LocateControlProps) => {
     const handleRecenter = () => {
-        if (targetLocation) {
+        if (map && targetLocation) {
             map.flyTo([targetLocation.lat, targetLocation.lng], map.getZoom());
         }
     };
 
     return (
-        <div className="leaflet-top leaflet-right z-[1100]" style={{ marginTop: '60px', marginRight: '10px' }}>
-            <div className="leaflet-control leaflet-bar">
+        <div className="absolute top-[60px] right-[10px] z-[1100]">
+            <div className="leaflet-bar border-none shadow-none">
                 <button
-                    className="bg-white p-2 hover:bg-gray-50 focus:outline-none flex items-center justify-center w-10 h-10 shadow-md rounded"
+                    className="bg-white p-2 hover:bg-gray-50 focus:outline-none flex items-center justify-center w-10 h-10 shadow-md rounded border border-slate-200"
                     onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -92,14 +100,15 @@ const LocateControl = ({ targetLocation }: LocateControlProps) => {
 interface RefreshControlProps {
     onRefresh: () => void;
     isLoading?: boolean;
+    map: L.Map | null;
 }
 
-const RefreshControl = ({ onRefresh, isLoading }: RefreshControlProps) => {
+const RefreshControl = ({ onRefresh, isLoading, map }: RefreshControlProps) => {
     return (
-        <div className="leaflet-top leaflet-right z-[1100]" style={{ marginTop: '10px', marginRight: '10px' }}>
-            <div className="leaflet-control leaflet-bar">
+        <div className="absolute top-[10px] right-[10px] z-[1100]">
+            <div className="leaflet-bar border-none shadow-none">
                 <button
-                    className="bg-white p-2 hover:bg-gray-50 focus:outline-none flex items-center justify-center w-10 h-10 shadow-md rounded text-primary"
+                    className="bg-white p-2 hover:bg-gray-50 focus:outline-none flex items-center justify-center w-10 h-10 shadow-md rounded border border-slate-200 text-primary"
                     onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -126,18 +135,21 @@ const RefreshControl = ({ onRefresh, isLoading }: RefreshControlProps) => {
 };
 
 export default function GeofenceMap({ userLocation, branchLocation, hotspots = [], onRefresh, isLoading }: GeofenceMapProps & { onRefresh?: () => void, isLoading?: boolean }) {
+    const [map, setMap] = useState<L.Map | null>(null);
+
     const defaultCenter: [number, number] = branchLocation
         ? [branchLocation.lat, branchLocation.lng]
         : (userLocation ? [userLocation.lat, userLocation.lng] : [23.8103, 90.4125]);
 
     return (
-        <div className="h-[250px] w-full rounded-md overflow-hidden border z-0 relative">
+        <div className="h-[250px] w-full rounded-md overflow-hidden border z-0 relative bg-slate-50">
             <MapContainer
                 center={defaultCenter}
                 zoom={16}
                 scrollWheelZoom={true}
                 style={{ height: '100%', width: '100%' }}
             >
+                <MapCapture setMap={setMap} />
                 <TileLayer
                     attribution='&copy; Google Maps'
                     url="http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
@@ -204,10 +216,11 @@ export default function GeofenceMap({ userLocation, branchLocation, hotspots = [
                 {userLocation && (
                     <UserLocationMarker position={new L.LatLng(userLocation.lat, userLocation.lng)} address={userLocation.address} />
                 )}
-
-                <LocateControl targetLocation={userLocation} />
-                {onRefresh && <RefreshControl onRefresh={onRefresh} isLoading={isLoading} />}
             </MapContainer>
+
+            {/* Absolute Controls (Outside MapContainer to ensure visibility) */}
+            <LocateControl targetLocation={userLocation} map={map} />
+            {onRefresh && <RefreshControl onRefresh={onRefresh} isLoading={isLoading} map={map} />}
 
             {/* Floating Legend - More compact */}
             <div className="absolute top-2 left-2 z-[1000] bg-white/90 backdrop-blur-sm px-2 py-1.5 rounded border border-gray-100 flex flex-col gap-1 pointer-events-none text-[9px] shadow-sm">
