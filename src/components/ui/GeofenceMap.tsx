@@ -75,81 +75,87 @@ export default function GeofenceMap({ userLocation, branchLocation, hotspots = [
 
     return (
         <div className="relative h-[250px] w-full rounded-lg overflow-hidden border border-slate-200">
-            <MapContainer
-                center={defaultCenter}
-                zoom={16}
-                scrollWheelZoom={true}
-                style={{ height: '100%', width: '100%' }}
-                zoomControl={false}
+            {/* Map Layer - Explicitly behind everything */}
+            <div
+                className="absolute inset-0"
+                style={{ zIndex: 1 }}
             >
-                <MapCapture setMap={setMap} />
-                <TileLayer
-                    attribution='&copy; Google Maps'
-                    url="http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-                    subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
-                />
+                <MapContainer
+                    center={defaultCenter}
+                    zoom={16}
+                    scrollWheelZoom={true}
+                    style={{ height: '100%', width: '100%' }}
+                    zoomControl={false}
+                >
+                    <MapCapture setMap={setMap} />
+                    <TileLayer
+                        attribution='&copy; Google Maps'
+                        url="http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+                        subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
+                    />
 
-                {/* Branch Circle */}
-                {branchLocation && (
-                    <>
-                        <Circle
-                            center={[branchLocation.lat, branchLocation.lng]}
-                            radius={branchLocation.radius}
-                            pathOptions={{ color: '#4285F4', fillColor: '#4285F4', fillOpacity: 0.15, weight: 2 }}
-                        />
-                        <Marker
-                            position={[branchLocation.lat, branchLocation.lng]}
-                            icon={L.divIcon({
-                                className: 'branch-marker',
-                                html: `<div style="background-color: #EA4335; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`,
-                                iconSize: [16, 16],
-                                iconAnchor: [8, 8]
-                            })}
-                        >
-                            <Popup>
-                                <div className="text-sm font-bold">{branchLocation.name || 'Branch Center'}</div>
-                                {branchLocation.address && <div className="text-xs text-muted-foreground">{branchLocation.address}</div>}
-                            </Popup>
-                        </Marker>
-                    </>
-                )}
+                    {/* Branch Circle */}
+                    {branchLocation && (
+                        <>
+                            <Circle
+                                center={[branchLocation.lat, branchLocation.lng]}
+                                radius={branchLocation.radius}
+                                pathOptions={{ color: '#4285F4', fillColor: '#4285F4', fillOpacity: 0.15, weight: 2 }}
+                            />
+                            <Marker
+                                position={[branchLocation.lat, branchLocation.lng]}
+                                icon={L.divIcon({
+                                    className: 'branch-marker',
+                                    html: `<div style="background-color: #EA4335; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`,
+                                    iconSize: [16, 16],
+                                    iconAnchor: [8, 8]
+                                })}
+                            >
+                                <Popup>
+                                    <div className="text-sm font-bold">{branchLocation.name || 'Branch Center'}</div>
+                                    {branchLocation.address && <div className="text-xs text-muted-foreground">{branchLocation.address}</div>}
+                                </Popup>
+                            </Marker>
+                        </>
+                    )}
 
-                {/* Hotspots Rendering */}
-                {hotspots && hotspots.map((hotspot, idx) => (
-                    <React.Fragment key={`hotspot-${idx}`}>
-                        <Circle
-                            center={[hotspot.lat, hotspot.lng]}
-                            radius={hotspot.radius}
-                            pathOptions={{
-                                fillColor: '#9333ea',
-                                fillOpacity: 0.15,
-                                color: '#9333ea',
-                                weight: 1,
-                                dashArray: '5, 5'
-                            }}
-                        />
-                        <Marker
-                            position={[hotspot.lat, hotspot.lng]}
-                            icon={L.divIcon({
-                                className: 'hotspot-marker',
-                                html: `<div style="background-color: #9333ea; width: 10px; height: 10px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`,
-                                iconSize: [14, 14],
-                                iconAnchor: [7, 7]
-                            })}
-                        >
-                            <Popup>
-                                <div className="text-sm font-bold">Hotspot: {hotspot.name}</div>
-                                {hotspot.address && <div className="text-xs text-muted-foreground">{hotspot.address}</div>}
-                            </Popup>
-                        </Marker>
-                    </React.Fragment>
-                ))}
+                    {/* Hotspots Rendering */}
+                    {hotspots && hotspots.map((hotspot, idx) => (
+                        <React.Fragment key={`hotspot-${idx}`}>
+                            <Circle
+                                center={[hotspot.lat, hotspot.lng]}
+                                radius={hotspot.radius}
+                                pathOptions={{
+                                    fillColor: '#9333ea',
+                                    fillOpacity: 0.15,
+                                    color: '#9333ea',
+                                    weight: 1,
+                                    dashArray: '5, 5'
+                                }}
+                            />
+                            <Marker
+                                position={[hotspot.lat, hotspot.lng]}
+                                icon={L.divIcon({
+                                    className: 'hotspot-marker',
+                                    html: `<div style="background-color: #9333ea; width: 10px; height: 10px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px rgba(0,0,0,0.3);"></div>`,
+                                    iconSize: [14, 14],
+                                    iconAnchor: [7, 7]
+                                })}
+                            >
+                                <Popup>
+                                    <div className="text-sm font-bold">Hotspot: {hotspot.name}</div>
+                                    {hotspot.address && <div className="text-xs text-muted-foreground">{hotspot.address}</div>}
+                                </Popup>
+                            </Marker>
+                        </React.Fragment>
+                    ))}
 
-                {/* User Location Marker */}
-                {userLocation && (
-                    <UserLocationMarker position={new L.LatLng(userLocation.lat, userLocation.lng)} address={userLocation.address} />
-                )}
-            </MapContainer>
+                    {/* User Location Marker */}
+                    {userLocation && (
+                        <UserLocationMarker position={new L.LatLng(userLocation.lat, userLocation.lng)} address={userLocation.address} />
+                    )}
+                </MapContainer>
+            </div>
 
             {/* Floating Control Buttons - Simple approach */}
             <div
