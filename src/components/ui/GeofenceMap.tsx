@@ -65,7 +65,7 @@ const LocateControl = ({ targetLocation }: LocateControlProps) => {
     };
 
     return (
-        <div className="leaflet-bottom leaflet-right">
+        <div className="leaflet-top leaflet-right z-[1100]" style={{ marginTop: '60px', marginRight: '10px' }}>
             <div className="leaflet-control leaflet-bar">
                 <button
                     className="bg-white p-2 hover:bg-gray-50 focus:outline-none flex items-center justify-center w-10 h-10 shadow-md rounded"
@@ -96,7 +96,7 @@ interface RefreshControlProps {
 
 const RefreshControl = ({ onRefresh, isLoading }: RefreshControlProps) => {
     return (
-        <div className="leaflet-top leaflet-right" style={{ marginTop: '10px', marginRight: '10px' }}>
+        <div className="leaflet-top leaflet-right z-[1100]" style={{ marginTop: '10px', marginRight: '10px' }}>
             <div className="leaflet-control leaflet-bar">
                 <button
                     className="bg-white p-2 hover:bg-gray-50 focus:outline-none flex items-center justify-center w-10 h-10 shadow-md rounded text-primary"
@@ -227,23 +227,6 @@ export default function GeofenceMap({ userLocation, branchLocation, hotspots = [
                 )}
             </div>
 
-            {/* Address Pill - Resolves "Double Info" by merging it here - Floating at bottom center */}
-            {(userLocation?.address || branchLocation?.address) && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 backdrop-blur-sm p-2 rounded-lg border shadow-lg text-[9px] leading-tight min-w-[200px] max-w-[90%] flex flex-col gap-1 pointer-events-auto overflow-hidden">
-                    {branchLocation?.address && (
-                        <div className="flex gap-1.5 items-start">
-                            <span className="font-bold text-primary shrink-0 uppercase tracking-tighter">Office:</span>
-                            <span className="text-gray-600 truncate" title={branchLocation.address}>{branchLocation.address}</span>
-                        </div>
-                    )}
-                    {userLocation?.address && (
-                        <div className="flex gap-1.5 items-start">
-                            <span className="font-bold text-blue-600 shrink-0 uppercase tracking-tighter">User:</span>
-                            <span className="text-gray-600 truncate" title={userLocation.address}>{userLocation.address}</span>
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
     );
 }

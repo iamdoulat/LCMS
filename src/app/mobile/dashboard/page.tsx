@@ -687,7 +687,7 @@ export default function MobileDashboardPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setIsSettingsOpen(true)}
-                                className="h-8 w-8 bg-blue-100 text-blue-600 rounded-lg"
+                                className="h-8 w-8 bg-blue-100 text-blue-600 rounded-lg shadow-md shadow-blue-200/50"
                             >
                                 <Settings className="h-4 w-4" />
                             </Button>

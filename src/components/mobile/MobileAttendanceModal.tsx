@@ -333,7 +333,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 await setDoc(doc(firestore, 'attendance', docId), attendanceData);
 
                 await Swal.fire({
-                    title: isInsideGeofence ? 'Check-In Approved!' : 'Check-In Pending Approval',
+                    title: isInsideGeofence ? 'In Time Approved!' : 'In Time Pending Approval',
                     html: isInsideGeofence
                         ? `<div class="text-center">
                             <p class="text-sm mb-1">Check-in time: <strong>${currentTime}</strong></p>
@@ -402,7 +402,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 }, { merge: true });
 
                 await Swal.fire({
-                    title: isInsideGeofence ? 'Check-Out Approved!' : 'Check-Out Pending Approval',
+                    title: isInsideGeofence ? 'Out Time Approved!' : 'Out Time Pending Approval',
                     html: isInsideGeofence
                         ? `<div class="text-center">
                             <p class="text-sm mb-1">Check-out time: <strong>${currentTime}</strong></p>
@@ -463,7 +463,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 bg-white border-b sticky top-0 z-10">
                     <h2 className="text-lg font-bold text-slate-800">
-                        {type === 'in' ? 'Mark Check-In' : 'Mark Check-Out'}
+                        {type === 'in' ? 'Mark In Time' : 'Mark Out Time'}
                     </h2>
                     <Button
                         variant="ghost"
@@ -477,73 +477,29 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
 
                 <div className="flex-1 overflow-y-auto">
                     <div className="p-4 space-y-4">
-                        {/* Map Section */}
+                        {/* Map or Capture Section */}
                         {location ? (
-                            <div className="space-y-3">
-                                <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100">
-                                    <div className="relative rounded-lg overflow-hidden h-[250px]">
-                                        <GeofenceMap
-                                            userLocation={location ? { lat: location.latitude, lng: location.longitude, address: address || '' } : null}
-                                            branchLocation={employeeBranch ? {
-                                                lat: Number(employeeBranch.latitude),
-                                                lng: Number(employeeBranch.longitude),
-                                                radius: Number(employeeBranch.allowRadius || 100),
-                                                name: employeeBranch.name,
-                                                address: employeeBranch.address
-                                            } : null}
-                                            hotspots={branchHotspots.map(h => ({
-                                                lat: Number(h.latitude),
-                                                lng: Number(h.longitude),
-                                                radius: Number(h.allowRadius || 100),
-                                                name: h.name,
-                                                address: h.address
-                                            }))}
-                                            onRefresh={captureLocation}
-                                            isLoading={isCapturing}
-                                        />
-                                    </div>
-
-                                    {/* Address Display */}
-                                    <div className="mt-3 px-1">
-                                        <div className="flex items-start gap-2">
-                                            <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                                            <p className="text-sm text-slate-600 break-words leading-snug">
-                                                {isGeocoding ? (
-                                                    <span className="flex items-center gap-1.5 text-slate-400 italic">
-                                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                                        Locating address...
-                                                    </span>
-                                                ) : (
-                                                    address || (isCapturing ? 'Capturing...' : 'Address unavailable')
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Location Stats */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                                        <p className="text-xs text-slate-500 mb-1">Status</p>
-                                        {isInsideGeofence ? (
-                                            <div className="flex items-center gap-1.5 text-emerald-600 font-medium text-sm">
-                                                <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                                Inside Office
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-1.5 text-amber-600 font-medium text-sm">
-                                                <div className="h-2 w-2 rounded-full bg-amber-500" />
-                                                Outside ({Math.round(distanceFromBranch)}m)
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                                        <p className="text-xs text-slate-500 mb-1">Accuracy</p>
-                                        <div className="flex items-center gap-1.5 text-slate-700 font-medium text-sm">
-                                            <Navigation className="h-3 w-3" />
-                                            ±{Math.round(location.accuracy)}m
-                                        </div>
-                                    </div>
+                            <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100">
+                                <div className="relative rounded-lg overflow-hidden h-[250px]">
+                                    <GeofenceMap
+                                        userLocation={location ? { lat: location.latitude, lng: location.longitude, address: address || '' } : null}
+                                        branchLocation={employeeBranch ? {
+                                            lat: Number(employeeBranch.latitude),
+                                            lng: Number(employeeBranch.longitude),
+                                            radius: Number(employeeBranch.allowRadius || 100),
+                                            name: employeeBranch.name,
+                                            address: employeeBranch.address
+                                        } : null}
+                                        hotspots={branchHotspots.map(h => ({
+                                            lat: Number(h.latitude),
+                                            lng: Number(h.longitude),
+                                            radius: Number(h.allowRadius || 100),
+                                            name: h.name,
+                                            address: h.address
+                                        }))}
+                                        onRefresh={captureLocation}
+                                        isLoading={isCapturing}
+                                    />
                                 </div>
                             </div>
                         ) : (
@@ -570,6 +526,55 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                             </div>
                         )}
 
+                        {/* Address Display - Always visible when something is captured or capturing */}
+                        {(location || isCapturing) && (
+                            <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                <div className="flex items-start gap-2">
+                                    <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                                    <p className="text-sm text-slate-600 break-words leading-snug font-medium">
+                                        {isGeocoding ? (
+                                            <span className="flex items-center gap-1.5 text-slate-400 italic">
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                Locating address...
+                                            </span>
+                                        ) : (
+                                            address || (isCapturing ? 'Capturing...' : 'Address unavailable')
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Location Stats - Always Visible */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                <p className="text-xs text-slate-500 mb-1">Status</p>
+                                {!location ? (
+                                    <div className="flex items-center gap-1.5 text-slate-400 font-medium text-sm italic">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        Scanning...
+                                    </div>
+                                ) : isInsideGeofence ? (
+                                    <div className="flex items-center gap-1.5 text-emerald-600 font-medium text-sm">
+                                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                        Inside Office
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-1.5 text-amber-600 font-medium text-sm">
+                                        <div className="h-2 w-2 rounded-full bg-amber-500" />
+                                        Outside ({Math.round(distanceFromBranch)}m)
+                                    </div>
+                                )}
+                            </div>
+                            <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                <p className="text-xs text-slate-500 mb-1">Accuracy</p>
+                                <div className="flex items-center gap-1.5 text-slate-700 font-medium text-sm">
+                                    <Navigation className="h-3 w-3" />
+                                    {location ? `±${Math.round(location.accuracy)}m` : '---'}
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Remarks Section */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700 pl-1">
@@ -595,28 +600,26 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
 
                 {/* Footer */}
                 <div className="p-4 bg-white border-t space-y-3 mt-auto">
-                    {location && (
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={isSubmitting}
-                            className={`w-full h-12 text-base font-medium ${type === 'in'
-                                ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-100'
-                                : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'
-                                } shadow-lg`}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                    Submitting...
-                                </>
-                            ) : (
-                                <>
-                                    <CheckCircle2 className="mr-2 h-5 w-5" />
-                                    {type === 'in' ? 'Submit Check-In' : 'Submit Check-Out'}
-                                </>
-                            )}
-                        </Button>
-                    )}
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting || !location}
+                        className={`w-full h-12 text-base font-medium ${type === 'in'
+                            ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-100'
+                            : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'
+                            } shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                Submitting...
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircle2 className="mr-2 h-5 w-5" />
+                                {type === 'in' ? 'Submit In Time' : 'Submit Out Time'}
+                            </>
+                        )}
+                    </Button>
 
                     <Button
                         variant="ghost"
