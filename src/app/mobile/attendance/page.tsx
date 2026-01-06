@@ -301,7 +301,7 @@ export default function MobileAttendancePage() {
 
                 <div className="px-6 pt-6 pb-[120px] space-y-6">
                     {/* Subordinate's Summary with Period Filter */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm">
+                    <div className="bg-white rounded-2xl p-6 shadow-xl">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-lg font-bold text-slate-800">
                                 Subordinate's {periodFilter === 'weekly' ? 'Weekly' : 'Monthly'} Summary

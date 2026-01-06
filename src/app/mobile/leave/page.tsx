@@ -243,7 +243,7 @@ export default function MobileLeavePage() {
 
                 <div className="px-6 pt-6 pb-[120px] space-y-6">
                     {/* Calendar */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm">
+                    <div className="bg-white rounded-2xl p-6 shadow-xl">
                         {/* Month Header */}
                         <div className="flex items-center justify-between mb-6">
                             <button
