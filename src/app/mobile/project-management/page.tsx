@@ -222,7 +222,7 @@ export default function MobileTaskManagementPage() {
                     <div className="flex items-center">
                         <button
                             onClick={() => router.back()}
-                            className="p-2 -ml-2 text-white bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
+                            className="h-10 w-10 text-white rounded-full flex items-center justify-center shadow-lg active:scale-100 transition-all"
                         >
                             <ArrowLeft className="h-6 w-6" />
                         </button>
@@ -232,17 +232,15 @@ export default function MobileTaskManagementPage() {
                         <button
                             onClick={() => setIsFilterOpen(true)}
                             className={cn(
-                                "h-10 w-10 text-white rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all",
+                                "h-10 w-10 text-white rounded-full flex items-center justify-center shadow-lg active:scale-100 transition-all",
                                 hasActiveFilters(filters)
-                                    ? "bg-[#3b82f6] shadow-blue-500/30"
-                                    : "bg-white/10 shadow-black/5"
+                                    ? "shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
+                                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                             )}
                         >
                             <Filter className="h-5 w-5" />
                         </button>
-                        <button className="h-10 w-10 bg-white/10 text-white rounded-full flex items-center justify-center shadow-lg shadow-black/5 active:scale-95 transition-all">
-                            <Search className="h-5 w-5" />
-                        </button>
+
                     </div>
                 </div>
 

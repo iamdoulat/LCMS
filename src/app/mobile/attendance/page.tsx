@@ -510,7 +510,7 @@ export default function MobileAttendancePage() {
                                         href={action.href}
                                         className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] hover:shadow-md transition-shadow active:scale-95 duration-200"
                                     >
-                                        <div className={`${action.color} p-4 rounded-full ${action.iconColor} h-14 w-14 flex items-center justify-center`}>
+                                        <div className={`${action.color} p-4 rounded-full ${action.iconColor} h-14 w-14 flex items-center justify-center shadow-lg shadow-blue-200`}>
                                             <Icon className="h-7 w-7" />
                                         </div>
                                         <span className="text-sm font-medium text-slate-700 text-center leading-tight">

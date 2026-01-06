@@ -825,8 +825,8 @@ export default function MobileDashboardPage() {
                                 className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 text-center w-full group"
                             >
                                 <div className={cn(
-                                    "p-4 rounded-full h-14 w-14 flex items-center justify-center transition-all shadow-inner group-hover:scale-110",
-                                    isOnBreak ? "bg-orange-100 text-orange-600 animate-pulse" : "bg-blue-100 text-blue-600"
+                                    "p-4 rounded-full h-14 w-14 flex items-center justify-center transition-all shadow-lg group-hover:scale-110",
+                                    isOnBreak ? "bg-orange-100 text-orange-600 animate-pulse shadow-orange-200" : "bg-blue-100 text-blue-600 shadow-blue-200"
                                 )}>
                                     {isOnBreak ? <Timer className="h-7 w-7 animate-spin-slow" /> : <Coffee className="h-7 w-7" />}
                                 </div>
@@ -843,7 +843,7 @@ export default function MobileDashboardPage() {
                                 href="/mobile/project-management"
                                 className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
                             >
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-blue-200 group-hover:scale-110">
                                     <ListTodo className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Task</span>
@@ -854,7 +854,7 @@ export default function MobileDashboardPage() {
                                 href="/mobile/check-in-out"
                                 className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
                             >
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-blue-200 group-hover:scale-110">
                                     <LogIn className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center leading-tight">Check In/Out</span>
@@ -866,7 +866,7 @@ export default function MobileDashboardPage() {
                                 href="/mobile/claim"
                                 className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
                             >
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-blue-200 group-hover:scale-110">
                                     <Wallet className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Claim</span>
@@ -878,7 +878,7 @@ export default function MobileDashboardPage() {
                                 href="/mobile/directory"
                                 className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
                             >
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-blue-200 group-hover:scale-110">
                                     <Users className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Directory</span>
@@ -889,7 +889,7 @@ export default function MobileDashboardPage() {
                                 href="/mobile/assets"
                                 className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
                             >
-                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all group-hover:scale-110">
+                                <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-blue-200 group-hover:scale-110">
                                     <UserCheck className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Assets</span>
