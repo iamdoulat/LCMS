@@ -7,19 +7,29 @@ import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 export default function HomePage() {
-  const { user, loading, userRole } = useAuth();
+  const { user, userRole, loading, viewMode } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading) {
       if (user) {
-        const isEmployee = userRole?.includes('Employee');
-        router.replace(isEmployee ? '/mobile/dashboard' : '/dashboard');
+        // Priority 1: User's saved preference
+        if (viewMode === 'mobile') {
+          router.replace('/mobile/dashboard');
+        } else if (viewMode === 'web') {
+          router.replace('/dashboard');
+        }
+        // Priority 2: Role-based default
+        else if (userRole?.includes('Employee')) {
+          router.replace('/mobile/dashboard');
+        } else {
+          router.replace('/dashboard');
+        }
       } else {
         router.replace('/login');
       }
     }
-  }, [user, loading, userRole, router]);
+  }, [user, userRole, loading, router, viewMode]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-background">

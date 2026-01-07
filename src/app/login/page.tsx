@@ -38,7 +38,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, loading: authLoading, login: contextLogin, companyLogoUrl, userRole } = useAuth();
+  const { user, userRole, loading: authLoading, viewMode, login: contextLogin, companyLogoUrl } = useAuth();
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,7 +95,15 @@ export default function LoginPage() {
       // Assuming userRole is populated if user is populated.
       // We'll check the fetched 'userRole' from context.
       const isEmployee = userRole?.includes('Employee');
-      const targetPath = isEmployee ? '/mobile/dashboard' : '/dashboard';
+      let targetPath = '/dashboard';
+
+      if (viewMode === 'mobile') {
+        targetPath = '/mobile/dashboard';
+      } else if (viewMode === 'web') {
+        targetPath = '/dashboard';
+      } else if (isEmployee) {
+        targetPath = '/mobile/dashboard';
+      }
 
       // Check if device change feature is enabled
       const settingsRef = doc(firestore, 'system_settings', 'device_change_feature');

@@ -20,7 +20,7 @@ import type { Employee } from '@/types';
 export function MobileDrawerSidebar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { user, logout } = useAuth();
+    const { user, logout, setViewMode } = useAuth();
     const { setIsOpen } = useMobileSidebar();
     const [employee, setEmployee] = useState<Employee | null>(null);
 
@@ -98,8 +98,10 @@ export function MobileDrawerSidebar() {
                     checked={!pathname.includes('/mobile')}
                     onCheckedChange={(checked) => {
                         if (checked) {
+                            setViewMode('web');
                             router.push('/dashboard');
                         } else {
+                            setViewMode('mobile');
                             router.push('/mobile/dashboard');
                         }
                     }}

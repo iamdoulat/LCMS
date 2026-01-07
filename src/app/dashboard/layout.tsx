@@ -8,6 +8,9 @@ import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar'
 import React from 'react';
 import { AppSidebarNav } from '@/components/layout/AppSidebarNav';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 
 interface DashboardLayoutProps {
@@ -15,6 +18,22 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+  const { user, loading, userRole, viewMode } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.replace('/login');
+      } else if (userRole?.includes('Employee') && viewMode !== 'web') {
+        router.replace('/mobile/dashboard');
+      }
+    }
+  }, [user, loading, router, userRole, viewMode]);
+
+  if (loading) return null; // Or a loading spinner
+  if (!user) return null;
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">

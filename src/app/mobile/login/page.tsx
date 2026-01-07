@@ -29,7 +29,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function MobileLoginPage() {
     const router = useRouter();
-    const { login: contextLogin, companyLogoUrl, loading: authLoading, user, userRole } = useAuth();
+    const { login: contextLogin, companyLogoUrl, loading: authLoading, user, userRole, viewMode } = useAuth();
     const [isEmailLoading, setIsEmailLoading] = useState(false);
     const [showDevicePopup, setShowDevicePopup] = useState(false);
     const [isCheckingDevice, setIsCheckingDevice] = useState(false);
@@ -74,7 +74,16 @@ export default function MobileLoginPage() {
         try {
             if (!currentUser?.uid) return;
 
-            const targetPath = '/mobile/dashboard';
+            const isEmployee = userRole?.includes('Employee');
+            let targetPath = '/mobile/dashboard';
+
+            if (viewMode === 'mobile') {
+                targetPath = '/mobile/dashboard';
+            } else if (viewMode === 'web') {
+                targetPath = '/dashboard';
+            } else if (!isEmployee) {
+                targetPath = '/dashboard';
+            }
 
             // Check if device change feature is enabled
             const settingsRef = doc(firestore, 'system_settings', 'device_change_feature');
@@ -195,7 +204,7 @@ export default function MobileLoginPage() {
         if (!authLoading && user && !showDevicePopup) {
             verifyDevice(user);
         }
-    }, [user, userRole, authLoading]);
+    }, [user, userRole, authLoading, viewMode]);
 
     const handleCheckNow = async () => {
         if (user) {

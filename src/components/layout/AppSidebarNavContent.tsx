@@ -111,6 +111,7 @@ interface NavItem {
   icon?: React.ElementType;
   iconColorClass?: string;
   disabled?: boolean;
+  allowedRoles?: UserRole[]; // Optional role restriction per item
 }
 
 interface NavItemGroup {
@@ -147,8 +148,10 @@ const financialNavItems: NavItem[] = [
 ];
 
 const commissionManagementNavItems: NavItem[] = [
+  { href: '/dashboard/commission-management', label: 'Commission Dashboard', icon: LayoutDashboard, iconColorClass: 'bg-icon-dashboard' },
   { href: '/dashboard/commission-management/add-pi', label: 'Add New PI', icon: PlusCircle, iconColorClass: 'bg-icon-add' },
   { href: '/dashboard/commission-management/issued-pi-list', label: 'Issued PI List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
+  { href: '/dashboard/commission-management/reports', label: 'Commission Report', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
 ];
 
 const lcManagementNavItems: NavItem[] = [
@@ -187,12 +190,11 @@ const serviceNavItems: NavItem[] = [
 ];
 
 const projectManagementNavItems: NavItem[] = [
-  { href: '/dashboard/project-management', label: 'Project Dashboard', icon: LayoutDashboard, iconColorClass: 'bg-icon-dashboard' },
-  { href: '/dashboard/project-management/projects', label: 'Manage Project', icon: FolderOpen, iconColorClass: 'bg-icon-project' },
-  { href: '/dashboard/project-management/tasks', label: 'Manage Tasks', icon: ListChecks, iconColorClass: 'bg-icon-list' },
-
-  { href: '/dashboard/project-management/invoices', label: 'Manage Invoices', icon: Receipt, iconColorClass: 'bg-icon-sale' },
-  { href: '/dashboard/project-management/settings', label: 'Project Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
+  { href: '/dashboard/project-management', label: 'Project Dashboard', icon: LayoutDashboard, iconColorClass: 'bg-icon-dashboard', allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial"] },
+  { href: '/dashboard/project-management/projects', label: 'Manage Project', icon: FolderOpen, iconColorClass: 'bg-icon-project', allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial"] },
+  { href: '/dashboard/project-management/tasks', label: 'Manage Tasks', icon: ListChecks, iconColorClass: 'bg-icon-list' }, // Available to all including Employee
+  { href: '/dashboard/project-management/invoices', label: 'Manage Invoices', icon: Receipt, iconColorClass: 'bg-icon-sale', allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial"] },
+  { href: '/dashboard/project-management/settings', label: 'Project Settings', icon: Settings, iconColorClass: 'bg-icon-settings', allowedRoles: ["Super Admin", "Admin", "Service", "Viewer", "Commercial"] },
 ];
 
 const hrNavItems: NavItem[] = [
@@ -264,9 +266,16 @@ export function AppSidebarNavContent() {
 
   const filteredNavGroups = React.useMemo(() => {
     if (!userRole) return [];
-    return allNavGroups.filter(group =>
-      group.allowedRoles.some(allowedRole => userRole.includes(allowedRole))
-    );
+    return allNavGroups
+      .filter(group =>
+        group.allowedRoles.some(allowedRole => userRole.includes(allowedRole))
+      )
+      .map(group => ({
+        ...group,
+        subLinks: group.subLinks.filter(sub =>
+          !sub.allowedRoles || sub.allowedRoles.some(role => userRole.includes(role))
+        )
+      }));
   }, [userRole]);
 
   React.useEffect(() => {

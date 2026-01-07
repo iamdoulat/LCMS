@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { FileEdit as FileEditIcon, ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { EditProformaInvoiceForm } from '@/components/forms/financial';
+import { EditCommissionInvoiceForm } from '../../components/EditCommissionInvoiceForm';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
 import type { ProformaInvoiceDocument } from '@/types';
@@ -35,8 +35,8 @@ export default function EditProformaInvoicePage() {
           if (piDocSnap.exists()) {
             setPiData({ id: piDocSnap.id, ...piDocSnap.data() } as ProformaInvoiceDocument);
           } else {
-            setError("Proforma Invoice not found.");
-            Swal.fire("Error", `PI with ID ${piId} not found.`, "error");
+            setError("Commission Invoice not found.");
+            Swal.fire("Error", `Invoice with ID ${piId} not found.`, "error");
           }
         } catch (err: any) {
           console.error("Error fetching PI data: ", err);
@@ -60,7 +60,7 @@ export default function EditProformaInvoicePage() {
     return (
       <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading PI details for ID: {piId}...</p>
+        <p className="text-muted-foreground">Loading invoice details for ID: {piId}...</p>
       </div>
     );
   }
@@ -72,7 +72,7 @@ export default function EditProformaInvoicePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-2xl font-bold text-destructive">
               <AlertTriangle className="h-7 w-7" />
-              Error Loading PI
+              Error Loading Invoice
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -92,7 +92,7 @@ export default function EditProformaInvoicePage() {
   if (!piData) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <p className="text-muted-foreground">PI data could not be loaded.</p>
+        <p className="text-muted-foreground">Invoice data could not be loaded.</p>
         <Button variant="outline" asChild className="mt-4">
           <Link href="/dashboard/commission-management/issued-pi-list">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -104,7 +104,7 @@ export default function EditProformaInvoicePage() {
   }
 
   return (
-    <div className="max-w-none mx-[25px] py-8 px-0">
+    <div className="m-[25px]">
       <div className="mb-6">
         <Link href="/dashboard/commission-management/issued-pi-list" passHref>
           <Button variant="outline">
@@ -113,18 +113,18 @@ export default function EditProformaInvoicePage() {
           </Button>
         </Link>
       </div>
-      <Card className="max-w-4xl mx-auto shadow-xl">
+      <Card className="w-full shadow-xl">
         <CardHeader>
           <CardTitle className={cn("flex items-center gap-2", "font-bold text-2xl lg:text-3xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
             <FileEditIcon className="h-7 w-7 text-primary" />
-            Edit Proforma Invoice (PI)
+            Edit Commission Invoice (PI)
           </CardTitle>
           <CardDescription>
-            Modify the details for PI ID: <span className="font-semibold text-foreground">{piId}</span>.
+            Modify the details for Invoice ID: <span className="font-semibold text-foreground">{piId}</span>.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <EditProformaInvoiceForm initialData={piData} piId={piId} />
+          <EditCommissionInvoiceForm initialData={piData} piId={piId} />
         </CardContent>
       </Card>
     </div>

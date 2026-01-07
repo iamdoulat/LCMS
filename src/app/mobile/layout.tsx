@@ -7,11 +7,14 @@ import { MobileDrawerSidebar } from '@/components/mobile/MobileDrawerSidebar';
 import { MobileNavbar } from '@/components/mobile/MobileNavbar';
 import { InstallPrompt } from '@/components/mobile/InstallPrompt';
 import { cn } from '@/lib/utils';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 function MobileLayoutContent({ children }: { children: React.ReactNode }) {
     const { isOpen, toggleSidebar } = useMobileSidebar();
     const pathname = usePathname();
+    const router = useRouter();
+    const { user, loading, userRole, viewMode } = useAuth();
 
     // If login page, maybe don't show the sidebar logic? 
     // But wrapper is fine, just contents might handle it.
@@ -61,6 +64,22 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
         '/mobile/profile',
         '/mobile/project-management'
     ].some(path => pathname?.startsWith(path));
+
+    React.useEffect(() => {
+        if (!loading && !isLoginPage) {
+            if (!user) {
+                router.replace('/mobile/login');
+            } else {
+                const isEmployee = userRole?.includes('Employee');
+                if (!isEmployee && viewMode !== 'mobile') {
+                    router.replace('/dashboard');
+                }
+            }
+        }
+    }, [user, loading, router, isLoginPage, userRole, viewMode]);
+
+    if (loading && !isLoginPage) return null;
+    if (!user && !isLoginPage) return null;
 
     if (isLoginPage) return <>{children}</>;
 

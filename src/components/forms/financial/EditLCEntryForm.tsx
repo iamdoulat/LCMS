@@ -1578,16 +1578,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             <AccordionTrigger
               className={cn(
                 "flex w-full items-center justify-between py-3 text-foreground hover:no-underline",
-                sectionHeadingClass, "border-b-0 mb-0"
+                "font-bold text-xl hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-0"
               )}
             >
               <div className="flex items-center gap-2">
                 <FileSignature className="mr-2 h-5 w-5 text-primary" />
-                46A: Documents Required
+                <span className="text-primary">46A: Documents Required</span>
               </div>
-              {activeSection46A === "section46A" ?
-                <Minus className="h-5 w-5 text-primary" /> :
-                <Plus className="h-5 w-5 text-primary" />}
             </AccordionTrigger>
             <AccordionContent className="pt-4 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

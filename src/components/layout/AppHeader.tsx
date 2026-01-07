@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
 export function AppHeader() {
-  const { user, logout, loading, companyName, companyLogoUrl } = useAuth();
+  const { user, logout, loading, companyName, companyLogoUrl, setViewMode } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchPopoverOpen, setIsSearchPopoverOpen] = useState(false);
@@ -162,7 +162,7 @@ export function AppHeader() {
                 <span>Clear Cache</span>
               </DropdownMenuItem>
               <Link href="/mobile/dashboard" passHref>
-                <DropdownMenuItem className="cursor-pointer">
+                <DropdownMenuItem className="cursor-pointer" onClick={() => setViewMode('mobile')}>
                   <Smartphone className="mr-2 h-4 w-4" />
                   <span>Mobile Mode</span>
                 </DropdownMenuItem>

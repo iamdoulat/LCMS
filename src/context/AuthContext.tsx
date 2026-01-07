@@ -7,6 +7,7 @@ import { onAuthStateChanged, signOut as firebaseSignOut, GoogleAuthProvider, sig
 import { useRouter } from 'next/navigation';
 import type { PropsWithChildren } from 'react';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { auth, firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp, query, where, getDocs, collection, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
@@ -42,6 +43,8 @@ interface AuthContextType {
   loading: boolean;
   userRole: UserRole[] | null; // Changed to array of roles
   firestoreUser: UserDocumentForAdmin | null;
+  viewMode: 'web' | 'mobile' | null;
+  setViewMode: (mode: 'web' | 'mobile') => void;
   login: (email: string, pass: string) => Promise<void>;
   register: (email: string, pass: string, displayName: string, roles?: UserRole[]) => Promise<void>;
   logout: () => Promise<void>;
@@ -65,6 +68,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [firestoreUser, setFirestoreUser] = useState<UserDocumentForAdmin | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole[] | null>(null); // Changed to array of roles
+  const [viewMode, setViewModeState] = useState<'web' | 'mobile' | null>(null);
   const [companyName, setCompanyName] = useState<string>(DEFAULT_COMPANY_NAME);
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const [invoiceLogoUrl, setInvoiceLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
@@ -72,6 +76,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [hideCompanyLogo, setHideCompanyLogo] = useState<boolean>(false);
   const [hideCompanyName, setHideCompanyName] = useState<boolean>(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const fetchInitialCompanyProfile = useCallback(async () => {
     try {
@@ -173,9 +178,18 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
   useEffect(() => {
     fetchInitialCompanyProfile();
+    // Load preferred view mode from localStorage
+    const savedMode = localStorage.getItem('preferred_view_mode') as 'web' | 'mobile' | null;
+    if (savedMode) setViewModeState(savedMode);
+
     const unsubscribe = onAuthStateChanged(auth, handleUserAuth);
     return () => unsubscribe();
   }, [fetchInitialCompanyProfile, handleUserAuth]);
+
+  const setViewMode = useCallback((mode: 'web' | 'mobile') => {
+    setViewModeState(mode);
+    localStorage.setItem('preferred_view_mode', mode);
+  }, []);
 
   const login = useCallback(async (email: string, pass: string) => {
     try {
@@ -208,15 +222,39 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
   const logout = useCallback(async () => {
     try {
+      const isMobilePath = window.location.pathname.startsWith('/mobile');
       await firebaseSignOut(auth);
+
+      // Preserve specific keys
+      const deviceId = localStorage.getItem('device_id');
+      const viewModePref = localStorage.getItem('preferred_view_mode');
+
+      // Clear all
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Restore preserved
+      if (deviceId) localStorage.setItem('device_id', deviceId);
+      if (viewModePref) localStorage.setItem('preferred_view_mode', viewModePref);
+
+      // Clear caches if service worker is used or query client exists
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+
+      // Clear React Query cache
+      queryClient.clear();
+
       Swal.fire({
         title: "Logged Out",
         icon: "success",
         timer: 1000,
         showConfirmButton: false,
       });
-      router.push('/login');
+      router.replace(isMobilePath ? '/mobile/login' : '/login');
     } catch (error: any) {
+      console.error("Error signing out: ", error);
       Swal.fire("Logout Error", error.message || "Failed to log out.", "error");
     }
   }, [router]);
@@ -365,7 +403,26 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   }, [companyName, companyLogoUrl, invoiceLogoUrl, hideCompanyLogo, hideCompanyName]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, userRole, firestoreUser, login, register, logout, signInWithGoogle, setUser, companyName, companyLogoUrl, address, invoiceLogoUrl, hideCompanyLogo, hideCompanyName, updateCompanyProfile }}>
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      userRole,
+      firestoreUser,
+      viewMode,
+      setViewMode,
+      login,
+      register,
+      logout,
+      signInWithGoogle,
+      setUser,
+      companyName,
+      companyLogoUrl,
+      address,
+      invoiceLogoUrl,
+      hideCompanyLogo,
+      hideCompanyName,
+      updateCompanyProfile
+    }}>
       {children}
     </AuthContext.Provider>
   );

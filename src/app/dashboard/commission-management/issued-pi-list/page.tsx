@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCap
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, ListChecks, FileEdit, Trash2, Loader2, Filter, XCircle, ArrowDownUp, Users, Building, CalendarDays, Clock, ChevronLeft, ChevronRight, MoreHorizontal, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -28,6 +28,8 @@ import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 
 const formatDisplayDate = (dateString?: string) => {
@@ -50,6 +52,22 @@ const formatPercentage = (percentage?: number) => {
   return `${percentage.toFixed(2)}%`;
 }
 
+const getDataUrl = async (url: string): Promise<string> => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("Error fetching image for PDF:", error);
+    return "";
+  }
+};
+
 const piSortOptions = [
   { value: "piNo", label: "PI Number" },
   { value: "piDate", label: "PI Date" },
@@ -70,23 +88,27 @@ const monthOptions = [
 
 const ALL_YEARS_VALUE = "All Years";
 const ALL_MONTHS_VALUE = "All Months";
+const ALL_STATUS_VALUE = "All Status";
+const statusFilterOptions = [ALL_STATUS_VALUE, "Pending", "Paid", "Rejected"];
 const PLACEHOLDER_APPLICANT_VALUE = "__PI_LIST_APPLICANT_PLACEHOLDER__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__PI_LIST_BENEFICIARY_PLACEHOLDER__";
 const PI_ITEMS_PER_PAGE = 10;
 
 export default function IssuedPIListPage() {
   const router = useRouter();
-  const { userRole } = useAuth();
+  const { userRole, companyName, companyLogoUrl, address, invoiceLogoUrl } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
   const [allProformaInvoices, setAllProformaInvoices] = useState<ProformaInvoiceDocument[]>([]);
   const [displayedProformaInvoices, setDisplayedProformaInvoices] = useState<ProformaInvoiceDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [filterPiNo, setFilterPiNo] = useState('');
   const [filterApplicantId, setFilterApplicantId] = useState('');
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
   const [filterMonth, setFilterMonth] = useState<string>(ALL_MONTHS_VALUE);
   const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
+  const [filterStatus, setFilterStatus] = useState<string>("Pending");
 
   const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
@@ -156,6 +178,9 @@ export default function IssuedPIListPage() {
     if (filterBeneficiaryId) {
       filtered = filtered.filter(pi => pi.beneficiaryId === filterBeneficiaryId);
     }
+    if (filterStatus !== ALL_STATUS_VALUE) {
+      filtered = filtered.filter(pi => pi.status === filterStatus || (!pi.status && filterStatus === "Pending"));
+    }
 
     const selectedYearNum = filterYear !== ALL_YEARS_VALUE ? parseInt(filterYear) : null;
     const selectedMonthNum = filterMonth !== ALL_MONTHS_VALUE ? monthOptions.indexOf(filterMonth) - 1 : null; // 0-indexed month
@@ -207,7 +232,7 @@ export default function IssuedPIListPage() {
     }
     setDisplayedProformaInvoices(filtered);
     setCurrentPage(1);
-  }, [allProformaInvoices, filterPiNo, filterApplicantId, filterBeneficiaryId, filterMonth, filterYear, sortBy, sortOrder]);
+  }, [allProformaInvoices, filterPiNo, filterApplicantId, filterBeneficiaryId, filterMonth, filterYear, filterStatus, sortBy, sortOrder]);
 
   const handleEditPI = (piId: string) => {
     if (!piId) {
@@ -249,12 +274,161 @@ export default function IssuedPIListPage() {
     });
   };
 
+  const handleDownloadPDF = async (pi: ProformaInvoiceDocument) => {
+    setIsGenerating(true);
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 10;
+
+      // Header Section
+      let textX = margin;
+      const logoToUse = invoiceLogoUrl || companyLogoUrl;
+
+      if (logoToUse) {
+        try {
+          const logoData = await getDataUrl(logoToUse);
+          if (logoData) {
+            doc.addImage(logoData, 'PNG', margin, 8, 22, 22);
+            textX = margin + 26;
+          }
+        } catch (error) {
+          console.warn("Could not add logo to PDF:", error);
+        }
+      }
+
+      // Company Info (Left)
+      doc.setFontSize(22);
+      doc.setTextColor(40, 40, 40);
+      doc.text(companyName || 'NextSew', textX, 16);
+
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      if (address) {
+        const splitAddress = doc.splitTextToSize(address, 100);
+        doc.text(splitAddress, textX, 22);
+      }
+
+      // Invoice Label (Right)
+      doc.setFontSize(20);
+      doc.setTextColor(59, 130, 246); // Blue
+      doc.text('COMMISSION INVOICE', pageWidth - margin, 16, { align: 'right' });
+
+      // Divider Line
+      doc.setDrawColor(220, 220, 220);
+      doc.line(margin, 35, pageWidth - margin, 35);
+
+      // Info Section
+      doc.setFontSize(10);
+      doc.setTextColor(40, 40, 40);
+
+      // 1. Customer Name (Left)
+      doc.setFont('helvetica', 'bold');
+      doc.text('Customer Name:', margin, 45);
+      doc.setFont('helvetica', 'normal');
+      doc.text(pi.applicantName || 'N/A', margin, 50);
+
+      // 2. Beneficiary Name (Middle)
+      const middleX = pageWidth / 2 - 20;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Beneficiary Name:', middleX, 45);
+      doc.setFont('helvetica', 'normal');
+      doc.text(pi.beneficiaryName || 'N/A', middleX, 50);
+
+      // 3. Invoice Details (Right)
+      const rightLabelX = pageWidth - 65;
+      const rightValueX = pageWidth - margin;
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('INVOICE NO:', rightLabelX, 45);
+      doc.setFont('helvetica', 'normal');
+      doc.text(pi.piNo || 'N/A', rightValueX, 45, { align: 'right' });
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('DATE:', rightLabelX, 51);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatDisplayDate(pi.piDate), rightValueX, 51, { align: 'right' });
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('SALES PERSON:', rightLabelX, 57);
+      doc.setFont('helvetica', 'normal');
+      doc.text(pi.salesPersonName || 'N/A', rightValueX, 57, { align: 'right' });
+
+      // Table Section
+      autoTable(doc, {
+        startY: 65,
+        margin: { left: margin, right: margin },
+        head: [['Model No.', 'Qty', 'Unit Price', 'Total Price']],
+        body: pi.lineItems.map(item => [
+          item.modelNo || 'N/A',
+          item.qty,
+          formatCurrencyValue(item.salesPrice),
+          formatCurrencyValue(item.qty * item.salesPrice)
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], halign: 'center' },
+        columnStyles: {
+          1: { halign: 'center' },
+          2: { halign: 'right' },
+          3: { halign: 'right' }
+        },
+        styles: { fontSize: 9 }
+      });
+
+      // Summary Section
+      const finalY = (doc as any).lastAutoTable.finalY + 10;
+      const summaryX = pageWidth - 85;
+      const summaryValueX = pageWidth - margin;
+
+      doc.setFontSize(10);
+      doc.setTextColor(40, 40, 40);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Total Items Qty:', summaryX, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(pi.totalQty.toString(), summaryValueX, finalY, { align: 'right' });
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Basic Total Value:', summaryX, finalY + 6);
+      doc.setFont('helvetica', 'normal');
+      doc.text(formatCurrencyValue(pi.totalSalesPrice), summaryValueX, finalY + 6, { align: 'right' });
+
+      if (pi.totalOVI && pi.totalOVI > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Over Value Items (OVI):', summaryX, finalY + 12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(formatCurrencyValue(pi.totalOVI), summaryValueX, finalY + 12, { align: 'right' });
+      }
+
+      const grandTotalY = finalY + (pi.totalOVI ? 20 : 14);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(59, 130, 246);
+      doc.text('GRAND TOTAL:', summaryX, grandTotalY);
+      doc.text(formatCurrencyValue(pi.grandTotalSalesPrice), summaryValueX, grandTotalY, { align: 'right' });
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.setFont('helvetica', 'italic');
+      doc.text('This is a computer generated document and does not require a signature.', pageWidth / 2, 285, { align: 'center' });
+
+      doc.save(`PI_${pi.piNo || 'Invoice'}.pdf`);
+    } catch (error) {
+      console.error("Error generating PI PDF:", error);
+      Swal.fire("Error", "Could not generate PDF. Please try again.", "error");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const clearFilters = () => {
     setFilterPiNo('');
     setFilterApplicantId('');
     setFilterBeneficiaryId('');
     setFilterMonth(ALL_MONTHS_VALUE);
     setFilterYear(ALL_YEARS_VALUE);
+    setFilterStatus("Pending");
     setSortBy('piDate');
     setSortOrder('desc');
     setCurrentPage(1);
@@ -387,6 +561,18 @@ export default function IssuedPIListPage() {
                   </Select>
                 </div>
                 <div className="space-y-1">
+                  <label htmlFor="statusFilterPi" className="text-sm font-medium flex items-center"><Clock className="mr-1 h-4 w-4 text-muted-foreground" />Comm. Status</label>
+                  <Select
+                    value={filterStatus}
+                    onValueChange={(value) => setFilterStatus(value)}
+                  >
+                    <SelectTrigger><SelectValue placeholder="All Status" /></SelectTrigger>
+                    <SelectContent>
+                      {statusFilterOptions.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
                   <label htmlFor="sortByPi" className="text-sm font-medium flex items-center"><ArrowDownUp className="mr-1 h-4 w-4 text-muted-foreground" />Sort By</label>
                   <Select value={sortBy} onValueChange={setSortBy}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -413,7 +599,9 @@ export default function IssuedPIListPage() {
                   <TableHead className="px-2 sm:px-4">Applicant</TableHead>
                   <TableHead className="px-2 sm:px-4">Beneficiary</TableHead>
                   <TableHead className="px-2 sm:px-4">Grand Total</TableHead>
-                  <TableHead className="px-2 sm:px-4">Commission %</TableHead>
+                  <TableHead className="px-2 sm:px-4">Comm. %</TableHead>
+                  <TableHead className="px-2 sm:px-4">Total Net Comm.</TableHead>
+                  <TableHead className="px-2 sm:px-4">Total OVI</TableHead>
                   <TableHead className="px-2 sm:px-4">Sales Person</TableHead>
                   <TableHead className="text-right px-2 sm:px-4">Actions</TableHead>
                 </TableRow>
@@ -421,7 +609,7 @@ export default function IssuedPIListPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center p-2 sm:p-4">
+                    <TableCell colSpan={10} className="h-24 text-center p-2 sm:p-4">
                       <div className="flex justify-center items-center">
                         <Loader2 className="mr-2 h-6 w-6 animate-spin text-primary" /> Loading PIs...
                       </div>
@@ -436,6 +624,8 @@ export default function IssuedPIListPage() {
                       <TableCell className="p-2 sm:p-4">{pi.beneficiaryName || 'N/A'}</TableCell>
                       <TableCell className="p-2 sm:p-4">{formatCurrencyValue(pi.grandTotalSalesPrice)}</TableCell>
                       <TableCell className="p-2 sm:p-4">{formatPercentage(pi.totalCommissionPercentage)}</TableCell>
+                      <TableCell className="p-2 sm:p-4 font-semibold text-emerald-600">{formatCurrencyValue(pi.grandTotalCommissionUSD)}</TableCell>
+                      <TableCell className="p-2 sm:p-4 font-semibold text-teal-600">{formatCurrencyValue(pi.totalOVI)}</TableCell>
                       <TableCell className="p-2 sm:p-4">{pi.salesPersonName || 'N/A'}</TableCell>
                       <TableCell className="text-right p-2 sm:p-4">
                         <DropdownMenu>
@@ -448,6 +638,10 @@ export default function IssuedPIListPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleDownloadPDF(pi)}>
+                              <Download className="mr-2 h-4 w-4" />
+                              <span>Download PDF</span>
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => pi.id && handleEditPI(pi.id)} disabled={isReadOnly}>
                               <FileEdit className="mr-2 h-4 w-4" />
                               <span>Edit</span>
@@ -467,7 +661,7 @@ export default function IssuedPIListPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center p-2 sm:p-4">
+                    <TableCell colSpan={10} className="h-24 text-center p-2 sm:p-4">
                       No Proforma Invoices found matching your criteria. Ensure Firestore rules allow reads and data exists.
                     </TableCell>
                   </TableRow>

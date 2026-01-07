@@ -543,7 +543,10 @@ export interface ProformaInvoiceLineItem {
   purchasePrice: number;
   salesPrice: number;
   netCommissionPercentage?: number;
+  oviAmount?: number;
 }
+
+export type CommissionStatus = 'Pending' | 'Paid' | 'Rejected';
 
 export interface ProformaInvoice {
   id?: string;
@@ -569,11 +572,15 @@ export interface ProformaInvoice {
   totalPurchasePrice: number;
   totalSalesPrice: number; // Sum of (qty * salesPrice) from line items
   totalExtraNetCommission?: number;
+  totalOVI?: number;
   grandTotalSalesPrice: number; // (totalSalesPrice + (freight if excluded)) - miscExpenses
   grandTotalCommissionUSD: number;
+  grandTotalCommissionWithOvi?: number;
+  grandTotalSalesWithOvi?: number;
   totalCommissionPercentage: number;
   createdAt?: any;
   updatedAt?: any;
+  status?: CommissionStatus;
 }
 
 export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'connectedLcIssueDate'> & {
@@ -582,6 +589,7 @@ export type ProformaInvoiceDocument = Omit<ProformaInvoice, 'piDate' | 'connecte
   connectedLcIssueDate?: string; // ISO string
   createdAt: any;
   updatedAt: any;
+  status?: CommissionStatus;
 };
 
 // --- END Proforma Invoice Types ---
