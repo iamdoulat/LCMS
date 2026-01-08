@@ -62,9 +62,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="font-sans antialiased">
-        <ServiceWorkerRegistration />
-        <OfflineStatus />
         <AppProviders>
+          <ServiceWorkerRegistration />
+          <OfflineStatus />
           <Suspense fallback={<div className="flex min-h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
             {children}
           </Suspense>

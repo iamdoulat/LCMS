@@ -50,6 +50,25 @@ export function AddNoticeForm() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
+      // Send Push Notification
+      try {
+        if (data.isEnabled) {
+          await fetch('/api/notifications/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: `New Notice: ${data.title}`,
+              body: 'A new important notice has been posted. Click to view.',
+              targetRoles: data.targetRoles,
+              badgeCount: 1 // Increment or set badge
+            })
+          });
+        }
+      } catch (notifyError) {
+        console.error("Failed to send notification:", notifyError);
+      }
+
       Swal.fire("Success", "New notice has been created successfully.", "success");
       form.reset();
       router.push('/dashboard/hr/notice');

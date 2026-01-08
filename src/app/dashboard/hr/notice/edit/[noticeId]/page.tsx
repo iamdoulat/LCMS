@@ -10,6 +10,7 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { NoticeBoardSettings } from '@/types';
 import { NoticeBoardSettingsSchema, userRoles } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -47,6 +48,9 @@ export default function EditNoticePage() {
       displayEndDate: undefined,
     },
   });
+
+  const { isDirty } = form.formState;
+  useUnsavedChangesWarning(isDirty, isSubmitting);
 
   React.useEffect(() => {
     if (!authLoading && !userRole?.some(r => ["Super Admin", "Admin", "HR"].includes(r))) {

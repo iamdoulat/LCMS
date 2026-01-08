@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { Loader2, Save, Image as ImageIcon, Crop as CropIcon, Settings } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
 import { firestore, storage } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -71,6 +72,9 @@ export default function PISettingsPage() {
       logoHeight: 64,
     },
   });
+
+  const { isDirty } = form.formState;
+  useUnsavedChangesWarning(isDirty, isSubmitting);
 
   React.useEffect(() => {
     const fetchSettings = async () => {

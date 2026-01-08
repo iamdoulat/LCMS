@@ -40,6 +40,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, query, orderBy, doc, runTransaction, serverTimestamp, getDoc } from 'firebase/firestore';
 import type { DemoMachineApplicationFormValues, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineApplicationDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types';
 import { demoMachineApplicationSchema } from '@/types';
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
 
 interface FactoryOption {
     id: string;
@@ -102,7 +103,9 @@ export default function MobileEditDemoApplicationPage() {
         },
     });
 
-    const { control, setValue, watch, handleSubmit, getValues, reset, formState: { errors } } = form;
+    const { control, setValue, watch, handleSubmit, getValues, reset, formState: { errors, isDirty } } = form;
+    useUnsavedChangesWarning(isDirty, isSubmitting);
+
     const { fields, append, remove, update, replace } = useFieldArray({
         control,
         name: "appliedMachines",

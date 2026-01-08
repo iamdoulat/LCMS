@@ -625,7 +625,7 @@ export default function IssuedPIListPage() {
                       <TableCell className="p-2 sm:p-4">{formatCurrencyValue(pi.grandTotalSalesPrice)}</TableCell>
                       <TableCell className="p-2 sm:p-4">{formatPercentage(pi.totalCommissionPercentage)}</TableCell>
                       <TableCell className="p-2 sm:p-4 font-semibold text-emerald-600">{formatCurrencyValue(pi.grandTotalCommissionUSD)}</TableCell>
-                      <TableCell className="p-2 sm:p-4 font-semibold text-teal-600">{formatCurrencyValue(pi.totalOVI)}</TableCell>
+                      <TableCell className="p-2 sm:p-4 font-semibold text-teal-600">{formatCurrencyValue(pi.totalOVI || 0)}</TableCell>
                       <TableCell className="p-2 sm:p-4">{pi.salesPersonName || 'N/A'}</TableCell>
                       <TableCell className="text-right p-2 sm:p-4">
                         <DropdownMenu>

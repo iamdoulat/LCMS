@@ -16,6 +16,7 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { UserDocumentForAdmin, UserRole } from '@/types';
 import { userRoles } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -44,7 +45,10 @@ export default function EditUserPage() {
     resolver: zodResolver(editUserSchema),
     defaultValues: { displayName: '', role: [] },
   });
-  
+
+  const { isDirty } = form.formState;
+  useUnsavedChangesWarning(isDirty, isSubmitting);
+
   const isReadOnly = currentUserRoles?.includes('Viewer');
 
   useEffect(() => {
@@ -82,33 +86,33 @@ export default function EditUserPage() {
 
     fetchUserData();
   }, [userId, form]);
-  
+
   const onSubmit = async (data: EditUserFormValues) => {
     if (isReadOnly) {
-        Swal.fire("Permission Denied", "You have read-only access and cannot save changes.", "error");
-        return;
+      Swal.fire("Permission Denied", "You have read-only access and cannot save changes.", "error");
+      return;
     }
 
     if (userData?.role?.includes("Super Admin") && currentUser?.uid !== userId) {
-        Swal.fire("Permission Denied", "You cannot change the role of another Super Admin.", "error");
-        return;
+      Swal.fire("Permission Denied", "You cannot change the role of another Super Admin.", "error");
+      return;
     }
 
     setIsSubmitting(true);
     try {
-        const userDocRef = doc(firestore, "users", userId);
-        await updateDoc(userDocRef, {
-            displayName: data.displayName,
-            role: data.role,
-            updatedAt: serverTimestamp(),
-        });
-        Swal.fire("Success", "User details updated successfully.", "success").then(() => {
-            router.push('/dashboard/settings/users');
-        });
+      const userDocRef = doc(firestore, "users", userId);
+      await updateDoc(userDocRef, {
+        displayName: data.displayName,
+        role: data.role,
+        updatedAt: serverTimestamp(),
+      });
+      Swal.fire("Success", "User details updated successfully.", "success").then(() => {
+        router.push('/dashboard/settings/users');
+      });
     } catch (err: any) {
-        Swal.fire("Error", `Failed to update user: ${err.message}`, "error");
+      Swal.fire("Error", `Failed to update user: ${err.message}`, "error");
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -122,19 +126,19 @@ export default function EditUserPage() {
 
   if (error) {
     return (
-        <div className="container mx-auto py-8 px-5 text-center text-destructive">{error}</div>
+      <div className="container mx-auto py-8 px-5 text-center text-destructive">{error}</div>
     );
   }
-  
+
   const canEditRole = (currentUserRoles?.includes('Super Admin') || currentUserRoles?.includes('Admin')) && (!userData?.role?.includes('Super Admin') || userData.id === currentUser?.uid);
 
   return (
     <div className="container mx-auto py-8 px-5">
-       <div className="mb-6">
-            <Link href="/dashboard/settings/users" passHref>
-                <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to User List</Button>
-            </Link>
-        </div>
+      <div className="mb-6">
+        <Link href="/dashboard/settings/users" passHref>
+          <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" />Back to User List</Button>
+        </Link>
+      </div>
       <Card className="max-w-7xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl font-bold">
@@ -147,71 +151,71 @@ export default function EditUserPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                 <FormField
-                    control={form.control}
-                    name="displayName"
-                    render={({ field }) => (
-                        <FormItem><FormLabel>Display Name*</FormLabel><FormControl><Input {...field} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="role"
-                    render={() => (
-                        <FormItem>
-                            <div className="mb-4">
-                                <FormLabel className="text-base">User Roles</FormLabel>
-                                <FormDescription>
-                                    Select the roles to assign to this user.
-                                </FormDescription>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                                {userRoles.map((role) => (
-                                    <FormField
-                                        key={role}
-                                        control={form.control}
-                                        name="role"
-                                        render={({ field }) => {
-                                        const isRoleDisabled = !canEditRole || (userData?.role?.includes('Super Admin') && role !== 'Super Admin');
-                                        return (
-                                            <FormItem
-                                            key={role}
-                                            className="flex flex-row items-center space-x-3 space-y-0"
-                                            >
-                                            <FormControl>
-                                                <Checkbox
-                                                checked={field.value?.includes(role)}
-                                                onCheckedChange={(checked) => {
-                                                    return checked
-                                                    ? field.onChange([...field.value, role])
-                                                    : field.onChange(
-                                                        field.value?.filter(
-                                                        (value) => value !== role
-                                                        )
-                                                    )
-                                                }}
-                                                disabled={isRoleDisabled || isReadOnly}
-                                                />
-                                            </FormControl>
-                                            <FormLabel className="font-normal">
-                                                {role}
-                                            </FormLabel>
-                                            </FormItem>
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem><FormLabel>Display Name*</FormLabel><FormControl><Input {...field} disabled={isReadOnly} /></FormControl><FormMessage /></FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={() => (
+                  <FormItem>
+                    <div className="mb-4">
+                      <FormLabel className="text-base">User Roles</FormLabel>
+                      <FormDescription>
+                        Select the roles to assign to this user.
+                      </FormDescription>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                      {userRoles.map((role) => (
+                        <FormField
+                          key={role}
+                          control={form.control}
+                          name="role"
+                          render={({ field }) => {
+                            const isRoleDisabled = !canEditRole || (userData?.role?.includes('Super Admin') && role !== 'Super Admin');
+                            return (
+                              <FormItem
+                                key={role}
+                                className="flex flex-row items-center space-x-3 space-y-0"
+                              >
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(role)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, role])
+                                        : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== role
+                                          )
                                         )
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                            {!canEditRole && <FormDescription className="text-destructive mt-2">Only Super Admins and Admins can change roles. Another Super Admin's role cannot be changed.</FormDescription>}
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 {!isReadOnly && (
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Changes</>}
-                    </Button>
-                 )}
+                                    }}
+                                    disabled={isRoleDisabled || isReadOnly}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">
+                                  {role}
+                                </FormLabel>
+                              </FormItem>
+                            )
+                          }}
+                        />
+                      ))}
+                    </div>
+                    {!canEditRole && <FormDescription className="text-destructive mt-2">Only Super Admins and Admins can change roles. Another Super Admin's role cannot be changed.</FormDescription>}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {!isReadOnly && (
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Changes</>}
+                </Button>
+              )}
             </form>
           </Form>
         </CardContent>

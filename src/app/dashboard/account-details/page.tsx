@@ -76,6 +76,7 @@ import { Monitor, CreditCard, Printer, FileText } from 'lucide-react';
 import { AddClaimModal } from '@/components/forms/hr/AddClaimModal';
 import { generateClaimPDF } from '@/components/reports/hr/ClaimReportPDF';
 import type { HRClaim, CompanyProfile, Employee } from '@/types';
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
 
 const accountDetailsSchema = z.object({
   displayName: z.string().min(1, "Display name cannot be empty.").max(50, "Display name is too long."),
@@ -1523,6 +1524,8 @@ export default function AccountDetailsPage() {
     resolver: zodResolver(accountDetailsSchema),
     defaultValues: { displayName: '', photoURL: '' },
   });
+  const { formState: { isDirty } } = form;
+  useUnsavedChangesWarning(isDirty, isSubmitting);
 
   useEffect(() => {
     if (user && employeeData) {

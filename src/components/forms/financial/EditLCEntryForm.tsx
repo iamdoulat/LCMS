@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument, ShipmentTerms } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined, shipmentTermsOptions } from '@/types';
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
 import Swal from 'sweetalert2';
 import { isValid, parseISO, format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
@@ -145,7 +146,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     defaultValues: defaultFormValues,
   });
 
-  const { control, setValue, watch, getValues, reset } = form;
+  const { control, setValue, watch, getValues, reset, formState: { isDirty } } = form;
+  useUnsavedChangesWarning(isDirty, isSubmitting);
 
   React.useEffect(() => {
     const fetchDropdownData = async () => {

@@ -15,12 +15,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/common';
-import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, User, DollarSign, Hash, Percent, Ship, Link2, MinusCircle, ExternalLink, Link as LinkIcon, TrendingUp } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Users, Building, FileText, CalendarDays, User, DollarSign, Hash, Percent, Ship, Link2, MinusCircle, ExternalLink, Link as LinkIcon, TrendingUp, ListChecks } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
 
 
 const lineItemFormSchema = z.object({
@@ -117,6 +118,7 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
 
             freightChargeAmount: '',
             miscellaneousExpenses: '',
+            status: 'Pending',
         },
     });
 
@@ -124,6 +126,10 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
         control: form.control,
         name: "lineItems",
     });
+
+    const { isDirty } = form.formState;
+
+    useUnsavedChangesWarning(isDirty, isSubmitting);
 
     React.useEffect(() => {
         const fetchOptions = async () => {
@@ -202,7 +208,8 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
                 const ovi = parseFloat(String(item.oviAmount || '0')) || 0;
                 const netCommP = parseFloat(String(item.netCommissionPercentage || '0')) || 0;
 
-                if (ovi >= 0 && qty > 0) newTotalSalesWithOVI += qty * ovi;
+                const effectiveOvi = ovi > 0 ? ovi : salesP;
+                if (qty > 0) newTotalSalesWithOVI += qty * effectiveOvi;
 
 
                 if (qty > 0) {
@@ -243,8 +250,8 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
         const newGrandTotalCommissionWithOvi = newGrandTotalCommissionUSD + finalTotalOVI;
         setGrandTotalCommissionWithOvi(newGrandTotalCommissionWithOvi);
 
-        if (newTotalPurchase > 0) {
-            const commissionPercentage = (newGrandTotalCommissionUSD / newTotalPurchase) * 100;
+        if (currentGrandTotalSalesPrice > 0) {
+            const commissionPercentage = (newGrandTotalCommissionUSD / currentGrandTotalSalesPrice) * 100;
             setTotalCommissionPercentage(parseFloat(commissionPercentage.toFixed(2)));
         } else {
             setTotalCommissionPercentage(0);
@@ -278,7 +285,8 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
             const netCommP = parseFloat(String(item.netCommissionPercentage || '0'));
 
             calculatedTotalQty += qty;
-            if (ovi >= 0 && qty > 0) calculatedTotalSalesWithOVI += qty * ovi;
+            const effectiveOvi = ovi > 0 ? ovi : salesPrice;
+            if (qty > 0) calculatedTotalSalesWithOVI += qty * effectiveOvi;
             calculatedTotalPurchasePrice += qty * purchasePrice;
             calculatedTotalSalesPriceLineItems += qty * salesPrice;
             if (netCommP > 0 && netCommP <= 100 && purchasePrice > 0) {
@@ -310,8 +318,8 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
         const finalGrandTotalCommissionUSD = baseCommission + calculatedTotalExtraNetCommission;
 
         let finalTotalCommissionPercentage = 0;
-        if (calculatedTotalPurchasePrice > 0) {
-            finalTotalCommissionPercentage = parseFloat(((finalGrandTotalCommissionUSD / calculatedTotalPurchasePrice) * 100).toFixed(2));
+        if (finalGrandTotalSalesPrice > 0) {
+            finalTotalCommissionPercentage = parseFloat(((finalGrandTotalCommissionUSD / finalGrandTotalSalesPrice) * 100).toFixed(2));
         }
 
         const dataToSave: Omit<ProformaInvoiceDocument, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -340,7 +348,7 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
             grandTotalCommissionUSD: finalGrandTotalCommissionUSD,
             grandTotalCommissionWithOvi: finalGrandTotalCommissionUSD + calculatedTotalOVI,
             totalCommissionPercentage: finalTotalCommissionPercentage,
-            status: 'Pending',
+            status: data.status || 'Pending',
         };
 
         try {
@@ -455,7 +463,7 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
                     />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <FormField
                         control={form.control}
                         name="piNo"
@@ -489,6 +497,28 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
                                 <FormControl>
                                     <Input placeholder="Enter sales person's name" {...field} />
                                 </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center"><ListChecks className="mr-2 h-4 w-4 text-muted-foreground" />Comm. Status</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || 'Pending'}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select status" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="Pending">Pending</SelectItem>
+                                        <SelectItem value="Paid">Paid</SelectItem>
+                                        <SelectItem value="Rejected">Rejected</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}

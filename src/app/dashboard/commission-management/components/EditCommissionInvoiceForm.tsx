@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
 
 
 const lineItemFormSchema = z.object({
@@ -131,6 +132,10 @@ export function EditCommissionInvoiceForm({ initialData, piId }: EditCommissionI
         control: form.control,
         name: "lineItems",
     });
+
+    const { isDirty } = form.formState;
+
+    useUnsavedChangesWarning(isDirty, isSubmitting);
 
     React.useEffect(() => {
         const fetchOptions = async () => {
@@ -247,7 +252,8 @@ export function EditCommissionInvoiceForm({ initialData, piId }: EditCommissionI
                 const ovi = parseFloat(String(item.oviAmount || '0')) || 0;
                 const netCommP = parseFloat(String(item.netCommissionPercentage || '0')) || 0;
 
-                if (ovi >= 0 && qty > 0) newTotalSalesWithOVI += qty * ovi;
+                const effectiveOvi = ovi > 0 ? ovi : salesP;
+                if (qty > 0) newTotalSalesWithOVI += qty * effectiveOvi;
 
 
                 if (qty > 0) {
@@ -287,8 +293,8 @@ export function EditCommissionInvoiceForm({ initialData, piId }: EditCommissionI
         const newGrandTotalCommissionWithOvi = newGrandTotalCommissionUSD + finalTotalOVI;
         setGrandTotalCommissionWithOvi(newGrandTotalCommissionWithOvi);
 
-        if (newTotalPurchase > 0) {
-            const commissionPercentage = (newGrandTotalCommissionUSD / newTotalPurchase) * 100;
+        if (currentGrandTotalSalesPrice > 0) {
+            const commissionPercentage = (newGrandTotalCommissionUSD / currentGrandTotalSalesPrice) * 100;
             setTotalCommissionPercentage(parseFloat(commissionPercentage.toFixed(2)));
         } else {
             setTotalCommissionPercentage(0);
@@ -321,7 +327,8 @@ export function EditCommissionInvoiceForm({ initialData, piId }: EditCommissionI
             const netCommP = parseFloat(String(item.netCommissionPercentage || '0'));
 
             calculatedTotalQty += qty;
-            if (ovi >= 0 && qty > 0) calculatedTotalSalesWithOVI += qty * ovi;
+            const effectiveOvi = ovi > 0 ? ovi : salesPrice;
+            if (qty > 0) calculatedTotalSalesWithOVI += qty * effectiveOvi;
             calculatedTotalPurchasePrice += qty * purchasePrice;
             calculatedTotalSalesPriceLineItems += qty * salesPrice;
             if (netCommP > 0 && netCommP <= 100 && purchasePrice > 0) {
@@ -353,8 +360,8 @@ export function EditCommissionInvoiceForm({ initialData, piId }: EditCommissionI
         const finalGrandTotalCommissionUSD = baseCommission + calculatedTotalExtraNetCommission;
 
         let finalTotalCommissionPercentage = 0;
-        if (calculatedTotalPurchasePrice > 0) {
-            finalTotalCommissionPercentage = parseFloat(((finalGrandTotalCommissionUSD / calculatedTotalPurchasePrice) * 100).toFixed(2));
+        if (finalGrandTotalSalesPrice > 0) {
+            finalTotalCommissionPercentage = parseFloat(((finalGrandTotalCommissionUSD / finalGrandTotalSalesPrice) * 100).toFixed(2));
         }
 
         const dataToUpdate: Partial<Omit<ProformaInvoiceDocument, 'id' | 'createdAt'>> = {

@@ -10,6 +10,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, serverTimestamp, getDocs, query, orderBy, doc, runTransaction } from 'firebase/firestore';
 import type { DemoMachineApplicationFormValues, DemoMachineApplicationDocument, DemoMachineFactoryDocument, DemoMachineDocument, DemoMachineStatusOption as AppDemoMachineStatus } from '@/types';
 import { demoMachineApplicationSchema } from '@/types';
+import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,7 +74,8 @@ export default function NewDemoMachineApplicationPage() {
     },
   });
 
-  const { control, setValue, watch, reset, getValues, formState: { errors } } = form;
+  const { control, setValue, watch, reset, getValues, formState: { errors, isDirty } } = form;
+  useUnsavedChangesWarning(isDirty, isSubmitting);
 
   const { fields, append, remove } = useFieldArray({
     control,
