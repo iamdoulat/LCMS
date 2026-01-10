@@ -28,6 +28,7 @@ import { SmtpConfiguration } from '@/types/email-settings';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { Loader2 } from 'lucide-react';
+import { getCompanyName } from '@/lib/settings/company';
 
 export default function SmtpSettingsPage() {
     const [configs, setConfigs] = useState<SmtpConfiguration[]>([]);
@@ -71,24 +72,7 @@ export default function SmtpSettingsPage() {
     }, []);
 
     useEffect(() => {
-        const fetchCompanyName = async () => {
-            try {
-                const docRef = doc(firestore, 'financial_settings', 'main_settings');
-                const docSnap = await getDocs(query(collection(firestore, 'financial_settings'))); // Simpler for now or direct getDoc
-                // Using getDoc is better for single doc
-            } catch (e) {
-                console.error("Error fetching company name:", e);
-            }
-        };
-
-        // Reuse the logic from getDoc if possible, but for simplicity in this component:
-        const financialRef = doc(firestore, 'financial_settings', 'main_settings');
-        getDocs(query(collection(firestore, 'financial_settings'))).then(snapshot => {
-            const mainDoc = snapshot.docs.find(d => d.id === 'main_settings');
-            if (mainDoc && mainDoc.data().companyName) {
-                setCompanyName(mainDoc.data().companyName);
-            }
-        });
+        getCompanyName().then(setCompanyName);
     }, []);
 
     const handleInputChange = (field: keyof SmtpConfiguration, value: any) => {

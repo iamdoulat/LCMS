@@ -4,6 +4,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { WhatsAppTemplate } from '@/types/whatsapp-settings';
 import { logActivity } from '@/lib/logger';
+import { getCompanyName } from '@/lib/settings/company';
 
 interface SendWhatsAppOptions {
     to: string | string[]; // Phone numbers
@@ -55,14 +56,16 @@ const getWhatsAppTemplate = async (slug: string) => {
 };
 
 // Helper to fully format message from template
-export const formatWhatsAppMessage = (template: WhatsAppTemplate, data: Record<string, any>) => {
+export const formatWhatsAppMessage = async (template: WhatsAppTemplate, data: Record<string, any>) => {
     let subject = template.subject;
     let body = template.body;
+
+    const dynamicCompanyName = await getCompanyName();
 
     // Standard replacements
     const allData: Record<string, any> = {
         ...data,
-        company_name: process.env.NEXT_PUBLIC_APP_NAME || 'NextSew',
+        company_name: dynamicCompanyName,
         year: new Date().getFullYear(),
         date: new Date().toLocaleDateString()
     };
@@ -110,7 +113,7 @@ export async function sendWhatsApp({ to, templateSlug, data, message }: SendWhat
                     });
                     return { success: true, status: 'skipped' };
                 }
-                finalMessage = formatWhatsAppMessage(template, data || {});
+                finalMessage = await formatWhatsAppMessage(template, data || {});
             } catch (err: any) {
                 console.error(`Error loading template ${templateSlug}:`, err);
                 throw err;

@@ -3,6 +3,7 @@ import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
 import { sendWhatsApp } from '@/lib/whatsapp/sender';
 import { sendTelegram } from '@/lib/telegram/sender';
+import { getCompanyName } from '@/lib/settings/company';
 
 export async function POST(request: Request) {
     try {
@@ -117,7 +118,8 @@ async function processTask(taskDoc: any, targetUserIds: string[], type: string) 
 
     // 5. Trigger Telegram Notification (Single group notification)
     try {
-        const telegramMsg = `🔔 <b>New Task Assigned</b>\n\n` +
+        const dynamicCompanyName = await getCompanyName();
+        const telegramMsg = `🔔 <b>${dynamicCompanyName} - New Task Assigned</b>\n\n` +
             `📌 <b>Task:</b> ${taskTitle} (${taskIdDisplay})\n` +
             `📁 <b>Project:</b> ${projectTitle}\n` +
             `⚠️ <b>Priority:</b> ${priority}\n` +
@@ -127,7 +129,7 @@ async function processTask(taskDoc: any, targetUserIds: string[], type: string) 
 
         await sendTelegram({
             templateSlug,
-            data: notificationData,
+            data: { ...notificationData, company_name: dynamicCompanyName },
             message: telegramMsg
         }).catch(err => console.error('[TASK NOTIFY] Telegram background error:', err));
     } catch (teleError) {

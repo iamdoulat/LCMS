@@ -19,10 +19,12 @@ import { WhatsAppGatewayConfig } from '@/types/whatsapp-settings';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { Loader2 } from 'lucide-react';
+import { getCompanyName } from '@/lib/settings/company';
 
 export default function WhatsAppSettingsPage() {
     const [configs, setConfigs] = useState<WhatsAppGatewayConfig[]>([]);
     const [loading, setLoading] = useState(true);
+    const [companyName, setCompanyName] = useState('Nextsew');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentId, setCurrentId] = useState<string | null>(null);
@@ -42,6 +44,9 @@ export default function WhatsAppSettingsPage() {
     });
 
     useEffect(() => {
+        // Fetch company name
+        getCompanyName().then(setCompanyName);
+
         // Removed orderBy temporarily to rule out index issues
         const q = query(collection(firestore, 'whatsapp_gateways'));
 
@@ -173,7 +178,7 @@ export default function WhatsAppSettingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     recipient: testNumber,
-                    message: 'This is a test message from your Nextsew WhatsApp settings.'
+                    message: `This is a test message from your ${companyName} WhatsApp settings.`
                 })
             });
 
@@ -198,7 +203,7 @@ export default function WhatsAppSettingsPage() {
         <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">WhatsApp Settings</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{companyName} WhatsApp Settings</h1>
                     <p className="text-muted-foreground">Manage your WhatsApp API gateways (bipsms.com). Select one as active.</p>
                 </div>
 
@@ -297,61 +302,62 @@ export default function WhatsAppSettingsPage() {
                 </div>
             </div>
 
-            {loading ? (
-                <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-            ) : configs.length === 0 ? (
-                <Card>
-                    <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-                        <Smartphone className="h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="text-lg font-medium">No WhatsApp Gateways Configured</p>
-                        <p className="text-muted-foreground mb-6">Add a gateway to start sending WhatsApp notifications.</p>
-                        <Button onClick={() => { setIsEditing(false); setIsDialogOpen(true); }}>
-                            <Plus className="mr-2 h-4 w-4" /> Configure Gateway
-                        </Button>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {configs.map((config) => (
-                        <Card key={config.id} className={`relative overflow-hidden transition-all ${config.isActive ? 'border-primary ring-1 ring-primary shadow-md' : 'border-border/60 hover:border-border'}`}>
-                            {config.isActive && (
-                                <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-medium rounded-bl-lg">
-                                    Active
-                                </div>
-                            )}
-                            <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2">
-                                    <MessageSquare className="h-5 w-5 text-green-500" />
-                                    {config.name}
-                                </CardTitle>
-                                <CardDescription>ID: {config.accountUniqueId}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-2 text-sm text-muted-foreground mb-6">
-                                    <div className="flex justify-between">
-                                        <span>API Secret:</span>
-                                        <span className="font-medium text-foreground">••••••••</span>
+            {
+                loading ? (
+                    <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                ) : configs.length === 0 ? (
+                    <Card>
+                        <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+                            <Smartphone className="h-12 w-12 text-muted-foreground mb-4" />
+                            <p className="text-lg font-medium">No WhatsApp Gateways Configured</p>
+                            <p className="text-muted-foreground mb-6">Add a gateway to start sending WhatsApp notifications.</p>
+                            <Button onClick={() => { setIsEditing(false); setIsDialogOpen(true); }}>
+                                <Plus className="mr-2 h-4 w-4" /> Configure Gateway
+                            </Button>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {configs.map((config) => (
+                            <Card key={config.id} className={`relative overflow-hidden transition-all ${config.isActive ? 'border-primary ring-1 ring-primary shadow-md' : 'border-border/60 hover:border-border'}`}>
+                                {config.isActive && (
+                                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-medium rounded-bl-lg">
+                                        Active
                                     </div>
-                                </div>
+                                )}
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="flex items-center gap-2">
+                                        <MessageSquare className="h-5 w-5 text-green-500" />
+                                        {config.name}
+                                    </CardTitle>
+                                    <CardDescription>ID: {config.accountUniqueId}</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-2 text-sm text-muted-foreground mb-6">
+                                        <div className="flex justify-between">
+                                            <span>API Secret:</span>
+                                            <span className="font-medium text-foreground">••••••••</span>
+                                        </div>
+                                    </div>
 
-                                <div className="flex gap-2">
-                                    {!config.isActive && (
-                                        <Button variant="outline" size="sm" className="flex-1" onClick={() => handleSetActive(config.id!)}>
-                                            <Check className="mr-2 h-4 w-4" /> Set Active
+                                    <div className="flex gap-2">
+                                        {!config.isActive && (
+                                            <Button variant="outline" size="sm" className="flex-1" onClick={() => handleSetActive(config.id!)}>
+                                                <Check className="mr-2 h-4 w-4" /> Set Active
+                                            </Button>
+                                        )}
+                                        <Button variant="ghost" size="icon" onClick={() => handleEdit(config)}>
+                                            <Edit className="h-4 w-4" />
                                         </Button>
-                                    )}
-                                    <Button variant="ghost" size="icon" onClick={() => handleEdit(config)}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(config.id!, config.name)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            )}
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(config.id!, config.name)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                )}
         </div>
     );
 }

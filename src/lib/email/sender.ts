@@ -17,6 +17,7 @@ import { Resend } from 'resend';
 
 // Import logging utility
 import { logActivity } from '@/lib/logger';
+import { getCompanyName } from '@/lib/settings/company';
 
 
 interface SendEmailOptions {
@@ -121,22 +122,7 @@ const getEmailTemplate = async (slug: string) => {
     }
 }
 
-const getCompanyName = async () => {
-    if (typeof window === 'undefined') {
-        try {
-            const { admin } = await import('@/lib/firebase/admin');
-            const doc = await admin.firestore().collection('financial_settings').doc('main_settings').get();
-            if (doc.exists) {
-                return doc.data()?.companyName || process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
-            }
-            return process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
-        } catch (e) {
-            console.error("Error fetching company name in sender:", e);
-            return process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
-        }
-    }
-    return process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
-}
+// This function is now imported from @/lib/settings/company
 
 export async function sendEmail({ to, templateSlug, subject: overrideSubject, body: overrideBody, data, attachments }: SendEmailOptions) {
     try {

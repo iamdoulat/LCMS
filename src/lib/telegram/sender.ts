@@ -2,6 +2,7 @@
 /* eslint-disable no-console */
 import { admin } from '@/lib/firebase/admin';
 import { logActivity } from '@/lib/logger';
+import { getCompanyName } from '@/lib/settings/company';
 
 interface SendTelegramOptions {
     message?: string;
@@ -34,11 +35,12 @@ export async function getTelegramTemplate(slug: string) {
 /**
  * Replaces variables in template body with actual data.
  */
-export const formatTelegramMessage = (body: string, data: Record<string, any>) => {
+export const formatTelegramMessage = async (body: string, data: Record<string, any>) => {
     let formatted = body;
+    const dynamicCompanyName = await getCompanyName();
     const allData: Record<string, any> = {
         ...data,
-        company_name: process.env.NEXT_PUBLIC_APP_NAME || 'Smart Solution',
+        company_name: dynamicCompanyName,
         date: new Date().toLocaleDateString(),
     };
 
@@ -71,7 +73,7 @@ export async function sendTelegram({ message, photoUrl, templateSlug, data }: Se
                     return { success: true, status: 'skipped' };
                 }
             } else {
-                finalMessage = formatTelegramMessage(template.body, data || {});
+                finalMessage = await formatTelegramMessage(template.body, data || {});
             }
         }
 

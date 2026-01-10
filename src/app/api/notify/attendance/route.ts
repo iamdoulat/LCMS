@@ -4,6 +4,7 @@ import { sendEmail } from '@/lib/email/sender';
 import { sendWhatsApp, getPhonesByRole } from '@/lib/whatsapp/sender';
 import { sendTelegram } from '@/lib/telegram/sender';
 import { reverseGeocode } from '@/lib/firebase/checkInOut';
+import { getCompanyName } from '@/lib/settings/company';
 
 export async function POST(request: Request) {
     try {
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
                 location: address,
                 location_company_name: companyName || '',
                 remarks: remarks || 'No remarks provided',
-                company_name: process.env.NEXT_PUBLIC_APP_NAME || 'Smart Solution'
+                company_name: await getCompanyName()
             };
 
             // Fire and forget telegram

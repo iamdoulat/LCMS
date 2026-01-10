@@ -21,10 +21,12 @@ import { TelegramConfiguration } from '@/types/telegram-settings';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { Loader2 } from 'lucide-react';
+import { getCompanyName } from '@/lib/settings/company';
 
 export default function TelegramSettingsPage() {
     const [configs, setConfigs] = useState<TelegramConfiguration[]>([]);
     const [loading, setLoading] = useState(true);
+    const [companyName, setCompanyName] = useState('Nextsew');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentId, setCurrentId] = useState<string | null>(null);
@@ -42,6 +44,8 @@ export default function TelegramSettingsPage() {
     });
 
     useEffect(() => {
+        getCompanyName().then(setCompanyName);
+
         const q = query(collection(firestore, 'telegram_settings'), orderBy('createdAt', 'desc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({
@@ -156,25 +160,33 @@ export default function TelegramSettingsPage() {
         }
     };
 
-    const handleSendTest = async (config: TelegramConfiguration) => {
+    const handleSendTest = async (configOverride?: Partial<TelegramConfiguration>) => {
+        const token = configOverride?.botToken || formData.botToken;
+        const chat = configOverride?.chatId || formData.chatId;
+
+        if (!token || !chat) {
+            Swal.fire('Error', 'Bot Token and Chat ID are required for testing', 'error');
+            return;
+        }
+
         setSendingTest(true);
         try {
-            const response = await fetch(`https://api.telegram.org/bot${config.botToken}/sendMessage`, {
+            const response = await fetch('/api/telegram/test', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    chat_id: config.chatId,
-                    text: `<b>Telegram Bot Test</b>\n\nYour Nextsew Telegram integration is working correctly!\n\nTimestamp: ${new Date().toLocaleString()}`,
-                    parse_mode: 'HTML'
+                    botToken: token,
+                    chatId: chat,
+                    companyName: companyName
                 })
             });
 
             const result = await response.json();
 
-            if (response.ok && result.ok) {
+            if (response.ok && result.success) {
                 Swal.fire('Success', 'Test message sent successfully! Please check your Telegram group.', 'success');
             } else {
-                throw new Error(result.description || 'Failed to send message');
+                throw new Error(result.error || 'Failed to send message');
             }
         } catch (error: any) {
             console.error("Test Telegram Error:", error);
@@ -198,7 +210,7 @@ export default function TelegramSettingsPage() {
                     time: new Date().toLocaleTimeString(),
                     date: new Date().toLocaleDateString(),
                     location: { latitude: 23.8103, longitude: 90.4125, address: 'Test Location, Dhaka' },
-                    companyName: type === 'check_in' ? 'Test Company' : undefined,
+                    companyName: type === 'check_in' ? companyName : undefined,
                     remarks: 'This is a system test notification.'
                 })
             });
@@ -226,7 +238,7 @@ export default function TelegramSettingsPage() {
         <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Telegram Bot Settings</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{companyName} Telegram Bot Settings</h1>
                     <p className="text-muted-foreground">Manage your Telegram bot for attendance notifications.</p>
                 </div>
 
@@ -293,12 +305,24 @@ export default function TelegramSettingsPage() {
                                 />
                                 <p className="text-xs text-muted-foreground">
                                     Use <a href="https://t.me/GetMyChatID_Bot" target="_blank" className="underline text-primary">@GetMyChatID_Bot</a> to find your group's ID.
+                                    <b>Note:</b> Group IDs usually start with a minus (e.g. -100...).
                                 </p>
                             </div>
 
-                            <DialogFooter>
-                                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                                <Button type="submit">Save Configuration</Button>
+                            <DialogFooter className="flex justify-between items-center w-full">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => handleSendTest()}
+                                    disabled={sendingTest || !formData.botToken || !formData.chatId}
+                                >
+                                    {sendingTest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                    Test Connection
+                                </Button>
+                                <div className="flex gap-2">
+                                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                                    <Button type="submit">Save Configuration</Button>
+                                </div>
                             </DialogFooter>
                         </form>
                     </DialogContent>

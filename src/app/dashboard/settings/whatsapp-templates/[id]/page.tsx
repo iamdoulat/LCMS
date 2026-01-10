@@ -14,6 +14,7 @@ import { doc, getDoc, addDoc, updateDoc, collection, serverTimestamp, query, whe
 import { firestore } from '@/lib/firebase/config';
 import { WhatsAppTemplate } from '@/types/whatsapp-settings';
 import { Badge } from '@/components/ui/badge';
+import { getCompanyName } from '@/lib/settings/company';
 import Link from 'next/link';
 import {
     Dialog,
@@ -29,6 +30,7 @@ export default function EditWhatsAppTemplatePage() {
     const params = useParams();
     const id = params.id as string;
     const isNew = id === 'new';
+    const [companyName, setCompanyName] = useState('Nextsew');
 
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
@@ -44,6 +46,8 @@ export default function EditWhatsAppTemplatePage() {
     const [variableInput, setVariableInput] = useState('');
 
     useEffect(() => {
+        getCompanyName().then(setCompanyName);
+
         if (!isNew && id) {
             const fetchTemplate = async () => {
                 try {
@@ -302,7 +306,7 @@ export default function EditWhatsAppTemplatePage() {
                                             .replace(/{{user_name}}/g, 'johndoe123')
                                             .replace(/{{department}}/g, 'Production')
                                             .replace(/{{designation}}/g, 'Manager')
-                                            .replace(/{{company_name}}/g, 'Nextsew')
+                                            .replace(/{{company_name}}/g, companyName)
                                             .replace(/{{password}}/g, '(hidden)')
                                         }
                                         <div className="text-[10px] text-right mt-2 opacity-60">

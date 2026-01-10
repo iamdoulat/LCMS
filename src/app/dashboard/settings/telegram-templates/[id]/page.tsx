@@ -14,6 +14,7 @@ import { doc, getDoc, addDoc, updateDoc, collection, serverTimestamp, query, whe
 import { firestore } from '@/lib/firebase/config';
 import { TelegramTemplate } from '@/types/telegram-settings';
 import { Badge } from '@/components/ui/badge';
+import { getCompanyName } from '@/lib/settings/company';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -30,6 +31,7 @@ export default function EditTelegramTemplatePage() {
     const params = useParams();
     const id = params.id as string;
     const isNew = id === 'new';
+    const [companyName, setCompanyName] = useState('Nextsew');
 
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
@@ -42,6 +44,8 @@ export default function EditTelegramTemplatePage() {
     });
 
     useEffect(() => {
+        getCompanyName().then(setCompanyName);
+
         if (!isNew && id) {
             const fetchTemplate = async () => {
                 try {
@@ -245,7 +249,7 @@ export default function EditTelegramTemplatePage() {
                                                         .replace(/{{location}}/g, 'Uttara, Dhaka')
                                                         .replace(/{{location_company_name}}/g, 'Client ABC')
                                                         .replace(/{{remarks}}/g, 'On time')
-                                                        .replace(/{{company_name}}/g, 'Smart Solution')
+                                                        .replace(/{{company_name}}/g, companyName)
                                                 }} />
                                             </div>
                                         </div>

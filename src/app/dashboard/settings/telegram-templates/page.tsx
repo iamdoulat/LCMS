@@ -11,12 +11,16 @@ import Swal from 'sweetalert2';
 import { collection, deleteDoc, doc, onSnapshot, query, orderBy, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { TelegramTemplate } from '@/types/telegram-settings';
+import { getCompanyName } from '@/lib/settings/company';
 
 export default function TelegramTemplatesPage() {
     const [templates, setTemplates] = useState<TelegramTemplate[]>([]);
     const [loading, setLoading] = useState(true);
+    const [companyName, setCompanyName] = useState('Nextsew');
 
     useEffect(() => {
+        getCompanyName().then(setCompanyName);
+
         const q = query(collection(firestore, 'telegram_templates'), orderBy('createdAt', 'desc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({
@@ -76,7 +80,7 @@ export default function TelegramTemplatesPage() {
         <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Telegram Templates</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{companyName} Telegram Templates</h1>
                     <p className="text-muted-foreground">Manage templates for automated Telegram notifications.</p>
                 </div>
                 <Link href="/dashboard/settings/telegram-templates/new">
