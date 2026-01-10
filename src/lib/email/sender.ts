@@ -121,10 +121,28 @@ const getEmailTemplate = async (slug: string) => {
     }
 }
 
+const getCompanyName = async () => {
+    if (typeof window === 'undefined') {
+        try {
+            const { admin } = await import('@/lib/firebase/admin');
+            const doc = await admin.firestore().collection('financial_settings').doc('main_settings').get();
+            if (doc.exists) {
+                return doc.data()?.companyName || process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
+            }
+            return process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
+        } catch (e) {
+            console.error("Error fetching company name in sender:", e);
+            return process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
+        }
+    }
+    return process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
+}
+
 export async function sendEmail({ to, templateSlug, subject: overrideSubject, body: overrideBody, data, attachments }: SendEmailOptions) {
     try {
         // 1. Fetch Active SMTP Config
         const config = await getSmtpConfig();
+        const dynamicCompanyName = await getCompanyName();
 
         let subject = overrideSubject || '';
         let body = overrideBody || '';
@@ -158,7 +176,7 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
         // 3. Process Template Variables
         const allData: Record<string, any> = {
             ...data,
-            company_name: process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew',
+            company_name: dynamicCompanyName,
             year: new Date().getFullYear(),
             date: new Date().toLocaleDateString()
         };

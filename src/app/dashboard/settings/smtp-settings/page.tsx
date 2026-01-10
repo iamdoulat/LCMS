@@ -36,6 +36,7 @@ export default function SmtpSettingsPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [currentId, setCurrentId] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [companyName, setCompanyName] = useState('Nextsew');
 
     // Test Email State
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
@@ -67,6 +68,27 @@ export default function SmtpSettingsPage() {
         });
 
         return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        const fetchCompanyName = async () => {
+            try {
+                const docRef = doc(firestore, 'financial_settings', 'main_settings');
+                const docSnap = await getDocs(query(collection(firestore, 'financial_settings'))); // Simpler for now or direct getDoc
+                // Using getDoc is better for single doc
+            } catch (e) {
+                console.error("Error fetching company name:", e);
+            }
+        };
+
+        // Reuse the logic from getDoc if possible, but for simplicity in this component:
+        const financialRef = doc(firestore, 'financial_settings', 'main_settings');
+        getDocs(query(collection(firestore, 'financial_settings'))).then(snapshot => {
+            const mainDoc = snapshot.docs.find(d => d.id === 'main_settings');
+            if (mainDoc && mainDoc.data().companyName) {
+                setCompanyName(mainDoc.data().companyName);
+            }
+        });
     }, []);
 
     const handleInputChange = (field: keyof SmtpConfiguration, value: any) => {
@@ -198,10 +220,10 @@ export default function SmtpSettingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     to: testEmail,
-                    subject: 'SMTP Test Email - Nextsew',
+                    subject: `SMTP Test Email - ${companyName}`,
                     body: `
             <h1>SMTP Configuration Test</h1>
-            <p>This is a test email sent from your Nextsew dashboard to verify your SMTP settings.</p>
+            <p>This is a test email sent from your ${companyName} dashboard to verify your SMTP settings.</p>
             <p><strong>Status:</strong> <span style="color: green;">Success</span></p>
             <p>Timestamp: ${new Date().toLocaleString()}</p>
           `
