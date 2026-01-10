@@ -34,8 +34,9 @@ export default function MobileDashboardPage() {
     const { user, userRole: globalUserRole } = useAuth();
     const { isSupervisor, supervisedEmployeeIds, currentEmployeeId } = useSupervisorCheck(user?.email);
 
-    const formatAttendanceTime = (timeStr?: string) => {
+    const formatAttendanceTime = (timeStr?: any) => {
         if (!timeStr) return null;
+        if (typeof timeStr !== 'string') return null;
         try {
             // Support both HH:mm and hh:mm a
             const formatStr = (timeStr.includes('AM') || timeStr.includes('PM')) ? 'hh:mm a' : 'HH:mm';
@@ -45,38 +46,24 @@ export default function MobileDashboardPage() {
             return timeStr;
         }
     };
-
-    const getAttendanceStatus = (flag?: string, approvalStatus?: string, inTimeApprovalStatus?: string, outTimeApprovalStatus?: string) => {
-        // Check for pending approvals - prioritize specific approval statuses
-        if (inTimeApprovalStatus === 'Pending' && outTimeApprovalStatus === 'Pending') {
-            return 'Pending Approval (In & Out)';
+    const getAttendanceStatus = (flag?: any, approvalStatus?: string, inTimeApprovalStatus?: string, outTimeApprovalStatus?: string) => {
+        if (typeof flag !== 'string') return null;
+        if (flag === 'A') return 'Absent';
+        if (flag === 'L') return 'On Leave';
+        if (flag === 'V') return 'On Visit';
+        if (flag === 'W') return 'Weekend';
+        if (flag === 'H') return 'Holiday';
+        if (flag === 'P' || flag === 'D') {
+            if (inTimeApprovalStatus === 'Pending') return 'In-Time Pending';
+            if (outTimeApprovalStatus === 'Pending') return 'Out-Time Pending';
+            if (approvalStatus === 'Pending') return 'Attendance Pending';
+            return flag === 'P' ? 'Present' : 'Delayed Entry';
         }
-        if (inTimeApprovalStatus === 'Pending') {
-            return 'Pending In-Time Approval';
-        }
-        if (outTimeApprovalStatus === 'Pending') {
-            return 'Pending Out-Time Approval';
-        }
-        // Fallback to general approval status
-        if (approvalStatus === 'Pending') {
-            return 'Pending Approval';
-        }
-
-        // If approved or no approval needed, show the flag status
-        if (!flag) return null;
-        const statusMap: Record<string, string> = {
-            'P': 'Present',
-            'D': 'Delayed',
-            'A': 'Absent',
-            'V': 'Visit',
-            'L': 'Leave',
-            'H': 'Holiday'
-        };
-        return statusMap[flag] || flag;
+        return null;
     };
-
-    const calculateWorkHours = (inTime?: string, outTime?: string) => {
+    const calculateWorkHours = (inTime?: any, outTime?: any) => {
         if (!inTime || !outTime) return null;
+        if (typeof inTime !== 'string' || typeof outTime !== 'string') return null;
         try {
             const inFormat = (inTime.includes('AM') || inTime.includes('PM')) ? 'hh:mm a' : 'HH:mm';
             const outFormat = (outTime.includes('AM') || outTime.includes('PM')) ? 'hh:mm a' : 'HH:mm';
@@ -180,8 +167,8 @@ export default function MobileDashboardPage() {
             case 'pending': return { ...item, value: stats.pendingCount.toString() };
             case 'missed': return { ...item, value: stats.missedAttendance.toString() };
             case 'notices': return { ...item, value: stats.noticesCount.toString() };
-            case 'checkin': return { ...item, value: todayAttendance?.inTime || '--:--' };
-            case 'checkout': return { ...item, value: todayAttendance?.outTime || '--:--' };
+            case 'checkin': return { ...item, value: typeof todayAttendance?.inTime === 'string' ? todayAttendance.inTime : '--:--' };
+            case 'checkout': return { ...item, value: typeof todayAttendance?.outTime === 'string' ? todayAttendance.outTime : '--:--' };
             case 'claim': return { ...item, value: `৳ ${stats.claimAmount.toLocaleString()}` };
             case 'disbursed': return { ...item, value: `৳ ${stats.disbursedAmount.toLocaleString()}` };
             default: return item;
@@ -702,7 +689,7 @@ export default function MobileDashboardPage() {
                                         <div className={`bg-white rounded-lg p-2 w-12 h-12 flex items-center justify-center shadow-xl/20 mb-[15px] ${item.textColor}`}>
                                             <Icon className="h-6 w-6" />
                                         </div>
-                                        <div className="absolute top-5 right-4 text-lg font-bold text-[#0a1e60]">{item.value}</div>
+                                        <div className="absolute top-5 right-4 text-lg font-bold text-[#0a1e60]">{String(item.value)}</div>
                                         <div>
                                             <div className="text-xs text-slate-500">{item.label}</div>
                                             <div className="text-xs text-slate-500">{item.subLabel}</div>
