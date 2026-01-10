@@ -182,7 +182,7 @@ export default function ProjectManagementDashboard() {
         });
 
         // Recent Activities (System Logs)
-        const unsubLogs = onSnapshot(query(collection(firestore, 'system_logs'), orderBy('createdAt', 'desc'), limit(10)), (snap) => {
+        const unsubLogs = onSnapshot(query(collection(firestore, 'system_logs'), where('type', '==', 'task_activity'), orderBy('createdAt', 'desc'), limit(10)), (snap) => {
             const logs = snap.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()

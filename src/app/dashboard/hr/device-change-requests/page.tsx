@@ -11,6 +11,7 @@ import {
     updateDoc,
     arrayUnion,
     getDoc,
+    setDoc,
     Timestamp,
     serverTimestamp
 } from 'firebase/firestore';
@@ -133,11 +134,11 @@ export default function DeviceChangeRequestsPage() {
 
         try {
             const settingsRef = doc(firestore, 'system_settings', 'device_change_feature');
-            await updateDoc(settingsRef, {
+            await setDoc(settingsRef, {
                 enabled,
                 updatedBy: currentUser.uid,
                 updatedAt: serverTimestamp()
-            });
+            }, { merge: true });
             toast({
                 title: enabled ? 'Feature Enabled' : 'Feature Disabled',
                 description: `Device change requests are now ${enabled ? 'enabled' : 'disabled'} for employees.`,

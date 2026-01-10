@@ -13,6 +13,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { logActivity } from '@/lib/logger';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -233,6 +234,20 @@ export function TaskForm({ initialData, docId, initialStatus, isMobile, backRout
                     }).catch(err => console.error('Task update notification error:', err));
                 }
 
+                await logActivity({
+                    type: 'task_activity',
+                    action: 'Task Updated',
+                    status: 'success',
+                    message: data.taskTitle,
+                    details: {
+                        taskId: docId,
+                        projectId: data.projectId,
+                        status: data.status
+                    },
+                    userId: user?.uid,
+                    relatedId: docId
+                });
+
                 Swal.fire({
                     title: "Task Updated!",
                     text: "The task has been successfully updated.",
@@ -311,6 +326,20 @@ export function TaskForm({ initialData, docId, initialStatus, isMobile, backRout
                         })
                     }).catch(err => console.error('Task creation notification error:', err));
                 }
+
+                await logActivity({
+                    type: 'task_activity',
+                    action: 'Task Created',
+                    status: 'success',
+                    message: data.taskTitle,
+                    details: {
+                        taskId: createdDocId,
+                        projectId: data.projectId,
+                        status: data.status
+                    },
+                    userId: user?.uid,
+                    relatedId: createdDocId
+                });
 
                 Swal.fire({
                     title: "Task Created!",
