@@ -36,6 +36,8 @@ interface CombinedSettingsProfile {
   invoiceLogoUrl?: string;
   piLogoUrl?: string;
   hideCompanyName?: boolean;
+  logoWidth?: number;
+  logoHeight?: number;
 }
 
 
@@ -296,8 +298,8 @@ export default function PrintQuotePage() {
                   <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={50}
-                    height={50}
+                    width={settings?.logoWidth || 50}
+                    height={settings?.logoHeight || 50}
                     className="object-contain"
                     priority
                     data-ai-hint="company logo"

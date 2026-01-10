@@ -38,6 +38,7 @@ interface CombinedSettingsProfile {
   hideCompanyName?: boolean;
   logoWidth?: number;
   logoHeight?: number;
+  piHeaderTitle?: string;
 }
 
 
@@ -257,8 +258,8 @@ export default function PrintInvoicePage() {
     <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
       <div className="p-4 flex flex-col flex-grow">
         <div className="print-header">
-          <div className="flex justify-between items-start mb-2">
-            <div className="w-2/3 pr-8">
+          <div className="flex justify-between items-start mb-2 gap-4">
+            <div className="flex-1 pr-4">
               <div className="flex items-center gap-3 mb-2">
                 {displayCompanyLogo && (
                   <Image
@@ -282,8 +283,10 @@ export default function PrintInvoicePage() {
               </div>
             </div>
 
-            <div className="text-right">
-              <h2 className="text-2xl font-bold underline underline-offset-4 tracking-wider mb-2">PROFORMA INVOICE</h2>
+            <div className="text-right min-w-[40%] flex-shrink-0">
+              <h2 className="text-[clamp(1.25rem,4vw,1.875rem)] font-bold underline underline-offset-4 tracking-wider mb-2 whitespace-nowrap uppercase">
+                {settings?.piHeaderTitle || 'PROFORMA INVOICE'}
+              </h2>
               <div className="flex justify-end items-baseline gap-2 text-[12px] font-bold">
                 <span className="font-semibold">Invoice Number :</span>
                 <span>{invoiceData.id}</span>
