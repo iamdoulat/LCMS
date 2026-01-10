@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -204,7 +205,8 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
 
 
 export default function DashboardPage() {
-  const { user: authUser, loading: authLoading, userRole } = useAuth();
+  const { user: authUser, loading: authLoading, userRole, setViewMode } = useAuth();
+  const router = useRouter();
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedChartYear, setSelectedChartYear] = React.useState<string>(new Date().getFullYear().toString());
   const [isLoading, setIsLoading] = useState(true);
@@ -606,11 +608,17 @@ export default function DashboardPage() {
                   My Dashboard
                 </Button>
               </Link>
-              <Link href="/mobile/dashboard">
-                <Button variant="default" size="sm" className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all ml-1">
-                  Mobile Mode
-                </Button>
-              </Link>
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all ml-1"
+                onClick={() => {
+                  setViewMode('mobile');
+                  router.push('/mobile/dashboard');
+                }}
+              >
+                Mobile Mode
+              </Button>
             </div>
           </CardContent>
         </Card>

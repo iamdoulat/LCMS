@@ -85,7 +85,8 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                             }
                         });
                     } catch (err) {
-                        console.warn("Could not fetch users for team filtering:", err);
+                        // Permission errors here are expected for non-admins (e.g. users creating specialized dashboards)
+                        // console.debug("Could not fetch users for team filtering (expected for non-admins):", err);
                     }
 
                     allEmployeesSnapshot.docs.forEach(doc => {
