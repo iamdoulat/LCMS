@@ -34,9 +34,9 @@ import {
     Area,
     AreaChart
 } from 'recharts';
-import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getMonth, parseISO } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -97,8 +97,20 @@ export default function ProjectManagementDashboard() {
     const [myProjects, setMyProjects] = useState<any[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [calEvents, setCalEvents] = useState<any[]>([]);
+    const [financialData, setFinancialData] = useState<any[]>([]);
+    const [userMap, setUserMap] = useState<Record<string, any>>({});
 
     useEffect(() => {
+        // Fetch Users first for mapping (or keep real-time)
+        const unsubUsers = onSnapshot(query(collection(firestore, 'employees'), where('disabled', '==', false)), (snap) => {
+            setStats(prev => ({ ...prev, totalUsers: snap.size }));
+            const mapping: Record<string, any> = {};
+            snap.docs.forEach(doc => {
+                mapping[doc.id] = doc.data();
+            });
+            setUserMap(mapping);
+        });
+
         // Real-time listeners
         const unsubProjects = onSnapshot(collection(firestore, 'projects'), (snap) => {
             setStats(prev => ({ ...prev, totalProjects: snap.size }));
@@ -110,10 +122,8 @@ export default function ProjectManagementDashboard() {
                 statusCounts[status] = (statusCounts[status] || 0) + 1;
             });
             setProjectStatusData(Object.entries(statusCounts).map(([name, value]) => ({ name, value })));
-            setProjectStatusData(Object.entries(statusCounts).map(([name, value]) => ({ name, value })));
 
-            // Filter My Active Projects (Assuming 'assignedUserIds' or similar exists, or just all active projects if admin)
-            // For now, let's just take the first 4 active projects for display
+            // Filter My Active Projects
             const active = snap.docs
                 .map(doc => ({ id: doc.id, ...doc.data() }))
                 .filter((p: any) => p.status === 'In Progress' || p.status === 'Pending')
@@ -125,34 +135,68 @@ export default function ProjectManagementDashboard() {
             setStats(prev => ({ ...prev, totalTasks: snap.size }));
 
             const statusCounts: Record<string, number> = {};
+            const events: any[] = [];
+
             snap.docs.forEach(doc => {
-                const status = doc.data().status || 'Pending';
+                const data = doc.data();
+                const status = data.status || 'Pending';
                 statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+                if (data.dueDate) {
+                    events.push({
+                        id: doc.id,
+                        title: data.taskTitle,
+                        date: new Date(data.dueDate),
+                        type: 'task',
+                        status: data.status
+                    });
+                }
             });
             setTaskStatusData(Object.entries(statusCounts).map(([name, value]) => ({ name, value })));
-        });
-
-        const unsubUsers = onSnapshot(query(collection(firestore, 'employees'), where('disabled', '==', false)), (snap) => {
-            setStats(prev => ({ ...prev, totalUsers: snap.size }));
+            setCalEvents(events);
         });
 
         const unsubClients = onSnapshot(collection(firestore, 'customers'), (snap) => {
             setStats(prev => ({ ...prev, totalClients: snap.size }));
         });
 
-        // Mocking Recent Activity for now (replace with actual collection later)
-        setRecentActivities([
-            { id: '1', user: 'Alice', action: 'created a new project', target: 'Website Redesign', time: '2 mins ago', avatar: '/avatars/01.png' },
-            { id: '2', user: 'Bob', action: 'completed task', target: 'Homepage Wireframe', time: '1 hour ago', avatar: '/avatars/02.png' },
-            { id: '3', user: 'Charlie', action: 'commented on', target: 'API Integration', time: '3 hours ago', avatar: '/avatars/03.png' },
-            { id: '4', user: 'Diana', action: 'updated status', target: 'Mobile App', time: '5 hours ago', avatar: '/avatars/04.png' },
-        ]);
+        // Financial Data
+        const unsubInvoices = onSnapshot(query(collection(firestore, 'project_invoices'), orderBy('createdAt', 'desc')), (snap) => {
+            const currentYear = new Date().getFullYear();
+            const monthlyData = Array(12).fill(0).map((_, i) => ({
+                name: format(new Date(currentYear, i, 1), 'MMM'),
+                income: 0,
+                expense: 0 // Placeholder
+            }));
+
+            snap.docs.forEach(doc => {
+                const data = doc.data();
+                const date = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt);
+
+                if (date.getFullYear() === currentYear && (data.status === 'Paid' || data.paymentStatus === 'Paid')) {
+                    const monthIndex = getMonth(date);
+                    monthlyData[monthIndex].income += Number(data.totalAmount || data.amount || 0);
+                }
+            });
+            setFinancialData(monthlyData);
+        });
+
+        // Recent Activities (System Logs)
+        const unsubLogs = onSnapshot(query(collection(firestore, 'system_logs'), orderBy('createdAt', 'desc'), limit(10)), (snap) => {
+            const logs = snap.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setRecentActivities(logs);
+        });
 
         return () => {
             unsubProjects();
             unsubTasks();
             unsubUsers();
             unsubClients();
+            unsubInvoices();
+            unsubLogs();
         };
     }, []);
 
@@ -326,15 +370,7 @@ export default function ProjectManagementDashboard() {
                     </CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                            <AreaChart data={[
-                                { name: 'Jan', income: 4000, expense: 2400 },
-                                { name: 'Feb', income: 3000, expense: 1398 },
-                                { name: 'Mar', income: 2000, expense: 9800 },
-                                { name: 'Apr', income: 2780, expense: 3908 },
-                                { name: 'May', income: 1890, expense: 4800 },
-                                { name: 'Jun', income: 2390, expense: 3800 },
-                                { name: 'Jul', income: 3490, expense: 4300 },
-                            ]}>
+                            <AreaChart data={financialData}>
                                 <defs>
                                     <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
@@ -374,23 +410,50 @@ export default function ProjectManagementDashboard() {
 
                             <div className="space-y-4 max-h-[250px] overflow-y-auto pr-2">
                                 <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Recent Activity</h4>
-                                {recentActivities.map((activity, i) => (
-                                    <div key={i} className="flex items-start gap-4 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors">
-                                        <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
-                                            <AvatarFallback className="bg-blue-600 text-white font-bold">{activity.user[0]}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1 space-y-1">
-                                            <p className="text-sm font-medium leading-none">
-                                                <span className="text-slate-900">{activity.user}</span>
-                                                <span className="text-slate-500 font-normal"> {activity.action} </span>
-                                                <span className="text-blue-600">{activity.target}</span>
-                                            </p>
-                                            <p className="text-xs text-slate-400 flex items-center gap-1">
-                                                <Clock className="h-3 w-3" /> {activity.time}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
+                                {recentActivities.length > 0 ? (
+                                    recentActivities.map((activity, i) => {
+                                        const user = userMap[activity.userId] || { fullName: 'System', photoURL: null };
+                                        const timeStr = activity.createdAt?.toDate ? format(activity.createdAt.toDate(), 'MMM dd, HH:mm') : 'Just now';
+
+                                        return (
+                                            <div key={activity.id || i} className="flex items-start gap-4 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors">
+                                                <Avatar className="h-9 w-9 border-2 border-white shadow-sm">
+                                                    <AvatarImage src={user.photoURL} />
+                                                    <AvatarFallback className="bg-blue-600 text-white font-bold">{user.fullName?.charAt(0) || 'S'}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 space-y-1">
+                                                    <p className="text-sm font-medium leading-none">
+                                                        <span className="text-slate-900">{user.fullName}</span>
+                                                        <span className="text-slate-500 font-normal"> {activity.action} </span>
+                                                        <span className="text-blue-600">{activity.message || activity.target}</span>
+                                                    </p>
+                                                    <p className="text-xs text-slate-400 flex items-center gap-1">
+                                                        <Clock className="h-3 w-3" /> {timeStr}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="text-center py-4 text-muted-foreground text-sm">No recent activity.</div>
+                                )}
+                            </div>
+                            <div className="pt-2 border-t">
+                                <h4 className="text-sm font-semibold text-slate-500 mb-2">
+                                    Tasks for {selectedDate ? format(selectedDate, 'MMM dd') : 'Selected Date'}
+                                </h4>
+                                {calEvents.filter(e => selectedDate && isSameDay(e.date, selectedDate)).length > 0 ? (
+                                    <ul className="space-y-1">
+                                        {calEvents.filter(e => selectedDate && isSameDay(e.date, selectedDate)).map((e: any) => (
+                                            <li key={e.id} className="text-xs flex items-center gap-2">
+                                                <div className={cn("w-2 h-2 rounded-full", e.status === 'Completed' ? "bg-green-500" : "bg-blue-500")} />
+                                                <span className={e.status === 'Completed' ? "line-through text-slate-400" : "text-slate-700"}>{e.title}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-xs text-slate-400 italic">No tasks due this day.</p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
