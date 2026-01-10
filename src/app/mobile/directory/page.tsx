@@ -9,7 +9,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import {
-    ChevronLeft,
+    ArrowLeft,
     Search,
     ChevronRight,
     Loader2,
@@ -90,12 +90,12 @@ export default function MobileDirectoryPage() {
     }, [processedEmployees, searchTerm]);
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#0a1e60]">
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Header */}
             <header className="sticky top-0 z-50 bg-[#0a1e60] flex flex-col px-4 pt-1 pb-4 text-white">
                 <div className="flex items-center justify-between mb-4">
                     <Button variant="ghost" size="icon" onClick={handleBack} className="text-white hover:bg-white/10 -ml-2">
-                        <ChevronLeft className="h-6 w-6" />
+                        <ArrowLeft className="h-6 w-6" />
                     </Button>
                     <h1 className="text-xl font-semibold">Employee Directory</h1>
                     <div className="w-10" /> {/* Spacer */}
@@ -114,33 +114,35 @@ export default function MobileDirectoryPage() {
             </header>
 
             {/* Content Area */}
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] px-4 pt-8 pb-[120px] min-h-[500px]">
-                {isLoading ? (
-                    <DirectorySkeleton />
-                ) : filteredEmployees && filteredEmployees.length > 0 ? (
-                    <div className="space-y-4">
-                        <p className="text-xs font-bold text-slate-400 uppercase px-2 mb-2">
-                            Total Employees ({filteredEmployees.length})
-                        </p>
-                        {filteredEmployees.map((emp) => (
-                            <EmployeeCard key={emp.id} emp={emp} />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center pt-20 text-slate-400">
-                        <div className="bg-slate-100 p-4 rounded-full mb-4">
-                            <SearchX className="h-8 w-8" />
+            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden relative">
+                <div className="h-full overflow-y-auto px-4 pt-8 pb-[120px]">
+                    {isLoading ? (
+                        <DirectorySkeleton />
+                    ) : filteredEmployees && filteredEmployees.length > 0 ? (
+                        <div className="space-y-4">
+                            <p className="text-xs font-bold text-slate-400 uppercase px-2 mb-2">
+                                Total Employees ({filteredEmployees.length})
+                            </p>
+                            {filteredEmployees.map((emp) => (
+                                <EmployeeCard key={emp.id} emp={emp} />
+                            ))}
                         </div>
-                        <p className="font-medium px-10 text-center">No employees found matching "{searchTerm}"</p>
-                        <Button
-                            variant="link"
-                            className="text-[#3b82f6] mt-2"
-                            onClick={() => setSearchTerm('')}
-                        >
-                            Clear Search
-                        </Button>
-                    </div>
-                )}
+                    ) : (
+                        <div className="flex flex-col items-center justify-center pt-20 text-slate-400">
+                            <div className="bg-slate-100 p-4 rounded-full mb-4">
+                                <SearchX className="h-8 w-8" />
+                            </div>
+                            <p className="font-medium px-10 text-center">No employees found matching "{searchTerm}"</p>
+                            <Button
+                                variant="link"
+                                className="text-[#3b82f6] mt-2"
+                                onClick={() => setSearchTerm('')}
+                            >
+                                Clear Search
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
