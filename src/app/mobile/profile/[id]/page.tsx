@@ -290,7 +290,7 @@ export default function MobileEmployeeProfilePage() {
                         {activeTab === 'others' && 'Others Info'}
                     </h3>
 
-                    <div className="space-y-6 overflow-y-auto pr-2">
+                    <div className="space-y-6 overflow-y-auto pr-2 flex-1 min-h-0">
                         {profileData[activeTab].map((item, index) => {
                             const Icon = item.icon;
                             return (
