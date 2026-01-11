@@ -151,7 +151,7 @@ function ReconciliationForm() {
             </div>
 
             <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col">
-                <div className="p-6 space-y-6 overflow-y-auto">
+                <div className="p-6 space-y-6 overflow-y-auto pb-24">
                     <div className="flex bg-white p-1 rounded-xl shadow-sm">
                         <button
                             onClick={() => setActiveTab('in')}
@@ -263,7 +263,7 @@ function ReconciliationForm() {
                     <Button
                         onClick={handleSubmit}
                         disabled={loading}
-                        className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-lg font-bold shadow-lg shadow-blue-200 mb-6"
+                        className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-lg font-bold shadow-lg shadow-blue-200 mb-20"
                     >
                         {loading ? <Loader2 className="animate-spin" /> : 'Submit'}
                     </Button>
