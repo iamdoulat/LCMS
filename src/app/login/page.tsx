@@ -97,7 +97,12 @@ export default function LoginPage() {
       const isEmployee = userRole?.includes('Employee');
       let targetPath = '/dashboard';
 
-      if (viewMode === 'mobile') {
+      // Check screen size first - force mobile mode on small screens
+      const isMobileScreen = typeof window !== 'undefined' && window.innerWidth < 768;
+
+      if (isMobileScreen) {
+        targetPath = '/mobile/dashboard';
+      } else if (viewMode === 'mobile') {
         targetPath = '/mobile/dashboard';
       } else if (viewMode === 'web') {
         targetPath = '/dashboard';
