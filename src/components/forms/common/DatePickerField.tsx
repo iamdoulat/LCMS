@@ -71,6 +71,18 @@ export function DatePickerField({
             toYear={2040}
             defaultMonth={field?.value ? new Date(field.value) : undefined}
           />
+          <div className="p-2 border-t border-border">
+            <Button
+              variant="ghost"
+              className="w-full h-8 text-xs"
+              onClick={() => {
+                field?.onChange(null);
+                setOpen(false);
+              }}
+            >
+              Reset
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
     </div>

@@ -23,15 +23,15 @@ function Calendar({
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-sm font-medium",
-        caption_dropdowns: "flex justify-center gap-1",
-        nav: "space-x-1 flex items-center",
+        caption_label: cn("text-sm font-medium", props.captionLayout?.includes("dropdown") && "hidden"),
+        caption_dropdowns: cn("flex justify-center gap-1", props.captionLayout?.includes("dropdown") && "w-full justify-between px-12 gap-2"),
+        nav: cn("space-x-1 flex items-center"),
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          "h-7 w-7 bg-transparent p-0 hover:opacity-100 border-input"
         ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
+        nav_button_previous: "absolute left-1 border bg-white text-foreground hover:bg-slate-100",
+        nav_button_next: "absolute right-1 border-0 bg-green-500 text-white hover:bg-green-600 hover:text-white",
         table: "w-full border-collapse space-y-1",
         head_row: "flex",
         head_cell:
@@ -52,6 +52,12 @@ function Calendar({
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
+        dropdown_month: "ml-1",
+        dropdown_year: "ml-1",
+        dropdown: cn(
+          "bg-transparent p-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-md border border-input shadow-sm focus:ring-1 focus:ring-ring"
+        ),
+        dropdown_icon: "hidden", // Hide the default rdp icon if any, we rely on native select or custom styling
         ...classNames,
       }}
       components={{
