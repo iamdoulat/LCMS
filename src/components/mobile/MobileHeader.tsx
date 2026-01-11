@@ -17,6 +17,7 @@ export function MobileHeader() {
     const { toggleSidebar } = useMobileSidebar();
     const [hasUnread, setHasUnread] = React.useState(false);
     const [profileImage, setProfileImage] = React.useState<string | undefined>(user?.photoURL || undefined);
+    const [fullName, setFullName] = React.useState<string>(user?.displayName || 'Employee');
 
     // Listen for real-time profile image updates
     React.useEffect(() => {
@@ -43,6 +44,9 @@ export function MobileHeader() {
                             const data = doc.data();
                             if (data.photoURL) {
                                 setProfileImage(data.photoURL);
+                            }
+                            if (data.fullName) {
+                                setFullName(data.fullName);
                             }
                         }
                     });
@@ -123,8 +127,8 @@ export function MobileHeader() {
                             <line x1="3" y1="18" x2="9" y2="18" />
                         </svg>
                     </Button>
-                    <div className="flex flex-col">
-                        <h1 className="text-lg font-bold leading-tight">Hi, {user?.displayName || 'Employee'}</h1>
+                    <div className="flex flex-col max-w-[200px]">
+                        <h1 className="text-lg font-bold leading-tight truncate">Hi, {fullName}</h1>
                         <p className="text-slate-300 text-xs">Explore the dashboard</p>
                     </div>
                 </div>
