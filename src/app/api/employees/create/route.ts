@@ -141,7 +141,7 @@ export async function POST(request: Request) {
                     name: displayName,
                     user_name: email,
                     password: password,
-                    login_url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+                    login_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/mobile/dashboard`
                 }
             });
             emailStatus = 'sent';
@@ -166,7 +166,7 @@ export async function POST(request: Request) {
                         name: displayName,
                         user_name: email,
                         password: password,
-                        login_url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+                        login_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/mobile/dashboard`
                     }
                 });
                 whatsappStatus = 'sent';
