@@ -182,7 +182,7 @@ export default function MobileEmployeeProfilePage() {
             {/* Header */}
             <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center justify-between px-4 py-4 text-white">
                 <Button variant="ghost" size="icon" onClick={handleBack} className="rounded-full bg-white/10 hover:bg-white/20 text-white shadow-[0_0_15px_rgba(59,130,246,0.6)] h-10 w-10 p-0 flex items-center justify-center">
-                    <ArrowLeft className="h-7 w-7" />
+                    <ArrowLeft className="h-9 w-9" />
                 </Button>
                 <h1 className="text-xl font-semibold">Employee Profile</h1>
                 <div className="w-10" />
