@@ -1,0 +1,129 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is the owner of the resource
+    function isOwner(employeeId) {
+      return request.auth.uid == employeeId;
+    }
+    
+    // Helper function to validate image file
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024 // 5MB max
+          && (request.resource.contentType.matches('image/.*') || 
+              request.resource.contentType == 'application/octet-stream'); // Handle some browsers/icons
+    }
+    
+    // Helper function to check admin/HR/DemoRole roles
+    function hasAdminOrDemoRole() {
+      let userDoc = firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+      let roles = userDoc.data.role;
+      return isAuthenticated() && (
+        (roles is list && (
+          'Super Admin' in roles || 
+          'Admin' in roles || 
+          'Service' in roles || 
+          'DemoManager' in roles || 
+          'HR' in roles
+        )) ||
+        (roles is string && (
+          roles == 'Super Admin' || 
+          roles == 'Admin' || 
+          roles == 'Service' || 
+          roles == 'DemoManager' || 
+          roles == 'HR'
+        ))
+      );
+    }
+    
+    // *** NEW: Company logos - Admins can upload/manage ***
+    match /companyLogos/{fileName} {
+      allow read: if true; // Public read access for company logos
+      allow write: if hasAdminOrDemoRole() && (isValidImage() || fileName.matches('.*\\.ico'));
+      allow delete: if hasAdminOrDemoRole();
+    }
+    
+    // Rules for check-in/out images
+    match /check_inout_images/{employeeId}/{imageFile} {
+      allow create: if isAuthenticated() && isValidImage();
+      allow read: if isAuthenticated();
+      allow update: if false;
+      allow delete: if hasAdminOrDemoRole();
+    }
+
+    // Support for alternative path used in some components
+    match /checkin-out/{employeeId}/{imageFile} {
+      allow create: if isAuthenticated() && isValidImage();
+      allow read: if isAuthenticated();
+      allow update: if false;
+      allow delete: if hasAdminOrDemoRole();
+    }
+    
+    // Profile images
+    match /profileImages/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Quote Items Product Images
+    match /quote_items/{itemId}/{fileName} {
+      allow read: if true; // Public read access for product images
+      allow write: if hasAdminOrDemoRole() && isValidImage();
+      allow delete: if hasAdminOrDemoRole();
+    }
+
+    // PI Settings Logo
+    match /piLayoutSettings/{fileName} {
+      allow read: if true;
+      allow write: if hasAdminOrDemoRole() && isValidImage();
+    }
+
+    // Item Images
+    match /itemImages/{itemId}/{fileName} {
+      allow read: if true;
+      allow write: if hasAdminOrDemoRole() && isValidImage();
+    }
+
+    // Employee Images
+    match /employeeImages/{employeeId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if hasAdminOrDemoRole() && isValidImage();
+    }
+
+    // Demo Machine Images
+    match /demoMachineImages/{machineId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if hasAdminOrDemoRole() && isValidImage();
+    }
+
+    // Asset Category Images
+    match /asset-categories/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // Firestore rules already enforce role-based access
+    }
+
+    // HR Claim Attachments
+    match /claim-attachments/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Task Attachments
+    match /tasks/{taskId}/attachments/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.resource.size < 2 * 1024 * 1024; // 2MB limit
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
