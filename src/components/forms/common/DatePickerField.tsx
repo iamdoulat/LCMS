@@ -67,7 +67,7 @@ export function DatePickerField({
             fromDate={fromDate}
             toDate={toDate}
             captionLayout="dropdown-buttons"
-            fromYear={1990}
+            fromYear={1940}
             toYear={2040}
             defaultMonth={field?.value ? new Date(field.value) : undefined}
           />

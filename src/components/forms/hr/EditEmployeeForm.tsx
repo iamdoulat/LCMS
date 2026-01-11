@@ -88,6 +88,8 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     defaultValues: {
       ...employee,
       leaveGroupId: employee.leaveGroupId || '',
+      remarksDivision: employee.remarksDivision || 'None',
+      remarksJobBase: employee.remarksJobBase || 'None',
       firstName: employee.fullName?.split(' ')[0] || '',
       middleName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ')[1] : '',
       lastName: employee.fullName?.split(' ').length > 2 ? employee.fullName.split(' ').slice(2).join(' ') : (employee.fullName?.split(' ')[1] || ''),
