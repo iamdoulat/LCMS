@@ -31,7 +31,7 @@ import {
     UserCheck,
     Network
 } from 'lucide-react';
-import type { Employee } from '@/types';
+import type { Employee, UserRole } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 
@@ -214,7 +214,7 @@ export default function MobileProfilePage() {
 
                 // Also ensure 'Employee' role is added if they have an employee record
                 if (userRole && !userRole.includes('Employee')) {
-                    updateData.role = [...new Set([...userRole, 'Employee'])];
+                    updateData.role = [...new Set([...userRole, 'Employee'] as UserRole[])];
                 }
 
                 await updateDoc(userDocRef, updateData);

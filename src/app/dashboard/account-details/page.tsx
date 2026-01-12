@@ -30,7 +30,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { getCroppedImg } from '@/lib/image-utils';
-import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag, AttendanceReconciliationConfiguration, MultipleCheckInOutConfiguration, LeaveGroupDocument, HotspotDocument } from '@/types';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, AdvanceSalaryDocument, Payslip, NoticeBoardSettings, AttendanceFlag, AttendanceReconciliationConfiguration, MultipleCheckInOutConfiguration, LeaveGroupDocument, HotspotDocument, UserRole } from '@/types';
 import type { CheckInOutType, MultipleCheckInOutRecord, MultipleCheckInOutLocation } from '@/types/checkInOut';
 import { getCurrentLocation, uploadCheckInOutImage, createCheckInOutRecord, reverseGeocode, getCheckInOutRecords } from '@/lib/firebase/checkInOut';
 import { startBreak, stopBreak } from '@/lib/firebase/breakTime';
