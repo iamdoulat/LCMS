@@ -29,7 +29,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function MobileLoginPage() {
     const router = useRouter();
-    const { login: contextLogin, companyLogoUrl, loading: authLoading, user, userRole, viewMode } = useAuth();
+    const { login: contextLogin, companyName, companyLogoUrl, loading: authLoading, user, userRole, viewMode } = useAuth();
     const [isEmailLoading, setIsEmailLoading] = useState(false);
     const [showDevicePopup, setShowDevicePopup] = useState(false);
     const [isCheckingDevice, setIsCheckingDevice] = useState(false);
@@ -335,7 +335,7 @@ export default function MobileLoginPage() {
                     </form>
                 </Form>
             </div>
-            <p className="mt-8 text-white/50 text-xs">© 2025 NextSew. All rights reserved.</p>
+            <p className="mt-8 text-white/50 text-xs">© {new Date().getFullYear()} {companyName}. All rights reserved.</p>
 
             <DeviceApprovalPopup
                 isOpen={showDevicePopup}

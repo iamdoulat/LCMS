@@ -1836,12 +1836,33 @@ export default function AccountDetailsPage() {
       });
 
       if (auth.currentUser.uid) {
+        // Update users collection
         const userDocRef = doc(firestore, "users", auth.currentUser.uid);
         await updateDoc(userDocRef, {
           displayName: data.displayName,
           photoURL: data.photoURL,
           updatedAt: serverTimestamp()
         });
+
+        // Sync with employees collection if exists
+        if (employeeData && employeeData.id) {
+          const employeeDocRef = doc(firestore, "employees", employeeData.id);
+          // Only update if it's actually their own employee record or they have elevated permissions
+          // The security rules already handle this, but it's good to be explicit in intent
+          await updateDoc(employeeDocRef, {
+            fullName: data.displayName, // Mapping displayName to fullName for consistency
+            photoURL: data.photoURL,
+            updatedAt: serverTimestamp()
+          });
+
+          // Also ensure 'Employee' role is added to users collection if they have an employee record
+          if (userRole && !userRole.includes('Employee')) {
+            await updateDoc(userDocRef, {
+              role: [...new Set([...userRole, 'Employee'] as UserRole[])],
+              updatedAt: serverTimestamp()
+            });
+          }
+        }
       }
 
       await auth.currentUser.reload();

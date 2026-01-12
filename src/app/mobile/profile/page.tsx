@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
-import { firestore, storage } from '@/lib/firebase/config';
+import { auth, firestore, storage } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, limit, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Swal from 'sweetalert2';
@@ -48,7 +48,7 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 
 export default function MobileProfilePage() {
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, userRole } = useAuth();
     const [employee, setEmployee] = useState<Employee | null>(null);
     const [loading, setLoading] = useState(true);
     const [supervisorName, setSupervisorName] = useState<string | null>(null);
@@ -194,12 +194,31 @@ export default function MobileProfilePage() {
             await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(storageRef);
 
-            // Update Firestore
+            // Update Firestore - employees collection
             const employeeRef = doc(firestore, 'employees', employee.id);
             await updateDoc(employeeRef, {
                 photoURL: downloadURL,
                 updatedAt: serverTimestamp()
             });
+
+            // Sync with Firebase Auth Profile and users collection
+            if (auth.currentUser) {
+                const { updateProfile } = await import('firebase/auth');
+                await updateProfile(auth.currentUser, { photoURL: downloadURL });
+
+                const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
+                const updateData: any = {
+                    photoURL: downloadURL,
+                    updatedAt: serverTimestamp()
+                };
+
+                // Also ensure 'Employee' role is added if they have an employee record
+                if (userRole && !userRole.includes('Employee')) {
+                    updateData.role = [...new Set([...userRole, 'Employee'])];
+                }
+
+                await updateDoc(userDocRef, updateData);
+            }
 
             setEmployee(prev => prev ? { ...prev, photoURL: downloadURL } : null);
 
