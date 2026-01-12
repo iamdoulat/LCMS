@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon, Image as ImageIcon } from 'lucide-react';
+import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon, ImageIcon, Link2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { firestore, storage } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query as firestoreQuery, orderBy, setDoc, doc } from 'firebase/firestore';
@@ -57,6 +57,7 @@ export function AddEmployeeForm() {
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
   const [externalUrl, setExternalUrl] = React.useState('');
   const [isUploading, setIsUploading] = React.useState(false);
+  const [showExternalUrlField, setShowExternalUrlField] = React.useState(false);
 
 
   // Use the hook to fetch data
@@ -353,21 +354,35 @@ export function AddEmployeeForm() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Input type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="w-full" />
-                    <Button type="button" onClick={() => { setSelectedFile(null); setPhotoPreview(null); }} variant="outline" size="icon" title="Clear Photo">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        onClick={() => setShowExternalUrlField(!showExternalUrlField)}
+                        variant={showExternalUrlField ? "secondary" : "outline"}
+                        size="icon"
+                        title="Toggle External URL"
+                        className={showExternalUrlField ? "bg-primary/10 text-primary border-primary/20" : ""}
+                      >
+                        <Link2 className="h-4 w-4" />
+                      </Button>
+                      <Button type="button" onClick={() => { setSelectedFile(null); setPhotoPreview(null); }} variant="outline" size="icon" title="Clear Photo">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Or External URL:</span>
-                    <Input
-                      placeholder="https://example.com/photo.jpg"
-                      value={externalUrl}
-                      onChange={(e) => setExternalUrl(e.target.value)}
-                    />
-                  </div>
+                  {showExternalUrlField && (
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <Input
+                        placeholder="https://example.com/photo.jpg"
+                        value={externalUrl}
+                        onChange={(e) => setExternalUrl(e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  )}
                 </div>
               </FormControl>
-              <FormDescription>Upload a photo or provide an external image URL. Uploaded file takes precedence.</FormDescription>
+              <FormDescription>Upload a photo or toggle the link icon to provide an external image URL. Uploaded file takes precedence.</FormDescription>
               <FormMessage />
             </FormItem>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
