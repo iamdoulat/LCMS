@@ -137,7 +137,9 @@ const inventoryNavItems: NavItem[] = [
   { href: '/dashboard/inventory/refunds-returns', label: 'Refunds & Returns', icon: Undo2, iconColorClass: 'bg-icon-return' },
   { href: '/dashboard/petty-cash/reports', label: 'Account Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/inventory/stock-reports', label: 'Stock Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
+  { href: '/dashboard/inventory/sales-invoices-reports', label: 'Sales Invoices Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/petty-cash/settings', label: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
+
 ];
 
 const financialNavItems: NavItem[] = [
@@ -145,6 +147,11 @@ const financialNavItems: NavItem[] = [
   { href: '/dashboard/pi/list', label: 'Proforma Invoice List', icon: ListChecks, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/quotations/items', label: 'Products Lists', icon: ListChecks, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/purchase-orders/list', label: 'Purchase Orders', icon: ShoppingCart, iconColorClass: 'bg-icon-list' },
+  { href: '/dashboard/quotations/reports', label: 'Quotations Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
+  { href: '/dashboard/pi/reports', label: 'PI Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
+  { href: '/dashboard/quotations/items-reports', label: 'Quote items Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
+  { href: '/dashboard/quotations/products-reports', label: 'Products list Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
+  { href: '/dashboard/purchase-orders/reports', label: 'Purchase Orders Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/pi/pi-settings', label: 'PI Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 

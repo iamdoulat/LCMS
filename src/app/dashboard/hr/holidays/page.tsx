@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Calendar, PlusCircle, AlertTriangle, Info, Trash2, Edit, MoreHorizontal } from 'lucide-react';
+import { Loader2, Calendar, PlusCircle, AlertTriangle, Info, Trash2, Edit, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
@@ -30,6 +30,9 @@ export default function HolidaysPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
   const router = useRouter();
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 10;
+
 
   const { data: holidays, isLoading, error, refetch } = useFirestoreQuery<HolidayDocument[]>(
     query(collection(firestore, 'holidays'), orderBy('fromDate', 'asc')),
@@ -71,6 +74,21 @@ export default function HolidaysPage() {
     }
     return fromDate;
   };
+
+  // Pagination Logic
+  const totalPages = holidays ? Math.ceil(holidays.length / itemsPerPage) : 0;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentHolidays = holidays ? holidays.slice(indexOfFirstItem, indexOfLastItem) : [];
+
+  const nextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(curr => curr + 1);
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) setCurrentPage(curr => curr - 1);
+  };
+
 
   return (
     <div className="py-8 px-4 sm:px-6 lg:px-8">
@@ -120,8 +138,9 @@ export default function HolidaysPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {holidays.map(holiday => (
+                  {currentHolidays.map(holiday => (
                     <TableRow key={holiday.id}>
+
                       <TableCell className="whitespace-nowrap">{holiday.name}</TableCell>
                       <TableCell className="min-w-[200px]">{formatHolidayDate(holiday)}</TableCell>
                       <TableCell>{holiday.type}</TableCell>
@@ -164,7 +183,43 @@ export default function HolidaysPage() {
               </Table>
             </div>
           )}
+
+          {/* Pagination Controls */}
+          {!isLoading && holidays && holidays.length > itemsPerPage && (
+            <div className="flex flex-col md:grid md:grid-cols-3 items-center gap-4 py-4 px-2 border-t mt-4">
+              <div className="text-sm text-muted-foreground text-center md:text-left order-2 md:order-1">
+                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, holidays.length)} of {holidays.length} entries
+              </div>
+              <div className="flex items-center justify-center gap-2 order-1 md:order-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={prevPage}
+                  disabled={currentPage === 1}
+                  className="h-9"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1 min-w-[5rem] justify-center text-sm font-medium">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={nextPage}
+                  disabled={currentPage === totalPages}
+                  className="h-9"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+              <div className="hidden md:block md:order-3" />
+            </div>
+          )}
         </CardContent>
+
       </Card>
     </div>
   );

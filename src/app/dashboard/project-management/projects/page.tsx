@@ -17,7 +17,9 @@ import {
     Eye,
     Calendar,
     Users,
-    ArrowUpDown
+    ArrowUpDown,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +67,9 @@ export default function ManageProjectsPage() {
     const [priorityFilter, setPriorityFilter] = useState<string>('all');
     const [loading, setLoading] = useState(true);
     const [employeePhotos, setEmployeePhotos] = useState<Record<string, string>>({});
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
 
     useEffect(() => {
         // Fetch Projects
@@ -106,8 +111,6 @@ export default function ManageProjectsPage() {
 
         return () => {
             unsubscribe();
-            // cleanupEmployeesPromise.then(unsub => unsub()); // This is a bit tricky with async in useEffect.
-            // Let's just do it inline.
         };
     }, []);
 
@@ -124,6 +127,24 @@ export default function ManageProjectsPage() {
             return matchesSearch && matchesStatus && matchesPriority;
         });
     }, [projects, searchQuery, statusFilter, priorityFilter]);
+
+    // Reset pagination on filter/view changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, statusFilter, priorityFilter, viewMode]);
+
+    const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentProjects = filteredProjects.slice(indexOfFirstItem, indexOfLastItem);
+
+    const nextPage = () => {
+        if (currentPage < totalPages) setCurrentPage(curr => curr + 1);
+    };
+
+    const prevPage = () => {
+        if (currentPage > 1) setCurrentPage(curr => curr - 1);
+    };
 
     const handleDelete = async (id: string) => {
         // 1. Permission Check (Frontend fallback)
@@ -291,8 +312,9 @@ export default function ManageProjectsPage() {
                             </TableCell>
                         </TableRow>
                     ) : (
-                        filteredProjects.map((project) => (
+                        currentProjects.map((project) => (
                             <TableRow key={project.id}>
+
                                 <TableCell className="font-medium text-xs text-muted-foreground">{project.projectId}</TableCell>
                                 <TableCell
                                     className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
@@ -478,9 +500,10 @@ export default function ManageProjectsPage() {
 
             {viewMode === 'grid' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {filteredProjects.map(project => (
+                    {currentProjects.map(project => (
                         <ProjectCard key={project.id} project={project} />
                     ))}
+
                     {filteredProjects.length === 0 && (
                         <div className="col-span-full h-40 flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
                             No projects found matching your criteria.
@@ -496,6 +519,42 @@ export default function ManageProjectsPage() {
                     Calendar view coming soon
                 </div>
             )}
+
+            {/* Pagination Controls */}
+            {(viewMode === 'list' || viewMode === 'grid') && filteredProjects.length > itemsPerPage && (
+                <div className="flex flex-col md:grid md:grid-cols-3 items-center gap-4 py-4 px-2 border-t mt-4 bg-white dark:bg-card rounded-lg border shadow-sm">
+                    <div className="text-sm text-muted-foreground text-center md:text-left order-2 md:order-1 px-2">
+                        Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredProjects.length)} of {filteredProjects.length} projects
+                    </div>
+                    <div className="flex items-center justify-center gap-2 order-1 md:order-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={prevPage}
+                            disabled={currentPage === 1}
+                            className="h-9"
+                        >
+                            <ChevronLeft className="h-4 w-4 mr-1" />
+                            Previous
+                        </Button>
+                        <div className="flex items-center gap-1 min-w-[5rem] justify-center text-sm font-medium">
+                            Page {currentPage} of {totalPages}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={nextPage}
+                            disabled={currentPage === totalPages}
+                            className="h-9"
+                        >
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                    </div>
+                    <div className="hidden md:block md:order-3" />
+                </div>
+            )}
         </div>
+
     );
 }

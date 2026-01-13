@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Search, Minus, Plus, PlusCircle, Trash2, Calendar, Filter, Save, Upload, AlertTriangle, MapPin } from 'lucide-react';
+import { Loader2, Search, Minus, Plus, PlusCircle, Trash2, Calendar, Filter, Save, Upload, AlertTriangle, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
@@ -551,6 +551,8 @@ export default function DailyAttendancePage() {
     const [selectedUnit, setSelectedUnit] = React.useState(ALL_UNITS_VALUE);
     const [selectedDept, setSelectedDept] = React.useState(ALL_DEPTS_VALUE);
     const [filterFlag, setFilterFlag] = React.useState(ALL_FLAGS_VALUE);
+    const [currentPage, setCurrentPage] = React.useState(1);
+    const itemsPerPage = 10;
 
 
     const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
@@ -793,6 +795,26 @@ export default function DailyAttendancePage() {
         });
     }, [employees, searchTerm, selectedBranch, selectedUnit, selectedDept, filterFlag, dateRange, isHROrAdmin, isSupervisor, supervisedEmployeeIds]);
 
+    // Reset page when filters change
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedBranch, selectedUnit, selectedDept, filterFlag, dateRange]);
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentEmployees = filteredEmployees.slice(indexOfFirstItem, indexOfLastItem);
+
+    const nextPage = () => {
+        if (currentPage < totalPages) setCurrentPage(curr => curr + 1);
+    };
+
+    const prevPage = () => {
+        if (currentPage > 1) setCurrentPage(curr => curr - 1);
+    };
+
+
     const attendanceByEmployee = React.useMemo(() => {
         const map = new Map<string, AttendanceDocument[]>();
         if (allAttendance && (employees || usersData)) {
@@ -982,7 +1004,7 @@ export default function DailyAttendancePage() {
                                     No employees found matching your criteria.
                                 </div>
                             ) : (
-                                filteredEmployees.map(emp => (
+                                currentEmployees.map(emp => (
                                     <EmployeeAttendanceRow
                                         key={emp.id}
                                         employee={emp}
@@ -997,6 +1019,42 @@ export default function DailyAttendancePage() {
                             )}
                         </div>
                     )}
+
+                    {/* Pagination Controls */}
+                    {!isLoading && filteredEmployees.length > itemsPerPage && (
+                        <div className="flex flex-col md:grid md:grid-cols-3 items-center gap-4 py-4 px-2 border-t mt-4">
+                            <div className="text-sm text-muted-foreground text-center md:text-left order-2 md:order-1">
+                                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredEmployees.length)} of {filteredEmployees.length} employees
+                            </div>
+                            <div className="flex items-center justify-center gap-2 order-1 md:order-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={prevPage}
+                                    disabled={currentPage === 1}
+                                    className="h-9"
+                                >
+                                    <ChevronLeft className="h-4 w-4 mr-1" />
+                                    Previous
+                                </Button>
+                                <div className="flex items-center gap-1 min-w-[5rem] justify-center text-sm font-medium">
+                                    Page {currentPage} of {totalPages}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={nextPage}
+                                    disabled={currentPage === totalPages}
+                                    className="h-9"
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4 ml-1" />
+                                </Button>
+                            </div>
+                            <div className="hidden md:block md:order-3" />
+                        </div>
+                    )}
+
                 </CardContent>
             </Card>
         </div>

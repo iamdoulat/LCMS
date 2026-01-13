@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Loader2, AlertTriangle, Info, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Loader2, AlertTriangle, Info, Edit, Trash2, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
     Table,
@@ -60,6 +60,8 @@ export default function VisitApplicationListPage() {
     const [applications, setApplications] = React.useState<VisitApplicationDocument[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [fetchError, setFetchError] = React.useState<string | null>(null);
+    const [currentPage, setCurrentPage] = React.useState(1);
+    const itemsPerPage = 10;
 
     const isReadOnly = userRole?.includes('Viewer');
 
@@ -90,6 +92,26 @@ export default function VisitApplicationListPage() {
         }
         return [];
     }, [applications, isHROrAdmin, isSupervisor, supervisedEmployeeIds]);
+
+    // Reset page when data changes
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [filteredApplications.length]);
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentApplications = filteredApplications.slice(indexOfFirstItem, indexOfLastItem);
+
+    const nextPage = () => {
+        if (currentPage < totalPages) setCurrentPage(curr => curr + 1);
+    };
+
+    const prevPage = () => {
+        if (currentPage > 1) setCurrentPage(curr => curr - 1);
+    };
+
 
     const handleDelete = async (id: string, employeeName: string) => {
         if (isReadOnly) return;
@@ -175,9 +197,10 @@ export default function VisitApplicationListPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredApplications.map((app, index) => (
+                                    {currentApplications.map((app, index) => (
                                         <TableRow key={app.id}>
-                                            <TableCell>{index + 1}</TableCell>
+                                            <TableCell>{indexOfFirstItem + index + 1}</TableCell>
+
                                             <TableCell className="font-medium">{app.employeeName}</TableCell>
                                             <TableCell>{formatDisplayDate(app.fromDate)}</TableCell>
                                             <TableCell>{formatDisplayDate(app.toDate)}</TableCell>
@@ -217,7 +240,43 @@ export default function VisitApplicationListPage() {
                             </Table>
                         </div>
                     )}
+
+                    {/* Pagination Controls */}
+                    {!isLoading && filteredApplications.length > itemsPerPage && (
+                        <div className="flex flex-col md:grid md:grid-cols-3 items-center gap-4 py-4 px-2 border-t mt-4">
+                            <div className="text-sm text-muted-foreground text-center md:text-left order-2 md:order-1">
+                                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredApplications.length)} of {filteredApplications.length} entries
+                            </div>
+                            <div className="flex items-center justify-center gap-2 order-1 md:order-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={prevPage}
+                                    disabled={currentPage === 1}
+                                    className="h-9"
+                                >
+                                    <ChevronLeft className="h-4 w-4 mr-1" />
+                                    Previous
+                                </Button>
+                                <div className="flex items-center gap-1 min-w-[5rem] justify-center text-sm font-medium">
+                                    Page {currentPage} of {totalPages}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={nextPage}
+                                    disabled={currentPage === totalPages}
+                                    className="h-9"
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4 ml-1" />
+                                </Button>
+                            </div>
+                            <div className="hidden md:block md:order-3" />
+                        </div>
+                    )}
                 </CardContent>
+
             </Card>
         </div>
     );

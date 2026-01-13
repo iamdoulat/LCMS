@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mailbox, PlusCircle, AlertTriangle, Info, ThumbsUp, ThumbsDown, Edit, Filter, XCircle, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Mailbox, PlusCircle, AlertTriangle, Info, ThumbsUp, ThumbsDown, Edit, Filter, XCircle, MoreHorizontal, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
     Table,
@@ -99,6 +99,8 @@ export default function LeaveManagementPage() {
     const [filterLeaveType, setFilterLeaveType] = React.useState<LeaveType | ''>('');
     const [filterStatus, setFilterStatus] = React.useState<LeaveStatus | ''>('');
     const [availableLeaveTypes, setAvailableLeaveTypes] = React.useState<string[]>([]);
+    const [currentPage, setCurrentPage] = React.useState(1);
+    const itemsPerPage = 10;
 
 
     const isHROrAdmin = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
@@ -265,6 +267,26 @@ export default function LeaveManagementPage() {
 
         setDisplayedLeaves(filtered);
     }, [allLeaves, filterEmployeeName, filterEmployeeCode, filterLeaveType, filterStatus]);
+
+    // Reset page when filters change
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [filterEmployeeName, filterEmployeeCode, filterLeaveType, filterStatus]);
+
+    // Pagination Logic
+    const totalPages = Math.ceil(displayedLeaves.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentLeaves = displayedLeaves.slice(indexOfFirstItem, indexOfLastItem);
+
+    const nextPage = () => {
+        if (currentPage < totalPages) setCurrentPage(curr => curr + 1);
+    };
+
+    const prevPage = () => {
+        if (currentPage > 1) setCurrentPage(curr => curr - 1);
+    };
+
 
 
     const handleUpdateStatus = async (leaveId: string, newStatus: 'Approved' | 'Rejected') => {
@@ -464,8 +486,9 @@ export default function LeaveManagementPage() {
                                             {fetchError}
                                         </TableCell>
                                     </TableRow>
-                                ) : displayedLeaves.length > 0 ? (
-                                    displayedLeaves.map(leave => {
+                                ) : currentLeaves.length > 0 ? (
+                                    currentLeaves.map(leave => {
+
                                         const { name, code } = getEmployeeDetails(leave.employeeName);
                                         return (
                                             <TableRow key={leave.id}>
@@ -529,7 +552,43 @@ export default function LeaveManagementPage() {
                             <TableCaption>This is a list of all submitted leave applications.</TableCaption>
                         </Table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {!isLoading && displayedLeaves.length > itemsPerPage && (
+                        <div className="flex flex-col md:grid md:grid-cols-3 items-center gap-4 py-4 px-2 border-t mt-4">
+                            <div className="text-sm text-muted-foreground text-center md:text-left order-2 md:order-1">
+                                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, displayedLeaves.length)} of {displayedLeaves.length} entries
+                            </div>
+                            <div className="flex items-center justify-center gap-2 order-1 md:order-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={prevPage}
+                                    disabled={currentPage === 1}
+                                    className="h-9"
+                                >
+                                    <ChevronLeft className="h-4 w-4 mr-1" />
+                                    Previous
+                                </Button>
+                                <div className="flex items-center gap-1 min-w-[5rem] justify-center text-sm font-medium">
+                                    Page {currentPage} of {totalPages}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={nextPage}
+                                    disabled={currentPage === totalPages}
+                                    className="h-9"
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4 ml-1" />
+                                </Button>
+                            </div>
+                            <div className="hidden md:block md:order-3" />
+                        </div>
+                    )}
                 </CardContent>
+
             </Card>
         </div>
     );

@@ -9,7 +9,9 @@ import {
     Trash2,
     Eye,
     Download,
-    FilterX
+    FilterX,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,6 +63,9 @@ interface Invoice {
 export default function ManageInvoicesPage() {
     const router = useRouter();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
 
     // Filters
     const [invoiceNoFilter, setInvoiceNoFilter] = useState('');
@@ -209,6 +214,23 @@ export default function ManageInvoicesPage() {
         return Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
     }, []);
 
+    // Reset pagination on filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [invoiceNoFilter, clientFilter, salespersonFilter, statusFilter, yearFilter]);
+
+    const totalPages = Math.ceil(filteredAndSortedInvoices.length / itemsPerPage);
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentInvoices = filteredAndSortedInvoices.slice(indexOfFirstItem, indexOfLastItem);
+
+    const nextPage = () => {
+        if (currentPage < totalPages) setCurrentPage(curr => curr + 1);
+    };
+
+    const prevPage = () => {
+        if (currentPage > 1) setCurrentPage(curr => curr - 1);
+    };
     return (
         <div className="p-6 space-y-6 min-h-screen bg-slate-50/50">
             {/* Header */}
@@ -299,9 +321,10 @@ export default function ManageInvoicesPage() {
                             <SelectItem value="asc">Ascending</SelectItem>
                         </SelectContent>
                     </Select>
-                    <div className="flex-1 text-right text-xs text-muted-foreground">
-                        Showing {filteredAndSortedInvoices.length} result(s)
+                    <div className="flex-1 text-right text-xs text-muted-foreground mr-4">
+                        Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredAndSortedInvoices.length)} of {filteredAndSortedInvoices.length} results
                     </div>
+
                 </div>
             </div>
 
@@ -328,8 +351,9 @@ export default function ManageInvoicesPage() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredAndSortedInvoices.map((invoice) => (
+                            currentInvoices.map((invoice) => (
                                 <TableRow key={invoice.id}>
+
                                     <TableCell className="font-medium text-blue-600">{invoice.invoiceNo}</TableCell>
                                     <TableCell>{invoice.projectTitle}</TableCell>
                                     <TableCell>{invoice.clientName}</TableCell>
@@ -373,6 +397,42 @@ export default function ManageInvoicesPage() {
                     </TableBody>
                 </Table>
             </div>
+
+            {/* Pagination Controls */}
+            {filteredAndSortedInvoices.length > itemsPerPage && (
+                <div className="flex flex-col md:grid md:grid-cols-3 items-center gap-4 py-4 px-2 border-t mt-4 bg-white dark:bg-card rounded-lg border shadow-sm">
+                    <div className="text-sm text-muted-foreground text-center md:text-left order-2 md:order-1 px-2">
+                        Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredAndSortedInvoices.length)} of {filteredAndSortedInvoices.length} invoices
+                    </div>
+                    <div className="flex items-center justify-center gap-2 order-1 md:order-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={prevPage}
+                            disabled={currentPage === 1}
+                            className="h-9"
+                        >
+                            <ChevronLeft className="h-4 w-4 mr-1" />
+                            Previous
+                        </Button>
+                        <div className="flex items-center gap-1 min-w-[5rem] justify-center text-sm font-medium">
+                            Page {currentPage} of {totalPages}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={nextPage}
+                            disabled={currentPage === totalPages}
+                            className="h-9"
+                        >
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                    </div>
+                    <div className="hidden md:block md:order-3" />
+                </div>
+            )}
         </div>
+
     );
 }
