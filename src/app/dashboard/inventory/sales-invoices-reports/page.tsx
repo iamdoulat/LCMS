@@ -127,15 +127,17 @@ export default function SalesInvoicesReportsPage() {
         doc.setFontSize(18);
         doc.text("Sales Invoices Report", 14, 20);
 
+        const pageWidth = doc.internal.pageSize.getWidth();
+        doc.setFontSize(10);
+        doc.text(`Total Invoices: ${displayedInvoices.length}`, pageWidth - 14, 20, { align: 'right' });
+        doc.text(`Total Sales: BDT ${totalSales.toLocaleString()}`, pageWidth - 14, 26, { align: 'right' });
+
         doc.setFontSize(10);
         doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 30);
 
         if (dateRange?.from) {
-            doc.text(`Date Range: ${format(dateRange.from, 'PP')} - ${dateRange.to ? format(dateRange.to, 'PP') : format(dateRange.from, 'PP')}`, 14, 35);
+            doc.text(`Date Range: ${format(dateRange.from, 'PP')} - ${dateRange.to ? format(dateRange.to, 'PP') : format(dateRange.from, 'PP')}`, 14, 36);
         }
-
-        doc.text(`Total Invoices: ${displayedInvoices.length}`, 14, 45);
-        doc.text(`Total Sales: BDT ${totalSales.toLocaleString()}`, 14, 50);
 
         const tableColumn = ["Invoice No", "Date", "Customer", "Status", "Amount"];
         const tableRows = displayedInvoices.map(inv => [

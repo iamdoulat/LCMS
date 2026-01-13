@@ -113,15 +113,32 @@ export default function PurchaseOrdersReportsPage() {
         doc.setFontSize(18);
         doc.text("Purchase Orders Report", 14, 20);
 
+        const pageWidth = doc.internal.pageSize.getWidth();
+        doc.setFontSize(10);
+        doc.text(`Total Orders: ${displayedOrders.length}`, pageWidth - 14, 20, { align: 'right' });
+        doc.text(`Total Value: ${totalAmount.toLocaleString()}`, pageWidth - 14, 26, { align: 'right' });
+
         doc.setFontSize(10);
         doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 30);
 
+        let yPos = 36;
         if (dateRange?.from) {
-            doc.text(`Date Range: ${format(dateRange.from, 'PP')} - ${dateRange.to ? format(dateRange.to, 'PP') : format(dateRange.from, 'PP')}`, 14, 35);
+            doc.text(`Date Range: ${format(dateRange.from, 'PP')} - ${dateRange.to ? format(dateRange.to, 'PP') : format(dateRange.from, 'PP')}`, 14, yPos);
+            yPos += 6;
         }
-
-        doc.text(`Total Orders: ${displayedOrders.length}`, 14, 45);
-        doc.text(`Total Value: ${totalAmount.toLocaleString()}`, 14, 50);
+        if (filterSupplierId) {
+            const supplierLabel = supplierOptions.find(s => s.value === filterSupplierId)?.label || filterSupplierId;
+            doc.text(`Beneficiary: ${supplierLabel}`, 14, yPos);
+            yPos += 6;
+        }
+        if (filterOrderNo) {
+            doc.text(`Order No: ${filterOrderNo}`, 14, yPos);
+            yPos += 6;
+        }
+        if (filterSalesperson) {
+            doc.text(`Salesperson: ${filterSalesperson}`, 14, yPos);
+            yPos += 6;
+        }
 
         const tableColumn = ["Order No", "Date", "Beneficiary", "Salesperson", "Total Amount"];
         const tableRows = displayedOrders.map(order => [
@@ -135,7 +152,7 @@ export default function PurchaseOrdersReportsPage() {
         autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
-            startY: 55,
+            startY: yPos + 4,
         });
 
         doc.save(`purchase_orders_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);

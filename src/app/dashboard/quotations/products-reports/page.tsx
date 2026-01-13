@@ -94,11 +94,31 @@ export default function ProductsListReportsPage() {
         doc.setFontSize(18);
         doc.text("Products List Report", 14, 20);
 
+        const pageWidth = doc.internal.pageSize.getWidth();
+        doc.setFontSize(10);
+        doc.text(`Total Items: ${totalItems}`, pageWidth - 14, 20, { align: 'right' });
+        doc.text(`Average Listed Price: ${averagePrice.toLocaleString()}`, pageWidth - 14, 26, { align: 'right' });
+
         doc.setFontSize(10);
         doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 30);
 
-        doc.text(`Total Items: ${totalItems}`, 14, 40);
-        doc.text(`Average Listed Price: ${averagePrice.toLocaleString()}`, 14, 45);
+        let yPos = 36;
+        if (filterName) {
+            doc.text(`Model No: ${filterName}`, 14, yPos);
+            yPos += 6;
+        }
+        if (filterItemCode) {
+            doc.text(`Item Code: ${filterItemCode}`, 14, yPos);
+            yPos += 6;
+        }
+        if (filterBrand) {
+            doc.text(`Brand: ${filterBrand}`, 14, yPos);
+            yPos += 6;
+        }
+        if (filterSupplier) {
+            doc.text(`Supplier: ${filterSupplier}`, 14, yPos);
+            yPos += 6;
+        }
 
         const tableColumn = ["Model No", "Item Code", "Brand", "Supplier", "Unit", "Price"];
         const tableRows = displayedItems.map(item => [
@@ -113,7 +133,7 @@ export default function ProductsListReportsPage() {
         autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
-            startY: 55,
+            startY: yPos + 4,
         });
 
         doc.save(`products_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);

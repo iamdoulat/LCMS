@@ -125,15 +125,32 @@ export default function QuotationsReportsPage() {
         doc.setFontSize(18);
         doc.text("Quotations Report", 14, 20);
 
+        const pageWidth = doc.internal.pageSize.getWidth();
+        doc.setFontSize(10);
+        doc.text(`Total Quotes: ${displayedQuotes.length}`, pageWidth - 14, 20, { align: 'right' });
+        doc.text(`Total Value: ${totalSales.toLocaleString()}`, pageWidth - 14, 26, { align: 'right' });
+
         doc.setFontSize(10);
         doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 30);
 
+        let yPos = 36;
         if (dateRange?.from) {
-            doc.text(`Date Range: ${format(dateRange.from, 'PP')} - ${dateRange.to ? format(dateRange.to, 'PP') : format(dateRange.from, 'PP')}`, 14, 35);
+            doc.text(`Date Range: ${format(dateRange.from, 'PP')} - ${dateRange.to ? format(dateRange.to, 'PP') : format(dateRange.from, 'PP')}`, 14, yPos);
+            yPos += 6;
         }
-
-        doc.text(`Total Quotes: ${displayedQuotes.length}`, 14, 45);
-        doc.text(`Total Value: ${totalSales.toLocaleString()}`, 14, 50);
+        if (filterCustomerId) {
+            const customerLabel = customerOptions.find(c => c.value === filterCustomerId)?.label || filterCustomerId;
+            doc.text(`Customer: ${customerLabel}`, 14, yPos);
+            yPos += 6;
+        }
+        if (filterStatus && filterStatus !== 'All') {
+            doc.text(`Status: ${filterStatus}`, 14, yPos);
+            yPos += 6;
+        }
+        if (filterSalesperson) {
+            doc.text(`Salesperson: ${filterSalesperson}`, 14, yPos);
+            yPos += 6;
+        }
 
         const tableColumn = ["Quote No", "Date", "Customer", "Salesperson", "Status", "Amount"];
         const tableRows = displayedQuotes.map(quote => [
@@ -148,7 +165,7 @@ export default function QuotationsReportsPage() {
         autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
-            startY: 55,
+            startY: yPos + 4,
         });
 
         doc.save(`quotations_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);

@@ -149,7 +149,7 @@ const financialNavItems: NavItem[] = [
   { href: '/dashboard/purchase-orders/list', label: 'Purchase Orders', icon: ShoppingCart, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/quotations/reports', label: 'Quotations Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/pi/reports', label: 'PI Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
-  { href: '/dashboard/quotations/items-reports', label: 'Quote items Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
+
   { href: '/dashboard/quotations/products-reports', label: 'Products list Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/purchase-orders/reports', label: 'Purchase Orders Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/pi/pi-settings', label: 'PI Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },

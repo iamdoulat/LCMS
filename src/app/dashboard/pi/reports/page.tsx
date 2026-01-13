@@ -123,15 +123,38 @@ export default function PiReportsPage() {
         doc.setFontSize(18);
         doc.text("PI Report", 14, 20);
 
+        const pageWidth = doc.internal.pageSize.getWidth();
+        doc.setFontSize(10);
+        doc.text(`Total PIs: ${displayedInvoices.length}`, pageWidth - 14, 20, { align: 'right' });
+        doc.text(`Total Value: ${totalSales.toLocaleString()}`, pageWidth - 14, 26, { align: 'right' });
+
         doc.setFontSize(10);
         doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 30);
 
+        let yPos = 36;
         if (dateRange?.from) {
-            doc.text(`Date Range: ${format(dateRange.from, 'PP')} - ${dateRange.to ? format(dateRange.to, 'PP') : format(dateRange.from, 'PP')}`, 14, 35);
+            doc.text(`Date Range: ${format(dateRange.from, 'PP')} - ${dateRange.to ? format(dateRange.to, 'PP') : format(dateRange.from, 'PP')}`, 14, yPos);
+            yPos += 6;
+        }
+        if (filterCustomerId) {
+            const customerLabel = customerOptions.find(c => c.value === filterCustomerId)?.label || filterCustomerId;
+            doc.text(`Customer: ${customerLabel}`, 14, yPos);
+            yPos += 6;
+        }
+        if (filterStatus && filterStatus !== 'All') {
+            doc.text(`Status: ${filterStatus}`, 14, yPos);
+            yPos += 6;
+        }
+        // PI uses filterInvoiceNo instead of quoteNo
+        if (filterInvoiceNo) {
+            doc.text(`Invoice No: ${filterInvoiceNo}`, 14, yPos);
+            yPos += 6;
         }
 
-        doc.text(`Total PIs: ${displayedInvoices.length}`, 14, 45);
-        doc.text(`Total Value: ${totalSales.toLocaleString()}`, 14, 50);
+        if (filterInvoiceNo) {
+            doc.text(`Invoice No: ${filterInvoiceNo}`, 14, yPos);
+            yPos += 6;
+        }
 
         const tableColumn = ["PI No", "Date", "Customer", "Salesperson", "Status", "Amount"];
         const tableRows = displayedInvoices.map(inv => [
@@ -146,7 +169,7 @@ export default function PiReportsPage() {
         autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
-            startY: 55,
+            startY: yPos + 4,
         });
 
         doc.save(`pi_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
