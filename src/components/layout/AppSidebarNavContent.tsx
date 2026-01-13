@@ -136,6 +136,7 @@ const inventoryNavItems: NavItem[] = [
   { href: '/dashboard/payments/view', label: 'View Payments', icon: ListChecks, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/inventory/refunds-returns', label: 'Refunds & Returns', icon: Undo2, iconColorClass: 'bg-icon-return' },
   { href: '/dashboard/petty-cash/reports', label: 'Account Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
+  { href: '/dashboard/inventory/stock-reports', label: 'Stock Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/petty-cash/settings', label: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 
