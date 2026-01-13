@@ -361,18 +361,19 @@ export default function EmployeesListPage() {
 
           {/* Pagination Controls */}
           {displayedEmployees.length > itemsPerPage && (
-            <div className="flex items-center justify-end space-x-2 py-4">
-              <div className="flex-1 text-sm text-muted-foreground">
+            <div className="flex flex-col md:grid md:grid-cols-3 items-center gap-4 py-4 px-2 border-t mt-4">
+              <div className="text-sm text-muted-foreground text-center md:text-left order-2 md:order-1">
                 Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, displayedEmployees.length)} of {displayedEmployees.length} entries
               </div>
-              <div className="space-x-2">
+              <div className="flex items-center justify-center gap-2 order-1 md:order-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={prevPage}
                   disabled={currentPage === 1}
+                  className="h-9"
                 >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  <ChevronLeft className="h-4 w-4 mr-1" />
                   Previous
                 </Button>
                 <Button
@@ -380,11 +381,13 @@ export default function EmployeesListPage() {
                   size="sm"
                   onClick={nextPage}
                   disabled={currentPage === totalPages}
+                  className="h-9"
                 >
                   Next
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                  <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
+              <div className="hidden md:block md:order-3" />
             </div>
           )}
         </CardContent>
