@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Filter, XCircle, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Filter, XCircle, MoreHorizontal, ChevronLeft, ChevronRight, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -21,7 +21,8 @@ import Swal from 'sweetalert2';
 import type { EmployeeDocument, DesignationDocument, UserDocumentForAdmin, UserRole } from '@/types';
 import { employeeStatusOptions } from '@/types';
 import { collection, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase/config';
+import { firestore, auth } from '@/lib/firebase/config';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { format, parseISO, isValid } from 'date-fns';
@@ -189,6 +190,39 @@ export default function EmployeesListPage() {
     });
   };
 
+  const handlePasswordReset = (email: string, fullName: string) => {
+    if (isReadOnly || !email) return;
+
+    Swal.fire({
+      title: 'Reset Password?',
+      text: `Send a password reset email to ${fullName} (${email})?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, send it!',
+      confirmButtonColor: 'hsl(var(--primary))',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await sendPasswordResetEmail(auth, email);
+          Swal.fire({
+            title: 'Email Sent!',
+            text: `A password reset link has been sent to ${email}.`,
+            icon: 'success',
+            timer: 3000,
+            showConfirmButton: false,
+          });
+        } catch (error: any) {
+          console.error('Password reset error:', error);
+          Swal.fire({
+            title: 'Error',
+            text: error.message || 'Could not send password reset email.',
+            icon: 'error',
+          });
+        }
+      }
+    });
+  };
+
   const getStatusVariant = (status?: string): "default" | "secondary" | "destructive" => {
     switch (status) {
       case 'Active': return 'default';
@@ -339,6 +373,14 @@ export default function EmployeesListPage() {
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               <span>Delete</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handlePasswordReset(employee.email!, employee.fullName!)}
+                              className="text-primary focus:bg-primary/10 focus:text-primary"
+                              disabled={isReadOnly || !employee.email}
+                            >
+                              <KeyRound className="mr-2 h-4 w-4" />
+                              <span>Password Reset</span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
