@@ -60,7 +60,7 @@ export default function ManageNoticesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const isSuperAdmin = userRole?.includes('Super Admin');
-
+  const canManage = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
   const isReadOnly = userRole?.includes('Viewer');
   const [viewingNotice, setViewingNotice] = React.useState<Notice | null>(null);
 
@@ -180,7 +180,7 @@ export default function ManageNoticesPage() {
               </CardDescription>
             </div>
             <Link href="/dashboard/hr/notice/add" passHref>
-              <Button disabled={isReadOnly || !isSuperAdmin}>
+              <Button disabled={!canManage}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Notice
               </Button>
             </Link>
@@ -248,7 +248,7 @@ export default function ManageNoticesPage() {
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!isSuperAdmin && !isReadOnly}>
+                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={!canManage && !isReadOnly}>
                               <span className="sr-only">Open menu</span>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -265,13 +265,12 @@ export default function ManageNoticesPage() {
                                 <span>{isReadOnly ? 'View Details' : 'Edit'}</span>
                               </Link>
                             </DropdownMenuItem>
-                            {isSuperAdmin && (
+                            {canManage && (
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onSelect={() => handleDeleteNotice(notice.id, notice.title)}
                                   className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                  disabled={isReadOnly}
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" />
                                   <span>Delete</span>

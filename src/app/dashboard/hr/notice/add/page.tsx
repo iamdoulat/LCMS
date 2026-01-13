@@ -4,12 +4,38 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, BellRing } from 'lucide-react';
+import { ArrowLeft, BellRing, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { AddNoticeForm } from '@/components/forms/common';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import Swal from 'sweetalert2';
 
 export default function AddNoticePage() {
+  const { userRole, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (!authLoading && !userRole?.some(r => ["Super Admin", "Admin", "HR"].includes(r))) {
+      Swal.fire({
+        title: 'Access Denied',
+        text: 'You do not have permission to manage notices.',
+        icon: 'error',
+        timer: 2000,
+        showConfirmButton: false,
+      }).then(() => router.push('/dashboard'));
+    }
+  }, [userRole, authLoading, router]);
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8 px-[20px]">
       <div className="mb-6">
