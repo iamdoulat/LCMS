@@ -213,7 +213,7 @@ export default function StockReportsPage() {
                                                     {(item.currentQuantity || 0) <= 0 ? (
                                                         <Badge variant="destructive">Out of Stock</Badge>
                                                     ) : (item.currentQuantity || 0) <= (item.warningQuantity || 0) ? (
-                                                        <Badge variant="warning" className="bg-amber-500 text-white">Low Stock</Badge>
+                                                        <Badge variant="outline" className="bg-amber-500 text-white border-none">Low Stock</Badge>
                                                     ) : (
                                                         <Badge variant="default" className="bg-green-500">Healthy</Badge>
                                                     )}
