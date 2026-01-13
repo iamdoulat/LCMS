@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Filter, XCircle, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Users as UsersIcon, FileEdit, Trash2, Filter, XCircle, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -79,6 +79,8 @@ export default function EmployeesListPage() {
   const [filterEmployeeName, setFilterEmployeeName] = React.useState('');
   const [filterDesignation, setFilterDesignation] = React.useState('');
   const [filterStatus, setFilterStatus] = React.useState('');
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 10;
 
   const { data: employees, isLoading: isLoadingEmployees, error: fetchError, refetch } = useFirestoreQuery<EmployeeDocument[]>(
     query(collection(firestore, "employees"), orderBy("createdAt", "desc")),
@@ -144,6 +146,25 @@ export default function EmployeesListPage() {
       };
     });
   }, [employees, users, filterEmployeeCode, filterEmployeeName, filterDesignation, filterStatus]);
+
+  // Pagination Logic
+  const totalPages = Math.ceil(displayedEmployees.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = displayedEmployees.slice(indexOfFirstItem, indexOfLastItem);
+
+  const nextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(curr => curr + 1);
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) setCurrentPage(curr => curr - 1);
+  };
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filterEmployeeCode, filterEmployeeName, filterDesignation, filterStatus, employees?.length]);
 
 
   const handleDeleteEmployee = (employeeId: string, employeeName?: string) => {
@@ -275,8 +296,8 @@ export default function EmployeesListPage() {
                       {fetchError.message}
                     </TableCell>
                   </TableRow>
-                ) : displayedEmployees && displayedEmployees.length > 0 ? (
-                  displayedEmployees.map((employee) => (
+                ) : currentItems && currentItems.length > 0 ? (
+                  currentItems.map((employee) => (
                     <TableRow key={employee.id}>
                       <TableCell>{employee.employeeCode}</TableCell>
                       <TableCell>
