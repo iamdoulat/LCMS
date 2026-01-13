@@ -103,6 +103,12 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
                     isDarkHeaderPage ? "bg-[#0a1e60]" : "bg-slate-50",
                     isOpen ? "translate-x-[49%] scale-[0.85] rounded-l-[2.5rem] overflow-hidden shadow-2xl" : "translate-x-0 scale-100 rounded-none shadow-none"
                 )}
+                style={{
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    transformStyle: 'preserve-3d',
+                    WebkitTransformStyle: 'preserve-3d',
+                }}
             >
                 {/* Content */}
                 <main className="flex-1 relative overflow-hidden flex flex-col">

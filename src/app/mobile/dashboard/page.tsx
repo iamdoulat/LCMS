@@ -523,7 +523,7 @@ export default function MobileDashboardPage() {
         setPullDistance(0);
     };
     return (
-        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
+        <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header - stays fixed during pull */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
                 <MobileHeader />
@@ -533,8 +533,11 @@ export default function MobileDashboardPage() {
                 ref={containerRef}
                 className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain relative transition-transform duration-200 ease-out"
                 style={{
-                    transform: `translateY(${isRefreshing ? 60 : pullDistance > 0 ? pullDistance * 0.4 : 0}px)`,
-                    backgroundColor: '#f8fafc' // Solid background to prevent seeing through
+                    transform: `translateY(${isRefreshing ? 60 : pullDistance > 0 ? pullDistance * 0.4 : 0}px) translateZ(0)`,
+                    backgroundColor: '#f8fafc', // Solid background to prevent seeing through
+                    willChange: 'transform',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
                 }}
                 onTouchStart={(e) => {
                     const scrollTop = containerRef.current?.scrollTop ?? 0;
@@ -571,7 +574,10 @@ export default function MobileDashboardPage() {
             >
                 {/* Pull to refresh indicator - Absolute positioned above content */}
                 <div className="absolute left-0 right-0 -top-12 flex justify-center py-2 z-10">
-                    <div className={`animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 ${isRefreshing || pullDistance > 40 ? 'opacity-100' : 'opacity-0'}`}></div>
+                    <div className={cn(
+                        "animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600",
+                        (isRefreshing || pullDistance > 40) ? 'opacity-100' : 'opacity-0'
+                    )}></div>
                 </div>
 
                 <div className="px-4 pt-6 pb-[120px] space-y-6">
