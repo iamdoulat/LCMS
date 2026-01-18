@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, parse } from 'date-fns';
 import { Edit2, Clock, Coffee, AlertCircle, ArrowLeft, Filter as FilterIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -218,6 +218,23 @@ export default function MyAttendancePage() {
         }
     };
 
+    const calculateWorkTime = (inTime?: string, outTime?: string) => {
+        if (!inTime || !outTime) return '-';
+        try {
+            // Parse times like "09:04 AM" and "12:10 PM"
+            const inDate = parse(inTime, 'hh:mm a', new Date());
+            const outDate = parse(outTime, 'hh:mm a', new Date());
+
+            const diffMs = outDate.getTime() - inDate.getTime();
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            return `${hours}h ${minutes}m`;
+        } catch (e) {
+            return '-';
+        }
+    };
+
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
@@ -325,6 +342,11 @@ export default function MyAttendancePage() {
                                                         <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">OUT</span>{formatTime(record.outTime)}</span>
                                                     </div>
                                                 </div>
+                                            </div>
+
+                                            <div className="h-10 w-16 rounded-lg bg-slate-50 flex flex-col items-center justify-center border border-slate-100 shrink-0 shadow-[0_3px_8px_rgba(0,0,0,0.1)]">
+                                                <span className="text-[10px] font-bold text-[#0a1e60] leading-none mb-0.5">{calculateWorkTime(record.inTime, record.outTime)}</span>
+                                                <span className="text-[7px] font-bold text-slate-400 uppercase leading-none">Work</span>
                                             </div>
 
                                             <Link
