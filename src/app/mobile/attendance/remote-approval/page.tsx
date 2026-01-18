@@ -26,6 +26,7 @@ import {
 interface UnifiedApprovalRecord extends MultipleCheckInOutRecord {
     source: 'multiple' | 'daily';
     employeeCode?: string;
+    displayTime?: string;
 }
 
 export default function RemoteAttendanceApprovalPage() {
@@ -97,7 +98,8 @@ export default function RemoteAttendanceApprovalPage() {
                             employeeName: data.employeeName || emp?.fullName || 'Unknown',
                             employeeCode: emp?.employeeCode || 'N/A',
                             type: 'Out Time',
-                            timestamp: data.outTime,
+                            timestamp: data.date,
+                            displayTime: data.outTime,
                             location: {
                                 latitude: data.outTimeLocation?.latitude || 0,
                                 longitude: data.outTimeLocation?.longitude || 0,
@@ -380,7 +382,10 @@ export default function RemoteAttendanceApprovalPage() {
                                         <div>
                                             <h3 className="text-sm font-bold text-slate-800 leading-tight">{record.employeeName}</h3>
                                             <div className="text-xs font-bold text-indigo-600 mt-0.5">
-                                                {format(new Date(record.timestamp), 'dd-MM-yyyy • hh:mm a')}
+                                                {record.displayTime
+                                                    ? `${format(new Date(record.timestamp), 'dd-MM-yyyy')} • ${record.displayTime}`
+                                                    : format(new Date(record.timestamp), 'dd-MM-yyyy • hh:mm a')
+                                                }
                                             </div>
                                         </div>
                                     </div>
@@ -435,7 +440,10 @@ export default function RemoteAttendanceApprovalPage() {
                                         {selectedRecord.employeeCode} • {selectedRecord.type}
                                     </div>
                                     <div className="text-[10px] text-indigo-600 font-bold mt-0.5">
-                                        {format(new Date(selectedRecord.timestamp), 'dd MMM, hh:mm a')}
+                                        {selectedRecord.displayTime
+                                            ? `${format(new Date(selectedRecord.timestamp), 'dd MMM')}, ${selectedRecord.displayTime}`
+                                            : format(new Date(selectedRecord.timestamp), 'dd MMM, hh:mm a')
+                                        }
                                     </div>
                                 </div>
                             </div>
