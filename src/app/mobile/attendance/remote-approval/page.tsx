@@ -97,7 +97,7 @@ export default function RemoteAttendanceApprovalPage() {
                             employeeName: data.employeeName || emp?.fullName || 'Unknown',
                             employeeCode: emp?.employeeCode || 'N/A',
                             type: 'Out Time',
-                            timestamp: data.date,
+                            timestamp: data.outTime,
                             location: {
                                 latitude: data.outTimeLocation?.latitude || 0,
                                 longitude: data.outTimeLocation?.longitude || 0,
