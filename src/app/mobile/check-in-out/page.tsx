@@ -454,7 +454,7 @@ export default function MobileCheckInOutPage() {
 
                                                 {/* Total Duration Label on Track */}
                                                 {duration && (
-                                                    <div className="absolute left-[calc(1.25rem+2.5rem-24px)] top-1/2 -translate-y-1/2 z-20 flex flex-col items-center">
+                                                    <div className="absolute left-[calc(1.25rem+2.5rem-24px)] top-[35%] -translate-y-1/2 z-20 flex flex-col items-center">
                                                         <div className="bg-white px-1.5 py-0.5 rounded-full border border-slate-200 shadow-sm text-[9px] font-bold text-slate-500 whitespace-nowrap">
                                                             {duration}
                                                         </div>
