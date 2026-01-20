@@ -46,7 +46,7 @@ export default function MobileCheckInOutPage() {
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState<string | null>(null);
 
     // Supervision & Filtering
-    const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const { isSupervisor, supervisedEmployees, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
     const [supervisionRecords, setSupervisionRecords] = useState<MultipleCheckInOutRecord[]>([]);
     const [filteredSupervisionRecords, setFilteredSupervisionRecords] = useState<MultipleCheckInOutRecord[]>([]);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -369,25 +369,6 @@ export default function MobileCheckInOutPage() {
 
 
     const renderContent = () => {
-        // Logics for different tabs
-        let recordsToDisplay: MultipleCheckInOutRecord[] = [];
-
-        if (activeTab === 'Check Ins') {
-            // Combine all current activity into a live feed for privileged users and the current user
-            // Using a flat list ensures both "Check In" and "Check Out" cards are visible for the same location
-            recordsToDisplay = [...records, ...privilegedRoleRecords];
-
-            // Sort by most recent first
-            recordsToDisplay.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-            // Limit to most recent 50 cards for a clean feed
-            recordsToDisplay = recordsToDisplay.slice(0, 50);
-        } else if (activeTab === 'Completed') {
-            recordsToDisplay = records;
-        } else {
-            recordsToDisplay = filteredSupervisionRecords;
-        }
-
         if (isLoading) {
             return (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400">
@@ -397,7 +378,34 @@ export default function MobileCheckInOutPage() {
             );
         }
 
-        if (recordsToDisplay.length === 0) {
+        // Collect all potential records to allow pairing even across tabs
+        const allRelevantRecords = [...records, ...privilegedRoleRecords, ...supervisionRecords];
+        // Deduplicate
+        const uniqueRecords = Array.from(new Map(allRelevantRecords.map(r => [r.id, r])).values());
+
+        const grouped = groupRecordsByDate(uniqueRecords);
+
+        // Filter visits based on active tab
+        const filteredGrouped = grouped.map(group => {
+            const filteredVisits = group.visits.filter(visit => {
+                const isUserRecord = visit.employeeId === currentUserEmployeeId;
+                const isDone = !!visit.checkOut;
+
+                if (activeTab === 'Check Ins') {
+                    // Show pending visits (User's + others for the live feed feel, but only if not checked out)
+                    return !isDone;
+                }
+                if (activeTab === 'Completed') {
+                    // Show only User's completed visits
+                    return isDone && isUserRecord;
+                }
+                // Supervision tab shows everything
+                return true;
+            });
+            return { ...group, visits: filteredVisits };
+        }).filter(group => group.visits.length > 0);
+
+        if (filteredGrouped.length === 0) {
             return (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400">
                     <p>No data to show</p>
@@ -405,11 +413,9 @@ export default function MobileCheckInOutPage() {
             );
         }
 
-        const grouped = groupRecordsByDate(recordsToDisplay);
-
         return (
-            <div className="px-5 py-4 space-y-8 pb-24">
-                {grouped.map((group) => (
+            <div className="px-[5px] py-4 space-y-6 pb-24">
+                {filteredGrouped.map((group) => (
                     <div key={group.date}>
                         <h3 className="text-[#0a1e60] font-bold text-base mb-6">{group.date}</h3>
                         <div className="relative">
@@ -428,90 +434,169 @@ export default function MobileCheckInOutPage() {
                                     duration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
                                 }
 
-                                return (
-                                    <div key={visit.id} className="flex gap-4 mb-6 last:mb-0 relative">
-                                        <div className="w-20 pt-1 flex flex-col items-center shrink-0">
-                                            <span className="text-xs font-semibold text-slate-500">{checkInTime}</span>
-                                            {checkOutTime && (
-                                                <>
-                                                    <div className="flex-1 flex flex-col items-center justify-start gap-1.5 my-1.5 opacity-30">
-                                                        <div className="w-1 h-1 rounded-full bg-slate-400"></div>
-                                                        <div className="w-1 h-1 rounded-full bg-slate-400"></div>
-                                                    </div>
-                                                    <span className="text-[10px] font-medium text-slate-400">{checkOutTime}</span>
-                                                </>
-                                            )}
-                                            {!checkOutTime && (
-                                                <div className="flex-1 flex flex-col items-center justify-start gap-1.5 mt-2 opacity-30">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                                                </div>
-                                            )}
-                                        </div>
+                                // Find employee profile for Supervision/Team view
+                                const employeeProfile = supervisedEmployees.find(emp => emp.id === visit.employeeId);
+                                const photoURL = employeeProfile?.photoURL;
 
-                                        <div className="flex-1 bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3 relative overflow-hidden">
-                                            <button
-                                                onClick={() => {
-                                                    if (visit.checkIn.imageURL) {
-                                                        setSelectedImageUrl(visit.checkIn.imageURL);
-                                                        setIsImageModalOpen(true);
-                                                    }
-                                                }}
-                                                className="h-12 w-12 rounded-xl bg-slate-100 shrink-0 overflow-hidden relative cursor-pointer hover:opacity-80 transition-opacity"
-                                                disabled={!visit.checkIn.imageURL}
-                                            >
-                                                {visit.checkIn.imageURL ? (
-                                                    <Image src={visit.checkIn.imageURL} alt="Visit" fill className="object-cover" />
-                                                ) : (
-                                                    <div className="h-full w-full flex items-center justify-center text-slate-400">
-                                                        <MapPin className="h-5 w-5" />
+                                return (
+                                    <div key={visit.id} className={`mb-4 last:mb-0 relative ${isDone ? 'bg-slate-50/50 p-4 rounded-3xl border border-slate-200 shadow-md' : ''}`}>
+                                        {/* Timeline Connection Line (only for paired cards) */}
+                                        {visit.checkOut && (
+                                            <>
+                                                {/* Vertical Track */}
+                                                <div className="absolute left-[calc(1.25rem+2.5rem)] top-[5rem] bottom-[5rem] w-px border-l border-dashed border-slate-300 z-0"></div>
+
+                                                {/* Top Branch (to Check Out card) */}
+                                                <div className="absolute left-[calc(1.25rem+2.5rem)] top-[4.5rem] w-4 border-t border-dashed border-slate-300 z-0"></div>
+
+                                                {/* Bottom Branch (to Check In card) */}
+                                                <div className="absolute left-[calc(1.25rem+2.5rem)] bottom-[4.5rem] w-4 border-t border-dashed border-slate-300 z-0"></div>
+
+                                                {/* Total Duration Label on Track */}
+                                                {duration && (
+                                                    <div className="absolute left-[calc(1.25rem+2.5rem-24px)] top-1/2 -translate-y-1/2 z-20 flex flex-col items-center">
+                                                        <div className="bg-white px-1.5 py-0.5 rounded-full border border-slate-200 shadow-sm text-[9px] font-bold text-slate-500 whitespace-nowrap">
+                                                            {duration}
+                                                        </div>
                                                     </div>
                                                 )}
-                                            </button>
+                                            </>
+                                        )}
 
-                                            <div className="flex-1 min-w-0 py-0.5">
-                                                <div className="flex justify-between items-start">
-                                                    <h4 className="font-bold text-[#0a1e60] text-sm truncate pr-2">{visit.companyName}</h4>
-                                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${!isDone ? 'text-blue-600 border-blue-100 bg-blue-50' : 'text-green-600 border-green-100 bg-green-50'}`}>
-                                                        {!isDone ? 'PENDING' : 'DONE'}
-                                                    </span>
-                                                </div>
-                                                <p className="text-xs text-slate-500 mb-2 truncate">{visit.checkIn.remarks || 'No remarks'}</p>
-
-                                                <div className="flex items-center gap-3">
-                                                    <div className="text-[10px] text-slate-500 leading-tight flex items-start gap-1 flex-1">
-                                                        <MapPin className="h-3 w-3 shrink-0 mt-0.5" />
-                                                        <span className="line-clamp-1">{visit.checkIn.location?.address || 'Address not captured'}</span>
+                                        <div className="space-y-6 relative z-10">
+                                            {/* Check Out Card (if exists) */}
+                                            {visit.checkOut && (
+                                                <div className="flex gap-4 relative">
+                                                    <div className="w-20 pt-1 flex flex-col items-center shrink-0">
+                                                        <span className="text-xs font-semibold text-[#0a1e60] mb-1">{checkOutTime}</span>
+                                                        <span className="text-[8px] font-bold px-1 py-0.5 rounded border text-green-600 border-green-100 bg-green-50 mb-2">
+                                                            OUT
+                                                        </span>
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
                                                     </div>
-                                                    {duration && (
-                                                        <span className="text-[10px] font-bold text-slate-400 shrink-0">{duration}</span>
-                                                    )}
+
+                                                    <div className="flex-1 bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3 relative overflow-hidden">
+                                                        <button
+                                                            onClick={() => {
+                                                                if (visit.checkOut?.imageURL) {
+                                                                    setSelectedImageUrl(visit.checkOut.imageURL);
+                                                                    setIsImageModalOpen(true);
+                                                                }
+                                                            }}
+                                                            className="h-12 w-12 rounded-xl bg-slate-100 shrink-0 overflow-hidden relative cursor-pointer hover:opacity-80 transition-opacity"
+                                                            disabled={!visit.checkOut?.imageURL}
+                                                        >
+                                                            {visit.checkOut?.imageURL ? (
+                                                                <Image src={visit.checkOut.imageURL} alt="Visit Out" fill className="object-cover" />
+                                                            ) : (
+                                                                <div className="h-full w-full flex items-center justify-center text-slate-400">
+                                                                    <MapPin className="h-5 w-5" />
+                                                                </div>
+                                                            )}
+                                                        </button>
+
+                                                        <div className="flex-1 min-w-0 py-0.5">
+                                                            <div className="flex justify-between items-start">
+                                                                <h4 className="font-bold text-[#0a1e60] text-sm pr-2">{visit.companyName}</h4>
+                                                            </div>
+                                                            <p className="text-xs text-slate-500 mb-3">{visit.checkOut.remarks || 'No remarks'}</p>
+
+                                                            <div className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 space-y-1">
+                                                                <div className="flex items-start gap-1.5">
+                                                                    <MapPin className="h-3 w-3 shrink-0 mt-0.5 text-blue-500" />
+                                                                    <span className="leading-normal">{visit.checkOut.location?.address || 'Address not captured'}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            {(activeTab === 'Supervision' || (activeTab === 'Check Ins' && !isUserRecord)) && (
+                                                                <div className="mt-3 pt-2 border-t border-slate-50 flex items-center gap-2">
+                                                                    <div className="h-8 w-8 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[10px] font-bold text-slate-500 relative shrink-0">
+                                                                        {photoURL ? (
+                                                                            <Image src={photoURL} alt={visit.employeeName} fill className="object-cover" />
+                                                                        ) : (
+                                                                            visit.employeeName?.substring(0, 2).toUpperCase()
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="text-[11px] font-semibold text-slate-700 truncate">{visit.employeeName}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Check In Card */}
+                                            <div className="flex gap-4 relative">
+                                                <div className="w-20 pt-1 flex flex-col items-center shrink-0">
+                                                    <span className="text-xs font-semibold text-[#0a1e60] mb-1">{checkInTime}</span>
+                                                    <span className={`text-[8px] font-bold px-1 py-0.5 rounded border mb-2 ${!isDone ? 'text-blue-600 border-blue-100 bg-blue-50' : 'text-slate-400 border-slate-100 bg-slate-50'}`}>
+                                                        IN
+                                                    </span>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
                                                 </div>
 
-                                                {(activeTab === 'Supervision' || (activeTab === 'Check Ins' && !isUserRecord)) && (
-                                                    <div className="mt-3 pt-2 border-t border-slate-50 flex items-center gap-2">
-                                                        <div className="h-5 w-5 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[8px] font-bold text-slate-500">
-                                                            {visit.employeeName?.substring(0, 2).toUpperCase()}
+                                                <div className="flex-1 bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3 relative overflow-hidden">
+                                                    <button
+                                                        onClick={() => {
+                                                            if (visit.checkIn.imageURL) {
+                                                                setSelectedImageUrl(visit.checkIn.imageURL);
+                                                                setIsImageModalOpen(true);
+                                                            }
+                                                        }}
+                                                        className="h-12 w-12 rounded-xl bg-slate-100 shrink-0 overflow-hidden relative cursor-pointer hover:opacity-80 transition-opacity"
+                                                        disabled={!visit.checkIn.imageURL}
+                                                    >
+                                                        {visit.checkIn.imageURL ? (
+                                                            <Image src={visit.checkIn.imageURL} alt="Visit In" fill className="object-cover" />
+                                                        ) : (
+                                                            <div className="h-full w-full flex items-center justify-center text-slate-400">
+                                                                <MapPin className="h-5 w-5" />
+                                                            </div>
+                                                        )}
+                                                    </button>
+
+                                                    <div className="flex-1 min-w-0 py-0.5">
+                                                        <div className="flex justify-between items-start">
+                                                            <h4 className="font-bold text-[#0a1e60] text-sm pr-2">{visit.companyName}</h4>
                                                         </div>
-                                                        <span className="text-[11px] font-semibold text-slate-700 truncate">{visit.employeeName}</span>
+                                                        <p className="text-xs text-slate-500 mb-3">{visit.checkIn.remarks || 'No remarks'}</p>
+
+                                                        <div className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 space-y-1">
+                                                            <div className="flex items-start gap-1.5">
+                                                                <MapPin className="h-3 w-3 shrink-0 mt-0.5 text-blue-500" />
+                                                                <span className="leading-normal">{visit.checkIn.location?.address || 'Address not captured'}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        {(activeTab === 'Supervision' || (activeTab === 'Check Ins' && !isUserRecord)) && (
+                                                            <div className="mt-3 pt-2 border-t border-slate-50 flex items-center gap-2">
+                                                                <div className="h-8 w-8 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[10px] font-bold text-slate-500 relative shrink-0">
+                                                                    {photoURL ? (
+                                                                        <Image src={photoURL} alt={visit.employeeName} fill className="object-cover" />
+                                                                    ) : (
+                                                                        visit.employeeName?.substring(0, 2).toUpperCase()
+                                                                    )}
+                                                                </div>
+                                                                <span className="text-[11px] font-semibold text-slate-700 truncate">{visit.employeeName}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {activeTab === 'Check Ins' && isUserRecord && !isDone && (
+                                                    <div className="flex flex-col justify-center pl-1 border-l border-dashed border-slate-100">
+                                                        <button
+                                                            onClick={() => handleCheckOutClick(visit.checkIn)}
+                                                            className="h-10 w-10 bg-blue-50 hover:bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 transition-colors"
+                                                        >
+                                                            <ArrowRight className="h-5 w-5" />
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
-
-                                            {activeTab === 'Check Ins' && isUserRecord && !isDone && (
-                                                <div className="flex flex-col justify-center pl-1 border-l border-dashed border-slate-100">
-                                                    <button
-                                                        onClick={() => handleCheckOutClick(visit.checkIn)}
-                                                        className="h-10 w-10 bg-blue-50 hover:bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 transition-colors"
-                                                    >
-                                                        <ArrowRight className="h-5 w-5" />
-                                                    </button>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
-                                )
+                                );
                             })}
                         </div>
                     </div>
@@ -519,7 +604,6 @@ export default function MobileCheckInOutPage() {
             </div>
         );
     };
-
 
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
@@ -555,7 +639,6 @@ export default function MobileCheckInOutPage() {
                         {['Check Ins', 'Completed', 'Supervision'].map((tab) => (
                             <button
                                 key={tab}
-                                onClick={() => setActiveTab(tab as any)}
                                 className={`flex-1 py-3 text-[10px] sm:text-xs font-bold rounded-full transition-all duration-200 ${activeTab === tab
                                     ? 'bg-white text-blue-600 shadow-sm'
                                     : 'text-slate-400 hover:text-slate-600'
@@ -571,7 +654,7 @@ export default function MobileCheckInOutPage() {
                 </div>
 
                 {/* Main Content List */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-8 pb-24 overscroll-contain">
+                <div className="flex-1 overflow-y-auto px-[5px] py-4 space-y-8 pb-24 overscroll-contain">
                     {renderContent()}
                 </div>
 
@@ -593,7 +676,7 @@ export default function MobileCheckInOutPage() {
             />
 
             {/* Filter Popup */}
-            <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            < Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen} >
                 <DialogContent className="sm:max-w-md p-6 rounded-3xl w-[90%] mx-auto bg-white border-none shadow-2xl">
                     <div className="flex items-center gap-2 mb-6 text-blue-600">
                         <Filter className="h-5 w-5" />
@@ -671,6 +754,6 @@ export default function MobileCheckInOutPage() {
                 </DialogContent>
             </Dialog>
 
-        </div>
+        </div >
     );
 }
