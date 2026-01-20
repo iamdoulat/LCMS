@@ -37,6 +37,7 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
     const [imagePreview, setImagePreview] = useState<string>('');
     const [location, setLocation] = useState<MultipleCheckInOutLocation | null>(null);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+    const [locationProgress, setLocationProgress] = useState<string>('');
     const [multiCheckConfig, setMultiCheckConfig] = useState<MultipleCheckInOutConfiguration | null>(null);
     const [lastRecord, setLastRecord] = useState<MultipleCheckInOutRecord | null>(null);
 
@@ -80,13 +81,18 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
 
     const captureLocation = async () => {
         setIsLoadingLocation(true);
+        setLocationProgress('Starting location capture...');
         try {
-            const loc = await getCurrentLocation();
+            const loc = await getCurrentLocation({
+                onProgress: (msg) => setLocationProgress(msg)
+            });
             setLocation(loc);
+            setLocationProgress('');
             Swal.fire('Success', 'Location captured successfully', 'success');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Location error:', error);
-            Swal.fire('Error', 'Could not capture location. Please enable location services.', 'error');
+            setLocationProgress('');
+            Swal.fire('Error', error.message || 'Could not capture location. Please enable location services.', 'error');
         } finally {
             setIsLoadingLocation(false);
         }
@@ -259,7 +265,7 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
                                 {isLoadingLocation ? (
                                     <div className="flex items-center gap-2">
                                         <Loader2 className="h-4 w-4 animate-spin" />
-                                        <span className="text-sm">Capturing location...</span>
+                                        <span className="text-sm">{locationProgress || 'Capturing location...'}</span>
                                     </div>
                                 ) : location ? (
                                     <div className="text-sm space-y-1">

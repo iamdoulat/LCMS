@@ -21,7 +21,16 @@ import { startOfDay, endOfDay } from 'date-fns';
 
 interface GroupedRecords {
     date: string;
-    records: MultipleCheckInOutRecord[];
+    visits: VisitGroup[];
+}
+
+interface VisitGroup {
+    id: string; // Combined ID or Check-In ID
+    checkIn: MultipleCheckInOutRecord;
+    checkOut?: MultipleCheckInOutRecord;
+    employeeId: string;
+    employeeName: string;
+    companyName: string;
 }
 
 
@@ -34,6 +43,7 @@ export default function MobileCheckInOutPage() {
     const [checkInOutType, setCheckInOutType] = useState<'Check In' | 'Check Out'>('Check In');
     const [lastRecord, setLastRecord] = useState<MultipleCheckInOutRecord | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState<string | null>(null);
 
     // Supervision & Filtering
     const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
@@ -78,6 +88,8 @@ export default function MobileCheckInOutPage() {
                         canonicalId = snap.docs[0].id;
                     }
                 }
+
+                setCurrentUserEmployeeId(canonicalId);
 
                 // Setup listener using canonicalId
                 const qValues = query(
@@ -246,19 +258,78 @@ export default function MobileCheckInOutPage() {
 
 
     const groupRecordsByDate = (records: MultipleCheckInOutRecord[]): GroupedRecords[] => {
-        const groups: { [key: string]: MultipleCheckInOutRecord[] } = {};
-        records.forEach(record => {
-            const dateStr = format(new Date(record.timestamp), 'dd-MM-yyyy');
-            if (!groups[dateStr]) groups[dateStr] = [];
-            groups[dateStr].push(record);
+        // First group by visit (pairs of In and Out)
+        const visits: VisitGroup[] = [];
+        const recordsByEmployeeCompany = new Map<string, MultipleCheckInOutRecord[]>();
+
+        // Sort records by timestamp (ASC) to pair them chronologically
+        const sortedRecords = [...records].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        sortedRecords.forEach(record => {
+            const key = `${record.employeeId}_${record.companyName}`;
+            if (!recordsByEmployeeCompany.has(key)) recordsByEmployeeCompany.set(key, []);
+            const employeeCompanyRecords = recordsByEmployeeCompany.get(key)!;
+
+            if (record.type === 'Check In') {
+                employeeCompanyRecords.push(record);
+            } else if (record.type === 'Check Out') {
+                // Find the latest Check In for this company that doesn't have a check out yet
+                const lastCheckInIndex = employeeCompanyRecords.findLastIndex(r => r.type === 'Check In');
+                if (lastCheckInIndex !== -1) {
+                    const checkIn = employeeCompanyRecords.splice(lastCheckInIndex, 1)[0];
+                    visits.push({
+                        id: `${checkIn.id}_${record.id}`,
+                        checkIn,
+                        checkOut: record,
+                        employeeId: record.employeeId,
+                        employeeName: record.employeeName,
+                        companyName: record.companyName
+                    });
+                } else {
+                    // Orphaned Check Out
+                    visits.push({
+                        id: record.id,
+                        checkIn: record, // Using itself for metadata, but type will show mismatch
+                        checkOut: record,
+                        employeeId: record.employeeId,
+                        employeeName: record.employeeName,
+                        companyName: record.companyName
+                    });
+                }
+            }
         });
+
+        // Add remaining orphaned Check Ins
+        recordsByEmployeeCompany.forEach((remainingRecords) => {
+            remainingRecords.forEach(record => {
+                visits.push({
+                    id: record.id,
+                    checkIn: record,
+                    employeeId: record.employeeId,
+                    employeeName: record.employeeName,
+                    companyName: record.companyName
+                });
+            });
+        });
+
+        // Sort visits DESC by check-in timestamp
+        visits.sort((a, b) => new Date(b.checkIn.timestamp).getTime() - new Date(a.checkIn.timestamp).getTime());
+
+        // Group visits by date
+        const groups: { [key: string]: VisitGroup[] } = {};
+        visits.forEach(visit => {
+            const dateStr = format(new Date(visit.checkIn.timestamp), 'dd-MM-yyyy');
+            if (!groups[dateStr]) groups[dateStr] = [];
+            groups[dateStr].push(visit);
+        });
+
         return Object.keys(groups).sort((a, b) => {
             const [d1, m1, y1] = a.split('-');
             const [d2, m2, y2] = b.split('-');
             return new Date(`${y2}-${m2}-${d2}`).getTime() - new Date(`${y1}-${m1}-${d1}`).getTime();
         }).map(date => ({
             date,
-            records: groups[date]
+            visits: groups[date]
         }));
     };
 
@@ -342,34 +413,56 @@ export default function MobileCheckInOutPage() {
                     <div key={group.date}>
                         <h3 className="text-[#0a1e60] font-bold text-base mb-6">{group.date}</h3>
                         <div className="relative">
-                            {group.records.map((record, idx) => {
-                                const timeStr = format(new Date(record.timestamp), 'hh:mm a');
-                                const isCheckIn = record.type === 'Check In';
+                            {group.visits.map((visit) => {
+                                const checkInTime = format(new Date(visit.checkIn.timestamp), 'hh:mm a');
+                                const checkOutTime = visit.checkOut ? format(new Date(visit.checkOut.timestamp), 'hh:mm a') : null;
+                                const isDone = !!visit.checkOut;
+                                const isUserRecord = visit.employeeId === currentUserEmployeeId;
+
+                                // Calculate duration if both times exist
+                                let duration = '';
+                                if (visit.checkIn && visit.checkOut) {
+                                    const diff = new Date(visit.checkOut.timestamp).getTime() - new Date(visit.checkIn.timestamp).getTime();
+                                    const hours = Math.floor(diff / 3600000);
+                                    const minutes = Math.floor((diff % 3600000) / 60000);
+                                    duration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                                }
 
                                 return (
-                                    <div key={record.id} className="flex gap-4 mb-6 last:mb-0 relative">
+                                    <div key={visit.id} className="flex gap-4 mb-6 last:mb-0 relative">
                                         <div className="w-20 pt-1 flex flex-col items-center shrink-0">
-                                            <span className="text-xs font-semibold text-slate-500">{timeStr}</span>
-                                            <div className="flex-1 flex flex-col items-center justify-start gap-1.5 mt-2 opacity-30">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                                                <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
-                                            </div>
+                                            <span className="text-xs font-semibold text-slate-500">{checkInTime}</span>
+                                            {checkOutTime && (
+                                                <>
+                                                    <div className="flex-1 flex flex-col items-center justify-start gap-1.5 my-1.5 opacity-30">
+                                                        <div className="w-1 h-1 rounded-full bg-slate-400"></div>
+                                                        <div className="w-1 h-1 rounded-full bg-slate-400"></div>
+                                                    </div>
+                                                    <span className="text-[10px] font-medium text-slate-400">{checkOutTime}</span>
+                                                </>
+                                            )}
+                                            {!checkOutTime && (
+                                                <div className="flex-1 flex flex-col items-center justify-start gap-1.5 mt-2 opacity-30">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="flex-1 bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3 relative overflow-hidden">
                                             <button
                                                 onClick={() => {
-                                                    if (record.imageURL) {
-                                                        setSelectedImageUrl(record.imageURL);
+                                                    if (visit.checkIn.imageURL) {
+                                                        setSelectedImageUrl(visit.checkIn.imageURL);
                                                         setIsImageModalOpen(true);
                                                     }
                                                 }}
                                                 className="h-12 w-12 rounded-xl bg-slate-100 shrink-0 overflow-hidden relative cursor-pointer hover:opacity-80 transition-opacity"
-                                                disabled={!record.imageURL}
+                                                disabled={!visit.checkIn.imageURL}
                                             >
-                                                {record.imageURL ? (
-                                                    <Image src={record.imageURL} alt="Visit" fill className="object-cover" />
+                                                {visit.checkIn.imageURL ? (
+                                                    <Image src={visit.checkIn.imageURL} alt="Visit" fill className="object-cover" />
                                                 ) : (
                                                     <div className="h-full w-full flex items-center justify-center text-slate-400">
                                                         <MapPin className="h-5 w-5" />
@@ -379,37 +472,37 @@ export default function MobileCheckInOutPage() {
 
                                             <div className="flex-1 min-w-0 py-0.5">
                                                 <div className="flex justify-between items-start">
-                                                    <h4 className="font-bold text-[#0a1e60] text-sm truncate pr-2">{record.companyName}</h4>
-                                                    {!isCheckIn && (
-                                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border text-green-600 border-green-100 bg-green-50">
-                                                            DONE
-                                                        </span>
+                                                    <h4 className="font-bold text-[#0a1e60] text-sm truncate pr-2">{visit.companyName}</h4>
+                                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${!isDone ? 'text-blue-600 border-blue-100 bg-blue-50' : 'text-green-600 border-green-100 bg-green-50'}`}>
+                                                        {!isDone ? 'PENDING' : 'DONE'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 mb-2 truncate">{visit.checkIn.remarks || 'No remarks'}</p>
+
+                                                <div className="flex items-center gap-3">
+                                                    <div className="text-[10px] text-slate-500 leading-tight flex items-start gap-1 flex-1">
+                                                        <MapPin className="h-3 w-3 shrink-0 mt-0.5" />
+                                                        <span className="line-clamp-1">{visit.checkIn.location?.address || 'Address not captured'}</span>
+                                                    </div>
+                                                    {duration && (
+                                                        <span className="text-[10px] font-bold text-slate-400 shrink-0">{duration}</span>
                                                     )}
                                                 </div>
-                                                <p className="text-xs text-slate-500 mb-2 truncate">{record.remarks || 'No remarks'}</p>
 
-                                                <div className="text-[10px] text-slate-500 leading-tight flex items-start gap-1">
-                                                    <MapPin className="h-3 w-3 shrink-0 mt-0.5" />
-                                                    <span className="line-clamp-2">{record.location?.address || 'Address not captured'}</span>
-                                                </div>
-
-                                                {(activeTab === 'Supervision' || (activeTab === 'Check Ins' && record.employeeId !== user?.uid)) && (
+                                                {(activeTab === 'Supervision' || (activeTab === 'Check Ins' && !isUserRecord)) && (
                                                     <div className="mt-3 pt-2 border-t border-slate-50 flex items-center gap-2">
                                                         <div className="h-5 w-5 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[8px] font-bold text-slate-500">
-                                                            {record.employeeName?.substring(0, 2).toUpperCase()}
+                                                            {visit.employeeName?.substring(0, 2).toUpperCase()}
                                                         </div>
-                                                        <span className="text-[11px] font-semibold text-slate-700 truncate">{record.employeeName}</span>
-                                                        <span className={`ml-auto text-[9px] font-bold px-1.5 rounded border ${isCheckIn ? 'text-blue-600 border-blue-100 bg-blue-50' : 'text-green-600 border-green-100 bg-green-50'}`}>
-                                                            {record.type}
-                                                        </span>
+                                                        <span className="text-[11px] font-semibold text-slate-700 truncate">{visit.employeeName}</span>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {activeTab === 'Check Ins' && record.employeeId === user?.uid && isCheckIn && (
+                                            {activeTab === 'Check Ins' && isUserRecord && !isDone && (
                                                 <div className="flex flex-col justify-center pl-1 border-l border-dashed border-slate-100">
                                                     <button
-                                                        onClick={() => handleCheckOutClick(record)}
+                                                        onClick={() => handleCheckOutClick(visit.checkIn)}
                                                         className="h-10 w-10 bg-blue-50 hover:bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 transition-colors"
                                                     >
                                                         <ArrowRight className="h-5 w-5" />

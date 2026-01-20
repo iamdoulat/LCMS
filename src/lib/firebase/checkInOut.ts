@@ -19,38 +19,74 @@ export const getCurrentLocation = async (options?: PositionOptions & {
         throw new Error('Geolocation is not supported by your browser');
     }
 
-    const posOptions: PositionOptions = {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: options?.forceRefresh ? 0 : 30000,
-        ...options
+    const onProgress = options?.onProgress || (() => { });
+
+    const getPosition = (opts: PositionOptions): Promise<GeolocationPosition> => {
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, opts);
+        });
     };
 
-    return new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                resolve({
-                    latitude: pos.coords.latitude,
-                    longitude: pos.coords.longitude,
-                    accuracy: pos.coords.accuracy
-                });
-            },
-            (err) => {
-                let msg = "Could not capture location. ";
-                if (err.code === 1) {
-                    msg = "Location permission denied. Please allow access in browser settings.";
-                } else if (err.code === 3) {
-                    msg += "The request timed out. Please ensure GPS is enabled.";
-                } else if (err.code === 2) {
-                    msg += "Location provider not available. Check your device settings.";
-                } else {
-                    msg += "Please ensure GPS/Location service is enabled on your device.";
-                }
-                reject(new Error(msg));
-            },
-            posOptions
-        );
-    });
+    // Stage 1: Try High Accuracy (GPS)
+    try {
+        onProgress('Searching for GPS signal...');
+        const pos = await getPosition({
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: options?.forceRefresh ? 0 : 30000,
+            ...options
+        });
+        return {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
+        };
+    } catch (err: any) {
+        console.warn('GPS Stage failed, moving to Stage 2:', err.message);
+    }
+
+    // Stage 2: Try Low Accuracy (Network/Cellular)
+    try {
+        onProgress('GPS weak. Trying network location...');
+        const pos = await getPosition({
+            enableHighAccuracy: false,
+            timeout: 7000,
+            maximumAge: 60000, // 1 min old OK
+            ...options
+        });
+        return {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
+        };
+    } catch (err: any) {
+        console.warn('Network Stage failed, moving to Stage 3:', err.message);
+    }
+
+    // Stage 3: Try Last Known Position (Cached)
+    try {
+        onProgress('Network weak. Fetching last known location...');
+        const pos = await getPosition({
+            enableHighAccuracy: false,
+            timeout: 5000,
+            maximumAge: 300000, // 5 min old OK
+            ...options
+        });
+        return {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
+        };
+    } catch (err: any) {
+        onProgress('Location capture failed.');
+        let msg = "Could not capture location. ";
+        if (err.code === 1) {
+            msg = "Location permission denied. Please allow access in browser settings.";
+        } else {
+            msg += "Please ensure GPS/Location service is enabled and you have a clear view of the sky or a stable network connection.";
+        }
+        throw new Error(msg);
+    }
 };
 
 /**
@@ -58,19 +94,24 @@ export const getCurrentLocation = async (options?: PositionOptions & {
  */
 export const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
         const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
             {
                 headers: {
                     'User-Agent': 'NextsewAttendanceApp/1.0'
-                }
+                },
+                signal: controller.signal
             }
         );
+        clearTimeout(timeoutId);
         const data = await response.json();
         return data.display_name || `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     } catch (error) {
         console.error('Reverse geocoding failed:', error);
-        return `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        return `Location captured (Address unavailable)`;
     }
 };
 

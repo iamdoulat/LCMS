@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { serverTimestamp, doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
-import { Loader2, Camera, Upload, MapPin, RefreshCw } from 'lucide-react';
+import { Loader2, Camera, Upload, MapPin, RefreshCw, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { getValidOption } from '@/types';
 import { getCurrentLocation, reverseGeocode, uploadCheckInOutImage, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
@@ -45,6 +45,8 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
     const [currentLocation, setCurrentLocation] = useState<MultipleCheckInOutLocation | null>(null);
     const [address, setAddress] = useState<string>('');
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+    const [locationProgress, setLocationProgress] = useState<string>('');
+    const [locationError, setLocationError] = useState<string | null>(null);
 
     // Reset state on open
     useEffect(() => {
@@ -58,20 +60,28 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
         }
     }, [isOpen, initialCompanyName]);
 
-    const updateLocation = async () => {
+    const updateLocation = async (force: boolean = false) => {
         setIsLoadingLocation(true);
+        setLocationError(null);
+        setLocationProgress('Initializing geolocation...');
         try {
-            const loc = await getCurrentLocation();
+            const loc = await getCurrentLocation({
+                forceRefresh: force,
+                onProgress: (msg) => setLocationProgress(msg)
+            });
             setCurrentLocation(loc);
 
             // Get address
             if (loc) {
+                setLocationProgress('Fetching address...');
                 const addr = await reverseGeocode(loc.latitude, loc.longitude);
                 setAddress(addr);
             }
-        } catch (error) {
+            setLocationProgress('');
+        } catch (error: any) {
             console.error("Error getting location:", error);
-            // Optionally show error toast or alert
+            setLocationError(error.message || "Failed to capture location.");
+            setLocationProgress('');
         } finally {
             setIsLoadingLocation(false);
         }
@@ -213,17 +223,27 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                                 />
                             </div>
                         ) : (
-                            <div className="h-[150px] bg-slate-100 rounded-lg flex flex-col items-center justify-center text-slate-400">
+                            <div className="h-[150px] bg-slate-100 rounded-lg flex flex-col items-center justify-center text-slate-400 p-4 text-center">
                                 {isLoadingLocation ? (
                                     <>
                                         <Loader2 className="h-8 w-8 animate-spin mb-2" />
-                                        <span className="text-xs">Fetching Location...</span>
+                                        <span className="text-xs font-medium">{locationProgress || 'Fetching Location...'}</span>
                                     </>
-                                ) : (
+                                ) : locationError ? (
                                     <div className="flex flex-col items-center">
+                                        <X className="h-8 w-8 mb-2 text-red-400" />
+                                        <span className="text-[10px] leading-tight text-red-500 mb-2">{locationError}</span>
+                                        <Button variant="link" size="sm" onClick={() => updateLocation(true)} className="text-blue-600 h-auto p-0">
+                                            <RefreshCw className="h-3 w-3 mr-1" /> Try Again
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center text-slate-400">
                                         <MapPin className="h-8 w-8 mb-2" />
                                         <span className="text-xs">Location not captured</span>
-                                        <Button variant="link" size="sm" onClick={updateLocation}>Retry</Button>
+                                        <Button variant="link" size="sm" onClick={() => updateLocation()} className="text-blue-600 h-auto p-0 mt-1">
+                                            Capture Location
+                                        </Button>
                                     </div>
                                 )}
                             </div>
