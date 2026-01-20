@@ -10,7 +10,9 @@ import {
     ShieldAlert,
     AlertCircle,
     Check,
-    X
+    X,
+    BookOpen,
+    FileCode
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -78,6 +80,24 @@ const ALL_MODULES: Module[] = [
         bgColor: 'bg-indigo-50',
         description: 'Track warranty claims',
         href: '/mobile/service/claim-reports'
+    },
+    {
+        id: 'catalogues',
+        label: 'Catalogues',
+        icon: BookOpen,
+        color: 'text-violet-600',
+        bgColor: 'bg-violet-50',
+        description: 'Machine manuals & catalogues',
+        href: '/mobile/service/catalogues'
+    },
+    {
+        id: 'error_codes',
+        label: 'Error Codes',
+        icon: FileCode,
+        color: 'text-rose-600',
+        bgColor: 'bg-rose-50',
+        description: 'Troubleshooting error guides',
+        href: '/mobile/service/error-codes'
     },
 ];
 

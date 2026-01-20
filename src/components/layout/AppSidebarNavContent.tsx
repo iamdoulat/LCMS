@@ -195,6 +195,8 @@ const serviceNavItems: NavItem[] = [
   { href: '/dashboard/warranty-management/missing-and-found', label: 'Missing and Found', icon: Archive, iconColorClass: 'bg-icon-archive' },
   { href: '/dashboard/warranty-management/machine-under-warranty', label: 'Machines Under Warranty', icon: ShieldCheck, iconColorClass: 'bg-icon-warranty' },
   { href: '/dashboard/warranty-management/machine-out-of-warranty', label: 'Machines Out of Warranty', icon: ShieldOff, iconColorClass: 'bg-icon-no-warranty' },
+  { href: '/dashboard/warranty-management/machinery-catalogues', label: 'Machinery Catalogues', icon: FileText, iconColorClass: 'bg-icon-financial' },
+  { href: '/dashboard/warranty-management/error-codes', label: 'Error Codes', icon: FileCode, iconColorClass: 'bg-icon-lc' },
 ];
 
 const projectManagementNavItems: NavItem[] = [
