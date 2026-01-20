@@ -392,8 +392,8 @@ export default function MobileCheckInOutPage() {
                 const isDone = !!visit.checkOut;
 
                 if (activeTab === 'Check Ins') {
-                    // Show pending visits (User's + others for the live feed feel, but only if not checked out)
-                    return !isDone;
+                    // Show only User's pending visits
+                    return !isDone && isUserRecord;
                 }
                 if (activeTab === 'Completed') {
                     // Show only User's completed visits
