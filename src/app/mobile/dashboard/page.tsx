@@ -156,6 +156,7 @@ export default function MobileDashboardPage() {
         pendingCount: 0,
         missedAttendance: 0,
         teamMissedToday: 0,
+        pendingAttendanceCount: 0,
         noticesCount: 0,
         claimAmount: 0,
         disbursedAmount: 0
@@ -165,7 +166,7 @@ export default function MobileDashboardPage() {
         switch (item.id) {
             case 'leave': return { ...item, value: stats.leaveSpent.toFixed(1) };
             case 'visit': return { ...item, value: stats.visitCount.toFixed(1) };
-            case 'pending': return { ...item, value: stats.pendingCount.toString() };
+            case 'pending': return { ...item, value: stats.pendingAttendanceCount.toString() };
             case 'missed': return { ...item, value: (isSupervisor ? stats.teamMissedToday : stats.missedAttendance).toString() };
             case 'notices': return { ...item, value: stats.noticesCount.toString() };
             case 'checkin': return { ...item, value: typeof todayAttendance?.inTime === 'string' ? todayAttendance.inTime : '--:--' };
@@ -181,41 +182,31 @@ export default function MobileDashboardPage() {
         if (!user?.email) return;
 
         const setupListeners = async () => {
+            const cleanupActions: (() => void)[] = [];
             try {
                 const canonicalId = currentEmployeeId || user.uid;
                 const ids = [user.uid, canonicalId].filter((v, i, a) => a.indexOf(v) === i);
-                let unsubTeamMissed = () => { };
 
                 if (currentEmployeeId && currentEmployeeId !== user.uid) {
-                    // Try to get role from employee data for local setting
                     const empDoc = await getDoc(doc(firestore, 'employees', currentEmployeeId));
                     if (empDoc.exists()) {
                         setLocalUserRole(empDoc.data().role || 'user');
                     }
                 }
 
-                const startMonth = startOfMonth(new Date());
-                const endMonth = endOfMonth(new Date());
-
                 // 1. Leave Stats (Approved)
-                const qLeave = query(
-                    collection(firestore, 'leave_applications'),
-                    where('employeeId', 'in', ids)
-                );
+                const qLeave = query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids));
                 const unsubLeave = onSnapshot(qLeave, (snapshot) => {
                     const startOfCurrentYear = startOfYear(new Date());
                     const endOfCurrentYear = endOfYear(new Date());
                     let totalDays = 0;
-
                     snapshot.docs.forEach(doc => {
                         const data = doc.data();
                         if (data.status === 'Approved' && data.fromDate && data.toDate) {
                             const leaveStart = parseISO(data.fromDate);
                             const leaveEnd = parseISO(data.toDate);
-
                             const overlapStart = max([leaveStart, startOfCurrentYear]);
                             const overlapEnd = min([leaveEnd, endOfCurrentYear]);
-
                             if (overlapEnd >= overlapStart) {
                                 totalDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
                             }
@@ -223,43 +214,37 @@ export default function MobileDashboardPage() {
                     });
                     setStats(prev => ({ ...prev, leaveSpent: totalDays }));
                 });
+                cleanupActions.push(unsubLeave);
 
                 // 2. Visit Stats (Approved)
-                const qVisit = query(
-                    collection(firestore, 'visit_applications'),
-                    where('employeeId', 'in', ids)
-                );
+                const qVisit = query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids));
                 const unsubVisit = onSnapshot(qVisit, (snapshot) => {
                     const startOfCurrentYear = startOfYear(new Date());
                     const endOfCurrentYear = endOfYear(new Date());
                     let totalDays = 0;
-
                     snapshot.docs.forEach(doc => {
                         const data = doc.data();
                         if (data.fromDate && data.toDate) {
                             const visitStart = parseISO(data.fromDate);
                             const visitEnd = parseISO(data.toDate);
-
                             const overlapStart = max([visitStart, startOfCurrentYear]);
                             const overlapEnd = min([visitEnd, endOfCurrentYear]);
-
                             if (overlapEnd >= overlapStart) {
-                                if (data.day) {
-                                    totalDays += Number(data.day);
-                                } else {
-                                    totalDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
-                                }
+                                if (data.day) totalDays += Number(data.day);
+                                else totalDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
                             }
                         }
                     });
                     setStats(prev => ({ ...prev, visitCount: totalDays }));
                 });
+                cleanupActions.push(unsubVisit);
 
                 // 3. Pending Requests (Aggregate)
                 const qPendingLeave = query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids));
                 const qPendingVisit = query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids));
                 const qPendingAdvance = query(collection(firestore, 'advance_salary'), where('employeeId', 'in', ids));
 
+                const pendingCounts = { leave: 0, visit: 0, advance: 0 };
                 const updatePendingCount = (count: number, type: 'leave' | 'visit' | 'advance') => {
                     pendingCounts[type] = count;
                     setStats(prev => ({
@@ -268,7 +253,6 @@ export default function MobileDashboardPage() {
                     }));
                 };
 
-                let pendingCounts = { leave: 0, visit: 0, advance: 0 };
                 const unsubPendingLeave = onSnapshot(qPendingLeave, (snap) => {
                     const myPending = snap.docs.filter(d => d.data().status === 'Pending' && ids.includes(d.data().employeeId)).length;
                     const teamPending = isSupervisor ? snap.docs.filter(d => d.data().status === 'Pending' && supervisedEmployeeIds.includes(d.data().employeeId)).length : 0;
@@ -281,36 +265,26 @@ export default function MobileDashboardPage() {
                 });
                 const unsubPendingAdvance = onSnapshot(qPendingAdvance, (snap) => {
                     const myPending = snap.docs.filter(d => d.data().status === 'Pending' && ids.includes(d.data().employeeId)).length;
-                    const teamPending = isSupervisor ? snap.docs.filter(d => d.data().status === 'Pending' && supervisedEmployeeIds.includes(d.data().employeeId)).length : 0; // Advance salary might have different logic but for now including if in team
+                    const teamPending = isSupervisor ? snap.docs.filter(d => d.data().status === 'Pending' && supervisedEmployeeIds.includes(d.data().employeeId)).length : 0;
                     updatePendingCount(myPending + teamPending, 'advance');
                 });
+                cleanupActions.push(unsubPendingLeave, unsubPendingVisit, unsubPendingAdvance);
 
                 // 4. Missed Attendance (Flag 'A' in current month)
-                const qMissed = query(
-                    collection(firestore, 'attendance'),
-                    where('employeeId', 'in', ids)
-                );
+                const qMissed = query(collection(firestore, 'attendance'), where('employeeId', 'in', ids));
                 const unsubMissed = onSnapshot(qMissed, (snapshot) => {
                     const now = new Date();
                     const currentMonth = now.getMonth();
                     const currentYear = now.getFullYear();
-
                     const missedCount = snapshot.docs.filter(doc => {
                         const data = doc.data();
                         if (!data.date || data.flag !== 'A') return false;
-
                         try {
                             let dDate: Date;
-                            if (typeof data.date === 'string') {
-                                dDate = parseISO(data.date);
-                            } else if (data.date instanceof Timestamp || (data.date && typeof data.date.toDate === 'function')) {
-                                dDate = data.date.toDate();
-                            } else {
-                                dDate = new Date(data.date);
-                            }
-
-                            return dDate.getMonth() === currentMonth &&
-                                dDate.getFullYear() === currentYear;
+                            if (typeof data.date === 'string') dDate = parseISO(data.date);
+                            else if (data.date instanceof Timestamp || (data.date && typeof data.date.toDate === 'function')) dDate = data.date.toDate();
+                            else dDate = new Date(data.date);
+                            return dDate.getMonth() === currentMonth && dDate.getFullYear() === currentYear;
                         } catch (e) {
                             console.error("Error parsing date for missed attendance:", data.date, e);
                             return false;
@@ -318,27 +292,20 @@ export default function MobileDashboardPage() {
                     }).length;
                     setStats(prev => ({ ...prev, missedAttendance: missedCount }));
                 });
+                cleanupActions.push(unsubMissed);
 
                 // 4.1 Team Missed Today
                 if (isSupervisor && supervisedEmployeeIds.length > 0) {
                     const now = new Date();
                     const startStr = format(startOfDay(now), "yyyy-MM-dd'T'00:00:00.000xxx");
                     const endStr = format(endOfDay(now), "yyyy-MM-dd'T'23:59:59.999xxx");
-
-                    const qTeamToday = query(
-                        collection(firestore, 'attendance'),
-                        where('date', '>=', startStr),
-                        where('date', '<=', endStr)
-                    );
-
-                    unsubTeamMissed = onSnapshot(qTeamToday, (snap) => {
+                    const qTeamToday = query(collection(firestore, 'attendance'), where('date', '>=', startStr), where('date', '<=', endStr));
+                    const unsubTeamMissed = onSnapshot(qTeamToday, (snap) => {
                         const presentIds = new Set();
                         snap.docs.forEach(doc => {
                             const d = doc.data();
                             if (supervisedEmployeeIds.includes(d.employeeId)) {
-                                if (d.flag && d.flag !== 'A') {
-                                    presentIds.add(d.employeeId);
-                                }
+                                if (d.flag && d.flag !== 'A') presentIds.add(d.employeeId);
                             }
                         });
                         const missed = supervisedEmployeeIds.length - presentIds.size;
@@ -346,6 +313,21 @@ export default function MobileDashboardPage() {
                     }, (err) => {
                         console.error("Error listening to team missed attendance:", err);
                     });
+                    cleanupActions.push(unsubTeamMissed);
+                }
+
+                // 7. Pending Attendance Approval (Supervisors)
+                if (isSupervisor && supervisedEmployeeIds.length > 0) {
+                    const qPendingAtt = query(
+                        collection(firestore, 'attendance'),
+                        where('employeeId', 'in', supervisedEmployeeIds.slice(0, 10)),
+                        where('isRemoteApprovalRequired', '==', true),
+                        where('remoteApprovalStatus', '==', 'Pending')
+                    );
+                    const unsubPendingAtt = onSnapshot(qPendingAtt, (snap) => {
+                        setStats(prev => ({ ...prev, pendingAttendanceCount: snap.size }));
+                    });
+                    cleanupActions.push(unsubPendingAtt);
                 }
 
                 // 5. Notices (Filtered by role and isEnabled)
@@ -353,44 +335,25 @@ export default function MobileDashboardPage() {
                 const unsubNotices = onSnapshot(qNotices, (snapshot) => {
                     const filtered = snapshot.docs.filter(doc => {
                         const data = doc.data();
-                        // Filter by targetRoles if they exist
                         if (!data.targetRoles || !Array.isArray(data.targetRoles) || data.targetRoles.length === 0) return true;
-                        // Use globalUserRole or localUserRole for matching
                         const currentUserRole = globalUserRole || localUserRole;
                         return data.targetRoles.some((role: any) => currentUserRole?.includes(role));
                     });
                     setStats(prev => ({ ...prev, noticesCount: filtered.length }));
                 });
+                cleanupActions.push(unsubNotices);
 
                 // 6. Claim Stats (Current Month)
-                const qClaims = query(
-                    collection(firestore, 'hr_claims'),
-                    where('employeeId', 'in', ids),
-                    where('claimDate', '>=', startOfMonth(new Date()).toISOString())
-                );
+                const qClaims = query(collection(firestore, 'hr_claims'), where('employeeId', 'in', ids), where('claimDate', '>=', startOfMonth(new Date()).toISOString()));
                 const unsubClaims = onSnapshot(qClaims, (snap) => {
                     const totalClaimed = snap.docs.reduce((sum, doc) => sum + (doc.data().claimAmount || 0), 0);
-                    const totalDisbursed = snap.docs
-                        .filter(doc => doc.data().status === 'Disbursed')
-                        .reduce((sum, doc) => sum + (doc.data().approvedAmount || 0), 0);
-
-                    setStats(prev => ({
-                        ...prev,
-                        claimAmount: totalClaimed,
-                        disbursedAmount: totalDisbursed
-                    }));
+                    const totalDisbursed = snap.docs.filter(doc => doc.data().status === 'Disbursed').reduce((sum, doc) => sum + (doc.data().approvedAmount || 0), 0);
+                    setStats(prev => ({ ...prev, claimAmount: totalClaimed, disbursedAmount: totalDisbursed }));
                 });
+                cleanupActions.push(unsubClaims);
 
                 return () => {
-                    unsubLeave();
-                    unsubVisit();
-                    unsubPendingLeave();
-                    unsubPendingVisit();
-                    unsubPendingAdvance();
-                    unsubMissed();
-                    unsubTeamMissed();
-                    unsubNotices();
-                    unsubClaims();
+                    cleanupActions.forEach(unsub => unsub?.());
                 };
             } catch (err) {
                 console.error("Error setting up dashboard listeners:", err);
@@ -753,7 +716,7 @@ export default function MobileDashboardPage() {
 
                                 if (item.id === 'pending') {
                                     return (
-                                        <Link key={item.id} href="/mobile/approve" className="flex-shrink-0 transition-transform active:scale-95">
+                                        <Link key={item.id} href="/mobile/attendance/remote-approval" className="flex-shrink-0 transition-transform active:scale-95">
                                             {content}
                                         </Link>
                                     );
