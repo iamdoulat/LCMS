@@ -901,7 +901,7 @@ export default function MobileDashboardPage() {
                                     })}
                                 </div>
 
-                                <div className="mt-6 pt-4 border-t border-slate-100 flex justify-center">
+                                <div className="mt-4 pt-4 border-t border-slate-100 flex justify-center pb-[45px]">
                                     <Button
                                         className="bg-[#0a1e60] text-white rounded-xl px-8 w-full h-12"
                                         onClick={() => setIsSettingsOpen(false)}
