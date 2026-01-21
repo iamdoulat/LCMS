@@ -62,7 +62,20 @@ export async function POST(req: NextRequest) {
 
         const response = await admin.messaging().sendEachForMulticast(message);
 
-        // 5. Cleanup invalid tokens (Optional but recommended)
+        // 5. Save Notification History to Firestore
+        await db.collection('push_notifications').add({
+            title,
+            body,
+            targetRoles: targetRoles || null,
+            userIds: userIds || null,
+            sentAt: admin.firestore.FieldValue.serverTimestamp(),
+            successCount: response.successCount,
+            failureCount: response.failureCount,
+            totalTokens: uniqueTokens.length,
+            createdBy: 'system' // You might want to pass currUser ID if available in request
+        });
+
+        // 6. Cleanup invalid tokens (Optional but recommended)
         if (response.failureCount > 0) {
             response.responses.forEach((resp, idx) => {
                 if (!resp.success) {

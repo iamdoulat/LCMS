@@ -138,4 +138,4 @@ LCMS is built for teams, with a robust and flexible role-based access control (R
 ---
 
 # Contact
-Contact: https://cards.mddoulat.com/iamdoulat
+Contact: https://vcard.mddoulat.com/iamdoulat
