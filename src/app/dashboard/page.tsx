@@ -560,8 +560,8 @@ export default function DashboardPage() {
             )}
             <h1
               className={cn(
-                "font-bold text-lg sm:text-2xl lg:text-3xl",
-                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                "font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-gradient-premium",
+                "hover:tracking-normal transition-all duration-500 ease-in-out"
               )}
             >
               Welcome
@@ -667,8 +667,8 @@ export default function DashboardPage() {
           )}
           <h1
             className={cn(
-              "font-bold text-lg sm:text-2xl lg:text-3xl",
-              "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+              "font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-gradient-premium",
+              "hover:tracking-normal transition-all duration-500 ease-in-out"
             )}
           >
             Dashboard Overview
@@ -700,51 +700,51 @@ export default function DashboardPage() {
               value={dashboardStats.totalLCs.toLocaleString()}
               icon={<Package />}
               description={`${dashboardStats.thisMonthLCQty} L/C this month`}
-              className="bg-[#4A90E2]"
+              className="gradient-primary"
             />
             <StatCard
               title={`Total L/Cs Value (${selectedYear})`}
               value={`$${(dashboardStats.totalLCValue / 1_000_000).toFixed(2)}M`}
               icon={<DollarSign />}
               description="Total value in USD"
-              className="bg-[#50E3C2]"
+              className="gradient-success"
             />
             <StatCard
               title={`Active Beneficiaries (${selectedYear})`}
               value={dashboardStats.activeSuppliers.toLocaleString()}
               icon={<Truck />}
               description="Unique suppliers"
-              className="bg-[#BD10E0]"
+              className="gradient-purple"
             />
             <StatCard
               title={`Active Applicants (${selectedYear})`}
               value={dashboardStats.activeApplicants.toLocaleString()}
               icon={<Factory />}
               description="Unique customers"
-              className="bg-[#F5A623]"
+              className="gradient-warning"
             />
             <StatCard
               title={`Linked PIs (${selectedYear})`}
               value={dashboardStats.totalLinkedPIs.toLocaleString()}
               icon={<Layers />}
               description="PIs connected to L/Cs"
-              className="bg-[#7ED321]"
+              className="gradient-info"
             />
             <StatCard
               title="Monthly L/C Quantity"
               value={dashboardStats.thisMonthLCQty.toLocaleString()}
               icon={<TrendingUp />}
               description={`Opened in ${format(new Date(), 'MMMM')}`}
-              className="bg-[#9013FE]"
+              className="gradient-purple"
             />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
             <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
               <CardHeader>
-                <CardTitle className="font-bold text-xl lg:text-2xl flex items-center gap-2 bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
-                  <PieChartIcon className="h-6 w-6 text-primary" />
-                  Beneficiary L/Cs Value Distribution
+                <CardTitle className="font-extrabold text-xl lg:text-2xl flex items-center gap-2 text-gradient-premium">
+                  <PieChartIcon className="h-6 w-6 text-indigo-500" />
+                  L/C Value Distribution
                 </CardTitle>
                 <CardDescription>
                   Breakdown of T/T and L/C value by beneficiary brand name for {selectedYear}.
@@ -769,8 +769,8 @@ export default function DashboardPage() {
             <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
-                  <CardTitle className="font-bold text-xl lg:text-2xl flex items-center gap-2 bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out">
-                    <Ship className="h-6 w-6 text-primary" />
+                  <CardTitle className="font-extrabold text-xl lg:text-2xl flex items-center gap-2 text-gradient-premium">
+                    <Ship className="h-6 w-6 text-blue-500" />
                     Upcoming ETDs
                   </CardTitle>
                   <CardDescription>
@@ -789,7 +789,7 @@ export default function DashboardPage() {
                     className="h-full overflow-y-auto space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                   >
                     {upcomingEtdShipments.map((shipment) => (
-                      <li key={shipment.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none relative">
+                      <li key={shipment.id} className="text-sm p-4 rounded-xl border bg-card/50 hover:bg-card hover:shadow-md transition-all duration-300 list-none relative group hover-lift">
                         <div className="absolute top-2 right-2 flex gap-1.5 z-10">
                           {[
                             { flag: shipment.isFirstShipment, label: "1st", note: shipment.firstShipmentNote },
@@ -845,9 +845,9 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
             <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300">
               <CardHeader>
-                <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                  <BarChart3 className="h-6 w-6 text-primary" />
-                  Total L/C Values by Year
+                <CardTitle className="font-extrabold text-xl lg:text-2xl flex items-center gap-2 text-gradient-premium">
+                  <BarChart3 className="h-6 w-6 text-emerald-500" />
+                  L/C Values by Year
                 </CardTitle>
                 <CardDescription>
                   Overview of total T/T and L/C values for each year.
@@ -872,8 +872,8 @@ export default function DashboardPage() {
               <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
-                    <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                      <BarChart3 className="h-6 w-6 text-primary" />
+                    <CardTitle className="font-extrabold text-xl lg:text-2xl flex items-center gap-2 text-gradient-premium">
+                      <BarChart3 className="h-6 w-6 text-amber-500" />
                       Monthly Transaction Flow
                     </CardTitle>
                     <CardDescription>
@@ -905,8 +905,8 @@ export default function DashboardPage() {
             <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
-                  <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                    <FileEdit className="h-6 w-6 text-primary" />
+                  <CardTitle className="font-extrabold text-xl lg:text-2xl flex items-center gap-2 text-gradient-premium">
+                    <FileEdit className="h-6 w-6 text-rose-500" />
                     Draft L/Cs
                   </CardTitle>
                   <CardDescription>
@@ -928,7 +928,7 @@ export default function DashboardPage() {
                 ) : (
                   <div ref={draftLcScrollRef} className="h-full overflow-y-auto space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     {draftLCs.map((lc) => (
-                      <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none">
+                      <li key={lc.id} className="text-sm p-4 rounded-xl border bg-card/50 hover:bg-card hover:shadow-md transition-all duration-300 list-none hover-lift">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
                           <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline truncate">
                             {lc.documentaryCreditNumber || 'N/A'}
@@ -974,8 +974,8 @@ export default function DashboardPage() {
             <Card className="shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
-                  <CardTitle className={cn("font-bold text-xl lg:text-2xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                    <CheckCircle2 className="h-6 w-6 text-primary" />
+                  <CardTitle className="font-extrabold text-xl lg:text-2xl flex items-center gap-2 text-gradient-premium">
+                    <CheckCircle2 className="h-6 w-6 text-teal-500" />
                     Recently Completed L/Cs
                   </CardTitle>
                   <CardDescription>
@@ -997,7 +997,7 @@ export default function DashboardPage() {
                 ) : (
                   <div ref={completedLcScrollRef} className="h-full overflow-y-auto space-y-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     {recentlyCompletedLCs.map((lc) => (
-                      <li key={lc.id} className="text-sm p-3 rounded-md border hover:bg-muted/50 list-none">
+                      <li key={lc.id} className="text-sm p-4 rounded-xl border bg-card/50 hover:bg-card hover:shadow-md transition-all duration-300 list-none hover-lift">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1">
                           <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="font-medium text-primary hover:underline truncate">
                             {lc.documentaryCreditNumber || 'N/A'}

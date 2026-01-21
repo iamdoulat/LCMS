@@ -324,8 +324,8 @@ export function AppSidebarNavContent() {
               )}
               <span
                 className={cn(
-                  "font-bold text-base group-data-[collapsible=icon]:hidden truncate",
-                  "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                  "font-black text-lg group-data-[collapsible=icon]:hidden tracking-tight text-gradient-premium",
+                  "hover:tracking-normal transition-all duration-300 ease-in-out"
                 )}
               >
                 {displayCompanyNameFromSettings}
@@ -380,7 +380,7 @@ export function AppSidebarNavContent() {
                           "flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-sidebar-ring transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                           "hover:no-underline justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2",
                           "[&>svg.lucide-chevron-down]:group-data-[collapsible=icon]:hidden",
-                          openAccordions.includes(group.groupLabel) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground font-medium'
+                          openAccordions.includes(group.groupLabel) && 'bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 font-bold'
                         )}
                       >
                         <span className="flex items-center gap-2">
@@ -405,7 +405,7 @@ export function AppSidebarNavContent() {
                             asChild
                             isActive={isActive(subLink.href)}
                             className={cn(
-                              isActive(subLink.href) && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground",
+                              isActive(subLink.href) && "bg-blue-600 text-white shadow-lg shadow-blue-600/20 font-bold",
                               "h-8 text-xs"
                             )}
                             tooltip={{ children: subLink.label, side: "right", className: "ml-2" }}

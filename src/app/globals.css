@@ -677,6 +677,7 @@
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -686,10 +687,83 @@
 /* Hide scrollbar utility */
 @layer utilities {
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* Internet Explorer 10+ */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    /* Internet Explorer 10+ */
+    scrollbar-width: none;
+    /* Firefox */
   }
+
   .scrollbar-hide::-webkit-scrollbar {
-    display: none;  /* Safari and Chrome */
+    display: none;
+    /* Safari and Chrome */
+  }
+
+  /* Glassmorphism */
+  .glass-card {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl;
+  }
+
+  .glass-morphism {
+    @apply backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10;
+  }
+
+  /* Premium Gradients */
+  .gradient-primary {
+    @apply bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600;
+  }
+
+  .gradient-success {
+    @apply bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600;
+  }
+
+  .gradient-warning {
+    @apply bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500;
+  }
+
+  .gradient-danger {
+    @apply bg-gradient-to-br from-rose-500 via-red-600 to-red-800;
+  }
+
+  .gradient-info {
+    @apply bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600;
+  }
+
+  .gradient-purple {
+    @apply bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-800;
+  }
+
+  /* Text Gradients */
+  .text-gradient-premium {
+    @apply bg-gradient-to-r from-blue-600 via-purple-500 via-pink-500 to-orange-500 bg-clip-text text-transparent;
+  }
+
+  /* Hover Effects */
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl active:scale-95;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-[0_0_20px_rgba(59, 130, 246, 0.5)];
+  }
+
+  /* Animations */
+  @keyframes shine {
+    from {
+      left: -100%;
+    }
+
+    to {
+      left: 200%;
+    }
+  }
+
+  .animate-shine {
+    @apply relative overflow-hidden;
+  }
+
+  .animate-shine::after {
+    content: '';
+    @apply absolute top-0 h-full w-12 bg-white/20 -skew-x-[25deg];
+    animation: shine 3s infinite;
   }
 }

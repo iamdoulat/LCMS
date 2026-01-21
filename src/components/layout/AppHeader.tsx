@@ -55,7 +55,7 @@ export function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-card shadow-sm px-2 md:px-4">
+    <header className="sticky top-0 z-50 flex h-16 items-center gap-4 border-b bg-card/80 backdrop-blur-md shadow-sm px-4 md:px-6 transition-all duration-300">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden" />
         {user && ( // Only show this link if a user is logged in
@@ -70,11 +70,11 @@ export function AppHeader() {
             </div>
             <span
               className={cn(
-                "font-bold text-base truncate",
-                "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out"
+                "font-extrabold text-lg tracking-tight whitespace-nowrap",
+                "bg-gradient-to-r from-blue-600 via-purple-500 via-pink-500 to-orange-500 text-transparent bg-clip-text hover:tracking-normal transition-all duration-300 ease-in-out"
               )}
             >
-              <span className="hidden md:inline">Indenting & LC Management System</span>
+              <span className="hidden md:inline">Indenting & LC Management System Portal</span>
               <span className="inline md:hidden">{companyName || 'NextSew'}</span>
             </span>
           </Link>
