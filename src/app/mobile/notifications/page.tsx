@@ -8,7 +8,6 @@ import { useAuth } from '@/context/AuthContext';
 import { Loader2, ChevronLeft, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { NoticeBoardSettings } from '@/types';
-import DOMPurify from 'isomorphic-dompurify';
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -49,12 +48,7 @@ export default function MobileNotificationsPage() {
     }, [userRole]);
 
     const stripHtml = (html: string) => {
-        try {
-            const clean = DOMPurify.sanitize(html, { ALLOWED_TAGS: [] });
-            return clean || "";
-        } catch (e) {
-            return "";
-        }
+        return html.replace(/<[^>]*>?/gm, "") || "";
     };
 
     const NotificationSkeleton = () => (
