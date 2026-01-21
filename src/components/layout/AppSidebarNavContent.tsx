@@ -324,7 +324,7 @@ export function AppSidebarNavContent() {
               )}
               <span
                 className={cn(
-                  "font-black text-lg group-data-[collapsible=icon]:hidden tracking-tight text-gradient-premium",
+                  "font-black text-base group-data-[collapsible=icon]:hidden tracking-tight text-gradient-premium whitespace-nowrap truncate",
                   "hover:tracking-normal transition-all duration-300 ease-in-out"
                 )}
               >
