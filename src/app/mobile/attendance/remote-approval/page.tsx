@@ -57,6 +57,22 @@ export default function RemoteAttendanceApprovalPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [processingId, setProcessingId] = useState<string | null>(null);
 
+    // Month selection logic
+    const currentMonthIndex = new Date().getMonth(); // 0-11
+    const [selectedMonth, setSelectedMonth] = useState<number>(currentMonthIndex);
+
+    const months = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
+
+    useEffect(() => {
+        const year = new Date().getFullYear();
+        const from = startOfDay(new Date(year, selectedMonth, 1));
+        const to = endOfDay(new Date(year, selectedMonth + 1, 0));
+        setDateRange({ from, to });
+    }, [selectedMonth]);
+
     const fetchRemoteAttendance = async () => {
         if (!user || isSupervisorLoading) return;
 
@@ -239,9 +255,8 @@ export default function RemoteAttendanceApprovalPage() {
         // Status is active if NOT Pending (since Pending is default)
         if (statusFilter !== 'Pending') count++;
         if (typeFilter !== 'All') count++;
-        // Check if dateRange is different from default (last 30 days)
-        const defaultFrom = startOfDay(subDays(new Date(), 30));
-        if (dateRange?.from && format(dateRange.from, 'yyyy-MM-dd') !== format(defaultFrom, 'yyyy-MM-dd')) count++;
+        // Active if not current month
+        if (selectedMonth !== currentMonthIndex) count++;
         return count;
     };
 
@@ -386,25 +401,20 @@ export default function RemoteAttendanceApprovalPage() {
 
                             <div className="p-6 space-y-6">
                                 <div className="space-y-3">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Date Range</label>
-                                    <DatePickerWithRange
-                                        date={dateRange}
-                                        onDateChange={setDateRange}
-                                        className="w-full"
-                                    />
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setDateRange({ from: startOfDay(subDays(new Date(), 7)), to: endOfDay(new Date()) })}
-                                            className="text-[10px] bg-white border border-slate-200 px-2 py-1 rounded-md text-slate-600 font-bold"
-                                        >
-                                            Last 7 Days
-                                        </button>
-                                        <button
-                                            onClick={() => setDateRange({ from: startOfDay(subDays(new Date(), 30)), to: endOfDay(new Date()) })}
-                                            className="text-[10px] bg-white border border-slate-200 px-2 py-1 rounded-md text-slate-600 font-bold"
-                                        >
-                                            Last 30 Days
-                                        </button>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Select Month ({new Date().getFullYear()})</label>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {months.map((month, index) => (
+                                            <button
+                                                key={month}
+                                                onClick={() => setSelectedMonth(index)}
+                                                className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${selectedMonth === index
+                                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-100'
+                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-200'
+                                                    }`}
+                                            >
+                                                {month}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -449,7 +459,7 @@ export default function RemoteAttendanceApprovalPage() {
                                         onClick={() => {
                                             setStatusFilter('Pending');
                                             setTypeFilter('All');
-                                            setDateRange({ from: startOfDay(subDays(new Date(), 30)), to: endOfDay(new Date()) });
+                                            setSelectedMonth(currentMonthIndex);
                                         }}
                                         className="w-full py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm"
                                     >
