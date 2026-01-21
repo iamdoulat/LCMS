@@ -6,7 +6,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import { ChevronLeft, MapPin, Map as MapIcon, ArrowRight, Loader2, Calendar, Check, X, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, MapPin, Map as MapIcon, ArrowRight, Loader2, Calendar, Check, X, ArrowLeft, Filter } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { MultipleCheckInOutRecord } from '@/types/checkInOut';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,16 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { DateRange } from 'react-day-picker';
+
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/ui/sheet";
 
 interface UnifiedApprovalRecord extends MultipleCheckInOutRecord {
     source: 'multiple' | 'daily';
@@ -36,7 +46,12 @@ export default function RemoteAttendanceApprovalPage() {
 
     const [records, setRecords] = useState<UnifiedApprovalRecord[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterDays, setFilterDays] = useState<30 | 90>(30);
+    const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('Pending');
+    const [typeFilter, setTypeFilter] = useState<'All' | 'In Time' | 'Out Time'>('All');
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: startOfDay(subDays(new Date(), 30)),
+        to: endOfDay(new Date()),
+    });
 
     const [selectedRecord, setSelectedRecord] = useState<UnifiedApprovalRecord | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -50,8 +65,7 @@ export default function RemoteAttendanceApprovalPage() {
 
         setLoading(true);
         try {
-            const endDate = new Date();
-            const startDate = subDays(endDate, filterDays);
+            const startDate = dateRange?.from || subDays(new Date(), 30);
             const fetchedRecords: UnifiedApprovalRecord[] = [];
 
 
@@ -181,7 +195,23 @@ export default function RemoteAttendanceApprovalPage() {
             }
 
             // Filter by date range and sort
-            const filteredRecords = fetchedRecords.filter(r => new Date(r.timestamp) >= startDate);
+            const filteredRecords = fetchedRecords.filter(r => {
+                const recordDate = new Date(r.timestamp);
+                const isWithinDate = dateRange?.from && dateRange?.to
+                    ? recordDate >= startOfDay(dateRange.from) && recordDate <= endOfDay(dateRange.to)
+                    : true;
+
+                const matchesStatus = statusFilter === 'All'
+                    ? true
+                    : (r.status || 'Pending') === statusFilter;
+
+                const matchesType = typeFilter === 'All'
+                    ? true
+                    : r.type === typeFilter;
+
+                return isWithinDate && matchesStatus && matchesType;
+            });
+
             filteredRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setRecords(filteredRecords);
 
@@ -194,13 +224,21 @@ export default function RemoteAttendanceApprovalPage() {
 
     useEffect(() => {
         fetchRemoteAttendance();
-    }, [user, isSupervisor, supervisedEmployees, filterDays]);
+    }, [user, isSupervisor, supervisedEmployees, dateRange, statusFilter, typeFilter]);
 
     const containerRef = usePullToRefresh(fetchRemoteAttendance);
 
 
-    const handleToggleFilter = () => {
-        setFilterDays(prev => prev === 30 ? 90 : 30);
+
+    const getActiveFiltersCount = () => {
+        let count = 0;
+        // Status is active if NOT Pending (since Pending is default)
+        if (statusFilter !== 'Pending') count++;
+        if (typeFilter !== 'All') count++;
+        // Check if dateRange is different from default (last 30 days)
+        const defaultFrom = startOfDay(subDays(new Date(), 30));
+        if (dateRange?.from && format(dateRange.from, 'yyyy-MM-dd') !== format(defaultFrom, 'yyyy-MM-dd')) count++;
+        return count;
     };
 
     const handleCardClick = (record: UnifiedApprovalRecord) => {
@@ -313,29 +351,114 @@ export default function RemoteAttendanceApprovalPage() {
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 pt-1 pb-6">
-                    <button
-                        onClick={() => router.back()}
-                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
-                    >
-                        <ArrowLeft className="h-6 w-6" />
-                    </button>
-                    <h1 className="text-xl font-bold text-white ml-2">Remote Att. Approval</h1>
+                <div className="flex items-center justify-between px-4 pt-1 pb-6">
+                    <div className="flex items-center">
+                        <button
+                            onClick={() => router.back()}
+                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
+                        >
+                            <ArrowLeft className="h-6 w-6" />
+                        </button>
+                        <h1 className="text-xl font-bold text-white ml-2">Remote Att. Approval</h1>
+                    </div>
+
+                    <Sheet>
+                        <SheetTrigger asChild>
+                            <button className="relative p-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]">
+                                <Filter className="h-6 w-6" />
+                                {getActiveFiltersCount() > 0 && (
+                                    <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#0a1e60]">
+                                        {getActiveFiltersCount()}
+                                    </span>
+                                )}
+                            </button>
+                        </SheetTrigger>
+                        <SheetContent side="right" className="w-[85%] sm:w-[540px] border-l-0 bg-slate-50 p-0 [&>button]:text-white [&>button]:opacity-100">
+                            <div className="bg-[#0a1e60] p-6 pt-10">
+                                <SheetHeader className="text-left">
+                                    <SheetTitle className="text-white text-xl font-bold">Filter Attendance</SheetTitle>
+                                </SheetHeader>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                <div className="space-y-3">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Date Range</label>
+                                    <DatePickerWithRange
+                                        date={dateRange}
+                                        onDateChange={setDateRange}
+                                        className="w-full"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setDateRange({ from: startOfDay(subDays(new Date(), 7)), to: endOfDay(new Date()) })}
+                                            className="text-[10px] bg-white border border-slate-200 px-2 py-1 rounded-md text-slate-600 font-bold"
+                                        >
+                                            Last 7 Days
+                                        </button>
+                                        <button
+                                            onClick={() => setDateRange({ from: startOfDay(subDays(new Date(), 30)), to: endOfDay(new Date()) })}
+                                            className="text-[10px] bg-white border border-slate-200 px-2 py-1 rounded-md text-slate-600 font-bold"
+                                        >
+                                            Last 30 Days
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Status</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {['All', 'Pending', 'Approved', 'Rejected'].map((status) => (
+                                            <button
+                                                key={status}
+                                                onClick={() => setStatusFilter(status as any)}
+                                                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${statusFilter === status
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100'
+                                                    : 'bg-white text-slate-600 border-slate-200'
+                                                    }`}
+                                            >
+                                                {status}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Type Filter</label>
+                                    <div className="flex gap-2">
+                                        {['All', 'In Time', 'Out Time'].map((type) => (
+                                            <button
+                                                key={type}
+                                                onClick={() => setTypeFilter(type as any)}
+                                                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-1 border ${typeFilter === type
+                                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100'
+                                                    : 'bg-white text-slate-600 border-slate-200'
+                                                    }`}
+                                            >
+                                                {type}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 mt-auto">
+                                    <button
+                                        onClick={() => {
+                                            setStatusFilter('Pending');
+                                            setTypeFilter('All');
+                                            setDateRange({ from: startOfDay(subDays(new Date(), 30)), to: endOfDay(new Date()) });
+                                        }}
+                                        className="w-full py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm"
+                                    >
+                                        Reset to Defaults
+                                    </button>
+                                </div>
+                            </div>
+                        </SheetContent>
+                    </Sheet>
                 </div>
             </div>
 
-            <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col">
-                <div className="p-6 pb-2">
-                    <div className="flex justify-end">
-                        <button
-                            onClick={handleToggleFilter}
-                            className="flex items-center gap-1 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-colors shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
-                        >
-                            <Calendar className="w-3 h-3" />
-                            {filterDays === 30 ? 'Last 30 Days' : 'Last 3 Months'}
-                        </button>
-                    </div>
-                </div>
+            <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col pt-6">
 
                 <div className="flex-1 px-6 pb-[120px] space-y-4">
                     {loading ? (

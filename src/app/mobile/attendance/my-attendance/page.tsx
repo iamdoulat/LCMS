@@ -144,11 +144,12 @@ export default function MyAttendancePage() {
     };
 
     useEffect(() => {
-        if (currentEmployeeId) {
+        // Trigger fetch as soon as we have at least one identifier (user.uid or employeeId)
+        if (user?.uid || currentEmployeeId) {
             if (activeTab === 'attendance') fetchAttendance();
             else fetchBreaks();
         }
-    }, [currentEmployeeId, activeTab, filters]);
+    }, [user?.uid, currentEmployeeId, activeTab, filters]);
 
     const refreshData = async () => {
         if (currentEmployeeId) {
@@ -243,7 +244,7 @@ export default function MyAttendancePage() {
                     <div className="flex items-center">
                         <button
                             onClick={() => router.back()}
-                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                         >
                             <ArrowLeft className="h-6 w-6" />
                         </button>
@@ -304,8 +305,17 @@ export default function MyAttendancePage() {
                 {/* Content */}
                 <div className="flex-1 px-6 pt-4 pb-[120px] space-y-4">
                     {loading ? (
-                        <div className="flex justify-center py-10">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <div className="space-y-4">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <div key={i} className="bg-white rounded-xl px-3 py-2.5 shadow-sm border border-slate-100 flex items-center gap-3 animate-pulse">
+                                    <div className="w-1 h-10 rounded-full bg-slate-200 shrink-0"></div>
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-3 bg-slate-100 rounded w-1/3"></div>
+                                        <div className="h-3 bg-slate-50 rounded w-1/2"></div>
+                                    </div>
+                                    <div className="h-10 w-16 bg-slate-50 rounded-lg"></div>
+                                </div>
+                            ))}
                         </div>
                     ) : (
                         activeTab === 'attendance' ? (

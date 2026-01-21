@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Filter, Loader2 } from 'lucide-react';
+import { Plus, ArrowLeft, Filter, Loader2, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
@@ -584,12 +584,15 @@ export default function MobileCheckInOutPage() {
                                                 </div>
 
                                                 {activeTab === 'Check Ins' && isUserRecord && !isDone && (
-                                                    <div className="flex flex-col justify-center pl-1 border-l border-dashed border-slate-100">
+                                                    <div className="flex flex-col justify-center pl-3">
                                                         <button
-                                                            onClick={() => handleCheckOutClick(visit.checkIn)}
-                                                            className="h-10 w-10 bg-blue-50 hover:bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 transition-colors"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCheckOutClick(visit.checkIn);
+                                                            }}
+                                                            className="h-12 w-12 bg-blue-50 hover:bg-blue-100 rounded-full flex items-center justify-center text-blue-600 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.15)] active:scale-90"
                                                         >
-                                                            <ArrowRight className="h-5 w-5" />
+                                                            <LogOut className="h-6 w-6" />
                                                         </button>
                                                     </div>
                                                 )}
@@ -612,7 +615,7 @@ export default function MobileCheckInOutPage() {
                 <div className="flex items-center justify-between px-4 pt-4 pb-6">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>

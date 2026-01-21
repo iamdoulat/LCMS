@@ -222,7 +222,7 @@ export default function MobileTaskManagementPage() {
                     <div className="flex items-center">
                         <button
                             onClick={() => router.back()}
-                            className="h-10 w-10 text-white rounded-full flex items-center justify-center shadow-lg active:scale-100 transition-all"
+                            className="h-10 w-10 text-white rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d] active:scale-100 transition-all"
                         >
                             <ArrowLeft className="h-6 w-6" />
                         </button>

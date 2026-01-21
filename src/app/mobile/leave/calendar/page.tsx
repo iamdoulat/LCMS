@@ -137,7 +137,7 @@ export default function LeaveCalendarPage() {
                 <div className="flex items-center px-4 pt-1 pb-6">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors text-white"
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>

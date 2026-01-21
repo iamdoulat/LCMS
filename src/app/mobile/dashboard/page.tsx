@@ -13,7 +13,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { useBreakTime } from '@/context/BreakTimeContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, getDocs, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
-import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min, isFriday, isWithinInterval, startOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min, isFriday, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
@@ -155,6 +155,7 @@ export default function MobileDashboardPage() {
         visitCount: 0,
         pendingCount: 0,
         missedAttendance: 0,
+        teamMissedToday: 0,
         noticesCount: 0,
         claimAmount: 0,
         disbursedAmount: 0
@@ -165,7 +166,7 @@ export default function MobileDashboardPage() {
             case 'leave': return { ...item, value: stats.leaveSpent.toFixed(1) };
             case 'visit': return { ...item, value: stats.visitCount.toFixed(1) };
             case 'pending': return { ...item, value: stats.pendingCount.toString() };
-            case 'missed': return { ...item, value: stats.missedAttendance.toString() };
+            case 'missed': return { ...item, value: (isSupervisor ? stats.teamMissedToday : stats.missedAttendance).toString() };
             case 'notices': return { ...item, value: stats.noticesCount.toString() };
             case 'checkin': return { ...item, value: typeof todayAttendance?.inTime === 'string' ? todayAttendance.inTime : '--:--' };
             case 'checkout': return { ...item, value: typeof todayAttendance?.outTime === 'string' ? todayAttendance.outTime : '--:--' };
@@ -183,6 +184,7 @@ export default function MobileDashboardPage() {
             try {
                 const canonicalId = currentEmployeeId || user.uid;
                 const ids = [user.uid, canonicalId].filter((v, i, a) => a.indexOf(v) === i);
+                let unsubTeamMissed = () => { };
 
                 if (currentEmployeeId && currentEmployeeId !== user.uid) {
                     // Try to get role from employee data for local setting
@@ -317,6 +319,35 @@ export default function MobileDashboardPage() {
                     setStats(prev => ({ ...prev, missedAttendance: missedCount }));
                 });
 
+                // 4.1 Team Missed Today
+                if (isSupervisor && supervisedEmployeeIds.length > 0) {
+                    const now = new Date();
+                    const startStr = format(startOfDay(now), "yyyy-MM-dd'T'00:00:00.000xxx");
+                    const endStr = format(endOfDay(now), "yyyy-MM-dd'T'23:59:59.999xxx");
+
+                    const qTeamToday = query(
+                        collection(firestore, 'attendance'),
+                        where('date', '>=', startStr),
+                        where('date', '<=', endStr)
+                    );
+
+                    unsubTeamMissed = onSnapshot(qTeamToday, (snap) => {
+                        const presentIds = new Set();
+                        snap.docs.forEach(doc => {
+                            const d = doc.data();
+                            if (supervisedEmployeeIds.includes(d.employeeId)) {
+                                if (d.flag && d.flag !== 'A') {
+                                    presentIds.add(d.employeeId);
+                                }
+                            }
+                        });
+                        const missed = supervisedEmployeeIds.length - presentIds.size;
+                        setStats(prev => ({ ...prev, teamMissedToday: missed }));
+                    }, (err) => {
+                        console.error("Error listening to team missed attendance:", err);
+                    });
+                }
+
                 // 5. Notices (Filtered by role and isEnabled)
                 const qNotices = query(collection(firestore, 'site_settings'), where('isEnabled', '==', true));
                 const unsubNotices = onSnapshot(qNotices, (snapshot) => {
@@ -357,6 +388,7 @@ export default function MobileDashboardPage() {
                     unsubPendingVisit();
                     unsubPendingAdvance();
                     unsubMissed();
+                    unsubTeamMissed();
                     unsubNotices();
                     unsubClaims();
                 };
@@ -738,6 +770,14 @@ export default function MobileDashboardPage() {
                                 if (item.id === 'claim' || item.id === 'disbursed') {
                                     return (
                                         <Link key={item.id} href="/mobile/claim" className="flex-shrink-0 transition-transform active:scale-95">
+                                            {content}
+                                        </Link>
+                                    );
+                                }
+
+                                if (item.id === 'missed') {
+                                    return (
+                                        <Link key={item.id} href="/mobile/attendance/team-attendance" className="flex-shrink-0 transition-transform active:scale-95">
                                             {content}
                                         </Link>
                                     );
