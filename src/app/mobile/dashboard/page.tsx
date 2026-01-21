@@ -261,12 +261,12 @@ export default function MobileDashboardPage() {
                 const qPendingVisit = query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids));
                 const qPendingAdvance = query(collection(firestore, 'advance_salary'), where('employeeId', 'in', ids));
 
-                const pendingCounts = { leave: 0, visit: 0, advance: 0 };
-                const updatePendingCount = (count: number, type: 'leave' | 'visit' | 'advance') => {
+                const pendingCounts = { leave: 0, visit: 0, advance: 0, remoteAttendance: 0 };
+                const updatePendingCount = (count: number, type: 'leave' | 'visit' | 'advance' | 'remoteAttendance') => {
                     pendingCounts[type] = count;
                     setStats(prev => ({
                         ...prev,
-                        pendingCount: pendingCounts.leave + pendingCounts.visit + pendingCounts.advance
+                        pendingCount: pendingCounts.leave + pendingCounts.visit + pendingCounts.advance + pendingCounts.remoteAttendance
                     }));
                 };
 
@@ -342,6 +342,7 @@ export default function MobileDashboardPage() {
                         where('remoteApprovalStatus', '==', 'Pending')
                     );
                     const unsubPendingAtt = onSnapshot(qPendingAtt, (snap) => {
+                        updatePendingCount(snap.size, 'remoteAttendance');
                         setStats(prev => ({ ...prev, pendingAttendanceCount: snap.size }));
                     });
                     cleanupActions.push(unsubPendingAtt);
