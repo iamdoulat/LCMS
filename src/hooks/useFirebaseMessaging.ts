@@ -99,10 +99,10 @@ export function useFirebaseMessaging() {
                         body: body || '',
                         icon: companyLogoUrl || '/icons/icon-192x192.png',
                         badge: '/icons/icon-72x72.png',
-                        vibrate: [200, 100, 200] as any, // Type assertion for vibrate
+                        vibrate: [200, 100, 200],
                         tag: 'push-notification',
                         renotify: true
-                    });
+                    } as any); // Cast entire object to fix TypeScript strict mode
 
                     // Handle click
                     notification.onclick = () => {
