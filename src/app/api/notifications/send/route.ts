@@ -44,6 +44,19 @@ export async function POST(req: NextRequest) {
         const uniqueTokens = [...new Set(tokens)];
 
         if (uniqueTokens.length === 0) {
+            // Save to history even if no devices found
+            await db.collection('push_notifications').add({
+                title,
+                body,
+                targetRoles: targetRoles || null,
+                userIds: userIds || null,
+                sentAt: admin.firestore.FieldValue.serverTimestamp(),
+                successCount: 0,
+                failureCount: 0,
+                totalTokens: 0,
+                createdBy: 'system',
+                status: 'no_targets'
+            });
             return NextResponse.json({ message: 'No devices to target', count: 0 });
         }
 
@@ -72,14 +85,14 @@ export async function POST(req: NextRequest) {
             successCount: response.successCount,
             failureCount: response.failureCount,
             totalTokens: uniqueTokens.length,
-            createdBy: 'system' // You might want to pass currUser ID if available in request
+            createdBy: 'system',
+            status: 'sent'
         });
 
         // 6. Cleanup invalid tokens (Optional but recommended)
         if (response.failureCount > 0) {
             response.responses.forEach((resp, idx) => {
                 if (!resp.success) {
-                    // You can remove uniqueTokens[idx] from DB here
                     console.warn('Failed to send to token:', uniqueTokens[idx], resp.error);
                 }
             });
