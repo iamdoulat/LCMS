@@ -14,6 +14,10 @@ import { useBreakTime } from '@/context/BreakTimeContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, getDocs, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min, isFriday, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo } from 'react';
+import Image from 'next/image';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
@@ -31,7 +35,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function MobileDashboardPage() {
-    const { user, userRole: globalUserRole } = useAuth();
+    const { user, userRole: globalUserRole, companyName, companyLogoUrl } = useAuth();
     const { isSupervisor, supervisedEmployeeIds, currentEmployeeId } = useSupervisorCheck(user?.email);
 
     const formatAttendanceTime = (timeStr?: any) => {
@@ -98,6 +102,13 @@ export default function MobileDashboardPage() {
     // Local role for display/legacy check, but we'll prioritize globalUserRole
     const [localUserRole, setLocalUserRole] = useState<string>('user');
     const [restrictionNote, setRestrictionNote] = useState<string | null>(null);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+    // Initial Loading Timer (Native feel)
+    useEffect(() => {
+        const timer = setTimeout(() => setIsInitialLoading(false), 1200);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Load settings from localStorage
     useEffect(() => {
@@ -162,20 +173,22 @@ export default function MobileDashboardPage() {
         disbursedAmount: 0
     });
 
-    const visibleItems = allSummaryItems.filter(item => selectedIds.includes(item.id)).map(item => {
-        switch (item.id) {
-            case 'leave': return { ...item, value: stats.leaveSpent.toFixed(1) };
-            case 'visit': return { ...item, value: stats.visitCount.toFixed(1) };
-            case 'pending': return { ...item, value: stats.pendingAttendanceCount.toString() };
-            case 'missed': return { ...item, value: (isSupervisor ? stats.teamMissedToday : stats.missedAttendance).toString() };
-            case 'notices': return { ...item, value: stats.noticesCount.toString() };
-            case 'checkin': return { ...item, value: typeof todayAttendance?.inTime === 'string' ? todayAttendance.inTime : '--:--' };
-            case 'checkout': return { ...item, value: typeof todayAttendance?.outTime === 'string' ? todayAttendance.outTime : '--:--' };
-            case 'claim': return { ...item, value: `৳ ${stats.claimAmount.toLocaleString()}` };
-            case 'disbursed': return { ...item, value: `৳ ${stats.disbursedAmount.toLocaleString()}` };
-            default: return item;
-        }
-    });
+    const visibleItems = useMemo(() => {
+        return allSummaryItems.filter(item => selectedIds.includes(item.id)).map(item => {
+            switch (item.id) {
+                case 'leave': return { ...item, value: stats.leaveSpent.toFixed(1) };
+                case 'visit': return { ...item, value: stats.visitCount.toFixed(1) };
+                case 'pending': return { ...item, value: stats.pendingAttendanceCount.toString() };
+                case 'missed': return { ...item, value: (isSupervisor ? stats.teamMissedToday : stats.missedAttendance).toString() };
+                case 'notices': return { ...item, value: stats.noticesCount.toString() };
+                case 'checkin': return { ...item, value: typeof todayAttendance?.inTime === 'string' ? todayAttendance.inTime : '--:--' };
+                case 'checkout': return { ...item, value: typeof todayAttendance?.outTime === 'string' ? todayAttendance.outTime : '--:--' };
+                case 'claim': return { ...item, value: `৳ ${stats.claimAmount.toLocaleString()}` };
+                case 'disbursed': return { ...item, value: `৳ ${stats.disbursedAmount.toLocaleString()}` };
+                default: return item;
+            }
+        });
+    }, [selectedIds, stats, todayAttendance, isSupervisor]);
 
     // Real-time listeners for stats
     useEffect(() => {
@@ -517,19 +530,104 @@ export default function MobileDashboardPage() {
         setIsRefreshing(false);
         setPullDistance(0);
     };
+    const AppLoader = () => (
+        <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
+            transition={{ duration: 0.6, ease: "circIn" }}
+            className="fixed inset-0 z-[2000] bg-[#0a1e60] flex flex-col items-center justify-center"
+        >
+            <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: [0.8, 1.1, 1], opacity: 1 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="relative"
+            >
+                <div className="h-24 w-24 rounded-3xl bg-white flex items-center justify-center shadow-2xl relative overflow-hidden p-4">
+                    <div className="absolute inset-0 bg-blue-500/5 animate-pulse" />
+                    {companyLogoUrl ? (
+                        <div className="relative h-full w-full">
+                            <Image
+                                src={companyLogoUrl}
+                                alt={companyName || 'Logo'}
+                                fill
+                                className="object-contain"
+                            />
+                        </div>
+                    ) : (
+                        <QrCode className="h-12 w-12 text-blue-600" />
+                    )}
+                </div>
+                <motion.div
+                    animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="absolute -inset-4 bg-blue-500 rounded-full blur-2xl z-[-1]"
+                />
+            </motion.div>
+            <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="mt-8 text-white font-black tracking-widest text-sm uppercase text-center px-4"
+            >
+                {companyName || 'NextSew Portal'}
+            </motion.p>
+            <div className="mt-4 flex gap-1">
+                {[0, 1, 2].map((i) => (
+                    <motion.div
+                        key={i}
+                        animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
+                        transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                        className="h-1.5 w-1.5 rounded-full bg-blue-400"
+                    />
+                ))}
+            </div>
+        </motion.div>
+    );
+
+    const SkeletonDashboard = () => (
+        <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
+            <div className="px-4 py-4"><Skeleton className="h-12 w-full bg-white/10 rounded-2xl" /></div>
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] p-6 space-y-8">
+                <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-[180px] rounded-3xl" />
+                    <Skeleton className="h-[180px] rounded-3xl" />
+                </div>
+                <div className="space-y-4">
+                    <Skeleton className="h-6 w-32" />
+                    <div className="flex gap-4 overflow-hidden">
+                        <Skeleton className="h-36 w-[130px] rounded-2xl shrink-0" />
+                        <Skeleton className="h-36 w-[130px] rounded-2xl shrink-0" />
+                        <Skeleton className="h-36 w-[130px] rounded-2xl shrink-0" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    // if (isInitialLoading) return <AppLoader />;
+    // We already have state listeners, so we don't need a mid-loading state for UI, 
+    // but skeletons are good if data is still fetching.
+    // if (!user) return <SkeletonDashboard />;
+
     return (
         <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
+            <AnimatePresence>
+                {isInitialLoading && <AppLoader />}
+            </AnimatePresence>
             {/* Sticky Header - stays fixed during pull */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
                 <MobileHeader />
             </div>
 
-            <div
+            <motion.div
                 ref={containerRef}
-                className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain relative transition-transform duration-200 ease-out"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative transition-transform duration-200 ease-out shadow-[0_-8px_30px_rgba(0,0,0,0.2)]"
                 style={{
                     transform: `translateY(${isRefreshing ? 60 : pullDistance > 0 ? pullDistance * 0.4 : 0}px) translateZ(0)`,
-                    backgroundColor: '#f8fafc', // Solid background to prevent seeing through
+                    backgroundColor: '#f8fafc',
                     willChange: 'transform',
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden',
@@ -583,14 +681,15 @@ export default function MobileDashboardPage() {
                             <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover/card:scale-110 duration-700" />
 
                             <div className="flex flex-col items-center gap-4 relative z-10 w-full">
-                                <button
+                                <motion.button
+                                    whileTap={{ scale: 0.9 }}
                                     onClick={() => {
                                         setAttendanceType('in');
                                         setIsAttendanceModalOpen(true);
                                     }}
                                     disabled={!!todayAttendance?.inTime || !!restrictionNote}
                                     className={cn(
-                                        "h-24 w-24 rounded-full flex flex-col items-center justify-center gap-1 transition-all active:scale-95 shadow-lg relative group/btn",
+                                        "h-24 w-24 rounded-full flex flex-col items-center justify-center gap-1 transition-all shadow-lg relative group/btn",
                                         todayAttendance?.inTime
                                             ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white ring-4 ring-emerald-50"
                                             : !!restrictionNote
@@ -610,7 +709,7 @@ export default function MobileDashboardPage() {
                                     {todayAttendance?.inTime && (
                                         <span className="text-[10px] font-medium bg-white/20 px-1.5 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.inTime)}</span>
                                     )}
-                                </button>
+                                </motion.button>
                                 <div className="flex flex-col items-center gap-0.5">
                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
                                     <span className="text-[11px] font-bold text-slate-700 text-center px-1 font-mono">
@@ -625,14 +724,15 @@ export default function MobileDashboardPage() {
                             <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover/card:scale-110 duration-700" />
 
                             <div className="flex flex-col items-center gap-4 relative z-10 w-full">
-                                <button
+                                <motion.button
+                                    whileTap={{ scale: 0.9 }}
                                     onClick={() => {
                                         setAttendanceType('out');
                                         setIsAttendanceModalOpen(true);
                                     }}
                                     disabled={!todayAttendance?.inTime || !!todayAttendance?.outTime || !!restrictionNote}
                                     className={cn(
-                                        "h-24 w-24 rounded-full flex flex-col items-center justify-center gap-1 transition-all active:scale-95 relative group/btn shadow-lg",
+                                        "h-24 w-24 rounded-full flex flex-col items-center justify-center gap-1 transition-all relative group/btn shadow-lg",
                                         todayAttendance?.outTime
                                             ? "bg-gradient-to-br from-purple-600 to-indigo-600 text-white ring-4 ring-purple-50"
                                             : !!restrictionNote
@@ -654,7 +754,7 @@ export default function MobileDashboardPage() {
                                     {todayAttendance?.outTime && (
                                         <span className="text-[10px] font-medium bg-white/20 px-1.5 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.outTime)}</span>
                                     )}
-                                </button>
+                                </motion.button>
                                 <div className="flex flex-col items-center gap-0.5">
                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Worked</span>
                                     <span className="text-[11px] font-bold text-slate-700 font-mono text-center">
@@ -671,14 +771,13 @@ export default function MobileDashboardPage() {
                     <div>
                         <div className="flex justify-between items-center mb-3">
                             <h2 className="font-bold text-lg text-slate-800">Summary</h2>
-                            <Button
-                                variant="ghost"
-                                size="icon"
+                            <motion.button
+                                whileTap={{ scale: 0.9 }}
                                 onClick={() => setIsSettingsOpen(true)}
-                                className="h-8 w-8 bg-blue-100 text-blue-600 rounded-lg shadow-md shadow-blue-200/50"
+                                className="h-10 w-10 bg-white shadow-lg text-blue-600 rounded-xl border border-slate-100 flex items-center justify-center transition-all hover:bg-slate-50"
                             >
-                                <Settings className="h-4 w-4" />
-                            </Button>
+                                <Settings className="h-5 w-5" />
+                            </motion.button>
                         </div>
 
                         {/* Horizontal Scrollable Container */}
@@ -686,16 +785,19 @@ export default function MobileDashboardPage() {
                             {visibleItems.map((item) => {
                                 const Icon = item.icon;
                                 const content = (
-                                    <div className={`flex-shrink-0 w-[130px] ${item.bgColor} p-3 rounded-xl flex flex-col h-36 relative overflow-hidden shadow-sm border border-slate-100 h-full`}>
-                                        <div className={`bg-white rounded-lg p-2 w-12 h-12 flex items-center justify-center shadow-xl/20 mb-[15px] ${item.textColor}`}>
+                                    <motion.div
+                                        whileTap={{ scale: 0.95 }}
+                                        className={`flex-shrink-0 w-[140px] ${item.bgColor} p-4 rounded-[2rem] flex flex-col h-40 relative overflow-hidden shadow-sm border border-white/50 group/item hover:shadow-md transition-all`}
+                                    >
+                                        <div className={`bg-white rounded-2xl p-2.5 w-12 h-12 flex items-center justify-center shadow-lg mb-[15px] ${item.textColor} group-hover/item:scale-110 transition-transform duration-300`}>
                                             <Icon className="h-6 w-6" />
                                         </div>
-                                        <div className="absolute top-5 right-4 text-lg font-bold text-[#0a1e60]">{String(item.value)}</div>
-                                        <div>
-                                            <div className="text-xs text-slate-500">{item.label}</div>
-                                            <div className="text-xs text-slate-500">{item.subLabel}</div>
+                                        <div className="absolute top-6 right-5 text-xl font-black text-[#0a1e60] tracking-tighter">{String(item.value)}</div>
+                                        <div className="mt-auto">
+                                            <div className="text-[11px] font-black text-slate-800 uppercase tracking-tight">{item.label}</div>
+                                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">{item.subLabel}</div>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 );
 
                                 if (item.id === 'leave') {
@@ -813,8 +915,8 @@ export default function MobileDashboardPage() {
 
                     {/* Modules Section */}
                     <div>
-                        <h2 className="font-bold text-lg text-slate-800 mb-3">Modules</h2>
-                        <div className="grid grid-cols-3 gap-4">
+                        <h2 className="font-bold text-lg text-slate-800 mb-4 px-1">Modules</h2>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
                             {/* Break Time */}
                             <button
                                 onClick={openBreakModal}
@@ -893,9 +995,7 @@ export default function MobileDashboardPage() {
                         </div>
                     </div>
                 </div>
-            </div>
-
-
+            </motion.div>
 
             {/* Attendance Modal */}
             <MobileAttendanceModal

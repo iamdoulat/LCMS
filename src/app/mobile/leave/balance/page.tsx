@@ -15,8 +15,11 @@ import {
     Loader2,
     Info,
     TrendingUp,
-    ArrowLeft
+    ArrowLeft,
+    PieChart as PieChartIcon
 } from 'lucide-react';
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import {
@@ -183,172 +186,244 @@ export default function MyLeaveBalancePage() {
         ];
     }, [balanceData]);
 
-    if (loading) {
-        return (
-            <div className="flex flex-col h-screen bg-[#0a1e60] items-center justify-center">
-                <Loader2 className="h-8 w-8 text-white animate-spin mb-4" />
-                <p className="text-white font-medium">Loading Balance...</p>
+    const SkeletonLoader = () => (
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
+            <div className="sticky top-0 z-50 bg-[#0a1e60]/80 backdrop-blur-md">
+                <div className="flex items-center px-4 pt-[14px] pb-6">
+                    <Skeleton className="h-10 w-10 rounded-full bg-white/10" />
+                    <Skeleton className="h-6 w-40 ml-4 bg-white/10" />
+                </div>
             </div>
-        );
-    }
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] p-6 space-y-6">
+                <Skeleton className="h-[300px] w-full rounded-2xl" />
+                <div className="space-y-4">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-20 w-full rounded-2xl" />
+                    <Skeleton className="h-20 w-full rounded-2xl" />
+                </div>
+            </div>
+        </div>
+    );
+
+    if (loading) return <SkeletonLoader />;
 
     return (
-        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
-            {/* Sticky Header */}
-            <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 py-6">
-                    <button
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden font-sans">
+            {/* Sticky Header with Glassmorphism */}
+            <div className="sticky top-0 z-50 bg-[#0a1e60]/80 backdrop-blur-md border-b border-white/5">
+                <div className="flex items-center px-4 pt-[14px] pb-6">
+                    <motion.button
+                        whileTap={{ scale: 0.9 }}
                         onClick={() => router.back()}
-                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-lg bg-white/5 backdrop-blur-sm border border-white/10"
                     >
                         <ArrowLeft className="h-6 w-6" />
-                    </button>
-                    <h1 className="text-xl font-bold text-white ml-2">My Leave Balance</h1>
+                    </motion.button>
+                    <h1 className="text-xl font-bold ml-3 text-white">
+                        Leave Balance
+                    </h1>
                 </div>
             </div>
 
-            <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain">
-                <div className="px-6 pt-6 pb-[120px] space-y-6">
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain shadow-[0_-8px_30px_rgba(0,0,0,0.2)]">
+                <div className="px-5 pt-8 pb-[120px] space-y-8">
 
-                    {/* Charts Section */}
-                    <Card className="rounded-2xl border-none shadow-md overflow-hidden">
-                        <CardHeader className="pb-2 border-b">
-                            <CardTitle className="text-lg font-bold text-slate-800">Visual Summary</CardTitle>
-                            {/* Horizontal Tabs */}
-                            <div className="flex items-center justify-center gap-4 pt-3">
-                                {(['pie', 'bar'] as const).map((mode) => (
-                                    <button
-                                        key={mode}
-                                        onClick={() => setViewMode(mode)}
-                                        className={cn(
-                                            "pb-2 relative text-sm font-semibold transition-colors capitalize px-4 border-b-2",
-                                            viewMode === mode ? "text-blue-600 border-blue-600" : "text-slate-400 border-transparent"
-                                        )}
-                                    >
-                                        {mode === 'pie' ? 'Pie Chart' : 'Bar Chart'}
-                                    </button>
-                                ))}
-                            </div>
-                        </CardHeader>
-                        <CardContent
-                            className="pt-6"
-                            onTouchStart={handleTouchStart}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleTouchEnd}
-                        >
-                            <div className="h-[250px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    {viewMode === 'pie' ? (
-                                        <PieChart>
-                                            <Pie
-                                                data={pieData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={80}
-                                                paddingAngle={5}
-                                                dataKey="value"
-                                            >
-                                                {pieData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip />
-                                            <Legend verticalAlign="bottom" height={36} />
-                                        </PieChart>
-                                    ) : (
-                                        <BarChart
-                                            data={balanceData}
-                                            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                    {/* Charts Section with Glassmorphism */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-lg font-black tracking-tight text-slate-800 flex items-center gap-2">
+                                    <TrendingUp className="h-5 w-5 text-indigo-500" />
+                                    Visual Summary
+                                </CardTitle>
+                                {/* Horizontal Tabs */}
+                                <div className="flex items-center justify-center gap-2 pt-4">
+                                    {(['pie', 'bar'] as const).map((mode) => (
+                                        <button
+                                            key={mode}
+                                            onClick={() => setViewMode(mode)}
+                                            className={cn(
+                                                "py-2 px-6 rounded-full text-xs font-bold transition-all duration-300",
+                                                viewMode === mode
+                                                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-200 scale-105"
+                                                    : "bg-slate-50 text-slate-400 hover:bg-slate-100"
+                                            )}
                                         >
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis
-                                                dataKey="name"
-                                                axisLine={false}
-                                                tickLine={false}
-                                                tick={{ fill: '#64748b', fontSize: 10 }}
-                                            />
-                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
-                                            <BarTooltip
-                                                cursor={{ fill: '#f8fafc' }}
-                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                            />
-                                            <Bar dataKey="used" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={20} />
-                                            <Bar dataKey="remaining" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
-                                        </BarChart>
-                                    )}
-                                </ResponsiveContainer>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                            {mode === 'pie' ? 'Overview' : 'Details'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </CardHeader>
+                            <CardContent
+                                className="pt-4 px-2"
+                                onTouchStart={handleTouchStart}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleTouchEnd}
+                            >
+                                <div className="h-[280px] w-full relative">
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={viewMode}
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="h-full w-full"
+                                        >
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                {viewMode === 'pie' ? (
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={pieData}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius={65}
+                                                            outerRadius={90}
+                                                            paddingAngle={8}
+                                                            dataKey="value"
+                                                            animationDuration={1500}
+                                                            animationBegin={200}
+                                                        >
+                                                            {pieData.map((entry, index) => (
+                                                                <Cell
+                                                                    key={`cell-${index}`}
+                                                                    fill={entry.color}
+                                                                    strokeWidth={0}
+                                                                />
+                                                            ))}
+                                                        </Pie>
+                                                        <RechartsTooltip
+                                                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                                                        />
+                                                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                                    </PieChart>
+                                                ) : (
+                                                    <BarChart
+                                                        data={balanceData}
+                                                        margin={{ top: 20, right: 30, left: -20, bottom: 20 }}
+                                                    >
+                                                        <defs>
+                                                            <linearGradient id="barUsed" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8} />
+                                                                <stop offset="100%" stopColor="#ef4444" stopOpacity={0.3} />
+                                                            </linearGradient>
+                                                            <linearGradient id="barRem" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8} />
+                                                                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                        <XAxis
+                                                            dataKey="name"
+                                                            axisLine={false}
+                                                            tickLine={false}
+                                                            tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
+                                                        />
+                                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
+                                                        <BarTooltip
+                                                            cursor={{ fill: 'rgba(51, 65, 85, 0.05)' }}
+                                                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                                                        />
+                                                        <Bar dataKey="used" fill="url(#barUsed)" radius={[8, 8, 0, 0]} barSize={16} animationDuration={1500} />
+                                                        <Bar dataKey="remaining" fill="url(#barRem)" radius={[8, 8, 0, 0]} barSize={16} animationDuration={1500} />
+                                                    </BarChart>
+                                                )}
+                                            </ResponsiveContainer>
+                                        </motion.div>
+                                    </AnimatePresence>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </motion.div>
 
                     {/* Breakdown List */}
-                    <div className="space-y-4">
-                        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <Info className="h-5 w-5 text-blue-600" />
-                            Breakdown by Type
+                    <div className="space-y-5">
+                        <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 px-1">
+                            <span className="h-8 w-1.5 rounded-full bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]" />
+                            Leave Breakdown
                         </h2>
-                        <div className="grid grid-cols-1 gap-3">
+                        <div className="grid grid-cols-1 gap-4">
                             {balanceData.map((item, index) => (
-                                <div key={index} className="bg-white p-4 rounded-2xl shadow-md border border-slate-100 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                                            <Calendar className="h-5 w-5 text-blue-600" />
+                                <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-all duration-300 group touch-none"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                            <Calendar className="h-6 w-6 text-indigo-600" />
                                         </div>
                                         <div>
-                                            <div className="text-sm font-bold text-slate-800">{item.name}</div>
-                                            <div className="text-[10px] text-slate-500 font-medium">Policy: {item.allowed} Days</div>
+                                            <div className="text-base font-black text-slate-800">{item.name}</div>
+                                            <div className="text-xs text-slate-400 font-bold uppercase tracking-tight">Total: {item.allowed} Days</div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="text-sm font-bold text-blue-600">{item.remaining}</div>
-                                        <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Remaining</div>
+                                    <div className="flex flex-col items-end">
+                                        <div className="text-2xl font-black text-indigo-600 leading-none">{item.remaining}</div>
+                                        <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Left</div>
                                     </div>
-                                </div>
+                                </motion.div>
                             ))}
                         </div>
                     </div>
 
                     {/* History Section */}
-                    <div className="space-y-4 pb-12">
-                        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <History className="h-5 w-5 text-blue-600" />
-                            Leave History
+                    <div className="space-y-5 pb-10">
+                        <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 px-1">
+                            <span className="h-8 w-1.5 rounded-full bg-indigo-600 shadow-[0_0_15px_rgba(79,70,229,0.4)]" />
+                            Recent Activity
                         </h2>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             {leaves.length > 0 ? (
-                                leaves.map((leave, index) => {
-                                    const statusColor = {
-                                        'Approved': 'text-emerald-600 bg-emerald-50 border-emerald-100',
-                                        'Pending': 'text-amber-600 bg-amber-50 border-amber-100',
-                                        'Rejected': 'text-red-600 bg-red-50 border-red-100'
-                                    }[leave.status] || 'text-slate-600 bg-slate-50 border-slate-100';
+                                leaves.slice(0, 5).map((leave, index) => {
+                                    const statusConfig = {
+                                        'Approved': { color: 'text-emerald-600 bg-emerald-50 border-emerald-100', icon: 'bg-emerald-500' },
+                                        'Pending': { color: 'text-amber-600 bg-amber-50 border-amber-100', icon: 'bg-amber-500' },
+                                        'Rejected': { color: 'text-rose-600 bg-rose-50 border-rose-100', icon: 'bg-rose-500' }
+                                    }[leave.status] || { color: 'text-slate-600 bg-slate-50 border-slate-100', icon: 'bg-slate-400' };
 
                                     return (
-                                        <div key={index} className="bg-white p-4 rounded-2xl shadow-md border border-slate-100 space-y-3">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <div className="text-sm font-bold text-slate-800">{leave.leaveType} Leave</div>
-                                                    <div className="text-xs text-slate-500">
-                                                        {format(parseISO(leave.fromDate), 'dd MMM')} - {format(parseISO(leave.toDate), 'dd MMM yyyy')}
+                                        <motion.div
+                                            key={index}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: 0.2 + index * 0.05 }}
+                                            className="bg-white p-5 rounded-[2.5rem] shadow-sm border border-slate-100 flex gap-4 items-start"
+                                        >
+                                            <div className={cn("w-1 h-12 rounded-full", statusConfig.icon)} />
+                                            <div className="flex-1 space-y-3">
+                                                <div className="flex justify-between items-center">
+                                                    <div>
+                                                        <div className="text-base font-black text-slate-800 leading-tight">
+                                                            {leave.leaveType}
+                                                        </div>
+                                                        <div className="text-xs text-slate-400 font-bold mt-0.5">
+                                                            {format(parseISO(leave.fromDate), 'dd MMM')} — {format(parseISO(leave.toDate), 'dd MMM yyyy')}
+                                                        </div>
+                                                    </div>
+                                                    <div className={cn("text-[9px] font-black px-3 py-1.5 rounded-full border uppercase tracking-wider", statusConfig.color)}>
+                                                        {leave.status}
                                                     </div>
                                                 </div>
-                                                <div className={cn("text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider", statusColor)}>
-                                                    {leave.status}
-                                                </div>
+                                                {leave.reason && (
+                                                    <div className="p-4 bg-slate-50 rounded-[1.5rem] text-xs font-medium text-slate-600 border border-slate-100/50 leading-relaxed italic">
+                                                        "{leave.reason}"
+                                                    </div>
+                                                )}
                                             </div>
-                                            {leave.reason && (
-                                                <div className="p-3 bg-slate-50 rounded-xl text-[11px] text-slate-600 italic">
-                                                    "{leave.reason}"
-                                                </div>
-                                            )}
-                                        </div>
+                                        </motion.div>
                                     );
                                 })
                             ) : (
-                                <div className="text-center py-12 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                                    <History className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                                    <p className="text-slate-400 text-sm font-medium">No leave history found</p>
+                                <div className="text-center py-16 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 shadow-inner">
+                                    <History className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+                                    <p className="text-slate-400 text-sm font-black uppercase tracking-widest">No Activity Yet</p>
                                 </div>
                             )}
                         </div>
