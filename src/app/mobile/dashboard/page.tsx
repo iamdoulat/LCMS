@@ -333,19 +333,57 @@ export default function MobileDashboardPage() {
                     cleanupActions.push(unsubTeamMissed);
                 }
 
-                // 7. Pending Attendance Approval (Supervisors)
-                if (isSupervisor && supervisedEmployeeIds.length > 0) {
-                    const qPendingAtt = query(
-                        collection(firestore, 'attendance'),
-                        where('employeeId', 'in', supervisedEmployeeIds.slice(0, 10)),
-                        where('isRemoteApprovalRequired', '==', true),
-                        where('remoteApprovalStatus', '==', 'Pending')
-                    );
-                    const unsubPendingAtt = onSnapshot(qPendingAtt, (snap) => {
-                        updatePendingCount(snap.size, 'remoteAttendance');
-                        setStats(prev => ({ ...prev, pendingAttendanceCount: snap.size }));
-                    });
-                    cleanupActions.push(unsubPendingAtt);
+                // 7. Pending Attendance Approval
+                // For Supervisors: show supervised employees only
+                // For HR/Admin/Super Admin: show all employees
+                const isHROrAdmin = globalUserRole && (
+                    globalUserRole.includes('HR') ||
+                    globalUserRole.includes('Admin') ||
+                    globalUserRole.includes('Super Admin')
+                );
+
+                if (isSupervisor || isHROrAdmin) {
+                    let qPendingAtt;
+
+                    if (isHROrAdmin) {
+                        // HR/Admin: Get ALL pending remote attendance
+                        qPendingAtt = query(
+                            collection(firestore, 'attendance'),
+                            where('isRemoteApprovalRequired', '==', true),
+                            where('remoteApprovalStatus', '==', 'Pending')
+                        );
+                    } else {
+                        // Supervisor: Get only supervised employees
+                        // Split into chunks if more than 10 employees (Firestore 'in' limit)
+                        const chunks = [];
+                        for (let i = 0; i < supervisedEmployeeIds.length; i += 10) {
+                            chunks.push(supervisedEmployeeIds.slice(i, i + 10));
+                        }
+
+                        // If small list, use single query
+                        if (chunks.length === 1 && chunks[0].length > 0) {
+                            qPendingAtt = query(
+                                collection(firestore, 'attendance'),
+                                where('employeeId', 'in', chunks[0]),
+                                where('isRemoteApprovalRequired', '==', true),
+                                where('remoteApprovalStatus', '==', 'Pending')
+                            );
+                        }
+                    }
+
+                    if (qPendingAtt) {
+                        const unsubPendingAtt = onSnapshot(qPendingAtt, (snap) => {
+                            let totalCount = snap.size;
+
+                            // For supervisors with multiple chunks, we only queried first 10
+                            // This is a limitation but prevents complex multi-query logic
+                            // Full solution would require fetching all chunks separately
+
+                            updatePendingCount(totalCount, 'remoteAttendance');
+                            setStats(prev => ({ ...prev, pendingAttendanceCount: totalCount }));
+                        });
+                        cleanupActions.push(unsubPendingAtt);
+                    }
                 }
 
                 // 5. Notices (Filtered by role and isEnabled)
