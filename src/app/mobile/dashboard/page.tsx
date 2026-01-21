@@ -705,14 +705,14 @@ export default function MobileDashboardPage() {
                                         </>
                                     )}
                                     <Clock className="h-6 w-6 mb-0.5" />
-                                    <span className="text-xs font-bold">In Time</span>
+                                    <span className="text-xs font-semibold">In Time</span>
                                     {todayAttendance?.inTime && (
                                         <span className="text-[10px] font-medium bg-white/20 px-1.5 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.inTime)}</span>
                                     )}
                                 </motion.button>
                                 <div className="flex flex-col items-center gap-0.5">
-                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
-                                    <span className="text-[11px] font-bold text-slate-700 text-center px-1 font-mono">
+                                    <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Status</span>
+                                    <span className="text-[11px] font-semibold text-slate-700 text-center px-1 font-mono">
                                         {restrictionNote || getAttendanceStatus(todayAttendance?.flag, todayAttendance?.approvalStatus, todayAttendance?.inTimeApprovalStatus, todayAttendance?.outTimeApprovalStatus) || '08:00 hr(s)'}
                                     </span>
                                 </div>
@@ -750,14 +750,14 @@ export default function MobileDashboardPage() {
                                         </>
                                     )}
                                     <Clock className="h-6 w-6 mb-0.5" />
-                                    <span className="text-xs font-bold">Out Time</span>
+                                    <span className="text-xs font-semibold">Out Time</span>
                                     {todayAttendance?.outTime && (
                                         <span className="text-[10px] font-medium bg-white/20 px-1.5 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.outTime)}</span>
                                     )}
                                 </motion.button>
                                 <div className="flex flex-col items-center gap-0.5">
-                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Worked</span>
-                                    <span className="text-[11px] font-bold text-slate-700 font-mono text-center">
+                                    <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Worked</span>
+                                    <span className="text-[11px] font-semibold text-slate-700 font-mono text-center">
                                         {restrictionNote ? '---' :
                                             todayAttendance?.outTimeApprovalStatus === 'Pending' ? 'Waiting For Approval' :
                                                 calculateWorkHours(todayAttendance?.inTime, todayAttendance?.outTime) || 'Waiting...'}
@@ -792,10 +792,10 @@ export default function MobileDashboardPage() {
                                         <div className={`bg-white rounded-2xl p-2.5 w-12 h-12 flex items-center justify-center shadow-lg mb-[15px] ${item.textColor} group-hover/item:scale-110 transition-transform duration-300`}>
                                             <Icon className="h-6 w-6" />
                                         </div>
-                                        <div className="absolute top-6 right-5 text-xl font-black text-[#0a1e60] tracking-tighter">{String(item.value)}</div>
+                                        <div className="absolute top-6 right-5 text-xl font-semibold text-[#0a1e60] tracking-tighter">{String(item.value)}</div>
                                         <div className="mt-auto">
-                                            <div className="text-[11px] font-black text-slate-800 uppercase tracking-tight">{item.label}</div>
-                                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">{item.subLabel}</div>
+                                            <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-tight">{item.label}</div>
+                                            <div className="text-[10px] text-slate-400 font-medium uppercase tracking-widest leading-none">{item.subLabel}</div>
                                         </div>
                                     </motion.div>
                                 );
