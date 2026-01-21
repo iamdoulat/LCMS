@@ -13,11 +13,23 @@ import { collection, query, orderBy, limit, getDocs, where, onSnapshot, doc } fr
 import { NoticeBoardSettings } from '@/types';
 
 export function MobileHeader() {
-    const { user, userRole } = useAuth();
+    const { user, userRole, companyLogoUrl } = useAuth();
     const { toggleSidebar } = useMobileSidebar();
     const [hasUnread, setHasUnread] = React.useState(false);
     const [profileImage, setProfileImage] = React.useState<string | undefined>(user?.photoURL || undefined);
     const [fullName, setFullName] = React.useState<string>(user?.displayName || 'Employee');
+
+    // Send company logo to service worker for notifications
+    React.useEffect(() => {
+        if (companyLogoUrl && 'serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then((registration) => {
+                registration.active?.postMessage({
+                    type: 'SET_COMPANY_LOGO',
+                    logoUrl: companyLogoUrl
+                });
+            });
+        }
+    }, [companyLogoUrl]);
 
     // Listen for real-time profile image updates
     React.useEffect(() => {
@@ -65,39 +77,68 @@ export function MobileHeader() {
 
     React.useEffect(() => {
         const checkUnreadNotices = async () => {
-            if (!userRole) return;
+            if (!user || !userRole) return;
 
             try {
+                // 1. Fetch recent notifications (last 20 to keep it light)
                 const q = query(
-                    collection(firestore, 'site_settings'),
-                    orderBy('updatedAt', 'desc'),
-                    limit(1)
+                    collection(firestore, 'push_notifications'),
+                    orderBy('sentAt', 'desc'),
+                    limit(20)
                 );
                 const snapshot = await getDocs(q);
 
-                if (!snapshot.empty) {
-                    const doc = snapshot.docs[0];
-                    const notice = doc.data() as NoticeBoardSettings;
-                    const noticeId = doc.id;
+                // 2. Filter visible notifications for this user
+                const visibleIds = snapshot.docs
+                    .filter(doc => {
+                        const n = doc.data();
 
-                    // Check if notice targets user
-                    const isTargeted = notice.isEnabled &&
-                        (!notice.targetRoles || (Array.isArray(notice.targetRoles) && notice.targetRoles.some(role => userRole.includes(role))));
+                        // Check if targeted by User ID
+                        if (n.userIds && Array.isArray(n.userIds) && n.userIds.includes(user.uid)) return true;
 
-                    if (isTargeted) {
-                        const lastSeenId = localStorage.getItem('mobile_last_seen_notice_id');
-                        if (lastSeenId !== noticeId) {
-                            setHasUnread(true);
+                        // Check if targeted by Role
+                        if (n.targetRoles && Array.isArray(n.targetRoles)) {
+                            if (userRole && n.targetRoles.some((role: any) => userRole.includes(role))) return true;
                         }
+
+                        return false;
+                    })
+                    .map(doc => doc.id);
+
+                if (visibleIds.length === 0) {
+                    setHasUnread(false);
+                    return;
+                }
+
+                // 3. Fetch Read Status for this user
+                const readSnap = await getDocs(collection(firestore, `users/${user.uid}/read_notifications`));
+                const readSet = new Set(readSnap.docs.map(d => d.id));
+
+                // 4. Check if ANY visible notification is NOT in readSet
+                const unreadCount = visibleIds.filter(id => !readSet.has(id)).length;
+                const anyUnread = unreadCount > 0;
+                setHasUnread(anyUnread);
+
+                // Set PWA App Badge
+                if ('setAppBadge' in navigator) {
+                    if (unreadCount > 0) {
+                        navigator.setAppBadge(unreadCount).catch(e => console.error("Badge error:", e));
+                    } else {
+                        navigator.clearAppBadge().catch(e => console.error("Badge clear error:", e));
                     }
                 }
+
             } catch (error) {
                 console.error("Error checking notifications:", error);
             }
         };
 
         checkUnreadNotices();
-    }, [userRole]);
+
+        // Re-check periodically or on focus could be added here
+        const interval = setInterval(checkUnreadNotices, 30000); // Check every 30s
+        return () => clearInterval(interval);
+    }, [user, userRole]);
 
     return (
         <header className="sticky top-0 z-50 bg-[#0a1e60] text-white px-4 py-6">

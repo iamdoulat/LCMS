@@ -47,14 +47,28 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// Store company logo URL (will be set by client app)
+let companyLogoUrl = '/icons/icon-192x192.png'; // Default fallback
+
+// Listen for messages from the client to update company logo
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SET_COMPANY_LOGO') {
+        companyLogoUrl = event.data.logoUrl || '/icons/icon-192x192.png';
+        console.log('[SW] Company logo updated:', companyLogoUrl);
+    }
+});
+
 messaging.onBackgroundMessage(function (payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
     const notificationTitle = payload.notification.title;
     const notificationOptions = {
         body: payload.notification.body,
-        icon: '/icons/icon-192x192.png', // Customize as needed
-        badge: '/icons/badge-72x72.png', // Customize as needed
+        icon: companyLogoUrl, // Use dynamic company logo
+        badge: '/icons/icon-72x72.png', // Converted to monochrome by Android usually, ensures valid path
+        vibrate: [200, 100, 200],
+        tag: 'push-notification', // Groups notifications (or use unique ID from payload if we want distinct)
+        renotify: true, // Vibrate/Alert even if replacing an old one with same tag
         data: payload.data
     };
 
