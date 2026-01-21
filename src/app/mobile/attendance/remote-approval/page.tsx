@@ -41,7 +41,7 @@ interface UnifiedApprovalRecord extends MultipleCheckInOutRecord {
 
 export default function RemoteAttendanceApprovalPage() {
     const { user, userRole } = useAuth();
-    const { isSupervisor, supervisedEmployees, currentEmployeeId } = useSupervisorCheck(user?.email);
+    const { isSupervisor, supervisedEmployees, currentEmployeeId, isLoading: isSupervisorLoading } = useSupervisorCheck(user?.email);
     const router = useRouter();
 
     const [records, setRecords] = useState<UnifiedApprovalRecord[]>([]);
@@ -58,7 +58,9 @@ export default function RemoteAttendanceApprovalPage() {
     const [processingId, setProcessingId] = useState<string | null>(null);
 
     const fetchRemoteAttendance = async () => {
-        if (!user || !isSupervisor || supervisedEmployees.length === 0) {
+        if (!user || isSupervisorLoading) return;
+
+        if (!isSupervisor || supervisedEmployees.length === 0) {
             setLoading(false);
             return;
         }
@@ -223,8 +225,10 @@ export default function RemoteAttendanceApprovalPage() {
     };
 
     useEffect(() => {
-        fetchRemoteAttendance();
-    }, [user, isSupervisor, supervisedEmployees, dateRange, statusFilter, typeFilter]);
+        if (!isSupervisorLoading) {
+            fetchRemoteAttendance();
+        }
+    }, [user, isSupervisor, supervisedEmployees, dateRange, statusFilter, typeFilter, isSupervisorLoading]);
 
     const containerRef = usePullToRefresh(fetchRemoteAttendance);
 
@@ -462,9 +466,30 @@ export default function RemoteAttendanceApprovalPage() {
 
                 <div className="flex-1 px-6 pb-[120px] space-y-4">
                     {loading ? (
-                        <div className="flex justify-center py-10">
-                            <Loader2 className="animate-spin text-blue-600 w-8 h-8" />
-                        </div>
+                        Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="bg-white p-4 rounded-2xl shadow-md animate-pulse">
+                                <div className="pl-4">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="h-4 w-12 bg-slate-200 rounded"></div>
+                                        <div className="h-4 w-16 bg-slate-200 rounded"></div>
+                                        <div className="h-4 w-12 bg-slate-200 rounded"></div>
+                                    </div>
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-full bg-slate-200"></div>
+                                        <div className="space-y-2">
+                                            <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                                            <div className="h-3 w-24 bg-slate-200 rounded"></div>
+                                        </div>
+                                    </div>
+                                    <div className="h-px bg-slate-100 my-3"></div>
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-5 h-5 bg-slate-200 rounded-full flex-shrink-0"></div>
+                                        <div className="h-3 bg-slate-200 rounded flex-1"></div>
+                                        <div className="w-8 h-8 bg-slate-200 rounded-lg flex-shrink-0"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
                     ) : records.length > 0 ? (
                         records.map((record) => (
                             <div

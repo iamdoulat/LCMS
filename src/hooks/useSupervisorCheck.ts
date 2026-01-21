@@ -19,6 +19,7 @@ export interface SupervisorInfo {
     supervisedEmployees: SupervisedEmployee[];
     supervisedEmployeeIds: string[];
     currentEmployeeId: string | null;
+    isLoading: boolean;
 }
 
 export function useSupervisorCheck(userEmail: string | null | undefined): SupervisorInfo {
@@ -27,7 +28,8 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
         isSupervisor: false,
         supervisedEmployees: [],
         supervisedEmployeeIds: [],
-        currentEmployeeId: null
+        currentEmployeeId: null,
+        isLoading: true
     });
 
     const isAdminRole = useMemo(() => {
@@ -120,7 +122,8 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         isSupervisor: true,
                         supervisedEmployees,
                         supervisedEmployeeIds: subordinateIds,
-                        currentEmployeeId: employeeId
+                        currentEmployeeId: employeeId,
+                        isLoading: false
                     });
                     return;
                 }
@@ -193,11 +196,15 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         isSupervisor: subordinateIds.length > 0,
                         supervisedEmployees: supervisedEmployees,
                         supervisedEmployeeIds: subordinateIds,
-                        currentEmployeeId: employeeId
+                        currentEmployeeId: employeeId,
+                        isLoading: false
                     });
+                } else {
+                    setInfo(prev => ({ ...prev, isLoading: false }));
                 }
             } catch (error) {
                 console.error("Error fetching supervisor info:", error);
+                setInfo(prev => ({ ...prev, isLoading: false }));
             }
         };
 
