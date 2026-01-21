@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/popover"
 
 interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
-    date: DateRange | undefined;
-    onDateChange: (range: DateRange | undefined) => void;
+  date: DateRange | undefined;
+  onDateChange: (range: DateRange | undefined) => void;
 }
 
 export function DatePickerWithRange({ className, date, onDateChange }: DatePickerWithRangeProps) {
@@ -25,22 +25,24 @@ export function DatePickerWithRange({ className, date, onDateChange }: DatePicke
 
   const handleDateSelect = (range: DateRange | undefined) => {
     onDateChange(range);
-    // Optionally close the popover after a range is selected
-    // if (range?.from && range?.to) {
-    //   setOpen(false);
-    // }
+    // Auto-close when a full range is selected
+    if (range?.from && range?.to) {
+      setOpen(false);
+    }
   };
-  
+
   return (
     <div className={cn("grid gap-2", className)}>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={false}>
         <PopoverTrigger asChild>
           <Button
             id="date"
             variant={"outline"}
             className={cn(
               "w-full justify-start text-left font-normal",
-              !date && "text-muted-foreground"
+              !date && "text-muted-foreground",
+              // Apply green styling if a date is selected to match screenshot
+              date?.from && date?.to ? "bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-500" : ""
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -58,14 +60,14 @@ export function DatePickerWithRange({ className, date, onDateChange }: DatePicke
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0" align="start" side="bottom" sideOffset={8}>
           <Calendar
             initialFocus
             mode="range"
             defaultMonth={date?.from}
             selected={date}
             onSelect={handleDateSelect}
-            numberOfMonths={2}
+            numberOfMonths={1} // Use 1 month for better mobile fit
           />
         </PopoverContent>
       </Popover>
