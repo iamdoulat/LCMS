@@ -188,7 +188,7 @@ export default function MyLeaveBalancePage() {
 
     const SkeletonLoader = () => (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
-            <div className="sticky top-0 z-50 bg-[#0a1e60]/80 backdrop-blur-md">
+            <div className="sticky top-0 z-50 bg-[#0a1e60]">
                 <div className="flex items-center px-4 pt-[14px] pb-6">
                     <Skeleton className="h-10 w-10 rounded-full bg-white/10" />
                     <Skeleton className="h-6 w-40 ml-4 bg-white/10" />
@@ -209,8 +209,8 @@ export default function MyLeaveBalancePage() {
 
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden font-sans">
-            {/* Sticky Header with Glassmorphism */}
-            <div className="sticky top-0 z-50 bg-[#0a1e60]/80 backdrop-blur-md border-b border-white/5">
+            {/* Solid Header with App Color */}
+            <div className="sticky top-0 z-50 bg-[#0a1e60] border-b border-white/5">
                 <div className="flex items-center px-4 pt-[14px] pb-6">
                     <motion.button
                         whileTap={{ scale: 0.9 }}
