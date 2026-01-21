@@ -29,7 +29,7 @@ interface PushNotification {
     totalTokens?: number;
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 20;
 
 export function NotificationHistoryList() {
     const [notifications, setNotifications] = useState<PushNotification[]>([]);

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, ChevronLeft, Bell } from 'lucide-react';
 import { format } from 'date-fns';
@@ -34,7 +34,7 @@ export default function MobileNotificationsPage() {
 
             try {
                 // Fetch recent notifications
-                const q = query(collection(firestore, 'push_notifications'), orderBy('sentAt', 'desc')); // Limit if needed
+                const q = query(collection(firestore, 'push_notifications'), orderBy('sentAt', 'desc'), limit(20)); // Limit if needed
                 const snapshot = await getDocs(q);
                 const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PushNotification[];
 
