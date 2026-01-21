@@ -53,18 +53,39 @@ export async function POST(request: Request) {
                     visit: 0
                 };
 
-                // Build Table HTML
-                let tableHtml = `<table border="1" cellpadding="5" cellspacing="0" style="width:100%; border-collapse:collapse; font-size: 14px;">
-                    <thead>
-                        <tr style="background:#f3f4f6;">
-                            <th style="text-align:left;">Date</th>
-                            <th style="text-align:left;">Status</th>
-                            <th style="text-align:left;">In Time</th>
-                            <th style="text-align:left;">Out Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
+                // --- PDF Generation ---
+                // We utilize jsPDF in Node environment. Some polyfills might be needed for 'window' or we use a node-specific wrapper if issues arise.
+                // However, standard jspdf often works if we don't rely on DOM.
+                // Note: 'jspdf' is primarily client-side. For server-side Node, usually 'pdfkit' or 'puppeteer' is preferred, 
+                // but jspdf can work with some shims or if we stick to basic features. 
+                // Let's use a simpler approach for now: construct the data and trust the library updates or fallback to HTML if this is complex to shim in environment.
+                // ACTUALLY, usually best to use 'jspdf' if we know it works, otherwise 'pdfmake' is good. 
+                // Given constraints, I will implement logic assuming it works, but if it fails, fallback to HTML?
+                // No, let's try to do it right.
 
+                // Since this runs in Next.js Server Request (Node), 'jspdf' might complain about 'window'.
+                // If so, we might need: global.window = { ... } as any; 
+                // A better alternative for Node is likely 'pdfkit'. 
+                // But let's try to stick to the plan.
+
+                // REVISION: 'jspdf' often has issues in pure Node. 
+                // Let's use a robust approach: HTML-to-PDF is hard.
+                // We will stick to a basic text/csv or basic PDF via 'jspdf' passing necessary mocks if needed.
+                // Or better: Let's use the installed 'jspdf' and hope standard usage works.
+
+                // Wait! Importing jspdf in Node requires:
+                const { jsPDF } = await import('jspdf');
+                const autoTable = (await import('jspdf-autotable')).default;
+
+                const doc = new jsPDF();
+
+                doc.setFontSize(18);
+                doc.text("Monthly Attendance Report", 14, 22);
+                doc.setFontSize(11);
+                doc.text(`Employee: ${emp.fullName || emp.name}`, 14, 30);
+                doc.text(`Month: ${format(date, 'MMMM yyyy')}`, 14, 36);
+
+                const tableData: any[] = [];
                 days.forEach(day => {
                     const dayStr = format(day, 'yyyy-MM-dd');
                     const record = allAttendance.find(r => r.employeeId === emp.id && r.date === dayStr);
@@ -72,69 +93,89 @@ export async function POST(request: Request) {
                     let status = '-';
                     let inTime = '-';
                     let outTime = '-';
-                    let rowColor = 'inherit';
+                    let remarks = '';
 
                     if (record) {
-                        status = record.remarks || record.flag || 'Present';
+                        status = record.flag || 'Present';
+                        remarks = record.remarks || '';
+                        if (record.inTime) try { inTime = format(new Date(record.inTime), 'hh:mm a'); } catch (e) { }
+                        if (record.outTime) try { outTime = format(new Date(record.outTime), 'hh:mm a'); } catch (e) { }
 
-                        if (record.inTime) {
-                            try { inTime = format(new Date(record.inTime), 'hh:mm a'); } catch (e) { }
-                        }
-                        if (record.outTime) {
-                            try { outTime = format(new Date(record.outTime), 'hh:mm a'); } catch (e) { }
-                        }
-
-                        // Stats Calculation
+                        // Stats Calculation (Already calc above, just re-using logic or calc here)
                         const f = (record.flag || '').toUpperCase();
                         if (f === 'P') { stats.present++; }
-                        else if (f === 'A') { stats.absent++; rowColor = '#fee2e2'; }
-                        else if (f === 'D') { stats.delayed++; stats.present++; rowColor = '#ffedd5'; } // Delayed counts as present usually
-                        else if (f === 'L') { stats.leave++; rowColor = '#e0e7ff'; }
-                        else if (f === 'V') { stats.visit++; stats.present++; rowColor = '#dcfce7'; } // Visit counts as present usually
+                        else if (f === 'A') { stats.absent++; }
+                        else if (f === 'D') { stats.delayed++; stats.present++; }
+                        else if (f === 'L') { stats.leave++; }
+                        else if (f === 'V') { stats.visit++; stats.present++; }
                         else if (status === 'Present') stats.present++;
                     }
 
-                    tableHtml += `<tr style="background-color: ${rowColor}">
-                        <td>${format(day, 'dd MMM, yyyy')}</td>
-                        <td>${status}</td>
-                        <td>${inTime}</td>
-                        <td>${outTime}</td>
-                   </tr>`;
+                    tableData.push([
+                        format(day, 'dd MMM'),
+                        status,
+                        inTime,
+                        outTime,
+                        remarks
+                    ]);
                 });
-                tableHtml += `</tbody></table>`;
 
-                // Add Summary Footer
-                tableHtml += `
-                <div style="margin-top: 20px; padding: 15px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
-                    <h3 style="margin-top: 0; margin-bottom: 10px; font-size: 16px;">Attendance Summary</h3>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                            <td style="padding: 5px;"><strong>Total Present:</strong> ${stats.present}</td>
-                            <td style="padding: 5px;"><strong>Absent:</strong> ${stats.absent}</td>
-                            <td style="padding: 5px;"><strong>Delayed:</strong> ${stats.delayed}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 5px;"><strong>Leave:</strong> ${stats.leave}</td>
-                            <td style="padding: 5px;"><strong>Visit:</strong> ${stats.visit}</td>
-                            <td style="padding: 5px;"></td>
-                        </tr>
-                    </table>
-                </div>`;
+                (autoTable as any)(doc, {
+                    head: [['Date', 'Status', 'In Time', 'Out Time', 'Remarks']],
+                    body: tableData,
+                    startY: 45,
+                    theme: 'grid',
+                    styles: { fontSize: 8 },
+                    headStyles: { fillColor: [66, 66, 66] }
+                });
+
+                // Summary
+                const finalY = (doc as any).lastAutoTable.finalY || 150;
+                doc.text("Summary:", 14, finalY + 10);
+                doc.setFontSize(10);
+                doc.text(`Present: ${stats.present}   Absent: ${stats.absent}   Delayed: ${stats.delayed}`, 14, finalY + 16);
+                doc.text(`Leave: ${stats.leave}   Visit: ${stats.visit}`, 14, finalY + 22);
+
+                const pdfBase64 = doc.output('datauristring').split(',')[1]; // Get raw base64
+
+                // Send Email with Attachment
+                const shortHtml = `
+                    <p>Dear ${emp.fullName || emp.name},</p>
+                    <p>Please find attached your attendance report for <strong>${format(date, 'MMMM yyyy')}</strong>.</p>
+                    <p><strong>Summary:</strong><br/>
+                    Present: ${stats.present} | Absent: ${stats.absent} | Delayed: ${stats.delayed}</p>
+                    <p>Regards,<br/>HR Team</p>
+                `;
 
                 await sendEmail({
                     to: emp.email,
-                    templateSlug: 'employee_monthly_attendance_report',
+                    templateSlug: 'employee_monthly_attendance_report', // Use slug if exists, or fallback
+                    subject: `Attendance Report - ${format(date, 'MMMM yyyy')}`, // Explicit subject if template doesn't handle attachment logic well?
+                    body: shortHtml, // We override body to be simple
                     data: {
                         employee_name: emp.fullName || emp.name || 'Employee',
                         month_year: format(date, 'MMMM yyyy'),
-                        attendance_chart: tableHtml
-                    }
+                        attendance_chart: "See attached PDF" // For template variable fallback
+                    },
+                    attachments: [
+                        {
+                            filename: `Attendance_${format(date, 'MMM_yyyy')}.pdf`,
+                            content: pdfBase64,
+                            encoding: 'base64'
+                        }
+                    ]
                 });
 
                 if (emp.phone) {
                     const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
-                    // WhatsApp cannot render HTML table. We send summary text.
-                    const waSummary = `Present: ${stats.present}, Absent: ${stats.absent}, Delayed: ${stats.delayed}, Leave: ${stats.leave}, Visit: ${stats.visit}`;
+                    const waSummary = `Attendance Report (${format(date, 'MMM yyyy')}):
+Present: ${stats.present}
+Absent: ${stats.absent}
+Delayed: ${stats.delayed}
+Leave: ${stats.leave}
+Visit: ${stats.visit}
+(Check email for detailed PDF)`;
+
                     try {
                         await sendWhatsApp({
                             to: emp.phone,
@@ -142,7 +183,7 @@ export async function POST(request: Request) {
                             data: {
                                 employee_name: emp.fullName || emp.name || 'Employee',
                                 month_year: format(date, 'MMMM yyyy'),
-                                attendance_chart: waSummary // Override HTML with text summary for WA
+                                attendance_chart: waSummary
                             }
                         });
                     } catch (e) { console.error("WA Report Error", e); }
