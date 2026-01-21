@@ -9,14 +9,13 @@ import {
     Building2,
     TrendingUp,
     Activity,
-    Calendar as CalendarIcon,
-    ArrowUpRight,
-    ArrowDownRight,
-    Clock,
     CheckCircle2,
     AlertCircle,
-    Info
+    Info,
+    ArrowUpRight,
+    ArrowDownRight
 } from "lucide-react";
+import { motion } from 'framer-motion';
 import {
     BarChart,
     Bar,
@@ -60,26 +59,38 @@ interface StatCardProps {
     iconColor?: string;
 }
 
-const StatCard = ({ title, value, icon: Icon, description, trend, trendValue, className, iconColor }: StatCardProps) => (
-    <Card className={cn("overflow-hidden", className)}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-            <div className={cn("p-2 rounded-full bg-slate-100 dark:bg-slate-800", iconColor)}>
-                <Icon className="h-4 w-4" />
-            </div>
-        </CardHeader>
-        <CardContent>
-            <div className="text-2xl font-bold">{value}</div>
-            {(description || trend) && (
-                <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                    {trend === 'up' && <ArrowUpRight className="h-4 w-4 text-emerald-500 mr-1" />}
-                    {trend === 'down' && <ArrowDownRight className="h-4 w-4 text-rose-500 mr-1" />}
-                    {trendValue && <span className={cn("font-medium mr-1", trend === 'up' ? "text-emerald-500" : trend === 'down' ? "text-rose-500" : "")}>{trendValue}</span>}
-                    {description}
-                </p>
-            )}
-        </CardContent>
-    </Card>
+const StatCard = ({ title, value, icon: Icon, description, trend, trendValue, className }: StatCardProps) => (
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -5 }}
+        className="w-full"
+    >
+        <Card className={cn("overflow-hidden border-none shadow-xl text-white group relative", className)}>
+            <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <CardTitle className="text-sm font-bold text-white/90 uppercase tracking-wider">{title}</CardTitle>
+                <div className="p-2.5 rounded-2xl bg-white/20 backdrop-blur-md shadow-inner border border-white/10 group-hover:rotate-12 transition-transform duration-300">
+                    <Icon className="h-5 w-5 text-white" />
+                </div>
+            </CardHeader>
+            <CardContent className="relative z-10 pt-2">
+                <div className="text-3xl font-black tracking-tight">{value}</div>
+                {(description || trend) && (
+                    <div className="text-xs text-white/80 mt-2 flex items-center font-medium bg-black/10 w-fit px-2 py-1 rounded-lg backdrop-blur-sm border border-white/5">
+                        {trend === 'up' && <ArrowUpRight className="h-3 w-3 text-white mr-1" />}
+                        {trend === 'down' && <ArrowDownRight className="h-3 w-3 text-white mr-1" />}
+                        {trendValue && <span className="font-bold mr-1">{trendValue}</span>}
+                        <span className="opacity-90">{description}</span>
+                    </div>
+                )}
+            </CardContent>
+
+            {/* Decorative background element */}
+            <div className="absolute bottom-0 right-0 -mb-8 -mr-8 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+        </Card>
+    </motion.div>
 );
 
 export default function ProjectManagementDashboard() {
@@ -224,7 +235,7 @@ export default function ProjectManagementDashboard() {
                     trend="up"
                     trendValue="+2"
                     description="this month"
-                    iconColor="text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
+                    className="gradient-primary"
                 />
                 <StatCard
                     title="Total Tasks"
@@ -233,21 +244,21 @@ export default function ProjectManagementDashboard() {
                     trend="up"
                     trendValue="+12%"
                     description="from last week"
-                    iconColor="text-purple-600 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400"
+                    className="gradient-purple"
                 />
                 <StatCard
                     title="Active Users"
                     value={stats.totalUsers}
                     icon={Users}
                     description="team members"
-                    iconColor="text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    className="gradient-success"
                 />
                 <StatCard
                     title="Total Clients"
                     value={stats.totalClients}
                     icon={Building2}
                     description="active contracts"
-                    iconColor="text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400"
+                    className="gradient-warning"
                 />
             </div>
 
