@@ -33,10 +33,14 @@ const allSummaryItems = [
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useFirebaseMessaging } from '@/hooks/useFirebaseMessaging';
 
 export default function MobileDashboardPage() {
     const { user, userRole: globalUserRole, companyName, companyLogoUrl } = useAuth();
     const { isSupervisor, supervisedEmployeeIds, currentEmployeeId } = useSupervisorCheck(user?.email);
+
+    // Initialize Firebase Cloud Messaging
+    useFirebaseMessaging();
 
     const formatAttendanceTime = (timeStr?: any) => {
         if (!timeStr) return null;
