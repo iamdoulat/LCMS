@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 export default function PushNotificationsPage() {
     return (
-        <div className="container mx-auto py-8">
+        <div className="container mx-auto py-8 px-[20px]">
             <div className="flex flex-col gap-8">
                 {/* Header Section */}
                 <div>

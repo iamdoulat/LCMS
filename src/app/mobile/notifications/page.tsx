@@ -7,34 +7,63 @@ import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, ChevronLeft, Bell } from 'lucide-react';
 import { format } from 'date-fns';
-import { NoticeBoardSettings } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface PushNotification {
+    id: string;
+    title: string;
+    body: string;
+    sentAt: any; // Timestamp
+    targetRoles?: string[];
+    userIds?: string[];
+}
+
 export default function MobileNotificationsPage() {
     const router = useRouter();
-    const { userRole } = useAuth();
-    const [notices, setNotices] = useState<(NoticeBoardSettings & { id: string })[]>([]);
+    const { userRole, user } = useAuth();
+    const [notifications, setNotifications] = useState<PushNotification[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedNotification, setSelectedNotification] = useState<PushNotification | null>(null);
 
     useEffect(() => {
-        const fetchNotices = async () => {
+        const fetchNotifications = async () => {
+            if (!user) return;
+
             try {
-                const noticesSnapshot = await getDocs(query(collection(firestore, 'site_settings'), orderBy('updatedAt', 'desc')));
-                const allNotices = noticesSnapshot.docs.map(d => ({ ...d.data(), id: d.id })) as (NoticeBoardSettings & { id: string })[];
+                // Fetch recent notifications
+                const q = query(collection(firestore, 'push_notifications'), orderBy('sentAt', 'desc')); // Limit if needed
+                const snapshot = await getDocs(q);
+                const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PushNotification[];
 
-                // Filter for enabled notices that target the current user's role
-                const visibleNotices = allNotices.filter(n =>
-                    n.isEnabled &&
-                    (!n.targetRoles || (Array.isArray(n.targetRoles) && n.targetRoles.some(role => userRole?.includes(role))))
-                );
+                // Filter logic
+                const visibleNotifications = allNotifications.filter(n => {
+                    // Check if targeted by User ID
+                    if (n.userIds && Array.isArray(n.userIds)) {
+                        if (n.userIds.includes(user.uid)) return true;
+                    }
 
-                setNotices(visibleNotices);
+                    // Check if targeted by Role
+                    if (n.targetRoles && Array.isArray(n.targetRoles)) {
+                        if (userRole && n.targetRoles.some(role => userRole.includes(role as any))) return true;
+                    }
 
-                // Mark latest notice as seen
-                if (visibleNotices.length > 0) {
-                    localStorage.setItem('mobile_last_seen_notice_id', visibleNotices[0].id);
+                    // Fallback: If no targets specified, maybe show to all? 
+                    // Or strictly hide. Let's assume strict targeting based on our Send API.
+                    // If both are empty/null, it might be an orphaned record or "All". 
+                    // Our API saves targetRoles for "All", so role check covers it.
+                    return false;
+                });
+
+                setNotifications(visibleNotifications);
+
+                // Mark latest as seen (optional, logic remains similar)
+                if (visibleNotifications.length > 0) {
+                    localStorage.setItem('mobile_last_seen_notice_id', visibleNotifications[0].id);
                 }
+
             } catch (error) {
                 console.error("Error fetching notifications:", error);
             } finally {
@@ -42,14 +71,8 @@ export default function MobileNotificationsPage() {
             }
         };
 
-        if (userRole) {
-            fetchNotices();
-        }
-    }, [userRole]);
-
-    const stripHtml = (html: string) => {
-        return html.replace(/<[^>]*>?/gm, "") || "";
-    };
+        fetchNotifications();
+    }, [user, userRole]);
 
     const NotificationSkeleton = () => (
         <div className="space-y-3">
@@ -88,7 +111,7 @@ export default function MobileNotificationsPage() {
                 <div className="flex-1 overflow-y-auto px-4 pt-8 pb-20 space-y-3 overscroll-contain">
                     {loading ? (
                         <NotificationSkeleton />
-                    ) : notices.length === 0 ? (
+                    ) : notifications.length === 0 ? (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -102,13 +125,13 @@ export default function MobileNotificationsPage() {
                         </motion.div>
                     ) : (
                         <AnimatePresence>
-                            {notices.map((notice, idx) => (
+                            {notifications.map((notice, idx) => (
                                 <motion.div
                                     key={notice.id}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: idx * 0.05 }}
-                                    onClick={() => router.push(`/mobile/notice-board/${notice.id}`)}
+                                    onClick={() => setSelectedNotification(notice)}
                                     className="bg-white rounded-xl p-4 shadow-sm active:scale-[0.98] transition-transform cursor-pointer border-l-4 border-blue-500 flex gap-3 hover:shadow-md"
                                 >
                                     <div className="mt-1">
@@ -120,11 +143,11 @@ export default function MobileNotificationsPage() {
                                         <div className="flex justify-between items-start mb-1">
                                             <h3 className="font-semibold text-slate-900 line-clamp-1 text-sm">{notice.title}</h3>
                                             <span className="text-[10px] text-slate-400 whitespace-nowrap ml-2 font-medium">
-                                                {notice.updatedAt ? format(notice.updatedAt.toDate(), 'dd MMM') : ''}
+                                                {notice.sentAt ? format(notice.sentAt.toDate(), 'dd MMM') : ''}
                                             </span>
                                         </div>
                                         <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed opacity-80">
-                                            {stripHtml(notice.content)}
+                                            {notice.body}
                                         </p>
                                     </div>
                                 </motion.div>
@@ -133,6 +156,20 @@ export default function MobileNotificationsPage() {
                     )}
                 </div>
             </main>
+
+            <Dialog open={!!selectedNotification} onOpenChange={(open) => !open && setSelectedNotification(null)}>
+                <DialogContent className="w-[90%] rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{selectedNotification?.title}</DialogTitle>
+                        <DialogDescription>
+                            {selectedNotification?.sentAt ? format(selectedNotification.sentAt.toDate(), "PPP p") : ''}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-2 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
+                        {selectedNotification?.body}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
