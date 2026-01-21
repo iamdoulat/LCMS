@@ -50,6 +50,30 @@ export async function GET(request: Request) {
             });
         }
 
+        // 1.1 Auto-Seed WhatsApp Template if missing
+        const waTemplateRef = db.collection('whatsapp_templates').where('slug', '==', templateSlug).limit(1);
+        const waTemplateSnap = await waTemplateRef.get();
+
+        if (waTemplateSnap.empty) {
+            console.log("Seeding default WhatsApp birthday template...");
+            await db.collection('whatsapp_templates').add({
+                name: 'Employee Birthday Wish',
+                slug: templateSlug,
+                subject: 'Happy Birthday! 🎂',
+                body: `Dear *{{employee_name}}*,
+
+Happy Birthday! 🎈
+Wishing you a day filled with happiness and a fantastic year ahead!
+
+Best Wishes,
+*{{company_name}}*`,
+                variables: ['employee_name', 'company_name'],
+                isActive: true,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
         // 2. Fetch Active Employees
         const snapshot = await db.collection('employees').where('isActive', '==', true).get();
         const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, limit, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, ChevronLeft, Bell } from 'lucide-react';
 import { format } from 'date-fns';
@@ -25,6 +25,7 @@ export default function MobileNotificationsPage() {
     const router = useRouter();
     const { userRole, user } = useAuth();
     const [notifications, setNotifications] = useState<PushNotification[]>([]);
+    const [readIds, setReadIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [selectedNotification, setSelectedNotification] = useState<PushNotification | null>(null);
 
@@ -33,7 +34,7 @@ export default function MobileNotificationsPage() {
             if (!user) return;
 
             try {
-                // Fetch recent notifications
+                // 1. Fetch recent notifications
                 const q = query(collection(firestore, 'push_notifications'), orderBy('sentAt', 'desc'), limit(20)); // Limit if needed
                 const snapshot = await getDocs(q);
                 const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PushNotification[];
@@ -50,19 +51,15 @@ export default function MobileNotificationsPage() {
                         if (userRole && n.targetRoles.some(role => userRole.includes(role as any))) return true;
                     }
 
-                    // Fallback: If no targets specified, maybe show to all? 
-                    // Or strictly hide. Let's assume strict targeting based on our Send API.
-                    // If both are empty/null, it might be an orphaned record or "All". 
-                    // Our API saves targetRoles for "All", so role check covers it.
                     return false;
                 });
 
                 setNotifications(visibleNotifications);
 
-                // Mark latest as seen (optional, logic remains similar)
-                if (visibleNotifications.length > 0) {
-                    localStorage.setItem('mobile_last_seen_notice_id', visibleNotifications[0].id);
-                }
+                // 2. Fetch Read Status
+                const readSnap = await getDocs(collection(firestore, `users/${user.uid}/read_notifications`));
+                const readSet = new Set(readSnap.docs.map(d => d.id));
+                setReadIds(readSet);
 
             } catch (error) {
                 console.error("Error fetching notifications:", error);
@@ -73,6 +70,26 @@ export default function MobileNotificationsPage() {
 
         fetchNotifications();
     }, [user, userRole]);
+
+    const handleNotificationClick = async (notice: PushNotification) => {
+        setSelectedNotification(notice);
+
+        if (user && !readIds.has(notice.id)) {
+            // Mark as read locally
+            const newReadIds = new Set(readIds);
+            newReadIds.add(notice.id);
+            setReadIds(newReadIds);
+
+            // Mark as read in Firestore (fire and forget)
+            try {
+                await setDoc(doc(firestore, `users/${user.uid}/read_notifications`, notice.id), {
+                    readAt: serverTimestamp()
+                });
+            } catch (e) {
+                console.error("Failed to mark as read:", e);
+            }
+        }
+    };
 
     const NotificationSkeleton = () => (
         <div className="space-y-3">
@@ -125,33 +142,39 @@ export default function MobileNotificationsPage() {
                         </motion.div>
                     ) : (
                         <AnimatePresence>
-                            {notifications.map((notice, idx) => (
-                                <motion.div
-                                    key={notice.id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.05 }}
-                                    onClick={() => setSelectedNotification(notice)}
-                                    className="bg-white rounded-xl p-4 shadow-sm active:scale-[0.98] transition-transform cursor-pointer border-l-4 border-blue-500 flex gap-3 hover:shadow-md"
-                                >
-                                    <div className="mt-1">
-                                        <div className="bg-blue-50 p-2 rounded-full">
-                                            <Bell className="h-4 w-4 text-blue-600" />
+                            {notifications.map((notice, idx) => {
+                                const isRead = readIds.has(notice.id);
+                                return (
+                                    <motion.div
+                                        key={notice.id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        onClick={() => handleNotificationClick(notice)}
+                                        className={`bg-white rounded-xl p-4 shadow-sm active:scale-[0.98] transition-transform cursor-pointer border-l-4 flex gap-3 hover:shadow-md relative ${isRead ? 'border-slate-200' : 'border-blue-500'}`}
+                                    >
+                                        <div className="mt-1 relative">
+                                            <div className={`p-2 rounded-full ${isRead ? 'bg-slate-100' : 'bg-blue-50'}`}>
+                                                <Bell className={`h-4 w-4 ${isRead ? 'text-slate-400' : 'text-blue-600'}`} />
+                                            </div>
+                                            {!isRead && (
+                                                <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-white bg-red-500 transform translate-x-1/4 -translate-y-1/4" />
+                                            )}
                                         </div>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start mb-1">
-                                            <h3 className="font-semibold text-slate-900 line-clamp-1 text-sm">{notice.title}</h3>
-                                            <span className="text-[10px] text-slate-400 whitespace-nowrap ml-2 font-medium">
-                                                {notice.sentAt ? format(notice.sentAt.toDate(), 'dd MMM') : ''}
-                                            </span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start mb-1 gap-2">
+                                                <h3 className={`font-semibold line-clamp-1 text-sm ${isRead ? 'text-slate-600' : 'text-slate-900'}`}>{notice.title}</h3>
+                                                <span className="text-[10px] text-slate-400 whitespace-nowrap font-medium shrink-0">
+                                                    {notice.sentAt ? format(notice.sentAt.toDate(), 'dd MMM') : ''}
+                                                </span>
+                                            </div>
+                                            <p className={`text-xs line-clamp-2 leading-relaxed ${isRead ? 'text-slate-400' : 'text-slate-600 font-medium'}`}>
+                                                {notice.body}
+                                            </p>
                                         </div>
-                                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed opacity-80">
-                                            {notice.body}
-                                        </p>
-                                    </div>
-                                </motion.div>
-                            ))}
+                                    </motion.div>
+                                );
+                            })}
                         </AnimatePresence>
                     )}
                 </div>
