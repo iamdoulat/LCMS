@@ -182,7 +182,7 @@ export default function MobileDashboardPage() {
             switch (item.id) {
                 case 'leave': return { ...item, value: stats.leaveSpent.toFixed(1) };
                 case 'visit': return { ...item, value: stats.visitCount.toFixed(1) };
-                case 'pending': return { ...item, value: stats.pendingAttendanceCount.toString() };
+                case 'pending': return { ...item, value: stats.pendingCount.toString() };
                 case 'missed': return { ...item, value: (isSupervisor ? stats.teamMissedToday : stats.missedAttendance).toString() };
                 case 'notices': return { ...item, value: stats.noticesCount.toString() };
                 case 'checkin': return { ...item, value: typeof todayAttendance?.inTime === 'string' ? todayAttendance.inTime : '--:--' };
@@ -343,46 +343,45 @@ export default function MobileDashboardPage() {
                 );
 
                 if (isSupervisor || isHROrAdmin) {
-                    let qPendingAtt;
-
                     if (isHROrAdmin) {
                         // HR/Admin: Get ALL pending remote attendance
-                        qPendingAtt = query(
+                        const qPendingAtt = query(
                             collection(firestore, 'attendance'),
-                            where('isRemoteApprovalRequired', '==', true),
-                            where('remoteApprovalStatus', '==', 'Pending')
+                            where('approvalStatus', '==', 'Pending')
                         );
-                    } else {
+                        const unsubPendingAtt = onSnapshot(qPendingAtt, (snap) => {
+                            const totalCount = snap.size;
+                            updatePendingCount(totalCount, 'remoteAttendance');
+                            setStats(prev => ({ ...prev, pendingAttendanceCount: totalCount }));
+                        });
+                        cleanupActions.push(unsubPendingAtt);
+                    } else if (supervisedEmployeeIds.length > 0) {
                         // Supervisor: Get only supervised employees
-                        // Split into chunks if more than 10 employees (Firestore 'in' limit)
+                        // Firestore 'in' limit is 30 in newer versions (10 in older but let's stick to 10 for safety)
                         const chunks = [];
                         for (let i = 0; i < supervisedEmployeeIds.length; i += 10) {
                             chunks.push(supervisedEmployeeIds.slice(i, i + 10));
                         }
 
-                        // If small list, use single query
-                        if (chunks.length === 1 && chunks[0].length > 0) {
-                            qPendingAtt = query(
+                        // Maintain a map of counts per chunk to sum them up
+                        const chunkCounts: Record<number, number> = {};
+
+                        chunks.forEach((chunk, index) => {
+                            const q = query(
                                 collection(firestore, 'attendance'),
-                                where('employeeId', 'in', chunks[0]),
-                                where('isRemoteApprovalRequired', '==', true),
-                                where('remoteApprovalStatus', '==', 'Pending')
+                                where('employeeId', 'in', chunk),
+                                where('approvalStatus', '==', 'Pending')
                             );
-                        }
-                    }
 
-                    if (qPendingAtt) {
-                        const unsubPendingAtt = onSnapshot(qPendingAtt, (snap) => {
-                            let totalCount = snap.size;
-
-                            // For supervisors with multiple chunks, we only queried first 10
-                            // This is a limitation but prevents complex multi-query logic
-                            // Full solution would require fetching all chunks separately
-
-                            updatePendingCount(totalCount, 'remoteAttendance');
-                            setStats(prev => ({ ...prev, pendingAttendanceCount: totalCount }));
+                            const unsub = onSnapshot(q, (snap) => {
+                                chunkCounts[index] = snap.size;
+                                // Recalculate total sum from all chunks
+                                const totalCount = Object.values(chunkCounts).reduce((sum, count) => sum + count, 0);
+                                updatePendingCount(totalCount, 'remoteAttendance');
+                                setStats(prev => ({ ...prev, pendingAttendanceCount: totalCount }));
+                            });
+                            cleanupActions.push(unsub);
                         });
-                        cleanupActions.push(unsubPendingAtt);
                     }
                 }
 
