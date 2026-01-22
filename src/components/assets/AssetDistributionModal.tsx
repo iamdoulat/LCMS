@@ -161,8 +161,12 @@ export function AssetDistributionModal({ isOpen, onClose, distributionToEdit, on
 
         try {
             setIsSubmitting(true);
-            const formattedStartDate = format(startDate, 'yyyy-MM-dd');
-            const formattedEndDate = endDate ? format(endDate, 'yyyy-MM-dd') : null;
+            const formattedStartDate = startDate && !isNaN(startDate.getTime()) ? format(startDate, 'yyyy-MM-dd') : null;
+            const formattedEndDate = endDate && !isNaN(endDate.getTime()) ? format(endDate, 'yyyy-MM-dd') : null;
+
+            if (!formattedStartDate) {
+                throw new Error("Start Date is invalid");
+            }
 
             if (variant === 'requisition') {
                 // --- REQUISITION SUBMISSION ---

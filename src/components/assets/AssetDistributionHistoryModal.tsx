@@ -166,7 +166,18 @@ export function AssetDistributionHistoryModal({ isOpen, onClose, assetId, assetN
                                             <TableCell>{dist.employeeBranch}</TableCell>
                                             <TableCell>{dist.employeeDepartment}</TableCell>
                                             <TableCell>{dist.startDate ? format(parseISO(dist.startDate), 'dd-MM-yyyy') : '-'}</TableCell>
-                                            <TableCell>{dist.endDate ? format(parseISO(dist.endDate), 'dd-MM-yyyy') : '-'}</TableCell>
+                                            <TableCell>
+                                                {(() => {
+                                                    if (!dist.endDate) return '-';
+                                                    try {
+                                                        const d = parseISO(dist.endDate);
+                                                        if (isNaN(d.getTime())) return '-';
+                                                        return format(d, 'dd-MM-yyyy');
+                                                    } catch (e) {
+                                                        return '-';
+                                                    }
+                                                })()}
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (

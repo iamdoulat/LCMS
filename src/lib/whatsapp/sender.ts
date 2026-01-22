@@ -165,10 +165,11 @@ export async function sendWhatsApp({ to, templateSlug, data, message }: SendWhat
             }
 
             // Send via bipsms WhatsApp API
+            const formattedPhone = phone.replace(/\D/g, ''); // Remove all non-digits
             const formData = new FormData();
             formData.append('secret', gateway.apiSecret);
             formData.append('account', gateway.accountUniqueId);
-            formData.append('recipient', phone);
+            formData.append('recipient', formattedPhone);
             formData.append('type', 'text');
             formData.append('message', finalMessage);
 

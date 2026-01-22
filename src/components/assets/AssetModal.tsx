@@ -136,7 +136,16 @@ export function AssetModal({ isOpen, onClose, assetToEdit, onSuccess }: AssetMod
 
             const selectedCategory = categories.find(c => c.id === categoryId);
             const categoryName = selectedCategory ? selectedCategory.name : 'Unknown';
-            const formattedDate = purchaseDate ? format(purchaseDate, 'yyyy-MM-dd') : null;
+            let formattedDate = null;
+            if (purchaseDate) {
+                try {
+                    if (!isNaN(purchaseDate.getTime())) {
+                        formattedDate = format(purchaseDate, 'yyyy-MM-dd');
+                    }
+                } catch (e) {
+                    console.error("Invalid purchase date", e);
+                }
+            }
 
             const assetData = {
                 title,

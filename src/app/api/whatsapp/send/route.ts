@@ -5,14 +5,15 @@ import { sendWhatsApp } from '@/lib/whatsapp/sender';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { recipient, message } = body;
+        const { to, recipient, message } = body;
+        const targetNumber = to || recipient;
 
-        if (!recipient || !message) {
-            return NextResponse.json({ error: 'Missing required fields: recipient and message' }, { status: 400 });
+        if (!targetNumber || !message) {
+            return NextResponse.json({ error: 'Missing required fields: to/recipient and message' }, { status: 400 });
         }
 
         const result = await sendWhatsApp({
-            to: recipient,
+            to: targetNumber,
             message: message
         });
 

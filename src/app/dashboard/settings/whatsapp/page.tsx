@@ -177,7 +177,7 @@ export default function WhatsAppSettingsPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    recipient: testNumber,
+                    to: testNumber,
                     message: `This is a test message from your ${companyName} WhatsApp settings.`
                 })
             });

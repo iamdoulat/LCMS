@@ -56,7 +56,7 @@ export function AssetRequestSheet({ isOpen, onClose }: AssetRequestSheetProps) {
     }, [assetsInCategory]);
 
     const handleSubmit = async () => {
-        if (!user || !fromDate || !toDate || !category || !requisition) {
+        if (!user || !fromDate || !category || !requisition) {
             // Simple validation
             return;
         }
@@ -148,7 +148,7 @@ export function AssetRequestSheet({ isOpen, onClose }: AssetRequestSheetProps) {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-xs font-bold text-[#0A1E60]">To Date<span className="text-red-500">*</span></Label>
+                            <Label className="text-xs font-bold text-[#0A1E60]">To Date (Optional)</Label>
                             <Input
                                 type="date"
                                 value={toDate}

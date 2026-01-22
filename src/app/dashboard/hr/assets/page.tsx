@@ -40,6 +40,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from '@/lib/utils';
 import { sendPushNotification } from '@/lib/notifications';
 
+const safeFormatDate = (dateStr: string | undefined | null) => {
+  if (!dateStr) return "-";
+  try {
+    const date = parseISO(dateStr);
+    if (isNaN(date.getTime())) return "-";
+    return format(date, 'dd-MM-yyyy');
+  } catch (e) {
+    return "-";
+  }
+};
+
 export default function AssetsPage() {
   const { userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
@@ -547,8 +558,8 @@ export default function AssetsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="align-middle max-w-[250px]">{req.details}</TableCell>
-                      <TableCell className="align-middle">{req.fromDate ? format(parseISO(req.fromDate), 'dd-MM-yyyy') : '-'}</TableCell>
-                      <TableCell className="align-middle">{req.toDate ? format(parseISO(req.toDate), 'dd-MM-yyyy') : '-'}</TableCell>
+                      <TableCell className="align-middle">{safeFormatDate(req.fromDate)}</TableCell>
+                      <TableCell className="align-middle">{safeFormatDate(req.toDate)}</TableCell>
                       <TableCell className="text-right align-middle">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

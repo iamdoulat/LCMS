@@ -179,9 +179,9 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
 
         // 4. Send Email based on provider
         if (config.serviceProvider === 'resend_api') {
-            if (!config.resendApiKey) throw new Error('Resend API Key missing');
-
-            const resend = new Resend(config.resendApiKey);
+            const apiKey = config.resendApiKey || process.env.RESEND_API_KEY;
+            if (!apiKey) throw new Error('Resend API Key missing in both Firestore and environment variables');
+            const resend = new Resend(apiKey);
 
             try {
                 // Map attachments for Resend (expects content as Buffer/string)
