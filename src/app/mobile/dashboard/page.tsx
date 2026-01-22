@@ -43,12 +43,12 @@ export default function MobileDashboardPage() {
     const { isSupervisor, supervisedEmployeeIds, explicitSubordinateIds, currentEmployeeId } = useSupervisorCheck(user?.email);
     const permissions = usePermissions();
 
-    // Context for data scoping
+    // Context for data scoping - using explicitSubordinateIds for "own team" focus
     const scoperContext = useMemo(() => ({
         uid: user?.uid || '',
         employeeId: currentEmployeeId,
-        supervisedEmployeeIds: supervisedEmployeeIds || []
-    }), [user?.uid, currentEmployeeId, supervisedEmployeeIds]);
+        supervisedEmployeeIds: explicitSubordinateIds || []
+    }), [user?.uid, currentEmployeeId, explicitSubordinateIds]);
 
     // Initialize Firebase Cloud Messaging
     useFirebaseMessaging();
@@ -339,8 +339,8 @@ export default function MobileDashboardPage() {
                 attendanceData?.forEach(doc => {
                     const date = doc.date instanceof Timestamp ? doc.date.toDate() : (typeof doc.date === 'string' ? parseISO(doc.date) : new Date(doc.date));
                     const dateStr = format(date, 'yyyy-MM-dd');
-                    // Directly count subordinates with 'A' flag for today
-                    if (dateStr === todayDateStr && doc.flag === 'A' && explicitSubordinateIds.includes(doc.employeeId)) {
+                    // Directly count subordinates with 'A' flag for today (case-insensitive)
+                    if (dateStr === todayDateStr && doc.flag?.toUpperCase() === 'A' && explicitSubordinateIds.includes(doc.employeeId)) {
                         absentCount++;
                     }
                 });
@@ -361,7 +361,7 @@ export default function MobileDashboardPage() {
         if (attendanceData || leaveData || visitData) {
             calculateStats();
         }
-    }, [attendanceData, leaveData, visitData]);
+    }, [attendanceData, leaveData, visitData, isSupervisor, explicitSubordinateIds, supervisedEmployeeIds, currentEmployeeId]);
 
     useEffect(() => {
         if (claimData) {

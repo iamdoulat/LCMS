@@ -108,7 +108,7 @@ const formatCurrency = (value?: number) => {
 export default function AccountDetailsPage() {
   const { user, userRole, loading: authLoading, setUser: setAuthUser } = useAuth();
   const router = useRouter();
-  const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+  const { isSupervisor, supervisedEmployeeIds, explicitSubordinateIds } = useSupervisorCheck(user?.email);
 
   const isPrivilegedRole = useMemo(() => {
     if (!userRole) return false;
@@ -2422,18 +2422,18 @@ export default function AccountDetailsPage() {
         </Card>
 
         {/* Supervisor Cards - My Team and Check-In History */}
-        {employeeData && (isSupervisor || supervisedEmployeeIds.length > 0) && (
+        {employeeData && (explicitSubordinateIds.length > 0) && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <EmployeeSupervisionCard currentEmployeeId={employeeData.id} />
             <TeamCheckInCard
               isSupervisor={isSupervisor}
-              supervisedEmployeeIds={supervisedEmployeeIds}
+              supervisedEmployeeIds={explicitSubordinateIds}
             />
           </div>
         )}
 
-        {employeeData && (isSupervisor || supervisedEmployeeIds.length > 0) && (
-          <TeamAttendanceCard supervisedEmployeeIds={supervisedEmployeeIds} />
+        {employeeData && (explicitSubordinateIds.length > 0) && (
+          <TeamAttendanceCard supervisedEmployeeIds={explicitSubordinateIds} />
         )}
 
 
@@ -2501,10 +2501,10 @@ export default function AccountDetailsPage() {
           </Card>
 
           {/* Team Break Time Card for Supervisors */}
-          {employeeData && (isSupervisor || supervisedEmployeeIds.length > 0) && (
+          {employeeData && (explicitSubordinateIds.length > 0) && (
             <TeamBreakTimeCard
               isSupervisor={isSupervisor}
-              supervisedEmployeeIds={supervisedEmployeeIds}
+              supervisedEmployeeIds={explicitSubordinateIds}
             />
           )}
         </div>
