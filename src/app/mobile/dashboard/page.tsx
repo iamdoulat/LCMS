@@ -117,13 +117,6 @@ export default function MobileDashboardPage() {
     // Local role for display/legacy check, but we'll prioritize globalUserRole
     const [localUserRole, setLocalUserRole] = useState<string>('user');
     const [restrictionNote, setRestrictionNote] = useState<string | null>(null);
-    const [isInitialLoading, setIsInitialLoading] = useState(true);
-
-    // Initial Loading Timer (Native feel)
-    useEffect(() => {
-        const timer = setTimeout(() => setIsInitialLoading(false), 1200);
-        return () => clearTimeout(timer);
-    }, []);
 
     // Load settings from localStorage
     useEffect(() => {
@@ -163,9 +156,9 @@ export default function MobileDashboardPage() {
     const leaveQuery = useMemo(() => dataScoper.getLeaveQuery(permissions, scoperContext), [permissions, scoperContext]);
     const visitQuery = useMemo(() => dataScoper.getVisitQuery(permissions, scoperContext), [permissions, scoperContext]);
 
-    const { data: attendanceData } = useRealtimeData<any[]>(attendanceQuery);
-    const { data: leaveData } = useRealtimeData<any[]>(leaveQuery);
-    const { data: visitData } = useRealtimeData<any[]>(visitQuery);
+    const { data: attendanceData, loading: attendanceLoading } = useRealtimeData<any[]>(attendanceQuery);
+    const { data: leaveData, loading: leaveLoading } = useRealtimeData<any[]>(leaveQuery);
+    const { data: visitData, loading: visitLoading } = useRealtimeData<any[]>(visitQuery);
 
     // Today's attendance listener using new hook
     const todayDocRef = useMemo(() => {
@@ -175,7 +168,34 @@ export default function MobileDashboardPage() {
         return doc(firestore, 'attendance', `${canonicalId}_${dateKey}`);
     }, [user?.uid, currentEmployeeId]);
 
-    const { data: todayAttendanceData } = useRealtimeDoc<any>(todayDocRef);
+    const { data: todayAttendanceData, loading: todayLoading } = useRealtimeDoc<any>(todayDocRef);
+
+    // Role-based notice listener
+    const noticeQuery = useMemo(() => query(collection(firestore, 'site_settings'), where('isEnabled', '==', true)), []);
+    const { data: rawNoticeData, loading: noticesLoading } = useRealtimeData<any[]>(noticeQuery);
+
+    // Claim stats current month
+    const claimQuery = useMemo(() => {
+        if (!user?.uid) return null;
+        const ids = [user.uid];
+        if (currentEmployeeId) ids.push(currentEmployeeId);
+        return query(
+            collection(firestore, 'hr_claims'),
+            where('employeeId', 'in', Array.from(new Set(ids))),
+            where('claimDate', '>=', startOfMonth(new Date()).toISOString())
+        );
+    }, [user?.uid, currentEmployeeId]);
+    const { data: claimData, loading: claimLoading } = useRealtimeData<any[]>(claimQuery);
+
+    useEffect(() => {
+        if (rawNoticeData) {
+            const filtered = rawNoticeData.filter(doc => {
+                if (!doc.targetRoles || !Array.isArray(doc.targetRoles) || doc.targetRoles.length === 0) return true;
+                return doc.targetRoles.some((role: any) => globalUserRole?.includes(role));
+            });
+            setStats(prev => ({ ...prev, noticesCount: filtered.length }));
+        }
+    }, [rawNoticeData, globalUserRole]);
 
     useEffect(() => {
         if (todayAttendanceData) {
@@ -194,20 +214,39 @@ export default function MobileDashboardPage() {
 
     const visibleItems = useMemo(() => {
         return allSummaryItems.filter(item => selectedIds.includes(item.id)).map(item => {
+            let isLoading = false;
             switch (item.id) {
-                case 'leave': return { ...item, value: stats.leaveSpent.toFixed(1) };
-                case 'visit': return { ...item, value: stats.visitCount.toFixed(1) };
-                case 'pending': return { ...item, value: stats.pendingCount.toString() };
-                case 'missed': return { ...item, value: (isSupervisor ? stats.teamMissedToday : stats.missedAttendance).toString() };
-                case 'notices': return { ...item, value: stats.noticesCount.toString() };
-                case 'checkin': return { ...item, value: typeof todayAttendance?.inTime === 'string' ? todayAttendance.inTime : '--:--' };
-                case 'checkout': return { ...item, value: typeof todayAttendance?.outTime === 'string' ? todayAttendance.outTime : '--:--' };
-                case 'claim': return { ...item, value: `৳ ${stats.claimAmount.toLocaleString()}` };
-                case 'disbursed': return { ...item, value: `৳ ${stats.disbursedAmount.toLocaleString()}` };
-                default: return item;
+                case 'leave':
+                    isLoading = leaveLoading;
+                    return { ...item, value: stats.leaveSpent.toFixed(1), isLoading };
+                case 'visit':
+                    isLoading = visitLoading;
+                    return { ...item, value: stats.visitCount.toFixed(1), isLoading };
+                case 'pending':
+                    isLoading = attendanceLoading || leaveLoading || visitLoading;
+                    return { ...item, value: stats.pendingCount.toString(), isLoading };
+                case 'missed':
+                    isLoading = attendanceLoading;
+                    return { ...item, value: (isSupervisor ? stats.teamMissedToday : stats.missedAttendance).toString(), isLoading };
+                case 'notices':
+                    isLoading = noticesLoading;
+                    return { ...item, value: stats.noticesCount.toString(), isLoading };
+                case 'checkin':
+                    isLoading = todayLoading;
+                    return { ...item, value: typeof todayAttendance?.inTime === 'string' ? todayAttendance.inTime : '--:--', isLoading };
+                case 'checkout':
+                    isLoading = todayLoading;
+                    return { ...item, value: typeof todayAttendance?.outTime === 'string' ? todayAttendance.outTime : '--:--', isLoading };
+                case 'claim':
+                    isLoading = claimLoading;
+                    return { ...item, value: `৳ ${stats.claimAmount.toLocaleString()}`, isLoading };
+                case 'disbursed':
+                    isLoading = claimLoading;
+                    return { ...item, value: `৳ ${stats.disbursedAmount.toLocaleString()}`, isLoading };
+                default: return { ...item, isLoading: false };
             }
         });
-    }, [selectedIds, stats, todayAttendance, isSupervisor]);
+    }, [selectedIds, stats, todayAttendance, isSupervisor, leaveLoading, visitLoading, attendanceLoading, noticesLoading, todayLoading, claimLoading]);
 
     // Derived stats from real-time data
     useEffect(() => {
@@ -325,33 +364,6 @@ export default function MobileDashboardPage() {
             calculateStats();
         }
     }, [attendanceData, leaveData, visitData]);
-
-    // Role-based notice listener
-    const noticeQuery = useMemo(() => query(collection(firestore, 'site_settings'), where('isEnabled', '==', true)), []);
-    const { data: rawNoticeData } = useRealtimeData<any[]>(noticeQuery);
-
-    useEffect(() => {
-        if (rawNoticeData) {
-            const filtered = rawNoticeData.filter(doc => {
-                if (!doc.targetRoles || !Array.isArray(doc.targetRoles) || doc.targetRoles.length === 0) return true;
-                return doc.targetRoles.some((role: any) => globalUserRole?.includes(role));
-            });
-            setStats(prev => ({ ...prev, noticesCount: filtered.length }));
-        }
-    }, [rawNoticeData, globalUserRole]);
-
-    // Claim stats current month
-    const claimQuery = useMemo(() => {
-        if (!user?.uid) return null;
-        const ids = [user.uid];
-        if (currentEmployeeId) ids.push(currentEmployeeId);
-        return query(
-            collection(firestore, 'hr_claims'),
-            where('employeeId', 'in', Array.from(new Set(ids))),
-            where('claimDate', '>=', startOfMonth(new Date()).toISOString())
-        );
-    }, [user?.uid, currentEmployeeId]);
-    const { data: claimData } = useRealtimeData<any[]>(claimQuery);
 
     useEffect(() => {
         if (claimData) {
@@ -512,91 +524,11 @@ export default function MobileDashboardPage() {
         setIsRefreshing(false);
         setPullDistance(0);
     };
-    const AppLoader = () => (
-        <motion.div
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
-            transition={{ duration: 0.6, ease: "circIn" }}
-            className="fixed inset-0 z-[2000] bg-[#0a1e60] flex flex-col items-center justify-center"
-        >
-            <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: [0.8, 1.1, 1], opacity: 1 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="relative"
-            >
-                <div className="h-24 w-24 rounded-3xl bg-white flex items-center justify-center shadow-2xl relative overflow-hidden p-4">
-                    <div className="absolute inset-0 bg-blue-500/5 animate-pulse" />
-                    {companyLogoUrl ? (
-                        <div className="relative h-full w-full">
-                            <Image
-                                src={companyLogoUrl}
-                                alt={companyName || 'Logo'}
-                                fill
-                                className="object-contain"
-                            />
-                        </div>
-                    ) : (
-                        <QrCode className="h-12 w-12 text-blue-600" />
-                    )}
-                </div>
-                <motion.div
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute -inset-4 bg-blue-500 rounded-full blur-2xl z-[-1]"
-                />
-            </motion.div>
-            <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="mt-8 text-white font-black tracking-widest text-sm uppercase text-center px-4"
-            >
-                {companyName || 'NextSew Portal'}
-            </motion.p>
-            <div className="mt-4 flex gap-1">
-                {[0, 1, 2].map((i) => (
-                    <motion.div
-                        key={i}
-                        animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
-                        transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                        className="h-1.5 w-1.5 rounded-full bg-blue-400"
-                    />
-                ))}
-            </div>
-        </motion.div>
-    );
-
-    const SkeletonDashboard = () => (
-        <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
-            <div className="px-4 py-4"><Skeleton className="h-12 w-full bg-white/10 rounded-2xl" /></div>
-            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] p-6 space-y-8">
-                <div className="grid grid-cols-2 gap-4">
-                    <Skeleton className="h-[180px] rounded-3xl" />
-                    <Skeleton className="h-[180px] rounded-3xl" />
-                </div>
-                <div className="space-y-4">
-                    <Skeleton className="h-6 w-32" />
-                    <div className="flex gap-4 overflow-hidden">
-                        <Skeleton className="h-36 w-[130px] rounded-2xl shrink-0" />
-                        <Skeleton className="h-36 w-[130px] rounded-2xl shrink-0" />
-                        <Skeleton className="h-36 w-[130px] rounded-2xl shrink-0" />
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-    // if (isInitialLoading) return <AppLoader />;
     // We already have state listeners, so we don't need a mid-loading state for UI, 
     // but skeletons are good if data is still fetching.
-    // if (!user) return <SkeletonDashboard />;
 
     return (
         <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
-            <AnimatePresence>
-                {isInitialLoading && <AppLoader />}
-            </AnimatePresence>
             {/* Sticky Header - stays fixed during pull */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
                 <MobileHeader />
@@ -776,13 +708,21 @@ export default function MobileDashboardPage() {
                                                 <Icon className="h-6 w-6" />
                                             </div>
                                             {(item.id !== 'checkin' && item.id !== 'checkout') && (
-                                                <div className="text-xl font-semibold text-[#0a1e60] tracking-tighter pr-1">{String(item.value)}</div>
+                                                <div className="text-xl font-semibold text-[#0a1e60] tracking-tighter pr-1">
+                                                    {(item as any).isLoading ? (
+                                                        <div className="h-6 w-10 bg-slate-200/50 animate-pulse rounded-md" />
+                                                    ) : String(item.value)}
+                                                </div>
                                             )}
                                         </div>
 
                                         {(item.id === 'checkin' || item.id === 'checkout') ? (
                                             <div className="mt-1">
-                                                <div className="text-lg font-bold text-[#0a1e60] tracking-tight">{String(item.value)}</div>
+                                                <div className="text-lg font-bold text-[#0a1e60] tracking-tight">
+                                                    {(item as any).isLoading ? (
+                                                        <div className="h-6 w-20 bg-slate-200/50 animate-pulse rounded-md" />
+                                                    ) : String(item.value)}
+                                                </div>
                                             </div>
                                         ) : null}
 
