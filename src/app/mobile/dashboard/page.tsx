@@ -333,20 +333,18 @@ export default function MobileDashboardPage() {
                 }
             });
 
-            // Special case for Team Missed Today: count subordinates who are not present/leave/visit etc.
+            // Special case for Team Missed Today: count subordinates who are specifically marked Absent (A)
             if (isSupervisor && explicitSubordinateIds && explicitSubordinateIds.length > 0) {
-                const presentEmployeeIdsForToday = new Set();
+                let absentCount = 0;
                 attendanceData?.forEach(doc => {
                     const date = doc.date instanceof Timestamp ? doc.date.toDate() : (typeof doc.date === 'string' ? parseISO(doc.date) : new Date(doc.date));
                     const dateStr = format(date, 'yyyy-MM-dd');
-                    // If they have any status other than Absent, count them as "not missed"
-                    if (dateStr === todayDateStr && doc.flag && !['A'].includes(doc.flag) && explicitSubordinateIds.includes(doc.employeeId)) {
-                        presentEmployeeIdsForToday.add(doc.employeeId);
+                    // Directly count subordinates with 'A' flag for today
+                    if (dateStr === todayDateStr && doc.flag === 'A' && explicitSubordinateIds.includes(doc.employeeId)) {
+                        absentCount++;
                     }
                 });
-
-                // Count = total subordinates minus those who checked in with a non-absent flag
-                teamMissedToday = Math.max(0, explicitSubordinateIds.length - presentEmployeeIdsForToday.size);
+                teamMissedToday = absentCount;
             }
 
             setStats(prev => ({
