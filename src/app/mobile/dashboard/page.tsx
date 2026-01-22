@@ -264,24 +264,51 @@ export default function MobileDashboardPage() {
                 const date = doc.date instanceof Timestamp ? doc.date.toDate() : (typeof doc.date === 'string' ? parseISO(doc.date) : new Date(doc.date));
                 const dateStr = format(date, 'yyyy-MM-dd');
 
-                // My missed attendance (if applicable)
+                // 1. My Stats (always track my own missed attendance)
                 if (doc.employeeId === (currentEmployeeId || user?.uid)) {
                     if (doc.flag === 'A' && date.getMonth() === currMonth && date.getFullYear() === currYear) {
                         missedAttendanceCount++;
                     }
-                }
-
-                // Team missed today (strict subordinates)
-                if (explicitSubordinateIds?.includes(doc.employeeId)) {
-                    if (doc.flag === 'A' && dateStr === todayDateStr) {
-                        teamMissedToday++;
+                    // For non-supervisors, count my own pending items
+                    if (!isSupervisor) {
+                        const isPending = doc.approvalStatus === 'Pending' ||
+                            doc.inTimeApprovalStatus === 'Pending' ||
+                            doc.outTimeApprovalStatus === 'Pending';
+                        if (isPending) {
+                            pendingAttendanceCount++;
+                        }
                     }
                 }
 
-                if (doc.approvalStatus === 'Pending') {
-                    pendingAttendanceCount++;
+                // 2. Team Stats (Subordinates/Supervised)
+                if (isSupervisor) {
+                    // Pending approval (uses supervisedEmployeeIds to match remote-approval page)
+                    if (supervisedEmployeeIds?.includes(doc.employeeId)) {
+                        const isPending = doc.approvalStatus === 'Pending' ||
+                            doc.inTimeApprovalStatus === 'Pending' ||
+                            doc.outTimeApprovalStatus === 'Pending';
+                        if (isPending) {
+                            pendingAttendanceCount++;
+                        }
+                    }
                 }
             });
+
+            // Special case for Team Missed Today: count subordinates who are not present/leave/visit etc.
+            if (isSupervisor && explicitSubordinateIds && explicitSubordinateIds.length > 0) {
+                const presentEmployeeIdsForToday = new Set();
+                attendanceData?.forEach(doc => {
+                    const date = doc.date instanceof Timestamp ? doc.date.toDate() : (typeof doc.date === 'string' ? parseISO(doc.date) : new Date(doc.date));
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    // If they have any status other than Absent, count them as "not missed"
+                    if (dateStr === todayDateStr && doc.flag && !['A'].includes(doc.flag) && explicitSubordinateIds.includes(doc.employeeId)) {
+                        presentEmployeeIdsForToday.add(doc.employeeId);
+                    }
+                });
+
+                // Count = total subordinates minus those who checked in with a non-absent flag
+                teamMissedToday = Math.max(0, explicitSubordinateIds.length - presentEmployeeIdsForToday.size);
+            }
 
             setStats(prev => ({
                 ...prev,

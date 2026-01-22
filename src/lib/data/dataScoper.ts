@@ -8,6 +8,7 @@ import {
     limit,
     Timestamp
 } from 'firebase/firestore';
+import { startOfMonth, subDays } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { Permissions } from '@/hooks/usePermissions';
 
@@ -29,18 +30,23 @@ export const dataScoper = {
         // Remove duplicates
         const selfIds = Array.from(new Set(ids));
 
+        const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+
         if (permissions.canViewAllAttendance) {
-            return query(attendanceRef, orderBy('date', 'desc'));
+            return query(
+                attendanceRef,
+                where('date', '>=', thirtyDaysAgo),
+                orderBy('date', 'desc')
+            );
         }
 
         if (permissions.canViewTeamAttendance && context.supervisedEmployeeIds.length > 0) {
             // Include self + team
             const allIds = Array.from(new Set([...selfIds, ...context.supervisedEmployeeIds]));
-            // Firestore 'in' limit is usually 10-30. If more, chunking would be needed in the hook.
-            // For now, we prioritze the 'in' query for the most recent team data.
             return query(
                 attendanceRef,
                 where('employeeId', 'in', allIds.slice(0, 30)),
+                where('date', '>=', thirtyDaysAgo),
                 orderBy('date', 'desc')
             );
         }
@@ -48,6 +54,7 @@ export const dataScoper = {
         return query(
             attendanceRef,
             where('employeeId', 'in', selfIds),
+            where('date', '>=', thirtyDaysAgo),
             orderBy('date', 'desc')
         );
     },
