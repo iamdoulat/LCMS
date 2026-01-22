@@ -23,7 +23,7 @@ interface AttendanceSummary {
 
 export default function TeamAttendancePage() {
     const { user } = useAuth();
-    const { isSupervisor, supervisedEmployees } = useSupervisorCheck(user?.email);
+    const { isSupervisor, explicitSubordinates: supervisedEmployees } = useSupervisorCheck(user?.email);
     const [attendanceData, setAttendanceData] = useState<AttendanceSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -153,7 +153,7 @@ export default function TeamAttendancePage() {
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2">Team Attendance</h1>
+                    <h1 className="text-xl font-bold text-white ml-2">View Attendance (Subordinates)</h1>
                 </div>
             </div>
 

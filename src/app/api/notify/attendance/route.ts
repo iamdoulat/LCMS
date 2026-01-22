@@ -6,8 +6,14 @@ import { sendTelegram } from '@/lib/telegram/sender';
 import { reverseGeocode } from '@/lib/firebase/checkInOut';
 import { getCompanyName } from '@/lib/settings/company';
 
+import { verifyAuth } from '@/lib/api/apiAuth';
+
 export async function POST(request: Request) {
     try {
+        // 1. Verify Authorization (Any authenticated user can trigger for now)
+        const { user, error } = await verifyAuth(request);
+        if (error) return error;
+
         const body = await request.json();
         const {
             type,

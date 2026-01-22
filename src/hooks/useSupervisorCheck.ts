@@ -17,7 +17,9 @@ export interface SupervisedEmployee {
 export interface SupervisorInfo {
     isSupervisor: boolean;
     supervisedEmployees: SupervisedEmployee[];
+    explicitSubordinates: SupervisedEmployee[]; // Always reporting-line based, even for admins
     supervisedEmployeeIds: string[];
+    explicitSubordinateIds: string[]; // Always reporting-line based IDs
     currentEmployeeId: string | null;
     isLoading: boolean;
 }
@@ -27,7 +29,9 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
     const [info, setInfo] = useState<SupervisorInfo>({
         isSupervisor: false,
         supervisedEmployees: [],
+        explicitSubordinates: [],
         supervisedEmployeeIds: [],
+        explicitSubordinateIds: [],
         currentEmployeeId: null,
         isLoading: true
     });
@@ -118,10 +122,41 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         });
                     });
 
+                    // Also calculate explicit subordinates for admins (reporting-line based)
+                    const explicitSubordinates: SupervisedEmployee[] = [];
+                    const supervisorIdCandidates = Array.from(new Set([employeeId, user?.uid].filter((id): id is string => !!id)));
+
+                    allEmployeesSnapshot.docs.forEach(doc => {
+                        const data = doc.data() as any;
+                        const isExplicit = (
+                            supervisorIdCandidates.includes(data.supervisorId) ||
+                            supervisorIdCandidates.includes(data.leaveApproverId) ||
+                            supervisorIdCandidates.includes(data.directSupervisorId) ||
+                            supervisorIdCandidates.includes(data.supervisor) ||
+                            supervisorIdCandidates.includes(data.supervision) ||
+                            supervisorIdCandidates.includes(data['Direct supervision']) ||
+                            (Array.isArray(data.supervisors) && data.supervisors.some((sup: any) => supervisorIdCandidates.includes(sup.supervisorId)))
+                        );
+
+                        if (isExplicit) {
+                            explicitSubordinates.push({
+                                id: doc.id,
+                                uid: data.uid,
+                                name: data.fullName || 'Unknown',
+                                fullName: data.fullName || 'Unknown',
+                                employeeCode: data.employeeCode || 'N/A',
+                                designation: data.designation || undefined,
+                                photoURL: data.photoURL || undefined
+                            });
+                        }
+                    });
+
                     setInfo({
                         isSupervisor: true,
                         supervisedEmployees,
+                        explicitSubordinates,
                         supervisedEmployeeIds: subordinateIds,
+                        explicitSubordinateIds: explicitSubordinates.map(e => e.id),
                         currentEmployeeId: employeeId,
                         isLoading: false
                     });
@@ -151,7 +186,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         }
                     });
 
-                    // 3. Fetch by directSupervisorId (Some older schemas might use this)
+                    // 3. Fetch by directSupervisorId
                     const directSupQuery = query(
                         collection(firestore, 'employees'),
                         where('directSupervisorId', 'in', supervisorIdCandidates)
@@ -163,15 +198,51 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         }
                     });
 
-                    // 4. Check the supervisors array structure
+                    // 4. Fetch by 'supervisor'
+                    const supervisorFieldQuery = query(
+                        collection(firestore, 'employees'),
+                        where('supervisor', 'in', supervisorIdCandidates)
+                    );
+                    const supervisorFieldSnapshot = await getDocs(supervisorFieldQuery);
+                    supervisorFieldSnapshot.docs.forEach(doc => {
+                        if (!subordinateIds.includes(doc.id)) {
+                            subordinateIds.push(doc.id);
+                        }
+                    });
+
+                    // 5. Fetch by 'supervision'
+                    const supervisionFieldQuery = query(
+                        collection(firestore, 'employees'),
+                        where('supervision', 'in', supervisorIdCandidates)
+                    );
+                    const supervisionFieldSnapshot = await getDocs(supervisionFieldQuery);
+                    supervisionFieldSnapshot.docs.forEach(doc => {
+                        if (!subordinateIds.includes(doc.id)) {
+                            subordinateIds.push(doc.id);
+                        }
+                    });
+
+                    // 6. Fetch by 'Direct supervision'
+                    const directSupervisionFieldQuery = query(
+                        collection(firestore, 'employees'),
+                        where('Direct supervision', 'in', supervisorIdCandidates)
+                    );
+                    const directSupervisionFieldSnapshot = await getDocs(directSupervisionFieldQuery);
+                    directSupervisionFieldSnapshot.docs.forEach(doc => {
+                        if (!subordinateIds.includes(doc.id)) {
+                            subordinateIds.push(doc.id);
+                        }
+                    });
+
+                    // 7. Check the supervisors array structure
                     const allEmployeesQuery = query(collection(firestore, 'employees'));
                     const allEmployeesSnapshot = await getDocs(allEmployeesQuery);
 
                     allEmployeesSnapshot.docs.forEach(doc => {
-                        const employee = doc.data() as EmployeeDocument;
-                        if (employee.supervisors) {
+                        const employee = doc.data() as any;
+                        if (employee.supervisors && Array.isArray(employee.supervisors)) {
                             const isSupervisedByMe = employee.supervisors.some(
-                                sup => supervisorIdCandidates.includes(sup.supervisorId) && (sup.isLeaveApprover || sup.isSupervisor || sup.isDirectSupervisor)
+                                (sup: any) => supervisorIdCandidates.includes(sup.supervisorId) && (sup.isLeaveApprover || sup.isSupervisor || sup.isDirectSupervisor)
                             );
                             if (isSupervisedByMe && !subordinateIds.includes(doc.id)) {
                                 subordinateIds.push(doc.id);
@@ -208,7 +279,9 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                     setInfo({
                         isSupervisor: subordinateIds.length > 0,
                         supervisedEmployees: supervisedEmployees,
+                        explicitSubordinates: supervisedEmployees,
                         supervisedEmployeeIds: subordinateIds,
+                        explicitSubordinateIds: subordinateIds,
                         currentEmployeeId: employeeId,
                         isLoading: false
                     });

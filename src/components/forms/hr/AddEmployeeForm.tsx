@@ -281,6 +281,11 @@ export function AddEmployeeForm() {
           totalIncrement: increasedAmount,
           grossSalary: totalAmount,
         } : undefined,
+        // Synchronize supervisor fields
+        directSupervisorId: data.supervisorId !== 'unassigned' ? data.supervisorId : null,
+        supervisor: data.supervisorId !== 'unassigned' ? data.supervisorId : null,
+        supervision: data.supervisorId !== 'unassigned' ? data.supervisorId : null,
+        'Direct supervision': data.supervisorId !== 'unassigned' ? data.supervisorId : null,
       };
 
       // Call API

@@ -20,7 +20,6 @@ export async function GET(request: Request) {
         const templateSnap = await templateRef.get();
 
         if (templateSnap.empty) {
-            console.log("Seeding default birthday template...");
             await db.collection('email_templates').add({
                 name: 'Employee Birthday Wish',
                 slug: templateSlug,
@@ -55,7 +54,6 @@ export async function GET(request: Request) {
         const waTemplateSnap = await waTemplateRef.get();
 
         if (waTemplateSnap.empty) {
-            console.log("Seeding default WhatsApp birthday template...");
             await db.collection('whatsapp_templates').add({
                 name: 'Employee Birthday Wish',
                 slug: templateSlug,
@@ -98,7 +96,6 @@ Best Wishes,
 
                 if (dobMonth === currentMonth && dobDay === currentDay) {
                     // It's their birthday!
-                    console.log(`Sending Birthday Wish to ${emp.fullName || emp.name} (${emp.email})...`);
 
                     // Send Email
                     if (emp.email) {

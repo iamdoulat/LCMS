@@ -307,7 +307,22 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       };
 
       if (rawDataToSave.supervisorId === 'unassigned') {
-        delete rawDataToSave.supervisorId;
+        const nullFields = {
+          supervisorId: null,
+          directSupervisorId: null,
+          supervisor: null,
+          supervision: null,
+          'Direct supervision': null
+        };
+        Object.assign(rawDataToSave, nullFields);
+      } else if (rawDataToSave.supervisorId) {
+        const syncFields = {
+          directSupervisorId: rawDataToSave.supervisorId,
+          supervisor: rawDataToSave.supervisorId,
+          supervision: rawDataToSave.supervisorId,
+          'Direct supervision': rawDataToSave.supervisorId
+        };
+        Object.assign(rawDataToSave, syncFields);
       }
 
       delete (rawDataToSave as any).firstName;

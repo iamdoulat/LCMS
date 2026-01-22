@@ -24,7 +24,9 @@ import {
     Building2,
     FileBadge,
     Loader2,
-    AlertCircle
+    AlertCircle,
+    Network,
+    UserCheck
 } from 'lucide-react';
 import type { Employee } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
@@ -49,6 +51,7 @@ export default function MobileEmployeeProfilePage() {
     const [employee, setEmployee] = useState<Employee | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [supervisorName, setSupervisorName] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'official' | 'others'>('personal');
 
     // Swipe Handling
@@ -97,7 +100,21 @@ export default function MobileEmployeeProfilePage() {
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
-                    setEmployee({ id: docSnap.id, ...docSnap.data() } as Employee);
+                    const empData = { id: docSnap.id, ...docSnap.data() } as Employee;
+                    setEmployee(empData);
+
+                    // Fetch Supervisor Name if ID exists
+                    if (empData.supervisorId) {
+                        try {
+                            const supervisorDocRef = doc(firestore, 'employees', empData.supervisorId);
+                            const supervisorDocSnap = await getDoc(supervisorDocRef);
+                            if (supervisorDocSnap.exists()) {
+                                setSupervisorName(supervisorDocSnap.data()?.fullName || null);
+                            }
+                        } catch (err) {
+                            console.error("Error fetching supervisor:", err);
+                        }
+                    }
                 } else {
                     setError("Employee not found");
                 }
@@ -168,6 +185,8 @@ export default function MobileEmployeeProfilePage() {
             { label: 'Designation', value: employee.designation, icon: Briefcase },
             { label: 'Job Status', value: employee.jobStatus || 'Active', icon: Briefcase },
             { label: 'Branch', value: employee.branch || 'Not Defined', icon: Building2 },
+            { label: 'Department', value: employee.department || 'Not Defined', icon: Network },
+            { label: 'Direct Supervisor', value: supervisorName || 'Not Assigned', icon: UserCheck },
         ],
         others: [
             { label: 'Blood Group', value: employee.bloodGroup || 'N/A', icon: Droplet },
@@ -190,7 +209,8 @@ export default function MobileEmployeeProfilePage() {
 
             {/* Main Content Container */}
             <div
-                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-[120px] relative mt-9"
+                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-[120px] relative mt-9 touch-none"
+                style={{ touchAction: 'pan-y' }}
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
@@ -251,9 +271,9 @@ export default function MobileEmployeeProfilePage() {
                     <div className="flex gap-3 min-w-max">
                         <button
                             onClick={() => setActiveTab('personal')}
-                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'personal'
+                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 whitespace-nowrap ${activeTab === 'personal'
                                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
-                                : 'bg-white text-slate-600 shadow-sm'
+                                : 'bg-white text-slate-600 shadow-sm hover:bg-slate-50'
                                 }`}
                         >
                             <User className="h-5 w-5" />
@@ -261,9 +281,9 @@ export default function MobileEmployeeProfilePage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('official')}
-                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'official'
+                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 whitespace-nowrap ${activeTab === 'official'
                                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
-                                : 'bg-white text-slate-600 shadow-sm'
+                                : 'bg-white text-slate-600 shadow-sm hover:bg-slate-50'
                                 }`}
                         >
                             <Briefcase className="h-5 w-5" />
@@ -271,9 +291,9 @@ export default function MobileEmployeeProfilePage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('others')}
-                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'others'
+                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 whitespace-nowrap ${activeTab === 'others'
                                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
-                                : 'bg-white text-slate-600 shadow-sm'
+                                : 'bg-white text-slate-600 shadow-sm hover:bg-slate-50'
                                 }`}
                         >
                             <LayoutGrid className="h-5 w-5" />
@@ -283,14 +303,18 @@ export default function MobileEmployeeProfilePage() {
                 </div>
 
                 {/* Info Card */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm max-h-[calc(100vh-420px)] flex flex-col">
+                <div className="bg-white rounded-2xl p-6 shadow-sm max-h-[calc(100vh-450px)] flex flex-col overflow-hidden">
                     <h3 className="text-lg font-bold text-[#0a1e60] mb-6">
                         {activeTab === 'personal' && 'Personal Info'}
                         {activeTab === 'official' && 'Official Info'}
                         {activeTab === 'others' && 'Others Info'}
                     </h3>
 
-                    <div className="space-y-6 overflow-y-auto pr-2 flex-1 min-h-0">
+                    <div
+                        className="space-y-6 overflow-y-auto pr-2 flex-1 min-h-0 scroll-smooth animate-in fade-in duration-300"
+                        key={activeTab}
+                        style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+                    >
                         {profileData[activeTab].map((item, index) => {
                             const Icon = item.icon;
                             return (

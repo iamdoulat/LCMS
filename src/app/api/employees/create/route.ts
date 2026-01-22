@@ -14,24 +14,16 @@ const generatePassword = (length = 10) => {
     return retVal;
 };
 
-// Helper to log to file
-const logToFile = (message: string) => {
-    try {
-        const logPath = path.join(process.cwd(), 'email-debug.log');
-        const timestamp = new Date().toISOString();
-        fs.appendFileSync(logPath, `[${timestamp}] ${message}\n`);
-    } catch (e) {
-        // Ignore logging errors
-    }
-};
+import { verifyAuth } from '@/lib/api/apiAuth';
 
 export async function POST(request: Request) {
     try {
-        // 1. Verify Admin SDK is initialized (it should be if env vars are correct)
+        // 1. Verify Authorization
+        const { user, error } = await verifyAuth(request, ['Super Admin', 'Admin', 'HR']);
+        if (error) return error;
+
+        // Verify Admin SDK is initialized
         if (!admin.apps.length) {
-            // Re-attempt init or fail
-            // admin.ts handles init on import, so we assume it's done if env vars exist.
-            // If not, we might fail here.
             const { admin: initializedAdmin } = await import('@/lib/firebase/admin');
             if (!initializedAdmin.apps.length) {
                 return NextResponse.json({ error: 'Server misconfiguration: Admin SDK not initialized.' }, { status: 500 });
@@ -59,25 +51,20 @@ export async function POST(request: Request) {
                 photoURL: photoURL || undefined,
             });
         } catch (authError: any) {
-            // Check for both error code and message content for robustness
             const isEmailInUse =
                 authError.code === 'auth/email-already-in-use' ||
                 (authError.message && authError.message.includes('already in use'));
 
             if (isEmailInUse) {
-
                 try {
                     const existingUser = await admin.auth().getUserByEmail(email);
                     userRecord = existingUser;
                 } catch (fetchError: any) {
-                    // Check if user really doesn't exist (race condition or confusion)
                     console.error("Failed to fetch existing user:", fetchError);
                     return NextResponse.json({ error: `Auth Error: Email reported in use, but could not fetch user. ${fetchError.message}` }, { status: 400 });
                 }
             } else {
                 console.error("Error creating Auth user:", authError);
-                // Log full error details
-                logToFile(`AUTH ERROR for ${email}: Code=${authError.code} | Msg=${authError.message}`);
                 return NextResponse.json({ error: `Auth Error: ${authError.message}` }, { status: 400 });
             }
         }
@@ -85,7 +72,6 @@ export async function POST(request: Request) {
         const uid = userRecord.uid;
 
         // 4. Create Firestore Document
-        // We use the same UID for the document ID
         try {
             const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
@@ -104,7 +90,6 @@ export async function POST(request: Request) {
             });
 
             // 4b. Create User Document (Replication for Login)
-            // Check if user doc exists first to avoid overwriting existing roles if we are in "repair" mode (auth exists)
             const userDocRef = admin.firestore().collection('users').doc(uid);
             const userDoc = await userDocRef.get();
 
@@ -120,14 +105,9 @@ export async function POST(request: Request) {
                     createdAt: timestamp,
                     updatedAt: timestamp,
                 });
-
-            } else {
-
             }
-
         } catch (dbError: any) {
             console.error("Error creating Firestore doc:", dbError);
-            logToFile(`DB ERROR for ${email}: ${dbError.message}`);
             return NextResponse.json({ error: `Database Error: ${dbError.message}` }, { status: 500 });
         }
 
@@ -145,18 +125,14 @@ export async function POST(request: Request) {
                 }
             });
             emailStatus = 'sent';
-            logToFile(`SUCCESS: Email sent to ${email}`);
         } catch (emailError: any) {
             console.error("Error sending email:", emailError);
             emailStatus = `failed: ${emailError.message}`;
-            logToFile(`ERROR sending email to ${email}: ${emailError.message} | Stack: ${emailError.stack}`);
         }
 
         // 6. Send WhatsApp
         let whatsappStatus = 'skipped';
         try {
-            // We need the phone number. It should be in `otherData.phone`.
-            // `create` endpoint receives `phone`.
             if ((otherData as any).phone) {
                 const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
                 await sendWhatsApp({
@@ -170,14 +146,10 @@ export async function POST(request: Request) {
                     }
                 });
                 whatsappStatus = 'sent';
-                logToFile(`SUCCESS: WhatsApp sent to ${(otherData as any).phone}`);
-            } else {
-                console.warn("No phone number provided for WhatsApp notification.");
             }
         } catch (waError: any) {
             console.error("Error sending WhatsApp:", waError);
             whatsappStatus = `failed: ${waError.message}`;
-            logToFile(`ERROR sending WhatsApp to ${email}: ${waError.message}`);
         }
 
         return NextResponse.json({
@@ -190,7 +162,6 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error("API Error:", error);
-        logToFile(`API CRITICAL ERROR: ${error.message}`);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

@@ -18,6 +18,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo } from 'react';
 import Image from 'next/image';
+import { usePermissions } from '@/hooks/usePermissions';
+import { useRealtimeData, useRealtimeDoc } from '@/hooks/useRealtimeData';
+import { dataScoper } from '@/lib/data/dataScoper';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
@@ -37,7 +40,15 @@ import { useFirebaseMessaging } from '@/hooks/useFirebaseMessaging';
 
 export default function MobileDashboardPage() {
     const { user, userRole: globalUserRole, companyName, companyLogoUrl } = useAuth();
-    const { isSupervisor, supervisedEmployeeIds, currentEmployeeId } = useSupervisorCheck(user?.email);
+    const { isSupervisor, supervisedEmployeeIds, explicitSubordinateIds, currentEmployeeId } = useSupervisorCheck(user?.email);
+    const permissions = usePermissions();
+
+    // Context for data scoping
+    const scoperContext = useMemo(() => ({
+        uid: user?.uid || '',
+        employeeId: currentEmployeeId,
+        supervisedEmployeeIds: supervisedEmployeeIds || []
+    }), [user?.uid, currentEmployeeId, supervisedEmployeeIds]);
 
     // Initialize Firebase Cloud Messaging
     useFirebaseMessaging();
@@ -135,36 +146,6 @@ export default function MobileDashboardPage() {
         });
     };
 
-    // Real-time listener for today's attendance
-    useEffect(() => {
-        const canonicalId = currentEmployeeId || user?.uid;
-        if (!canonicalId) return;
-
-        const today = new Date();
-        const dateKey = format(today, 'yyyy-MM-dd');
-        const docId = `${canonicalId}_${dateKey}`;
-
-        const unsubscribe = onSnapshot(doc(firestore, 'attendance', docId), (doc) => {
-            if (doc.exists()) {
-                const data = doc.data();
-                setTodayAttendance({
-                    inTime: data.inTime,
-                    outTime: data.outTime,
-                    flag: data.flag,
-                    approvalStatus: data.approvalStatus,
-                    inTimeApprovalStatus: data.inTimeApprovalStatus,
-                    outTimeApprovalStatus: data.outTimeApprovalStatus
-                });
-            } else {
-                setTodayAttendance(null);
-            }
-        }, (error) => {
-            console.error('Error listening to today attendance:', error);
-        });
-
-        return () => unsubscribe();
-    }, [user, currentEmployeeId]);
-
     const [stats, setStats] = useState({
         leaveSpent: 0,
         visitCount: 0,
@@ -176,6 +157,40 @@ export default function MobileDashboardPage() {
         claimAmount: 0,
         disbursedAmount: 0
     });
+
+    // Real-time Data Subscriptions using the new architecture
+    const attendanceQuery = useMemo(() => dataScoper.getAttendanceQuery(permissions, scoperContext), [permissions, scoperContext]);
+    const leaveQuery = useMemo(() => dataScoper.getLeaveQuery(permissions, scoperContext), [permissions, scoperContext]);
+    const visitQuery = useMemo(() => dataScoper.getVisitQuery(permissions, scoperContext), [permissions, scoperContext]);
+
+    const { data: attendanceData } = useRealtimeData<any[]>(attendanceQuery);
+    const { data: leaveData } = useRealtimeData<any[]>(leaveQuery);
+    const { data: visitData } = useRealtimeData<any[]>(visitQuery);
+
+    // Today's attendance listener using new hook
+    const todayDocRef = useMemo(() => {
+        const canonicalId = currentEmployeeId || user?.uid;
+        if (!canonicalId) return null;
+        const dateKey = format(new Date(), 'yyyy-MM-dd');
+        return doc(firestore, 'attendance', `${canonicalId}_${dateKey}`);
+    }, [user?.uid, currentEmployeeId]);
+
+    const { data: todayAttendanceData } = useRealtimeDoc<any>(todayDocRef);
+
+    useEffect(() => {
+        if (todayAttendanceData) {
+            setTodayAttendance({
+                inTime: todayAttendanceData.inTime,
+                outTime: todayAttendanceData.outTime,
+                flag: todayAttendanceData.flag,
+                approvalStatus: todayAttendanceData.approvalStatus,
+                inTimeApprovalStatus: todayAttendanceData.inTimeApprovalStatus,
+                outTimeApprovalStatus: todayAttendanceData.outTimeApprovalStatus
+            });
+        } else {
+            setTodayAttendance(null);
+        }
+    }, [todayAttendanceData]);
 
     const visibleItems = useMemo(() => {
         return allSummaryItems.filter(item => selectedIds.includes(item.id)).map(item => {
@@ -194,232 +209,130 @@ export default function MobileDashboardPage() {
         });
     }, [selectedIds, stats, todayAttendance, isSupervisor]);
 
-    // Real-time listeners for stats
+    // Derived stats from real-time data
     useEffect(() => {
-        if (!user?.email) return;
+        const calculateStats = () => {
+            const now = new Date();
+            const startOfCurrYear = startOfYear(now);
+            const endOfCurrYear = endOfYear(now);
+            const startOfCurrMonth = startOfMonth(now);
+            const currMonth = now.getMonth();
+            const currYear = now.getFullYear();
 
-        const setupListeners = async () => {
-            const cleanupActions: (() => void)[] = [];
-            try {
-                const canonicalId = currentEmployeeId || user.uid;
-                const ids = [user.uid, canonicalId].filter((v, i, a) => a.indexOf(v) === i);
+            // 1. Leave Stats
+            let leafSpent = 0;
+            let pendingLeaveCount = 0;
+            leaveData?.forEach(doc => {
+                if (doc.status === 'Approved' && doc.fromDate && doc.toDate) {
+                    const start = parseISO(doc.fromDate);
+                    const end = parseISO(doc.toDate);
+                    const overlapStart = max([start, startOfCurrYear]);
+                    const overlapEnd = min([end, endOfCurrYear]);
+                    if (overlapEnd >= overlapStart) {
+                        leafSpent += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
+                    }
+                } else if (doc.status === 'Pending') {
+                    pendingLeaveCount++;
+                }
+            });
 
-                if (currentEmployeeId && currentEmployeeId !== user.uid) {
-                    const empDoc = await getDoc(doc(firestore, 'employees', currentEmployeeId));
-                    if (empDoc.exists()) {
-                        setLocalUserRole(empDoc.data().role || 'user');
+            // 2. Visit Stats
+            let visitCount = 0;
+            let pendingVisitCount = 0;
+            visitData?.forEach(doc => {
+                if (doc.status === 'Approved' && doc.fromDate && doc.toDate) {
+                    const start = parseISO(doc.fromDate);
+                    const end = parseISO(doc.toDate);
+                    const overlapStart = max([start, startOfCurrYear]);
+                    const overlapEnd = min([end, endOfCurrYear]);
+                    if (overlapEnd >= overlapStart) {
+                        visitCount += doc.day ? Number(doc.day) : (differenceInCalendarDays(overlapEnd, overlapStart) + 1);
+                    }
+                } else if (doc.status === 'Pending') {
+                    pendingVisitCount++;
+                }
+            });
+
+            // 3. Attendance Stats
+            let missedAttendanceCount = 0;
+            let pendingAttendanceCount = 0;
+            let teamMissedToday = 0;
+
+            const todayDateStr = format(now, 'yyyy-MM-dd');
+
+            attendanceData?.forEach(doc => {
+                const date = doc.date instanceof Timestamp ? doc.date.toDate() : (typeof doc.date === 'string' ? parseISO(doc.date) : new Date(doc.date));
+                const dateStr = format(date, 'yyyy-MM-dd');
+
+                // My missed attendance (if applicable)
+                if (doc.employeeId === (currentEmployeeId || user?.uid)) {
+                    if (doc.flag === 'A' && date.getMonth() === currMonth && date.getFullYear() === currYear) {
+                        missedAttendanceCount++;
                     }
                 }
 
-                // 1. Leave Stats (Approved)
-                const qLeave = query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids));
-                const unsubLeave = onSnapshot(qLeave, (snapshot) => {
-                    const startOfCurrentYear = startOfYear(new Date());
-                    const endOfCurrentYear = endOfYear(new Date());
-                    let totalDays = 0;
-                    snapshot.docs.forEach(doc => {
-                        const data = doc.data();
-                        if (data.status === 'Approved' && data.fromDate && data.toDate) {
-                            const leaveStart = parseISO(data.fromDate);
-                            const leaveEnd = parseISO(data.toDate);
-                            const overlapStart = max([leaveStart, startOfCurrentYear]);
-                            const overlapEnd = min([leaveEnd, endOfCurrentYear]);
-                            if (overlapEnd >= overlapStart) {
-                                totalDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
-                            }
-                        }
-                    });
-                    setStats(prev => ({ ...prev, leaveSpent: totalDays }));
-                });
-                cleanupActions.push(unsubLeave);
-
-                // 2. Visit Stats (Approved)
-                const qVisit = query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids));
-                const unsubVisit = onSnapshot(qVisit, (snapshot) => {
-                    const startOfCurrentYear = startOfYear(new Date());
-                    const endOfCurrentYear = endOfYear(new Date());
-                    let totalDays = 0;
-                    snapshot.docs.forEach(doc => {
-                        const data = doc.data();
-                        if (data.fromDate && data.toDate) {
-                            const visitStart = parseISO(data.fromDate);
-                            const visitEnd = parseISO(data.toDate);
-                            const overlapStart = max([visitStart, startOfCurrentYear]);
-                            const overlapEnd = min([visitEnd, endOfCurrentYear]);
-                            if (overlapEnd >= overlapStart) {
-                                if (data.day) totalDays += Number(data.day);
-                                else totalDays += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
-                            }
-                        }
-                    });
-                    setStats(prev => ({ ...prev, visitCount: totalDays }));
-                });
-                cleanupActions.push(unsubVisit);
-
-                // 3. Pending Requests (Aggregate)
-                const qPendingLeave = query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids));
-                const qPendingVisit = query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids));
-                const qPendingAdvance = query(collection(firestore, 'advance_salary'), where('employeeId', 'in', ids));
-
-                const pendingCounts = { leave: 0, visit: 0, advance: 0, remoteAttendance: 0 };
-                const updatePendingCount = (count: number, type: 'leave' | 'visit' | 'advance' | 'remoteAttendance') => {
-                    pendingCounts[type] = count;
-                    setStats(prev => ({
-                        ...prev,
-                        pendingCount: pendingCounts.leave + pendingCounts.visit + pendingCounts.advance + pendingCounts.remoteAttendance
-                    }));
-                };
-
-                const unsubPendingLeave = onSnapshot(qPendingLeave, (snap) => {
-                    const myPending = snap.docs.filter(d => d.data().status === 'Pending' && ids.includes(d.data().employeeId)).length;
-                    const teamPending = isSupervisor ? snap.docs.filter(d => d.data().status === 'Pending' && supervisedEmployeeIds.includes(d.data().employeeId)).length : 0;
-                    updatePendingCount(myPending + teamPending, 'leave');
-                });
-                const unsubPendingVisit = onSnapshot(qPendingVisit, (snap) => {
-                    const myPending = snap.docs.filter(d => d.data().status === 'Pending' && ids.includes(d.data().employeeId)).length;
-                    const teamPending = isSupervisor ? snap.docs.filter(d => d.data().status === 'Pending' && supervisedEmployeeIds.includes(d.data().employeeId)).length : 0;
-                    updatePendingCount(myPending + teamPending, 'visit');
-                });
-                const unsubPendingAdvance = onSnapshot(qPendingAdvance, (snap) => {
-                    const myPending = snap.docs.filter(d => d.data().status === 'Pending' && ids.includes(d.data().employeeId)).length;
-                    const teamPending = isSupervisor ? snap.docs.filter(d => d.data().status === 'Pending' && supervisedEmployeeIds.includes(d.data().employeeId)).length : 0;
-                    updatePendingCount(myPending + teamPending, 'advance');
-                });
-                cleanupActions.push(unsubPendingLeave, unsubPendingVisit, unsubPendingAdvance);
-
-                // 4. Missed Attendance (Flag 'A' in current month)
-                const qMissed = query(collection(firestore, 'attendance'), where('employeeId', 'in', ids));
-                const unsubMissed = onSnapshot(qMissed, (snapshot) => {
-                    const now = new Date();
-                    const currentMonth = now.getMonth();
-                    const currentYear = now.getFullYear();
-                    const missedCount = snapshot.docs.filter(doc => {
-                        const data = doc.data();
-                        if (!data.date || data.flag !== 'A') return false;
-                        try {
-                            let dDate: Date;
-                            if (typeof data.date === 'string') dDate = parseISO(data.date);
-                            else if (data.date instanceof Timestamp || (data.date && typeof data.date.toDate === 'function')) dDate = data.date.toDate();
-                            else dDate = new Date(data.date);
-                            return dDate.getMonth() === currentMonth && dDate.getFullYear() === currentYear;
-                        } catch (e) {
-                            console.error("Error parsing date for missed attendance:", data.date, e);
-                            return false;
-                        }
-                    }).length;
-                    setStats(prev => ({ ...prev, missedAttendance: missedCount }));
-                });
-                cleanupActions.push(unsubMissed);
-
-                // 4.1 Team Missed Today
-                if (isSupervisor && supervisedEmployeeIds.length > 0) {
-                    const now = new Date();
-                    const startStr = format(startOfDay(now), "yyyy-MM-dd'T'00:00:00.000xxx");
-                    const endStr = format(endOfDay(now), "yyyy-MM-dd'T'23:59:59.999xxx");
-                    const qTeamToday = query(collection(firestore, 'attendance'), where('date', '>=', startStr), where('date', '<=', endStr));
-                    const unsubTeamMissed = onSnapshot(qTeamToday, (snap) => {
-                        const presentIds = new Set();
-                        snap.docs.forEach(doc => {
-                            const d = doc.data();
-                            if (supervisedEmployeeIds.includes(d.employeeId)) {
-                                if (d.flag && d.flag !== 'A') presentIds.add(d.employeeId);
-                            }
-                        });
-                        const missed = supervisedEmployeeIds.length - presentIds.size;
-                        setStats(prev => ({ ...prev, teamMissedToday: missed }));
-                    }, (err) => {
-                        console.error("Error listening to team missed attendance:", err);
-                    });
-                    cleanupActions.push(unsubTeamMissed);
-                }
-
-                // 7. Pending Attendance Approval
-                // For Supervisors: show supervised employees only
-                // For HR/Admin/Super Admin: show all employees
-                const isHROrAdmin = globalUserRole && (
-                    globalUserRole.includes('HR') ||
-                    globalUserRole.includes('Admin') ||
-                    globalUserRole.includes('Super Admin')
-                );
-
-                if (isSupervisor || isHROrAdmin) {
-                    if (isHROrAdmin) {
-                        // HR/Admin: Get ALL pending remote attendance
-                        const qPendingAtt = query(
-                            collection(firestore, 'attendance'),
-                            where('approvalStatus', '==', 'Pending')
-                        );
-                        const unsubPendingAtt = onSnapshot(qPendingAtt, (snap) => {
-                            const totalCount = snap.size;
-                            updatePendingCount(totalCount, 'remoteAttendance');
-                            setStats(prev => ({ ...prev, pendingAttendanceCount: totalCount }));
-                        });
-                        cleanupActions.push(unsubPendingAtt);
-                    } else if (supervisedEmployeeIds.length > 0) {
-                        // Supervisor: Get only supervised employees
-                        // Firestore 'in' limit is 30 in newer versions (10 in older but let's stick to 10 for safety)
-                        const chunks = [];
-                        for (let i = 0; i < supervisedEmployeeIds.length; i += 10) {
-                            chunks.push(supervisedEmployeeIds.slice(i, i + 10));
-                        }
-
-                        // Maintain a map of counts per chunk to sum them up
-                        const chunkCounts: Record<number, number> = {};
-
-                        chunks.forEach((chunk, index) => {
-                            const q = query(
-                                collection(firestore, 'attendance'),
-                                where('employeeId', 'in', chunk),
-                                where('approvalStatus', '==', 'Pending')
-                            );
-
-                            const unsub = onSnapshot(q, (snap) => {
-                                chunkCounts[index] = snap.size;
-                                // Recalculate total sum from all chunks
-                                const totalCount = Object.values(chunkCounts).reduce((sum, count) => sum + count, 0);
-                                updatePendingCount(totalCount, 'remoteAttendance');
-                                setStats(prev => ({ ...prev, pendingAttendanceCount: totalCount }));
-                            });
-                            cleanupActions.push(unsub);
-                        });
+                // Team missed today (strict subordinates)
+                if (explicitSubordinateIds?.includes(doc.employeeId)) {
+                    if (doc.flag === 'A' && dateStr === todayDateStr) {
+                        teamMissedToday++;
                     }
                 }
 
-                // 5. Notices (Filtered by role and isEnabled)
-                const qNotices = query(collection(firestore, 'site_settings'), where('isEnabled', '==', true));
-                const unsubNotices = onSnapshot(qNotices, (snapshot) => {
-                    const filtered = snapshot.docs.filter(doc => {
-                        const data = doc.data();
-                        if (!data.targetRoles || !Array.isArray(data.targetRoles) || data.targetRoles.length === 0) return true;
-                        const currentUserRole = globalUserRole || localUserRole;
-                        return data.targetRoles.some((role: any) => currentUserRole?.includes(role));
-                    });
-                    setStats(prev => ({ ...prev, noticesCount: filtered.length }));
-                });
-                cleanupActions.push(unsubNotices);
+                if (doc.approvalStatus === 'Pending') {
+                    pendingAttendanceCount++;
+                }
+            });
 
-                // 6. Claim Stats (Current Month)
-                const qClaims = query(collection(firestore, 'hr_claims'), where('employeeId', 'in', ids), where('claimDate', '>=', startOfMonth(new Date()).toISOString()));
-                const unsubClaims = onSnapshot(qClaims, (snap) => {
-                    const totalClaimed = snap.docs.reduce((sum, doc) => sum + (doc.data().claimAmount || 0), 0);
-                    const totalDisbursed = snap.docs.filter(doc => doc.data().status === 'Disbursed').reduce((sum, doc) => sum + (doc.data().approvedAmount || 0), 0);
-                    setStats(prev => ({ ...prev, claimAmount: totalClaimed, disbursedAmount: totalDisbursed }));
-                });
-                cleanupActions.push(unsubClaims);
-
-                return () => {
-                    cleanupActions.forEach(unsub => unsub?.());
-                };
-            } catch (err) {
-                console.error("Error setting up dashboard listeners:", err);
-            }
+            setStats(prev => ({
+                ...prev,
+                leaveSpent: leafSpent,
+                visitCount: visitCount,
+                missedAttendance: missedAttendanceCount,
+                teamMissedToday: teamMissedToday,
+                pendingAttendanceCount: pendingAttendanceCount,
+                pendingCount: pendingLeaveCount + pendingVisitCount + pendingAttendanceCount
+            }));
         };
 
-        const cleanupPromise = setupListeners();
-        return () => {
-            cleanupPromise.then(cleanup => cleanup && cleanup());
-        };
-    }, [user, localUserRole, isSupervisor, supervisedEmployeeIds, currentEmployeeId]);
+        if (attendanceData || leaveData || visitData) {
+            calculateStats();
+        }
+    }, [attendanceData, leaveData, visitData]);
+
+    // Role-based notice listener
+    const noticeQuery = useMemo(() => query(collection(firestore, 'site_settings'), where('isEnabled', '==', true)), []);
+    const { data: rawNoticeData } = useRealtimeData<any[]>(noticeQuery);
+
+    useEffect(() => {
+        if (rawNoticeData) {
+            const filtered = rawNoticeData.filter(doc => {
+                if (!doc.targetRoles || !Array.isArray(doc.targetRoles) || doc.targetRoles.length === 0) return true;
+                return doc.targetRoles.some((role: any) => globalUserRole?.includes(role));
+            });
+            setStats(prev => ({ ...prev, noticesCount: filtered.length }));
+        }
+    }, [rawNoticeData, globalUserRole]);
+
+    // Claim stats current month
+    const claimQuery = useMemo(() => {
+        if (!user?.uid) return null;
+        const ids = [user.uid];
+        if (currentEmployeeId) ids.push(currentEmployeeId);
+        return query(
+            collection(firestore, 'hr_claims'),
+            where('employeeId', 'in', Array.from(new Set(ids))),
+            where('claimDate', '>=', startOfMonth(new Date()).toISOString())
+        );
+    }, [user?.uid, currentEmployeeId]);
+    const { data: claimData } = useRealtimeData<any[]>(claimQuery);
+
+    useEffect(() => {
+        if (claimData) {
+            const totalClaimed = claimData.reduce((sum, doc) => sum + (doc.claimAmount || 0), 0);
+            const totalDisbursed = claimData.filter(doc => doc.status === 'Disbursed').reduce((sum, doc) => sum + (doc.approvedAmount || 0), 0);
+            setStats(prev => ({ ...prev, claimAmount: totalClaimed, disbursedAmount: totalDisbursed }));
+        }
+    }, [claimData]);
 
     // Timer effect for active break
     useEffect(() => {

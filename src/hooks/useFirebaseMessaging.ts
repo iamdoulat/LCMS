@@ -30,7 +30,6 @@ export function useFirebaseMessaging() {
                         scope: '/'
                     });
                     await navigator.serviceWorker.ready;
-                    console.log('[FCM] Service worker registered:', registration);
 
                     // 3. Send company logo to service worker
                     if (companyLogoUrl && registration.active) {
@@ -38,7 +37,6 @@ export function useFirebaseMessaging() {
                             type: 'SET_COMPANY_LOGO',
                             logoUrl: companyLogoUrl
                         });
-                        console.log('[FCM] Company logo sent to SW:', companyLogoUrl);
                     }
 
                     // 4. Get FCM token
@@ -54,7 +52,6 @@ export function useFirebaseMessaging() {
                     });
 
                     if (token) {
-                        console.log('[FCM] Token obtained:', token.substring(0, 20) + '...');
                         setFcmToken(token);
 
                         // 5. Save token to user profile
@@ -64,7 +61,6 @@ export function useFirebaseMessaging() {
                                 fcmTokens: arrayUnion(token),
                                 lastTokenUpdate: new Date().toISOString()
                             });
-                            console.log('[FCM] Token saved to user profile');
                         } catch (error) {
                             console.error('[FCM] Error saving token:', error);
                         }
@@ -87,7 +83,6 @@ export function useFirebaseMessaging() {
         if (!messaging || notificationPermission !== 'granted') return;
 
         const unsubscribe = onMessage(messaging, (payload) => {
-            console.log('[FCM] Foreground message received:', payload);
 
             // Show notification even when app is open
             if (payload.notification) {

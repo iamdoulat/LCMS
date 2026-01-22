@@ -67,7 +67,6 @@ export const useFcmToken = () => {
         if (!messaging) return;
 
         const unsubscribe = onMessage(messaging, (payload) => {
-            console.log('Foreground Message received. ', payload);
             const { title, body, icon } = payload.notification || {};
 
             // Show toast or custom UI

@@ -61,18 +61,11 @@ export default function RegisterPage() {
         const settingsRef = doc(firestore, 'system_settings', 'registration_enabled');
         const settingsSnap = await getDoc(settingsRef);
 
-        console.log('🔍 Registration Status Check:', {
-          documentExists: settingsSnap.exists(),
-          data: settingsSnap.exists() ? settingsSnap.data() : null
-        });
-
         if (settingsSnap.exists()) {
           const enabled = settingsSnap.data().enabled ?? true;
-          console.log('✅ Registration enabled from Firestore:', enabled);
           setRegistrationEnabled(enabled);
         } else {
           // Default to enabled if document doesn't exist
-          console.log('⚠️ No registration_enabled document found, defaulting to enabled');
           setRegistrationEnabled(true);
         }
       } catch (error) {

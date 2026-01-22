@@ -162,7 +162,6 @@ export default function LoginPage() {
 
       // Case 1: No devices registered yet -> Auto-approve this first device
       if (allowedDevices.length === 0) {
-        // console.log("No devices registered. Auto-approving first device...");
         const userRef = doc(firestore, 'users', currentUser.uid);
         // Also update `registeredAt` if missing?
         const updateData: any = {
@@ -170,7 +169,6 @@ export default function LoginPage() {
           registeredAt: Timestamp.now()
         };
         await updateDoc(userRef, updateData);
-        // console.log("Device registered successfully.");
         router.push(targetPath);
         return;
       }
@@ -178,13 +176,11 @@ export default function LoginPage() {
       // Case 2: Check if current device is allowed
       const isAllowed = allowedDevices.some((d) => d.deviceId === deviceId);
       if (isAllowed) {
-        // console.log("Device is allowed.");
         router.push(targetPath);
         return;
       }
 
       // Case 3: New/Unrecognized Device
-      // console.log("Device not recognized. Checking for pending requests...");
       setShowDevicePopup(true);
 
       // Check if a pending request already exists to avoid spamming
@@ -200,7 +196,6 @@ export default function LoginPage() {
       });
 
       if (existingReqs.length === 0) {
-        // console.log("Creating new device change request...");
         await addDoc(requestsRef, {
           userId: currentUser.uid,
           userName: userData.displayName || currentUser.displayName || 'Unknown User',
@@ -227,7 +222,6 @@ export default function LoginPage() {
           timerProgressBar: true,
         });
       } else {
-        // console.log("Pending request already exists.");
       }
 
     } catch (err) {

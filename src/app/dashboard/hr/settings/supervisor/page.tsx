@@ -86,9 +86,15 @@ export default function SupervisorSetupPage() {
             // For legacy field 'leaveApproverId', we pick the first one marked as such, or fallback to direct supervisor.
             const primaryLeaveApproverId = leaveApprover?.supervisorId || (directSupervisor?.isLeaveApprover ? directSupervisor.supervisorId : null);
 
+            const directSupId = directSupervisor ? directSupervisor.supervisorId : null;
+
             const updateData: any = {
                 supervisors: supervisors,
-                supervisorId: directSupervisor ? directSupervisor.supervisorId : null,
+                supervisorId: directSupId,
+                directSupervisorId: directSupId, // Sync with legacy field
+                supervisor: directSupId, // Sync with alternative field
+                supervision: directSupId, // Sync with alternative field
+                "Direct supervision": directSupId, // Sync with alternative field
                 leaveApproverId: primaryLeaveApproverId, // Legacy support
                 updatedAt: serverTimestamp()
             };
