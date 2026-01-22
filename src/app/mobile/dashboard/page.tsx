@@ -333,15 +333,39 @@ export default function MobileDashboardPage() {
                 }
             });
 
-            // Special case for Team Missed Today: count subordinates who are specifically marked Absent (A)
+            // Special case for Team Missed Today: Align with Web "Absent (A)" logic
+            // Web Logic: Total Subordinates - (Present + Delayed + Pending)
             if (isSupervisor && explicitSubordinateIds && explicitSubordinateIds.length > 0) {
-                let absentCount = 0;
+                const todayAttendanceMap = new Map();
+
+                // First, find all today's records for subordinates
                 attendanceData?.forEach(doc => {
                     const date = doc.date instanceof Timestamp ? doc.date.toDate() : (typeof doc.date === 'string' ? parseISO(doc.date) : new Date(doc.date));
                     const dateStr = format(date, 'yyyy-MM-dd');
-                    // Directly count subordinates with 'A' flag for today (case-insensitive)
-                    if (dateStr === todayDateStr && doc.flag?.toUpperCase() === 'A' && explicitSubordinateIds.includes(doc.employeeId)) {
+                    if (dateStr === todayDateStr && explicitSubordinateIds.includes(doc.employeeId)) {
+                        todayAttendanceMap.set(doc.employeeId, doc);
+                    }
+                });
+
+                let absentCount = 0;
+                explicitSubordinateIds.forEach(empId => {
+                    const att = todayAttendanceMap.get(empId);
+
+                    if (!att) {
+                        // No record today = Absent/Missed
                         absentCount++;
+                    } else {
+                        // Check if the record counts as "Not Absent" (Present or Delayed or Pending)
+                        const isPending = att.approvalStatus === 'Pending' ||
+                            att.inTimeApprovalStatus === 'Pending' ||
+                            att.outTimeApprovalStatus === 'Pending';
+
+                        const isActive = (att.flag === 'P' || att.flag === 'D') && att.approvalStatus !== 'Rejected';
+
+                        // If it's not pending and not active present/delayed, it's Absent (A, L, or Rejected)
+                        if (!isPending && !isActive) {
+                            absentCount++;
+                        }
                     }
                 });
                 teamMissedToday = absentCount;
