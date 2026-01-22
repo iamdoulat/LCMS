@@ -45,7 +45,7 @@ interface AvailableMachineOption extends ComboboxOption { // Renamed for clarity
 }
 
 export default function NewDemoMachineApplicationPage() {
-  const { userRole } = useAuth();
+  const { user, userRole } = useAuth();
   const isReadOnly = userRole?.includes('Viewer');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [factoryOptions, setFactoryOptions] = React.useState<FactoryOption[]>([]);
@@ -240,6 +240,8 @@ export default function NewDemoMachineApplicationPage() {
           inchargeCell: data.inchargeCell || undefined,
           notes: data.notes || undefined,
           machineReturned: data.machineReturned ?? false,
+          appliedById: user?.uid,
+          appliedByName: user?.displayName || user?.email || undefined,
         };
 
         const cleanedAppData = { ...appDataToSave, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };

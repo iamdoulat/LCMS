@@ -10,6 +10,7 @@ import {
     updateReconciliation,
     deleteReconciliation
 } from '@/lib/firebase/reconciliation';
+import { sendPushNotification } from '@/lib/notifications';
 import type { AttendanceReconciliation } from '@/types/reconciliation';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -138,6 +139,14 @@ export default function AttendanceReconciliationPage() {
         try {
             await approveReconciliation(rec.id, rec, user.uid);
             await notifyDecision(rec.id, 'approved'); // Trigger Email
+
+            // Push Notification
+            sendPushNotification({
+                title: "Attendance Recon Approved",
+                body: `Your attendance reconciliation for ${format(new Date(rec.attendanceDate), 'PPP')} has been approved.`,
+                userIds: [rec.employeeId],
+                url: '/mobile/attendance/my-attendance'
+            });
             await safeSwalFire({
                 title: "Approved",
                 text: "Reconciliation approved successfully.",
@@ -203,6 +212,17 @@ export default function AttendanceReconciliationPage() {
             await rejectReconciliation(id, user.uid);
 
             await notifyDecision(id, 'rejected', reason); // Trigger Email
+
+            // Push Notification
+            const rec = reconciliations.find(r => r.id === id);
+            if (rec) {
+                sendPushNotification({
+                    title: "Attendance Recon Rejected",
+                    body: `Your attendance reconciliation for ${format(new Date(rec.attendanceDate), 'PPP')} has been rejected. Reason: ${reason}`,
+                    userIds: [rec.employeeId],
+                    url: '/mobile/attendance/my-attendance'
+                });
+            }
 
             await safeSwalFire({
                 title: "Rejected",
@@ -330,7 +350,15 @@ export default function AttendanceReconciliationPage() {
             await bulkApproveReconciliations(selectedRecs, user.uid);
 
             // Trigger emails for all
-            selectedRecs.forEach(rec => notifyDecision(rec.id, 'approved'));
+            selectedRecs.forEach(rec => {
+                notifyDecision(rec.id, 'approved');
+                sendPushNotification({
+                    title: "Attendance Recon Approved",
+                    body: `Your attendance reconciliation for ${format(new Date(rec.attendanceDate), 'PPP')} has been approved.`,
+                    userIds: [rec.employeeId],
+                    url: '/mobile/attendance/my-attendance'
+                });
+            });
 
             await safeSwalFire({
                 title: "Success",
@@ -383,7 +411,18 @@ export default function AttendanceReconciliationPage() {
             await bulkRejectReconciliations(ids, user.uid);
 
             // Trigger emails
-            ids.forEach(id => notifyDecision(id, 'rejected', reason));
+            ids.forEach(id => {
+                notifyDecision(id, 'rejected', reason);
+                const rec = reconciliations.find(r => r.id === id);
+                if (rec) {
+                    sendPushNotification({
+                        title: "Attendance Recon Rejected",
+                        body: `Your attendance reconciliation for ${format(new Date(rec.attendanceDate), 'PPP')} has been rejected. Reason: ${reason}`,
+                        userIds: [rec.employeeId],
+                        url: '/mobile/attendance/my-attendance'
+                    });
+                }
+            });
 
             await safeSwalFire({
                 title: "Success",

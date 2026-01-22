@@ -38,6 +38,7 @@ import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from '@/lib/utils';
+import { sendPushNotification } from '@/lib/notifications';
 
 export default function AssetsPage() {
   const { userRole } = useAuth();
@@ -193,6 +194,14 @@ export default function AssetsPage() {
         updatedAt: serverTimestamp(),
       });
 
+      // Push Notification
+      sendPushNotification({
+        title: "Asset Requisition Approved",
+        body: `Your requisition for ${requisition.assetCategoryName} has been approved. ${requisition.preferredAssetId ? 'An asset has been assigned to you.' : ''}`,
+        userIds: [requisition.employeeId],
+        url: '/mobile/dashboard'
+      });
+
       refetchRequisitions();
       Swal.fire('Approved', requisition.preferredAssetId ? 'Requisition approved and asset assigned successfully.' : 'Requisition has been approved.', 'success');
     } catch (error) {
@@ -213,7 +222,21 @@ export default function AssetsPage() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
+          // Get requisition for notification info
+          const reqDoc = await getDoc(doc(firestore, "asset_requisitions", id));
+          const requisition = reqDoc.exists() ? reqDoc.data() : null;
+
           await updateDoc(doc(firestore, "asset_requisitions", id), { status: 'Rejected' });
+
+          if (requisition) {
+            sendPushNotification({
+              title: "Asset Requisition Rejected",
+              body: `Your requisition for ${requisition.assetCategoryName} has been rejected.`,
+              userIds: [requisition.employeeId],
+              url: '/mobile/dashboard'
+            });
+          }
+
           refetchRequisitions();
           Swal.fire('Rejected', 'Requisition has been rejected.', 'success');
         } catch (error) {

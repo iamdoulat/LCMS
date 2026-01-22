@@ -773,6 +773,8 @@ export interface DemoMachineApplicationDocument {
   inchargeCell?: string;
   notes?: string;
   machineReturned?: boolean; // Overall status of the application's machines
+  appliedById?: string;
+  appliedByName?: string;
   appliedMachines: Array<{ // Array of machines in this application
     demoMachineId: string;
     machineModel: string; // Denormalized

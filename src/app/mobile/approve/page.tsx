@@ -41,6 +41,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, parseISO, isValid, differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
+import { sendPushNotification } from '@/lib/notifications';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
 import { DateRange } from 'react-day-picker';
@@ -186,6 +187,18 @@ export default function ApproveApplicationsPage() {
                 updatedAt: serverTimestamp(),
                 approvedBy: currentEmployeeId
             });
+
+            // Push Notification
+            const app = leaveApps.find(a => a.id === appId);
+            if (app) {
+                sendPushNotification({
+                    title: "Leave Approved",
+                    body: `Your leave request for ${app.leaveType} has been approved.`,
+                    userIds: [app.employeeId],
+                    url: '/mobile/leave'
+                });
+            }
+
             setIsLeaveModalOpen(false);
             toast({
                 title: "Approved!",
@@ -206,6 +219,18 @@ export default function ApproveApplicationsPage() {
                 approverComment: reason || 'No reason provided',
                 rejectedBy: currentEmployeeId
             });
+
+            // Push Notification
+            const app = leaveApps.find(a => a.id === appId);
+            if (app) {
+                sendPushNotification({
+                    title: "Leave Rejected",
+                    body: `Your leave request for ${app.leaveType} has been rejected.`,
+                    userIds: [app.employeeId],
+                    url: '/mobile/leave'
+                });
+            }
+
             setIsLeaveModalOpen(false);
             toast({
                 title: "Rejected",
@@ -225,6 +250,18 @@ export default function ApproveApplicationsPage() {
                 updatedAt: serverTimestamp(),
                 approvedBy: currentEmployeeId
             });
+
+            // Push Notification
+            const app = visitApps.find(a => a.id === appId);
+            if (app) {
+                sendPushNotification({
+                    title: "Visit Approved",
+                    body: `Your visit request for ${app.customerName || 'Work Visit'} has been approved.`,
+                    userIds: [app.employeeId],
+                    url: '/mobile/visit'
+                });
+            }
+
             setIsVisitModalOpen(false);
             toast({
                 title: "Approved!",
@@ -245,6 +282,18 @@ export default function ApproveApplicationsPage() {
                 approverComment: reason || 'No reason provided',
                 rejectedBy: currentEmployeeId
             });
+
+            // Push Notification
+            const app = visitApps.find(a => a.id === appId);
+            if (app) {
+                sendPushNotification({
+                    title: "Visit Rejected",
+                    body: `Your visit request for ${app.customerName || 'Work Visit'} has been rejected.`,
+                    userIds: [app.employeeId],
+                    url: '/mobile/visit'
+                });
+            }
+
             setIsVisitModalOpen(false);
             toast({
                 title: "Rejected",

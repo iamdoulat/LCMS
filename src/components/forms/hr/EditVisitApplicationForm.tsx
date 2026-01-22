@@ -22,6 +22,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { sendPushNotification } from '@/lib/notifications';
 
 interface EditVisitApplicationFormProps {
   initialData: VisitApplicationDocument;
@@ -116,6 +117,14 @@ export function EditVisitApplicationForm({ initialData }: EditVisitApplicationFo
               status: data.status,
               rejectionReason: data.approverComment
             })
+          });
+
+          // Push Notification
+          sendPushNotification({
+            title: `Visit ${data.status}`,
+            body: `Your visit application for ${data.customerName || 'Work Visit'} has been ${data.status.toLowerCase()}.`,
+            userIds: [data.employeeId],
+            url: '/mobile/visit'
           });
         } catch (err) {
           console.error("Failed to trigger decision notification", err);

@@ -5,7 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { CalendarClock, Loader2, AlertTriangle, Info, Edit, User, Phone, FileText as NoteIcon, FileBadge } from 'lucide-react';
+import { CalendarClock, Loader2, AlertTriangle, Info, Edit, User, Phone, FileText as NoteIcon, FileBadge, Bell } from 'lucide-react';
+import { sendPushNotification } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp } from 'firebase/firestore';
@@ -93,17 +94,55 @@ export default function DemoMcDateOverduePage() {
     fetchOverdueApplications();
   }, []);
 
+  const handleNotifyOverdue = async () => {
+    if (overdueApplications.length === 0) return;
+
+    const notifiedUsers = new Set<string>();
+    let count = 0;
+
+    overdueApplications.forEach(app => {
+      if (app.appliedById) {
+        sendPushNotification({
+          title: "Demo Machine Overdue",
+          body: `The demo machine for "${app.factoryName}" (Challan: ${app.challanNo}) is overdue for return.`,
+          userIds: [app.appliedById],
+          url: `/dashboard/demo/edit-demo-machine-application/${app.id}`
+        });
+        notifiedUsers.add(app.appliedById);
+        count++;
+      }
+    });
+
+    if (count > 0) {
+      Swal.fire("Notifications Sent", `Sent ${count} notifications to ${notifiedUsers.size} responsible persons.`, "success");
+    } else {
+      Swal.fire("No Users to Notify", "None of the overdue applications have an associated applicant ID (possibly created before update).", "info");
+    }
+  };
+
   return (
     <div className="max-w-none mx-[25px] py-8 px-0">
       <Card className="shadow-xl">
         <CardHeader>
-          <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-            <CalendarClock className="h-7 w-7 text-primary" />
-            Demo M/C Date Overdue
-          </CardTitle>
-          <CardDescription>
-            List of demo machine applications whose estimated return date has passed and are not marked as returned.
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                <CalendarClock className="h-7 w-7 text-primary" />
+                Demo M/C Date Overdue
+              </CardTitle>
+              <CardDescription>
+                List of demo machine applications whose estimated return date has passed and are not marked as returned.
+              </CardDescription>
+            </div>
+            <Button
+              onClick={handleNotifyOverdue}
+              disabled={overdueApplications.length === 0}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              <Bell className="mr-2 h-4 w-4" />
+              Notify All Responsible
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (

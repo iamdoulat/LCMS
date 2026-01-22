@@ -8,6 +8,7 @@ import {
     updateBreakRecord,
     deleteBreakRecord
 } from '@/lib/firebase/breakTime';
+import { sendPushNotification } from '@/lib/notifications';
 import { BreakTimeRecord } from '@/types/breakTime';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -112,6 +113,18 @@ export default function BreakTimeReconciliationPage() {
         try {
             setProcessing(true);
             await approveBreakRecord(id, user.uid);
+
+            // Push Notification
+            const rec = records.find(r => r.id === id);
+            if (rec) {
+                sendPushNotification({
+                    title: "Break Approved",
+                    body: `Your break request for ${format(new Date(rec.startTime), 'PPP')} has been approved.`,
+                    userIds: [rec.employeeId],
+                    url: '/mobile/attendance/my-attendance'
+                });
+            }
+
             await Swal.fire({
                 title: "Approved",
                 text: "Break request approved successfully.",
@@ -143,6 +156,18 @@ export default function BreakTimeReconciliationPage() {
 
             setProcessing(true);
             await rejectBreakRecord(id, user.uid, reason);
+
+            // Push Notification
+            const rec = records.find(r => r.id === id);
+            if (rec) {
+                sendPushNotification({
+                    title: "Break Rejected",
+                    body: `Your break request for ${format(new Date(rec.startTime), 'PPP')} has been rejected. Reason: ${reason}`,
+                    userIds: [rec.employeeId],
+                    url: '/mobile/attendance/my-attendance'
+                });
+            }
+
             // In a real app, we'd also save the reason, but for now just notify
             await Swal.fire({
                 title: "Rejected",

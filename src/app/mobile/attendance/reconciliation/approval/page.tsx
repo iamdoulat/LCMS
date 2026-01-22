@@ -12,6 +12,7 @@ import { approveReconciliation, rejectReconciliation } from '@/lib/firebase/reco
 import Swal from 'sweetalert2';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { Button } from '@/components/ui/button';
+import { sendPushNotification } from '@/lib/notifications';
 
 // Define Types locally if not strictly exported or for convenience
 interface ReconRequest {
@@ -180,6 +181,14 @@ export default function ReconApprovalPage() {
                     });
                 }
             }
+
+            // Push Notification
+            sendPushNotification({
+                title: `${activeTab === 'attendance' ? 'Attendance' : 'Break'} Recon ${action.charAt(0).toUpperCase() + action.slice(1)}`,
+                body: `Your ${activeTab} reconciliation for ${format(new Date(request.attendanceDate), 'dd MMM yyyy')} has been ${action}.`,
+                userIds: [request.employeeId],
+                url: '/mobile/attendance/my-attendance'
+            });
 
             // Update local state
             setRequests(prev => prev.map(r => r.id === request.id ? { ...r, status: action === 'approve' ? 'approved' : 'rejected' } : r));

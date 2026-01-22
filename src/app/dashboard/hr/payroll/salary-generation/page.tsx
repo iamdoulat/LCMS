@@ -23,6 +23,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { format, getDaysInMonth, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWithinInterval, parseISO } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { sendPushNotification } from '@/lib/notifications';
 
 const toComboboxOptions = (data: any[] | undefined, labelKey: string, valueKey: string = 'id'): ComboboxOption[] => {
     if (!data) return [];
@@ -166,6 +167,7 @@ export default function SalaryGenerationPage() {
 
             const batch = writeBatch(firestore);
             let totalGrossSalary = 0, totalDeductions = 0, processedCount = 0;
+            const employeeIds: string[] = [];
 
             for (const empDoc of employeesSnapshot.docs) {
                 const employee = { id: empDoc.id, ...empDoc.data() } as EmployeeDocument;
@@ -248,6 +250,7 @@ export default function SalaryGenerationPage() {
                     createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
                 };
                 batch.set(payslipDocRef, payslipData);
+                employeeIds.push(employee.id);
             }
 
             if (processedCount > 0) {
@@ -261,6 +264,16 @@ export default function SalaryGenerationPage() {
             }
 
             await batch.commit();
+
+            // Push Notification to all affected employees
+            if (employeeIds.length > 0) {
+                sendPushNotification({
+                    title: "Salary Generated",
+                    body: `Your payslip for ${data.month} ${data.year} has been generated.`,
+                    userIds: employeeIds,
+                    url: '/mobile/payroll'
+                });
+            }
 
             Swal.fire({ title: "Salary Generation Complete!", text: `Successfully generated payroll for ${processedCount} employees for ${payPeriod}.`, icon: "success" });
         } catch (error: any) {

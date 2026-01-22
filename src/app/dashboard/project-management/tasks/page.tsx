@@ -50,6 +50,7 @@ import { collection, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } fro
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { Task } from '@/types/projectManagement';
 import { cn } from '@/lib/utils';
+import { sendPushNotification } from '@/lib/notifications';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
@@ -202,6 +203,17 @@ export default function ManageTasksPage() {
                     status: newStatus,
                     updatedAt: new Date()
                 });
+
+                // Send Push Notifications to assigned users
+                const movedTask = tasks.find(t => t.id === taskId);
+                if (movedTask && movedTask.assignedUserIds && movedTask.assignedUserIds.length > 0) {
+                    sendPushNotification({
+                        title: `Task Status: ${newStatus}`,
+                        body: `Task "${movedTask.taskTitle}" has been moved to ${newStatus}.`,
+                        userIds: movedTask.assignedUserIds,
+                        url: `/mobile/project-management/${taskId}`
+                    });
+                }
             } catch (error) {
                 console.error("Error updating task status:", error);
             }

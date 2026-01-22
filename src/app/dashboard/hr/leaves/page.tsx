@@ -33,6 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { sendPushNotification } from '@/lib/notifications';
 
 
 const formatDisplayDate = (dateString: string): string => {
@@ -323,6 +324,17 @@ export default function LeaveManagementPage() {
                         updateData.approverComment = comment;
                     }
                     await updateDoc(leaveDocRef, updateData);
+
+                    // Push Notification
+                    const leaveDoc = allLeaves.find(l => l.id === leaveId);
+                    if (leaveDoc) {
+                        sendPushNotification({
+                            title: `Leave ${newStatus}`,
+                            body: `Your leave request for ${leaveDoc.leaveType} has been ${newStatus.toLowerCase()}.`,
+                            userIds: [leaveDoc.employeeId],
+                            url: '/mobile/leave'
+                        });
+                    }
 
                     // Notify Employee
                     try {

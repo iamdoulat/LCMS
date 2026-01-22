@@ -25,6 +25,7 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { sendPushNotification } from '@/lib/notifications';
 
 interface AssetDistributionModalProps {
     isOpen: boolean;
@@ -253,6 +254,15 @@ export function AssetDistributionModal({ isOpen, onClose, distributionToEdit, on
                         ...distributionData,
                         createdAt: serverTimestamp(),
                     });
+
+                    // Push Notification for new assignment
+                    sendPushNotification({
+                        title: "Asset Assigned",
+                        body: `An asset "${selectedAsset?.title || 'Unknown'}" has been assigned to you.`,
+                        userIds: [employeeId],
+                        url: '/mobile/dashboard'
+                    });
+
                     await updateDoc(doc(firestore, 'assets', assetId), { status: 'Assigned' });
                     Swal.fire({
                         icon: 'success',

@@ -10,6 +10,7 @@ import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, up
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
+import { sendPushNotification } from '@/lib/notifications';
 import {
     Dialog,
     DialogContent,
@@ -363,6 +364,17 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
 
             if (editingClaim) {
                 await updateDoc(doc(firestore, 'hr_claims', editingClaim.id), claimData);
+
+                // Push Notification if status changed
+                if (data.status !== editingClaim.status) {
+                    sendPushNotification({
+                        title: `Claim ${data.status}`,
+                        body: `Your claim ${claimNo} has been ${data.status.toLowerCase()}.`,
+                        userIds: [data.employeeId],
+                        url: '/mobile/dashboard' // Adjust as needed
+                    });
+                }
+
                 Swal.fire({
                     title: "Success",
                     text: "Claim updated successfully!",

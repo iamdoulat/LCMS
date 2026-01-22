@@ -14,6 +14,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { updateCheckInOutStatus } from '@/lib/firebase/checkInOut';
 import Swal from 'sweetalert2';
+import { sendPushNotification } from '@/lib/notifications';
 import {
     Dialog,
     DialogContent,
@@ -350,6 +351,20 @@ export default function RemoteAttendanceApprovalPage() {
                 }
 
                 await updateDoc(docRef, updates);
+            }
+
+            // Send Push Notification to Employee
+            if (selectedRecord.employeeId) {
+                const emp = supervisedEmployees.find(e => e.id === selectedRecord.employeeId || e.uid === selectedRecord.employeeId);
+                const uid = emp?.uid || selectedRecord.employeeId;
+                const recordDate = selectedRecord.timestamp ? format(new Date(selectedRecord.timestamp), 'dd MMM yyyy') : 'today';
+
+                sendPushNotification({
+                    title: `Attendance ${action}`,
+                    body: `Your ${selectedRecord.type} for ${recordDate} has been ${action.toLowerCase()}.`,
+                    userIds: [uid],
+                    url: '/mobile/attendance/my-attendance'
+                });
             }
 
             setRecords(prev => prev.map(r => r.id === selectedRecord.id ? { ...r, status: action } : r));
