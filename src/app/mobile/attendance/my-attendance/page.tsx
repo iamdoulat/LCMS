@@ -49,6 +49,21 @@ export default function MyAttendancePage() {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState<FilterState>({});
 
+    // Load from cache on mount
+    useEffect(() => {
+        const cachedAttendance = localStorage.getItem('myAttendanceRecords');
+        const cachedBreaks = localStorage.getItem('myBreakRecords');
+        if (cachedAttendance) {
+            try { setAttendanceRecords(JSON.parse(cachedAttendance)); } catch (e) { }
+        }
+        if (cachedBreaks) {
+            try { setBreakRecords(JSON.parse(cachedBreaks)); } catch (e) { }
+        }
+        if (cachedAttendance || cachedBreaks) {
+            setLoading(false);
+        }
+    }, []);
+
     const fetchAttendance = async () => {
         const queryIds = [currentEmployeeId, user?.uid].filter((id): id is string => !!id);
         if (queryIds.length === 0) return;
@@ -84,6 +99,10 @@ export default function MyAttendancePage() {
             });
 
             setAttendanceRecords(data.slice(0, 30));
+            // Update cache
+            if (!filters.dateRange?.from) {
+                localStorage.setItem('myAttendanceRecords', JSON.stringify(data.slice(0, 30)));
+            }
         } catch (error) {
             console.error("Error fetching attendance:", error);
         } finally {
@@ -136,6 +155,10 @@ export default function MyAttendancePage() {
 
             // data.sort((a, b)...
             setBreakRecords(data.slice(0, 30));
+            // Update cache
+            if (!filters.dateRange?.from && (!filters.status || filters.status === 'All')) {
+                localStorage.setItem('myBreakRecords', JSON.stringify(data.slice(0, 30)));
+            }
         } catch (error) {
             console.error("Error fetching breaks:", error);
         } finally {
@@ -304,7 +327,7 @@ export default function MyAttendancePage() {
 
                 {/* Content */}
                 <div className="flex-1 px-6 pt-4 pb-[120px] space-y-4">
-                    {loading ? (
+                    {(loading && attendanceRecords.length === 0 && breakRecords.length === 0) ? (
                         <div className="space-y-4">
                             {[1, 2, 3, 4, 5].map((i) => (
                                 <div key={i} className="bg-white rounded-xl px-3 py-2.5 shadow-sm border border-slate-100 flex items-center gap-3 animate-pulse">

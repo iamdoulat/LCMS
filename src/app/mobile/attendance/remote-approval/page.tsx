@@ -66,6 +66,19 @@ export default function RemoteAttendanceApprovalPage() {
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ];
 
+    // Load from cache on mount
+    useEffect(() => {
+        const cachedRecords = localStorage.getItem('remoteAttendanceRecords');
+        if (cachedRecords) {
+            try {
+                setRecords(JSON.parse(cachedRecords));
+                setLoading(false); // If we have cache, we can hide initial loader early
+            } catch (e) {
+                console.error('Error parsing cached records', e);
+            }
+        }
+    }, []);
+
     useEffect(() => {
         const year = new Date().getFullYear();
         const from = startOfDay(new Date(year, selectedMonth, 1));
@@ -232,6 +245,9 @@ export default function RemoteAttendanceApprovalPage() {
 
             filteredRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setRecords(filteredRecords);
+
+            // Update cache
+            localStorage.setItem('remoteAttendanceRecords', JSON.stringify(filteredRecords));
 
         } catch (error) {
             console.error("Error fetching remote attendance:", error);
@@ -475,7 +491,7 @@ export default function RemoteAttendanceApprovalPage() {
             <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col pt-6">
 
                 <div className="flex-1 px-6 pb-[120px] space-y-4">
-                    {loading ? (
+                    {(loading && records.length === 0) ? (
                         Array.from({ length: 5 }).map((_, i) => (
                             <div key={i} className="bg-white p-4 rounded-2xl shadow-md animate-pulse">
                                 <div className="pl-4">

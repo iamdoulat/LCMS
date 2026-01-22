@@ -29,6 +29,17 @@ export default function TeamAttendancePage() {
     const [searchTerm, setSearchTerm] = useState('');
     const router = useRouter();
 
+    // Load from cache on mount
+    useEffect(() => {
+        const cached = localStorage.getItem('teamAttendanceRecords');
+        if (cached) {
+            try {
+                setAttendanceData(JSON.parse(cached));
+                setLoading(false);
+            } catch (e) { }
+        }
+    }, []);
+
     const fetchTeamAttendance = async () => {
         if (!user || !isSupervisor || supervisedEmployees.length === 0) {
             setLoading(false);
@@ -51,9 +62,14 @@ export default function TeamAttendancePage() {
                 return;
             }
 
+            // Collect both doc IDs and UIDs for more resilient matching
+            const allPossibleIds = Array.from(new Set(
+                supervisedEmployees.map(e => [e.id, e.uid]).flat().filter((id): id is string => !!id)
+            ));
+
             const chunks = [];
-            for (let i = 0; i < employeeIds.length; i += 10) {
-                chunks.push(employeeIds.slice(i, i + 10));
+            for (let i = 0; i < allPossibleIds.length; i += 10) {
+                chunks.push(allPossibleIds.slice(i, i + 10));
             }
 
             const attendanceMap = new Map<string, any>();
@@ -74,7 +90,7 @@ export default function TeamAttendancePage() {
 
             // Map supervised employees to summary
             for (const emp of supervisedEmployees) {
-                const att = attendanceMap.get(emp.id);
+                const att = attendanceMap.get(emp.id) || (emp.uid ? attendanceMap.get(emp.uid) : null);
                 summaries.push({
                     employeeId: emp.id,
                     employeeName: emp.fullName || emp.name,
@@ -86,7 +102,8 @@ export default function TeamAttendancePage() {
             }
 
             setAttendanceData(summaries);
-
+            // Update cache
+            localStorage.setItem('teamAttendanceRecords', JSON.stringify(summaries));
         } catch (error) {
             console.error("Error fetching team attendance:", error);
         } finally {
@@ -155,11 +172,11 @@ export default function TeamAttendancePage() {
                 </div>
 
                 <div className="flex-1 px-6 pt-6 pb-[120px] space-y-4">
-                    {loading ? (
+                    {(loading && attendanceData.length === 0) ? (
                         <div className="flex justify-center py-10">
                             <Loader2 className="animate-spin text-blue-600 w-8 h-8" />
                         </div>
-                    ) : filteredData.length > 0 ? (
+                    ) : (filteredData.length > 0 || searchTerm) ? (
                         filteredData.map((emp) => (
                             <div key={emp.employeeId} className="bg-white p-4 rounded-2xl shadow-md flex items-center gap-4">
                                 {/* Avatar with status indicator line/border */}

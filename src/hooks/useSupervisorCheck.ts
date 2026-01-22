@@ -129,19 +129,20 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                 }
 
                 if (employeeId) {
-                    // Standard supervisor logic based on supervisorId/leaveApproverId
-                    // Check if this employee is a supervisor by querying for subordinates
+                    const supervisorIdCandidates = Array.from(new Set([employeeId, user?.uid].filter((id): id is string => !!id)));
+
+                    // 1. Fetch by supervisorId
                     const subordinatesQuery = query(
                         collection(firestore, 'employees'),
-                        where('supervisorId', '==', employeeId)
+                        where('supervisorId', 'in', supervisorIdCandidates)
                     );
                     const subordinatesSnapshot = await getDocs(subordinatesQuery);
                     subordinateIds = subordinatesSnapshot.docs.map(doc => doc.id);
 
-                    // Also check for leaveApproverId
+                    // 2. Fetch by leaveApproverId
                     const leaveApproverQuery = query(
                         collection(firestore, 'employees'),
-                        where('leaveApproverId', '==', employeeId)
+                        where('leaveApproverId', 'in', supervisorIdCandidates)
                     );
                     const leaveApproverSnapshot = await getDocs(leaveApproverQuery);
                     leaveApproverSnapshot.docs.forEach(doc => {
@@ -150,17 +151,29 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         }
                     });
 
-                    // Also check the new supervisors array structure
+                    // 3. Fetch by directSupervisorId (Some older schemas might use this)
+                    const directSupQuery = query(
+                        collection(firestore, 'employees'),
+                        where('directSupervisorId', 'in', supervisorIdCandidates)
+                    );
+                    const directSupSnapshot = await getDocs(directSupQuery);
+                    directSupSnapshot.docs.forEach(doc => {
+                        if (!subordinateIds.includes(doc.id)) {
+                            subordinateIds.push(doc.id);
+                        }
+                    });
+
+                    // 4. Check the supervisors array structure
                     const allEmployeesQuery = query(collection(firestore, 'employees'));
                     const allEmployeesSnapshot = await getDocs(allEmployeesQuery);
 
                     allEmployeesSnapshot.docs.forEach(doc => {
                         const employee = doc.data() as EmployeeDocument;
                         if (employee.supervisors) {
-                            const hasAsPrivileged = employee.supervisors.some(
-                                sup => sup.supervisorId === employeeId && (sup.isLeaveApprover || sup.isSupervisor || sup.isDirectSupervisor)
+                            const isSupervisedByMe = employee.supervisors.some(
+                                sup => supervisorIdCandidates.includes(sup.supervisorId) && (sup.isLeaveApprover || sup.isSupervisor || sup.isDirectSupervisor)
                             );
-                            if (hasAsPrivileged && !subordinateIds.includes(doc.id)) {
+                            if (isSupervisedByMe && !subordinateIds.includes(doc.id)) {
                                 subordinateIds.push(doc.id);
                             }
                         }
