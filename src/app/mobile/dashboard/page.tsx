@@ -568,7 +568,7 @@ export default function MobileDashboardPage() {
                 ref={containerRef}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative transition-transform duration-200 ease-out shadow-[0_-8px_30px_rgba(0,0,0,0.2)]"
+                className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative z-10 transition-transform duration-200 ease-out shadow-[0_-8px_30px_rgba(0,0,0,0.2)]"
                 style={{
                     transform: `translateY(${isRefreshing ? 60 : pullDistance > 0 ? pullDistance * 0.4 : 0}px) translateZ(0)`,
                     backgroundColor: '#f8fafc',

@@ -503,7 +503,7 @@ export default function RemoteAttendanceApprovalPage() {
                 </div>
             </div>
 
-            <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col pt-6">
+            <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col pt-6 relative z-10">
 
                 <div className="flex-1 px-6 pb-[120px] space-y-4">
                     {(loading && records.length === 0) ? (
