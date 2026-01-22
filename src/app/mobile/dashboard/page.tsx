@@ -28,8 +28,8 @@ const allSummaryItems = [
     { id: 'missed', label: 'Missed', subLabel: 'Attendance', value: '0', icon: CalendarX, bgColor: 'bg-slate-100', textColor: 'text-slate-500' },
     { id: 'visit', label: 'Visit', subLabel: 'Taken', value: '0.0', icon: ArrowRight, bgColor: 'bg-orange-50', textColor: 'text-orange-500' },
     { id: 'notices', label: 'New', subLabel: 'Notices', value: '2', icon: Bell, bgColor: 'bg-blue-50', textColor: 'text-blue-500' },
-    { id: 'checkin', label: "Today's", subLabel: 'Check In', value: '--:--', icon: LogIn, bgColor: 'bg-indigo-50', textColor: 'text-indigo-500' },
-    { id: 'checkout', label: "Today's", subLabel: 'Check Out', value: '--:--', icon: LogOut, bgColor: 'bg-purple-50', textColor: 'text-purple-500' },
+    { id: 'checkin', label: "Today's", subLabel: 'Clock In', value: '--:--', icon: LogIn, bgColor: 'bg-indigo-50', textColor: 'text-indigo-500' },
+    { id: 'checkout', label: "Today's", subLabel: 'Clock Out', value: '--:--', icon: LogOut, bgColor: 'bg-purple-50', textColor: 'text-purple-500' },
     { id: 'claim', label: 'Monthly', subLabel: 'Claim Amount', value: '0', icon: Wallet, bgColor: 'bg-emerald-50', textColor: 'text-emerald-500' },
     { id: 'disbursed', label: 'Monthly', subLabel: 'Disbursed', value: '0', icon: Wallet, bgColor: 'bg-teal-50', textColor: 'text-teal-500' },
 ];
@@ -771,10 +771,21 @@ export default function MobileDashboardPage() {
                                         whileTap={{ scale: 0.95 }}
                                         className={`flex-shrink-0 w-[140px] ${item.bgColor} p-4 rounded-[2rem] flex flex-col h-40 relative overflow-hidden shadow-sm border border-white/50 group/item hover:shadow-md transition-all`}
                                     >
-                                        <div className={`bg-white rounded-2xl p-2.5 w-12 h-12 flex items-center justify-center shadow-lg mb-[15px] ${item.textColor} group-hover/item:scale-110 transition-transform duration-300`}>
-                                            <Icon className="h-6 w-6" />
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className={`bg-white rounded-2xl p-2.5 w-12 h-12 flex items-center justify-center shadow-lg ${item.textColor} group-hover/item:scale-110 transition-transform duration-300`}>
+                                                <Icon className="h-6 w-6" />
+                                            </div>
+                                            {(item.id !== 'checkin' && item.id !== 'checkout') && (
+                                                <div className="text-xl font-semibold text-[#0a1e60] tracking-tighter pr-1">{String(item.value)}</div>
+                                            )}
                                         </div>
-                                        <div className="absolute top-6 right-5 text-xl font-semibold text-[#0a1e60] tracking-tighter">{String(item.value)}</div>
+
+                                        {(item.id === 'checkin' || item.id === 'checkout') ? (
+                                            <div className="mt-1">
+                                                <div className="text-lg font-bold text-[#0a1e60] tracking-tight">{String(item.value)}</div>
+                                            </div>
+                                        ) : null}
+
                                         <div className="mt-auto">
                                             <div className="text-[11px] font-semibold text-slate-800 uppercase tracking-tight">{item.label}</div>
                                             <div className="text-[10px] text-slate-400 font-medium uppercase tracking-widest leading-none">{item.subLabel}</div>
