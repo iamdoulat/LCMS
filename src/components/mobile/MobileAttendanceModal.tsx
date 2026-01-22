@@ -349,27 +349,35 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 });
 
                 // Trigger Notification
-                fetch('/api/notify/attendance', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'in_time',
-                        employeeId: user.uid,
-                        employeeName: employeeData.fullName || user.displayName || 'Unknown',
-                        employeeCode: employeeData.employeeCode,
-                        employeeEmail: employeeData.email,
-                        employeePhone: employeeData.phone,
-                        time: currentTime,
-                        date: format(today, 'PPP'),
-                        flag: flag,
-                        location: {
-                            latitude: location.latitude,
-                            longitude: location.longitude,
-                            address: address || ''
+                try {
+                    const idToken = await user.getIdToken();
+                    fetch('/api/notify/attendance', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${idToken}`
                         },
-                        remarks: remarks
-                    })
-                }).catch(err => console.error('[ATTENDANCE NOTIFY] Notification error:', err));
+                        body: JSON.stringify({
+                            type: 'in_time',
+                            employeeId: user.uid,
+                            employeeName: employeeData.fullName || user.displayName || 'Unknown',
+                            employeeCode: employeeData.employeeCode,
+                            employeeEmail: employeeData.email,
+                            employeePhone: employeeData.phone,
+                            time: currentTime,
+                            date: format(today, 'PPP'),
+                            flag: flag,
+                            location: {
+                                latitude: location.latitude,
+                                longitude: location.longitude,
+                                address: address || ''
+                            },
+                            remarks: remarks
+                        })
+                    }).catch(err => console.error('[ATTENDANCE NOTIFY] Notification error:', err));
+                } catch (authErr) {
+                    console.error('[ATTENDANCE NOTIFY] Failed to get ID token:', authErr);
+                }
 
             } else {
                 // Check-out logic
@@ -418,26 +426,34 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 });
 
                 // Trigger Notification
-                fetch('/api/notify/attendance', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'out_time',
-                        employeeId: user.uid,
-                        employeeName: employeeData.fullName || user.displayName || 'Unknown',
-                        employeeCode: employeeData.employeeCode,
-                        employeeEmail: employeeData.email,
-                        employeePhone: employeeData.phone,
-                        time: currentTime,
-                        date: format(today, 'PPP'),
-                        location: {
-                            latitude: location.latitude,
-                            longitude: location.longitude,
-                            address: address || ''
+                try {
+                    const idToken = await user.getIdToken();
+                    fetch('/api/notify/attendance', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${idToken}`
                         },
-                        remarks: remarks
-                    })
-                }).catch(err => console.error('[ATTENDANCE NOTIFY] Notification error:', err));
+                        body: JSON.stringify({
+                            type: 'out_time',
+                            employeeId: user.uid,
+                            employeeName: employeeData.fullName || user.displayName || 'Unknown',
+                            employeeCode: employeeData.employeeCode,
+                            employeeEmail: employeeData.email,
+                            employeePhone: employeeData.phone,
+                            time: currentTime,
+                            date: format(today, 'PPP'),
+                            location: {
+                                latitude: location.latitude,
+                                longitude: location.longitude,
+                                address: address || ''
+                            },
+                            remarks: remarks
+                        })
+                    }).catch(err => console.error('[ATTENDANCE NOTIFY] Notification error:', err));
+                } catch (authErr) {
+                    console.error('[ATTENDANCE NOTIFY] Failed to get ID token:', authErr);
+                }
             }
 
             // Play success sound

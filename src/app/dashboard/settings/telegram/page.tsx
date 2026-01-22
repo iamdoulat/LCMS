@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +25,7 @@ import { Loader2 } from 'lucide-react';
 import { getCompanyName } from '@/lib/settings/company';
 
 export default function TelegramSettingsPage() {
+    const { user } = useAuth();
     const [configs, setConfigs] = useState<TelegramConfiguration[]>([]);
     const [loading, setLoading] = useState(true);
     const [companyName, setCompanyName] = useState('Nextsew');
@@ -197,11 +199,19 @@ export default function TelegramSettingsPage() {
     };
 
     const handleSendSystemTest = async (type: 'in_time' | 'check_in') => {
+        if (!user) {
+            Swal.fire('Error', 'You must be logged in to send a system test', 'error');
+            return;
+        }
         setSendingTest(true);
         try {
+            const idToken = await user.getIdToken();
             const response = await fetch('/api/notify/attendance', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
+                },
                 body: JSON.stringify({
                     type: type,
                     employeeId: 'TEST_ID',

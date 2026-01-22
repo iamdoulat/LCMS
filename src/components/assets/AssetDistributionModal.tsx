@@ -39,8 +39,7 @@ export function AssetDistributionModal({ isOpen, onClose, distributionToEdit, on
     const { user, firestoreUser } = useAuth(); // Get current user for requisition
     const [assetId, setAssetId] = useState('');
     const [employeeId, setEmployeeId] = useState('');
-    const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-    const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+    const [distributionDate, setDistributionDate] = useState<Date | undefined>(undefined);
     const [status, setStatus] = useState<string>('Pending For Acknowledgement');
 
     const [category, setCategory] = useState(''); // New for requisition
@@ -127,15 +126,18 @@ export function AssetDistributionModal({ isOpen, onClose, distributionToEdit, on
             if (distributionToEdit) {
                 setAssetId(distributionToEdit.assetId);
                 setEmployeeId(distributionToEdit.employeeId);
-                setStartDate(distributionToEdit.startDate ? new Date(distributionToEdit.startDate) : undefined);
-                setEndDate(distributionToEdit.endDate ? new Date(distributionToEdit.endDate) : undefined);
+                if (distributionToEdit.startDate) {
+                    const d = new Date(distributionToEdit.startDate);
+                    setDistributionDate(isNaN(d.getTime()) ? undefined : d);
+                } else {
+                    setDistributionDate(undefined);
+                }
                 setStatus(distributionToEdit.status);
             } else {
                 // Reset form
                 setAssetId('');
                 setEmployeeId('');
-                setStartDate(undefined);
-                setEndDate(undefined);
+                setDistributionDate(undefined);
                 setStatus('Pending For Acknowledgement');
                 setCategory('');
                 setDetails('');
@@ -147,25 +149,30 @@ export function AssetDistributionModal({ isOpen, onClose, distributionToEdit, on
         e.preventDefault();
 
         // Validation
-        if (variant === 'distribution') {
-            if (!assetId) return Swal.fire('Error', 'Asset is required.', 'error');
-            if (!employeeId) return Swal.fire('Error', 'Employee is required.', 'error');
-        } else {
+        if (variant === 'requisition') {
             // Requisition
             if (!category) return Swal.fire('Error', 'Category is required.', 'error');
-            if (!startDate) return Swal.fire('Error', 'Start Date is required.', 'error');
             if (!details) return Swal.fire('Error', 'Requisition Reason is required.', 'error');
+        } else {
+            if (!assetId) return Swal.fire('Error', 'Asset is required.', 'error');
+            if (!employeeId) return Swal.fire('Error', 'Employee is required.', 'error');
         }
 
-        if (!startDate) return Swal.fire('Error', 'Start Date is required.', 'error');
+        if (!distributionDate) return Swal.fire('Error', 'Distribution Date is required.', 'error');
 
         try {
             setIsSubmitting(true);
-            const formattedStartDate = startDate && !isNaN(startDate.getTime()) ? format(startDate, 'yyyy-MM-dd') : null;
-            const formattedEndDate = endDate && !isNaN(endDate.getTime()) ? format(endDate, 'yyyy-MM-dd') : null;
+            let formattedDate = null;
+            try {
+                if (distributionDate && !isNaN(distributionDate.getTime())) {
+                    formattedDate = format(distributionDate, 'yyyy-MM-dd');
+                }
+            } catch (e) {
+                console.error("Date formatting error:", e);
+            }
 
-            if (!formattedStartDate) {
-                throw new Error("Start Date is invalid");
+            if (!formattedDate) {
+                throw new Error("Distribution Date is invalid");
             }
 
             if (variant === 'requisition') {
@@ -208,8 +215,8 @@ export function AssetDistributionModal({ isOpen, onClose, distributionToEdit, on
                     preferredAssetId: preferredAsset?.id || null,
                     preferredAssetName: preferredAsset?.title || null,
                     details: details,
-                    fromDate: formattedStartDate,
-                    toDate: formattedEndDate, // Use the end date from standard form if filled
+                    fromDate: formattedDate,
+                    toDate: null,
                     status: 'Pending',
                     createdAt: serverTimestamp(),
                 });
@@ -233,8 +240,7 @@ export function AssetDistributionModal({ isOpen, onClose, distributionToEdit, on
                     employeeName: selectedEmployee?.fullName || 'Unknown Employee',
                     employeeDesignation: selectedEmployee?.designation || '',
                     employeePhotoUrl: selectedEmployee?.photoURL || '',
-                    startDate: formattedStartDate,
-                    endDate: formattedEndDate,
+                    startDate: formattedDate,
                     status,
                     updatedAt: serverTimestamp(),
                 };
@@ -364,23 +370,13 @@ export function AssetDistributionModal({ isOpen, onClose, distributionToEdit, on
                         </div>
                     )}
 
-                    <div className="space-y-2 flex flex-col pt-1">
-                        <Label className="mb-2">Start Date <span className="text-destructive">*</span></Label>
+                    <div className="space-y-2 flex flex-col pt-1 col-span-2 md:col-span-1">
+                        <Label className="mb-2">Distribution Date <span className="text-destructive">*</span></Label>
                         <Input
                             type="date"
-                            value={startDate ? format(startDate, "yyyy-MM-dd") : ''}
-                            onChange={(e) => setStartDate(e.target.value ? new Date(e.target.value) : undefined)}
+                            value={distributionDate && !isNaN(distributionDate.getTime()) ? format(distributionDate, "yyyy-MM-dd") : ''}
+                            onChange={(e) => setDistributionDate(e.target.value ? new Date(e.target.value) : undefined)}
                             max={format(new Date(), "yyyy-MM-dd")}
-                        />
-                    </div>
-
-                    <div className="space-y-2 flex flex-col pt-1">
-                        <Label className="mb-2">End Date {variant === 'requisition' && '(Optional)'}</Label>
-                        <Input
-                            type="date"
-                            value={endDate ? format(endDate, "yyyy-MM-dd") : ''}
-                            onChange={(e) => setEndDate(e.target.value ? new Date(e.target.value) : undefined)}
-                            min={startDate ? format(startDate, "yyyy-MM-dd") : undefined}
                         />
                     </div>
 

@@ -166,28 +166,36 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
             // Trigger Notification
             const notificationType = checkInOutType === 'Check In' ? 'check_in' : 'check_out';
-            fetch('/api/notify/attendance', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: notificationType,
-                    employeeId: canonicalId,
-                    employeeName: employeeData?.fullName || firestoreUser?.displayName || 'Unknown Employee',
-                    employeeCode: employeeData?.employeeCode || 'N/A',
-                    employeeEmail: employeeData?.email || user.email,
-                    employeePhone: employeeData?.phone || employeeData?.contactNumber,
-                    time: new Date().toLocaleTimeString(),
-                    date: new Date().toLocaleDateString(),
-                    location: {
-                        latitude: currentLocation.latitude,
-                        longitude: currentLocation.longitude,
-                        address: address || ''
+            try {
+                const idToken = await user.getIdToken();
+                fetch('/api/notify/attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
                     },
-                    companyName: companyName,
-                    remarks: remarks,
-                    photoUrl: photoUrl || undefined
-                })
-            }).catch(err => console.error('[ATTENDANCE NOTIFY] Notification error:', err));
+                    body: JSON.stringify({
+                        type: notificationType,
+                        employeeId: canonicalId,
+                        employeeName: employeeData?.fullName || firestoreUser?.displayName || 'Unknown Employee',
+                        employeeCode: employeeData?.employeeCode || 'N/A',
+                        employeeEmail: employeeData?.email || user.email,
+                        employeePhone: employeeData?.phone || employeeData?.contactNumber,
+                        time: new Date().toLocaleTimeString(),
+                        date: new Date().toLocaleDateString(),
+                        location: {
+                            latitude: currentLocation.latitude,
+                            longitude: currentLocation.longitude,
+                            address: address || ''
+                        },
+                        companyName: companyName,
+                        remarks: remarks,
+                        photoUrl: photoUrl || undefined
+                    })
+                }).catch(err => console.error('[ATTENDANCE NOTIFY] Notification error:', err));
+            } catch (authErr) {
+                console.error('[ATTENDANCE NOTIFY] Failed to get ID token:', authErr);
+            }
 
             onSuccess();
             onClose();

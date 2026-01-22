@@ -184,7 +184,6 @@ export default function AssetsPage() {
           employeePhotoUrl: requisition.employeePhotoUrl || '',
           employeeDesignation: requisition.employeeDesignation || '',
           startDate: requisition.fromDate,
-          endDate: requisition.toDate,
           status: 'Pending For Acknowledgement',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -659,8 +658,7 @@ export default function AssetsPage() {
                   <TableHead>Asset Name</TableHead>
                   <TableHead>Employee Code</TableHead>
                   <TableHead>Employee Name</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
+                  <TableHead>Distribution Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -694,8 +692,7 @@ export default function AssetsPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="align-middle">{dist.startDate}</TableCell>
-                      <TableCell className="align-middle">{dist.endDate || 'N/A'}</TableCell>
+                      <TableCell className="align-middle">{safeFormatDate(dist.startDate)}</TableCell>
                       <TableCell className="align-middle">{dist.status}</TableCell>
                       <TableCell className="text-right align-middle">
                         <DropdownMenu>

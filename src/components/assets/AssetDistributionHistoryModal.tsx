@@ -136,8 +136,7 @@ export function AssetDistributionHistoryModal({ isOpen, onClose, assetId, assetN
                                     <TableHead className="font-semibold text-foreground">Designation</TableHead>
                                     <TableHead className="font-semibold text-foreground">Branch</TableHead>
                                     <TableHead className="font-semibold text-foreground">Department</TableHead>
-                                    <TableHead className="font-semibold text-foreground">Start Date</TableHead>
-                                    <TableHead className="font-semibold text-foreground">End Date</TableHead>
+                                    <TableHead className="font-semibold text-foreground">Distribution Date</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -149,7 +148,6 @@ export function AssetDistributionHistoryModal({ isOpen, onClose, assetId, assetN
                                             <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                                             <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                                             <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                             <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                         </TableRow>
                                     ))
@@ -165,12 +163,11 @@ export function AssetDistributionHistoryModal({ isOpen, onClose, assetId, assetN
                                             <TableCell>{dist.employeeDesignation}</TableCell>
                                             <TableCell>{dist.employeeBranch}</TableCell>
                                             <TableCell>{dist.employeeDepartment}</TableCell>
-                                            <TableCell>{dist.startDate ? format(parseISO(dist.startDate), 'dd-MM-yyyy') : '-'}</TableCell>
                                             <TableCell>
                                                 {(() => {
-                                                    if (!dist.endDate) return '-';
+                                                    if (!dist.startDate) return '-';
                                                     try {
-                                                        const d = parseISO(dist.endDate);
+                                                        const d = parseISO(dist.startDate);
                                                         if (isNaN(d.getTime())) return '-';
                                                         return format(d, 'dd-MM-yyyy');
                                                     } catch (e) {
