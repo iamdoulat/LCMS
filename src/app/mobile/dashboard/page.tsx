@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { MobileAttendanceModal } from '@/components/mobile/MobileAttendanceModal';
 // MobileBreakTimeModal is now global via Context
@@ -108,6 +108,7 @@ export default function MobileDashboardPage() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
     const containerRef = React.useRef<HTMLDivElement>(null);
+    const [refreshKey, setRefreshKey] = useState(0);
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
     // isBreakModalOpen state removed
     const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
@@ -151,10 +152,10 @@ export default function MobileDashboardPage() {
         disbursedAmount: 0
     });
 
-    // Real-time Data Subscriptions using the new architecture
-    const attendanceQuery = useMemo(() => dataScoper.getAttendanceQuery(permissions, scoperContext), [permissions, scoperContext]);
-    const leaveQuery = useMemo(() => dataScoper.getLeaveQuery(permissions, scoperContext), [permissions, scoperContext]);
-    const visitQuery = useMemo(() => dataScoper.getVisitQuery(permissions, scoperContext), [permissions, scoperContext]);
+    // Real-time Data Subscriptions using the new architecture - refreshKey triggers re-fetch
+    const attendanceQuery = useMemo(() => dataScoper.getAttendanceQuery(permissions, scoperContext), [permissions, scoperContext, refreshKey]);
+    const leaveQuery = useMemo(() => dataScoper.getLeaveQuery(permissions, scoperContext), [permissions, scoperContext, refreshKey]);
+    const visitQuery = useMemo(() => dataScoper.getVisitQuery(permissions, scoperContext), [permissions, scoperContext, refreshKey]);
 
     const { data: attendanceData, loading: attendanceLoading } = useRealtimeData<any[]>(attendanceQuery);
     const { data: leaveData, loading: leaveLoading } = useRealtimeData<any[]>(leaveQuery);
@@ -171,7 +172,7 @@ export default function MobileDashboardPage() {
     const { data: todayAttendanceData, loading: todayLoading } = useRealtimeDoc<any>(todayDocRef);
 
     // Role-based notice listener
-    const noticeQuery = useMemo(() => query(collection(firestore, 'site_settings'), where('isEnabled', '==', true)), []);
+    const noticeQuery = useMemo(() => query(collection(firestore, 'site_settings'), where('isEnabled', '==', true)), [refreshKey]);
     const { data: rawNoticeData, loading: noticesLoading } = useRealtimeData<any[]>(noticeQuery);
 
     // Claim stats current month
@@ -184,7 +185,7 @@ export default function MobileDashboardPage() {
             where('employeeId', 'in', Array.from(new Set(ids))),
             where('claimDate', '>=', startOfMonth(new Date()).toISOString())
         );
-    }, [user?.uid, currentEmployeeId]);
+    }, [user?.uid, currentEmployeeId, refreshKey]);
     const { data: claimData, loading: claimLoading } = useRealtimeData<any[]>(claimQuery);
 
     useEffect(() => {
@@ -424,82 +425,82 @@ export default function MobileDashboardPage() {
     }, [isOnBreak, activeBreakRecord?.startTime]);
 
     // Check for restrictions (Weekend, Holiday, Leave, Visit)
-    useEffect(() => {
-        const checkRestrictions = async () => {
-            const today = startOfDay(new Date());
+    const checkRestrictions = useCallback(async () => {
+        const today = startOfDay(new Date());
 
-            // 1. Check Weekend (Friday)
-            if (isFriday(today)) {
-                setRestrictionNote("Today is the weekend.");
+        // 1. Check Weekend (Friday)
+        if (isFriday(today)) {
+            setRestrictionNote("Today is the weekend.");
+            return;
+        }
+
+        // 2. Check Holidays
+        try {
+            const holidaySnap = await getDocs(collection(firestore, 'holidays'));
+            const todayHoliday = holidaySnap.docs.find(doc => {
+                const data = doc.data();
+                if (!data.fromDate) return false;
+                const start = startOfDay(parseISO(data.fromDate));
+                const end = data.toDate ? startOfDay(parseISO(data.toDate)) : start;
+                return isWithinInterval(today, { start, end });
+            });
+            if (todayHoliday) {
+                setRestrictionNote("Today is a holiday.");
+                return;
+            }
+        } catch (e) {
+            console.error("Error checking holidays:", e);
+        }
+
+        // 3. Check Leaves (Approved)
+        try {
+            if (!user) return;
+            const empQuery = query(collection(firestore, 'employees'), where('email', '==', user.email));
+            const empSnap = await getDocs(empQuery);
+            const ids = [user.uid];
+            if (!empSnap.empty) {
+                ids.push(empSnap.docs[0].id);
+            }
+
+            const leaveSnap = await getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved')));
+            const todayLeave = leaveSnap.docs.find(doc => {
+                const data = doc.data();
+                if (!data.fromDate || !data.toDate) return false;
+                const start = startOfDay(parseISO(data.fromDate));
+                const end = startOfDay(parseISO(data.toDate));
+                return isWithinInterval(today, { start, end });
+            });
+            if (todayLeave) {
+                setRestrictionNote("You are on leave.");
                 return;
             }
 
-            // 2. Check Holidays
-            try {
-                const holidaySnap = await getDocs(collection(firestore, 'holidays'));
-                const todayHoliday = holidaySnap.docs.find(doc => {
-                    const data = doc.data();
-                    if (!data.fromDate) return false;
-                    const start = startOfDay(parseISO(data.fromDate));
-                    const end = data.toDate ? startOfDay(parseISO(data.toDate)) : start;
-                    return isWithinInterval(today, { start, end });
-                });
-                if (todayHoliday) {
-                    setRestrictionNote("Today is a holiday.");
-                    return;
-                }
-            } catch (e) {
-                console.error("Error checking holidays:", e);
+            // 4. Check Visits (Approved)
+            const visitSnap = await getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved')));
+            const todayVisit = visitSnap.docs.find(doc => {
+                const data = doc.data();
+                if (!data.fromDate || !data.toDate) return false;
+                const start = startOfDay(parseISO(data.fromDate));
+                const end = startOfDay(parseISO(data.toDate));
+                return isWithinInterval(today, { start, end });
+            });
+            if (todayVisit) {
+                setRestrictionNote("You are on a visit.");
+                return;
             }
+        } catch (e) {
+            console.error("Error checking leaves/visits:", e);
+        }
 
-            // 3. Check Leaves (Approved)
-            try {
-                if (!user) return;
-                const empQuery = query(collection(firestore, 'employees'), where('email', '==', user.email));
-                const empSnap = await getDocs(empQuery);
-                const ids = [user.uid];
-                if (!empSnap.empty) {
-                    ids.push(empSnap.docs[0].id);
-                }
+        setRestrictionNote(null);
+    }, [user]);
 
-                const leaveSnap = await getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved')));
-                const todayLeave = leaveSnap.docs.find(doc => {
-                    const data = doc.data();
-                    if (!data.fromDate || !data.toDate) return false;
-                    const start = startOfDay(parseISO(data.fromDate));
-                    const end = startOfDay(parseISO(data.toDate));
-                    return isWithinInterval(today, { start, end });
-                });
-                if (todayLeave) {
-                    setRestrictionNote("You are on leave.");
-                    return;
-                }
-
-                // 4. Check Visits (Approved)
-                const visitSnap = await getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved')));
-                const todayVisit = visitSnap.docs.find(doc => {
-                    const data = doc.data();
-                    if (!data.fromDate || !data.toDate) return false;
-                    const start = startOfDay(parseISO(data.fromDate));
-                    const end = startOfDay(parseISO(data.toDate));
-                    return isWithinInterval(today, { start, end });
-                });
-                if (todayVisit) {
-                    setRestrictionNote("You are on a visit.");
-                    return;
-                }
-            } catch (e) {
-                console.error("Error checking leaves/visits:", e);
-            }
-
-            setRestrictionNote(null);
-        };
-
+    useEffect(() => {
         checkRestrictions();
         // Re-check every hour to handle day transitions
         const interval = setInterval(checkRestrictions, 60 * 60 * 1000);
         return () => clearInterval(interval);
-    }, [user]);
+    }, [checkRestrictions]);
 
     const refreshAttendanceData = async () => {
         const canonicalId = currentEmployeeId || user?.uid;
@@ -541,8 +542,15 @@ export default function MobileDashboardPage() {
             // Silently fail audio
         }
 
-        // Simulate data refresh
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Force re-fetch of all data
+        setRefreshKey(prev => prev + 1);
+        await Promise.all([
+            refreshAttendanceData(),
+            checkRestrictions()
+        ]);
+
+        // Simulate a small delay for better UX feel
+        await new Promise(resolve => setTimeout(resolve, 800));
         setIsRefreshing(false);
         setPullDistance(0);
     };
