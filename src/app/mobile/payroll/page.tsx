@@ -668,7 +668,7 @@ export default function MobilePayrollPage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center justify-between px-4 pt-1 pb-6">
+                <div className="flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-6">
                     <div className="flex items-center">
                         <button
                             onClick={() => router.back()}

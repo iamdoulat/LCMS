@@ -52,7 +52,7 @@ export default function ServicePage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center px-4 pt-1 pb-6">
+                <div className="flex items-center px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-6">
                     <button
                         onClick={() => router.back()}
                         className="p-2 -ml-2 rounded-full bg-white/10 active:bg-white/20 transition-all text-white shadow-[0_4px_12px_rgba(37,99,235,0.2)]"
