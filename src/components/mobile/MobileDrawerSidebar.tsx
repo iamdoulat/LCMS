@@ -55,7 +55,7 @@ export function MobileDrawerSidebar() {
     ];
 
     return (
-        <div className="fixed inset-y-0 left-0 w-[80%] bg-gradient-to-b from-[#5c42ff] to-[#4c35de] text-white z-0 flex flex-col pt-12 pb-6 px-6 overflow-y-auto shadow-2xl">
+        <div className="fixed inset-y-0 left-0 w-[60%] bg-gradient-to-b from-[#5c42ff] to-[#4c35de] text-white z-0 flex flex-col pt-12 pb-6 px-6 overflow-y-auto shadow-2xl">
             {/* Profile Section */}
             <div className="mb-8 flex flex-col">
                 <div className="h-16 w-16 rounded-xl overflow-hidden border-2 border-white mb-3">
@@ -93,8 +93,8 @@ export function MobileDrawerSidebar() {
             </nav>
 
             {/* Mobile/Web Mode Switch */}
-            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-1.5 flex items-center justify-between mt-8 mb-6 w-full max-w-[180px]">
-                <span className={cn("text-xs px-3 font-bold transition-colors", pathname.includes('/mobile') ? "text-white" : "text-white/40")}>12h</span>
+            <div className="bg-white/10 rounded-lg p-1 flex items-center justify-between mt-6 mb-4 w-[160px]">
+                <span className={cn("text-xs px-2 font-medium cursor-pointer transition-colors", pathname.includes('/mobile') ? "text-white" : "text-white/50")}>Mobile</span>
                 <Switch
                     checked={!pathname.includes('/mobile')}
                     onCheckedChange={(checked) => {
@@ -106,23 +106,61 @@ export function MobileDrawerSidebar() {
                             router.push('/mobile/dashboard');
                         }
                     }}
-                    className="data-[state=checked]:bg-white/20 data-[state=unchecked]:bg-white/20 h-7 w-12"
+                    className="data-[state=checked]:bg-white data-[state=unchecked]:bg-slate-400 h-5 w-9"
                 />
-                <span className={cn("text-xs px-3 font-bold transition-colors", !pathname.includes('/mobile') ? "text-white" : "text-white/40")}>24h</span>
+                <span className={cn("text-xs px-2 font-medium cursor-pointer transition-colors", !pathname.includes('/mobile') ? "text-white" : "text-white/50")}>Web</span>
             </div>
+
+            {/* Clear Cache Button */}
+            <Button
+                onClick={async () => {
+                    try {
+                        // Clear all caches
+                        if ('caches' in window) {
+                            const cacheNames = await caches.keys();
+                            await Promise.all(
+                                cacheNames.map(cacheName => caches.delete(cacheName))
+                            );
+                        }
+
+                        // Clear localStorage
+                        localStorage.clear();
+
+                        // Clear sessionStorage
+                        sessionStorage.clear();
+
+                        // Unregister service workers
+                        if ('serviceWorker' in navigator) {
+                            const registrations = await navigator.serviceWorker.getRegistrations();
+                            await Promise.all(
+                                registrations.map(registration => registration.unregister())
+                            );
+                        }
+
+                        // Show success message and reload
+                        alert('Cache cleared successfully! The app will reload.');
+                        window.location.reload();
+                    } catch (error) {
+                        console.error('Error clearing cache:', error);
+                        alert('Failed to clear cache. Please try again.');
+                    }
+                }}
+                className="bg-white/10 text-white hover:bg-white/20 w-full rounded-xl flex items-center justify-start gap-3 h-12 px-4 mb-3"
+            >
+                <Trash2 className="h-5 w-5" />
+                <span className="font-bold">Clear Cache</span>
+            </Button>
 
             {/* Logout Button */}
             <Button
                 onClick={() => logout()}
-                className="bg-white text-[#4c35de] hover:bg-white/90 w-full rounded-xl flex items-center justify-start gap-4 h-14 px-6 shadow-xl group transition-all active:scale-95"
+                className="bg-white text-[#4c35de] hover:bg-white/90 w-full rounded-xl flex items-center justify-start gap-3 h-12 px-4 shadow-lg"
             >
-                <div className="bg-[#4c35de]/10 p-2 rounded-lg group-hover:bg-[#4c35de]/20 transition-colors">
-                    <LogOut className="h-5 w-5 text-[#4c35de]" />
-                </div>
-                <span className="font-bold text-lg">Log out</span>
+                <LogOut className="h-5 w-5 rotate-180" />
+                <span className="font-bold">Log out</span>
             </Button>
 
-            <p className="text-white/40 text-[10px] mt-6 text-center font-medium tracking-wider">Version 22.0.20</p>
+            <p className="text-white/40 text-[10px] mt-4 text-center">Version v1.1</p>
         </div>
     );
 }

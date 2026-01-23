@@ -108,7 +108,7 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
                 className={cn(
                     "relative z-10 transition-transform duration-300 ease-out flex flex-col h-full w-full",
                     isDarkHeaderPage ? "bg-[#0a1e60]" : "bg-slate-50",
-                    isOpen ? "translate-x-[80%] scale-[0.85] rounded-l-[3rem] overflow-hidden shadow-2xl" : "translate-x-0 scale-100 rounded-none shadow-none"
+                    isOpen ? "translate-x-[60%] scale-[0.85] rounded-l-[20px] overflow-hidden shadow-2xl" : "translate-x-0 scale-100 rounded-none shadow-none"
                 )}
                 style={{
                     backfaceVisibility: 'hidden',
