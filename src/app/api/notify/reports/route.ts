@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import { format } from 'date-fns';
 import { sendMonthlyReports } from '@/lib/services/report-service';
 

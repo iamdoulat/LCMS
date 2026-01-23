@@ -48,6 +48,10 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
 
     // Pages that need the dark blue background to match the header (filling status bar area)
     const isDarkHeaderPage = [
+        '/mobile/dashboard',
+        '/mobile/notifications',
+        '/mobile/directory',
+        '/mobile/notice-board',
         '/mobile/attendance/my-attendance',
         '/mobile/attendance/team-attendance',
         '/mobile/attendance/reconciliation/my-applications',
@@ -85,7 +89,7 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
 
     return (
         <div
-            className="fixed inset-0 bg-[#4c35de] overflow-hidden select-none overscroll-none touch-none"
+            className="fixed inset-0 bg-[#0a1e60] overflow-hidden select-none overscroll-none touch-none"
             style={{
                 WebkitTouchCallout: 'none',
                 WebkitUserSelect: 'none',
