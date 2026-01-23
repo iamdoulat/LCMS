@@ -11,7 +11,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import {
     Home, Coffee, Bell, Contact, QrCode, User,
-    MessageSquare, Lock, LogOut, Trash2
+    LogOut, Trash2, UserCheck, Lock
 } from 'lucide-react';
 import { Switch } from "@/components/ui/switch"
 import { Button } from '@/components/ui/button';
@@ -50,12 +50,12 @@ export function MobileDrawerSidebar() {
         { href: '/mobile/directory', label: 'Directory', icon: Contact },
         { href: '/mobile/qrcode', label: 'My QR Code', icon: QrCode },
         { href: '/mobile/profile', label: 'My Profile', icon: User },
-        { href: '/mobile/notice-board', label: 'My Notice Board', icon: Bell }, // Duplicate icon, maybe MessageSquare or distinct Bell
+        { href: '/mobile/notice-board', label: 'My Notice Board', icon: Bell },
         { href: '/mobile/change-password', label: 'Change Password', icon: Lock },
     ];
 
     return (
-        <div className="fixed inset-y-0 left-0 w-[49%] bg-[#4c35de] text-white z-0 flex flex-col pt-12 pb-6 px-6 overflow-y-auto">
+        <div className="fixed inset-y-0 left-0 w-[80%] bg-gradient-to-b from-[#5c42ff] to-[#4c35de] text-white z-0 flex flex-col pt-12 pb-6 px-6 overflow-y-auto shadow-2xl">
             {/* Profile Section */}
             <div className="mb-8 flex flex-col">
                 <div className="h-16 w-16 rounded-xl overflow-hidden border-2 border-white mb-3">
@@ -73,27 +73,28 @@ export function MobileDrawerSidebar() {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 space-y-4">
+            <nav className="flex-1 space-y-6 pt-4">
                 {menuItems.map((item) => {
                     const Icon = item.icon;
-                    // For reference image, items are just white text/icons.
                     return (
                         <Link
                             key={item.href}
                             href={item.href}
                             onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-4 text-white hover:text-white/80 transition-colors"
+                            className="flex items-center gap-4 text-white hover:text-white/80 transition-all active:scale-95"
                         >
-                            <Icon className="h-5 w-5" />
-                            <span className="font-medium text-sm">{item.label}</span>
+                            <div className="w-8 flex justify-center">
+                                <Icon className="h-6 w-6 opacity-90" />
+                            </div>
+                            <span className="font-semibold text-base tracking-tight">{item.label}</span>
                         </Link>
                     )
                 })}
             </nav>
 
             {/* Mobile/Web Mode Switch */}
-            <div className="bg-white/10 rounded-lg p-1 flex items-center justify-between mt-6 mb-4 w-[160px]">
-                <span className={cn("text-xs px-2 font-medium cursor-pointer transition-colors", pathname.includes('/mobile') ? "text-white" : "text-white/50")}>Mobile</span>
+            <div className="bg-white/15 backdrop-blur-md rounded-2xl p-1.5 flex items-center justify-between mt-8 mb-6 w-full max-w-[180px]">
+                <span className={cn("text-xs px-3 font-bold transition-colors", pathname.includes('/mobile') ? "text-white" : "text-white/40")}>12h</span>
                 <Switch
                     checked={!pathname.includes('/mobile')}
                     onCheckedChange={(checked) => {
@@ -105,61 +106,23 @@ export function MobileDrawerSidebar() {
                             router.push('/mobile/dashboard');
                         }
                     }}
-                    className="data-[state=checked]:bg-white data-[state=unchecked]:bg-slate-400 h-5 w-9"
+                    className="data-[state=checked]:bg-white/20 data-[state=unchecked]:bg-white/20 h-7 w-12"
                 />
-                <span className={cn("text-xs px-2 font-medium cursor-pointer transition-colors", !pathname.includes('/mobile') ? "text-white" : "text-white/50")}>Web</span>
+                <span className={cn("text-xs px-3 font-bold transition-colors", !pathname.includes('/mobile') ? "text-white" : "text-white/40")}>24h</span>
             </div>
-
-            {/* Clear Cache Button */}
-            <Button
-                onClick={async () => {
-                    try {
-                        // Clear all caches
-                        if ('caches' in window) {
-                            const cacheNames = await caches.keys();
-                            await Promise.all(
-                                cacheNames.map(cacheName => caches.delete(cacheName))
-                            );
-                        }
-
-                        // Clear localStorage
-                        localStorage.clear();
-
-                        // Clear sessionStorage
-                        sessionStorage.clear();
-
-                        // Unregister service workers
-                        if ('serviceWorker' in navigator) {
-                            const registrations = await navigator.serviceWorker.getRegistrations();
-                            await Promise.all(
-                                registrations.map(registration => registration.unregister())
-                            );
-                        }
-
-                        // Show success message and reload
-                        alert('Cache cleared successfully! The app will reload.');
-                        window.location.reload();
-                    } catch (error) {
-                        console.error('Error clearing cache:', error);
-                        alert('Failed to clear cache. Please try again.');
-                    }
-                }}
-                className="bg-white/10 text-white hover:bg-white/20 w-full rounded-xl flex items-center justify-start gap-3 h-12 px-4 mb-3"
-            >
-                <Trash2 className="h-5 w-5" />
-                <span className="font-bold">Clear Cache</span>
-            </Button>
 
             {/* Logout Button */}
             <Button
                 onClick={() => logout()}
-                className="bg-white text-[#4c35de] hover:bg-white/90 w-full rounded-xl flex items-center justify-start gap-3 h-12 px-4 shadow-lg"
+                className="bg-white text-[#4c35de] hover:bg-white/90 w-full rounded-xl flex items-center justify-start gap-4 h-14 px-6 shadow-xl group transition-all active:scale-95"
             >
-                <LogOut className="h-5 w-5 rotate-180" /> {/* Icon rotated to look like 'exit' left */}
-                <span className="font-bold">Log out</span>
+                <div className="bg-[#4c35de]/10 p-2 rounded-lg group-hover:bg-[#4c35de]/20 transition-colors">
+                    <LogOut className="h-5 w-5 text-[#4c35de]" />
+                </div>
+                <span className="font-bold text-lg">Log out</span>
             </Button>
 
-            <p className="text-white/40 text-[10px] mt-4 text-center">Version v1.1</p>
+            <p className="text-white/40 text-[10px] mt-6 text-center font-medium tracking-wider">Version 22.0.20</p>
         </div>
     );
 }
