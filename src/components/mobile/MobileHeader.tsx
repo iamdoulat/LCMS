@@ -141,7 +141,10 @@ export function MobileHeader() {
     }, [user, userRole]);
 
     return (
-        <header className="sticky top-0 z-50 bg-[#0a1e60] text-white px-4 pt-[env(safe-area-inset-top)] pb-6">
+        <header className="sticky top-0 z-50 bg-[#0a1e60] text-white px-4 pt-[env(safe-area-inset-top)] pb-6 relative">
+            {/* Status bar filler for Android/Hairlines - ensures no white gap during scroll/pull */}
+            <div className="absolute top-[-100px] left-0 right-0 h-[100px] bg-[#0a1e60] -z-10 pointer-events-none" />
+
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                     <Button

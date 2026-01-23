@@ -558,7 +558,7 @@ export default function MobileDashboardPage() {
     // but skeletons are good if data is still fetching.
 
     return (
-        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
+        <div className="flex flex-col h-screen bg-[#0a1e60]">
             {/* Sticky Header - stays fixed during pull */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
                 <MobileHeader />
