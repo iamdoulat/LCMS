@@ -558,17 +558,15 @@ export default function MobileDashboardPage() {
     // but skeletons are good if data is still fetching.
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header - stays fixed during pull */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
                 <MobileHeader />
             </div>
 
-            <motion.div
+            <div
                 ref={containerRef}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain relative z-10 transition-transform duration-200 ease-out shadow-[0_-8px_30px_rgba(0,0,0,0.2)]"
+                className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain relative z-10 transition-transform duration-200 ease-out"
                 style={{
                     transform: `translateY(${isRefreshing ? 60 : pullDistance > 0 ? pullDistance * 0.4 : 0}px) translateZ(0)`,
                     backgroundColor: '#f8fafc',
@@ -958,7 +956,7 @@ export default function MobileDashboardPage() {
                         </div>
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
             {/* Attendance Modal */}
             <MobileAttendanceModal

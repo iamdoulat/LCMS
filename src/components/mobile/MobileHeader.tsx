@@ -141,7 +141,7 @@ export function MobileHeader() {
     }, [user, userRole]);
 
     return (
-        <header className="sticky top-0 z-50 bg-[#0a1e60] text-white px-4 py-6">
+        <header className="sticky top-0 z-50 bg-[#0a1e60] text-white px-4 pt-[env(safe-area-inset-top)] pb-6">
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
                     <Button
