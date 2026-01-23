@@ -281,7 +281,7 @@ export default function MobileLoginPage() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0a1e60]">
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0a1e60] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
             <div className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-xl">
                 <div className="flex flex-col items-center mb-6">
                     <div className="h-20 w-20 rounded-2xl bg-blue-50 flex items-center justify-center mb-4 shadow-sm">

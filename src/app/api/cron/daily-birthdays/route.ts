@@ -1,24 +1,26 @@
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
-import { format } from 'date-fns';
 
 export async function GET(request: Request) {
     try {
-        // Authenticate Cron Job (Optional header check)
-        // const authHeader = request.headers.get('authorization');
-        // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) { ... }
+        // 1. Authenticate Cron Job
+        const authHeader = request.headers.get('authorization');
+        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
 
         const db = admin.firestore();
         const today = new Date();
         const currentMonth = today.getMonth() + 1; // 1-12
         const currentDay = today.getDate(); // 1-31
 
-        // 1. Auto-Seed Template if missing
+        // 2. Auto-Seed Templates if missing
         const templateSlug = 'employee_birthday_wish';
+
+        // Email Template
         const templateRef = db.collection('email_templates').where('slug', '==', templateSlug).limit(1);
         const templateSnap = await templateRef.get();
-
         if (templateSnap.empty) {
             await db.collection('email_templates').add({
                 name: 'Employee Birthday Wish',
@@ -49,10 +51,9 @@ export async function GET(request: Request) {
             });
         }
 
-        // 1.1 Auto-Seed WhatsApp Template if missing
+        // WhatsApp Template
         const waTemplateRef = db.collection('whatsapp_templates').where('slug', '==', templateSlug).limit(1);
         const waTemplateSnap = await waTemplateRef.get();
-
         if (waTemplateSnap.empty) {
             await db.collection('whatsapp_templates').add({
                 name: 'Employee Birthday Wish',
@@ -72,17 +73,16 @@ Best Wishes,
             });
         }
 
-        // 2. Fetch Active Employees
+        // 3. Fetch Active Employees
         const snapshot = await db.collection('employees').where('isActive', '==', true).get();
         const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
         let sentCount = 0;
 
-        // 3. Check for Birthdays
+        // 4. Check for Birthdays
         for (const emp of employees) {
             if (!emp.dateOfBirth) continue;
 
-            // Handle dateOfBirth: could be Timestamp or String (YYYY-MM-DD)
             let dobDate: Date | null = null;
             if (emp.dateOfBirth.toDate) {
                 dobDate = emp.dateOfBirth.toDate();
@@ -95,8 +95,6 @@ Best Wishes,
                 const dobDay = dobDate.getDate();
 
                 if (dobMonth === currentMonth && dobDay === currentDay) {
-                    // It's their birthday!
-
                     // Send Email
                     if (emp.email) {
                         try {
@@ -117,13 +115,12 @@ Best Wishes,
                             const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
                             await sendWhatsApp({
                                 to: emp.phone,
-                                templateSlug: templateSlug, // Assuming WA sender handles this slug mapping or uses default text
+                                templateSlug: templateSlug,
                                 data: {
                                     employee_name: emp.fullName || emp.name || 'Employee'
                                 }
                             });
                         } catch (e) {
-                            // Try importing WA sender dynamically, might fail if not set up, ignore silently for cron robustness
                             console.error(`Failed to send Birthday WA to ${emp.id}`, e);
                         }
                     }

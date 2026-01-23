@@ -16,6 +16,14 @@ import { admin } from '@/lib/firebase/admin';
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const COMPANY_PROFILE_DOC_ID = 'main_settings';
 const DEFAULT_FAVICON_URL = 'https://res.cloudinary.com/iamdoulat/image/upload/v1735712111/favicon_pjr3zn.ico';
+export const viewport: Viewport = {
+  themeColor: '#0a1e60',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   try {
