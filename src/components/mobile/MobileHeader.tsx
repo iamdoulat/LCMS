@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useMobileSidebar } from '@/context/MobileSidebarContext';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, orderBy, limit, getDocs, where, onSnapshot, doc } from 'firebase/firestore';
@@ -14,7 +15,9 @@ import { NoticeBoardSettings } from '@/types';
 
 export function MobileHeader() {
     const { user, userRole, companyLogoUrl } = useAuth();
+    const pathname = usePathname();
     const { toggleSidebar } = useMobileSidebar();
+    const isDashboard = pathname === '/mobile/dashboard';
     const [hasUnread, setHasUnread] = React.useState(false);
     const [profileImage, setProfileImage] = React.useState<string | undefined>(user?.photoURL || undefined);
     const [fullName, setFullName] = React.useState<string>(user?.displayName || 'Employee');
@@ -141,7 +144,12 @@ export function MobileHeader() {
     }, [user, userRole]);
 
     return (
-        <header className="sticky top-0 z-50 bg-[#0a1e60] text-white px-4 pt-[env(safe-area-inset-top)] pb-6 relative">
+        <header
+            className="sticky top-0 z-50 bg-[#0a1e60] text-white px-4 pt-[env(safe-area-inset-top)] pb-6 relative transition-all duration-300"
+            style={{
+                paddingTop: isDashboard ? 'calc(env(safe-area-inset-top) + 20px)' : undefined
+            }}
+        >
             {/* Status bar filler for Android/Hairlines - ensures no white gap during scroll/pull */}
             <div className="absolute top-[-100px] left-0 right-0 h-[100px] bg-[#0a1e60] -z-10 pointer-events-none" />
 
