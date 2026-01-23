@@ -459,6 +459,7 @@ export interface CompanyProfile {
   pwaScreenshotUrl?: string;
   hideCompanyLogo?: boolean;
   hideCompanyName?: boolean;
+  appVersion?: string;
   logoWidth?: number;
   logoHeight?: number;
   piHeaderTitle?: string;

@@ -9,18 +9,20 @@ import type { PropsWithChildren } from 'react';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { auth, firestore } from '@/lib/firebase/config';
-import { doc, getDoc, setDoc, serverTimestamp, query, where, getDocs, collection, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, query, where, getDocs, collection, updateDoc, limit } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import type { UserRole, CompanyProfile, UserDocumentForAdmin } from '@/types';
+import type { UserRole, CompanyProfile, UserDocumentForAdmin, Employee } from '@/types';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const FINANCIAL_SETTINGS_DOC_ID = 'main_settings';
 const COMPANY_NAME_STORAGE_KEY = 'appCompanyName';
 const COMPANY_LOGO_URL_STORAGE_KEY = 'appCompanyLogoUrl';
 const INVOICE_LOGO_URL_STORAGE_KEY = 'appInvoiceLogoUrl';
+const APP_VERSION_STORAGE_KEY = 'appVersion';
 const DEFAULT_COMPANY_NAME = 'LCMS';
 const DEFAULT_COMPANY_LOGO_URL = "/icons/icon-192x192.png";
+const DEFAULT_APP_VERSION = 'v1.1';
 
 // Helper function to parse emails from environment variables
 const getEmailsFromEnv = (envVar?: string): string[] => {
@@ -54,9 +56,12 @@ interface AuthContextType {
   companyLogoUrl: string;
   address: string;
   invoiceLogoUrl: string;
+  appVersion: string;
   hideCompanyLogo: boolean;
   hideCompanyName: boolean;
-  updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address' | 'hideCompanyLogo' | 'hideCompanyName'>>) => void;
+  employeeData: Employee | null;
+  refreshEmployeeData: () => Promise<void>;
+  updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address' | 'hideCompanyLogo' | 'hideCompanyName' | 'appVersion'>>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,8 +78,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const [invoiceLogoUrl, setInvoiceLogoUrl] = useState<string>(DEFAULT_COMPANY_LOGO_URL);
   const [address, setAddress] = useState<string>('');
+  const [appVersion, setAppVersion] = useState<string>(DEFAULT_APP_VERSION);
   const [hideCompanyLogo, setHideCompanyLogo] = useState<boolean>(false);
   const [hideCompanyName, setHideCompanyName] = useState<boolean>(false);
+  const [employeeData, setEmployeeData] = useState<Employee | null>(null);
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -90,6 +97,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const newAddress = profileData.address || '';
         const newHideLogo = !!profileData.hideCompanyLogo;
         const newHideName = !!profileData.hideCompanyName;
+        const newVersion = profileData.appVersion || DEFAULT_APP_VERSION;
 
         setCompanyName(newName);
         setCompanyLogoUrl(newLogoUrl);
@@ -97,11 +105,13 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         setAddress(newAddress);
         setHideCompanyLogo(newHideLogo);
         setHideCompanyName(newHideName);
+        setAppVersion(newVersion);
 
         if (typeof window !== 'undefined') {
           localStorage.setItem(COMPANY_NAME_STORAGE_KEY, newName);
           localStorage.setItem(COMPANY_LOGO_URL_STORAGE_KEY, newLogoUrl);
           localStorage.setItem(INVOICE_LOGO_URL_STORAGE_KEY, newInvoiceLogoUrl);
+          localStorage.setItem(APP_VERSION_STORAGE_KEY, newVersion);
         }
       } else {
         const storedName = typeof window !== 'undefined' ? localStorage.getItem(COMPANY_NAME_STORAGE_KEY) : null;
@@ -115,6 +125,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const storedInvoiceLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(INVOICE_LOGO_URL_STORAGE_KEY) : null;
         setInvoiceLogoUrl(storedInvoiceLogoUrl || DEFAULT_COMPANY_LOGO_URL);
         if (!storedInvoiceLogoUrl && typeof window !== 'undefined') localStorage.setItem(INVOICE_LOGO_URL_STORAGE_KEY, DEFAULT_COMPANY_LOGO_URL);
+
+        const storedAppVersion = typeof window !== 'undefined' ? localStorage.getItem(APP_VERSION_STORAGE_KEY) : null;
+        setAppVersion(storedAppVersion || DEFAULT_APP_VERSION);
+        if (!storedAppVersion && typeof window !== 'undefined') localStorage.setItem(APP_VERSION_STORAGE_KEY, DEFAULT_APP_VERSION);
       }
     } catch (error: any) {
       console.error("AuthContext: Error fetching company profile from Firestore:", error);
@@ -124,6 +138,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       setCompanyLogoUrl(storedLogoUrl || DEFAULT_COMPANY_LOGO_URL);
       const storedInvoiceLogoUrl = typeof window !== 'undefined' ? localStorage.getItem(INVOICE_LOGO_URL_STORAGE_KEY) : null;
       setInvoiceLogoUrl(storedInvoiceLogoUrl || DEFAULT_COMPANY_LOGO_URL);
+
+      const storedAppVersion = typeof window !== 'undefined' ? localStorage.getItem(APP_VERSION_STORAGE_KEY) : null;
+      setAppVersion(storedAppVersion || DEFAULT_APP_VERSION);
     }
   }, []);
 
@@ -175,6 +192,32 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
     setLoading(false);
   }, [router]);
+
+  const refreshEmployeeData = useCallback(async () => {
+    if (!user?.email) return;
+    try {
+      const q = query(
+        collection(firestore, 'employees'),
+        where('email', '==', user.email),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const empData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as Employee;
+        setEmployeeData(empData);
+      }
+    } catch (err) {
+      console.error("AuthContext: Error fetching employee data:", err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      refreshEmployeeData();
+    } else {
+      setEmployeeData(null);
+    }
+  }, [user, refreshEmployeeData]);
 
   useEffect(() => {
     fetchInitialCompanyProfile();
@@ -372,12 +415,13 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [router]);
 
-  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address' | 'hideCompanyLogo' | 'hideCompanyName'>>) => {
+  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address' | 'hideCompanyLogo' | 'hideCompanyName' | 'appVersion'>>) => {
     let newName = companyName;
     let newLogoUrl = companyLogoUrl;
     let newInvoiceLogoUrl = invoiceLogoUrl;
     let newHideLogo = hideCompanyLogo;
     let newHideName = hideCompanyName;
+    let newVersion = appVersion;
 
     if (profile.companyName !== undefined) {
       newName = profile.companyName || DEFAULT_COMPANY_NAME;
@@ -391,16 +435,21 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       newInvoiceLogoUrl = profile.invoiceLogoUrl || newLogoUrl; // Fallback to main logo if cleared
       if (typeof window !== 'undefined') localStorage.setItem(INVOICE_LOGO_URL_STORAGE_KEY, newInvoiceLogoUrl);
     }
+    if (profile.appVersion !== undefined) {
+      newVersion = profile.appVersion || DEFAULT_APP_VERSION;
+      if (typeof window !== 'undefined') localStorage.setItem(APP_VERSION_STORAGE_KEY, newVersion);
+    }
     if (profile.hideCompanyLogo !== undefined) newHideLogo = !!profile.hideCompanyLogo;
     if (profile.hideCompanyName !== undefined) newHideName = !!profile.hideCompanyName;
 
     setCompanyName(newName);
     setCompanyLogoUrl(newLogoUrl);
     setInvoiceLogoUrl(newInvoiceLogoUrl);
+    setAppVersion(newVersion);
     setHideCompanyLogo(newHideLogo);
     setHideCompanyName(newHideName);
     if (profile.address !== undefined) setAddress(profile.address || '');
-  }, [companyName, companyLogoUrl, invoiceLogoUrl, hideCompanyLogo, hideCompanyName]);
+  }, [companyName, companyLogoUrl, invoiceLogoUrl, hideCompanyLogo, hideCompanyName, appVersion]);
 
   return (
     <AuthContext.Provider value={{
@@ -419,8 +468,11 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       companyLogoUrl,
       address,
       invoiceLogoUrl,
+      appVersion,
       hideCompanyLogo,
       hideCompanyName,
+      employeeData,
+      refreshEmployeeData,
       updateCompanyProfile
     }}>
       {children}

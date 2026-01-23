@@ -4,9 +4,11 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/context/AuthContext';
 
 export function AppFooter() {
   const currentYear = new Date().getFullYear();
+  const { appVersion } = useAuth();
 
   return (
     <footer className="mt-auto hidden md:block noprint">
@@ -22,7 +24,7 @@ export function AppFooter() {
           >
             Doulat
           </Link>{" "}
-          v1.1
+          {appVersion}
         </p>
       </div>
     </footer>

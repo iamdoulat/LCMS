@@ -53,6 +53,7 @@ interface FinancialSettingsProfile {
   contactPerson?: string;
   binNumber?: string;
   tinNumber?: string;
+  appVersion?: string;
   updatedAt?: any;
 }
 
@@ -79,6 +80,7 @@ const financialSettingsSchema = z.object({
   contactPerson: z.string().optional(),
   binNumber: z.string().optional(),
   tinNumber: z.string().optional(),
+  appVersion: z.string().optional().or(z.literal('')),
 });
 
 type FinancialSettingsFormValues = z.infer<typeof financialSettingsSchema>;
@@ -91,6 +93,7 @@ const DEFAULT_COMPANY_LOGO_URL = "/icons/icon-192x192.png";
 const DEFAULT_PWA_APP_NAME = 'LCMS';
 const DEFAULT_PWA_SHORT_NAME = 'LCMS';
 const DEFAULT_PWA_DESCRIPTION = 'LCMS - LC & HR Management System - Employee Portal';
+const DEFAULT_APP_VERSION = 'v1.1';
 
 
 export function CompanySetupForm() {
@@ -197,6 +200,7 @@ export function CompanySetupForm() {
       contactPerson: '',
       binNumber: '',
       tinNumber: '',
+      appVersion: DEFAULT_APP_VERSION,
     },
   });
 
@@ -227,6 +231,7 @@ export function CompanySetupForm() {
           contactPerson: '',
           binNumber: '',
           tinNumber: '',
+          appVersion: DEFAULT_APP_VERSION,
         };
 
         if (profileDocSnap.exists()) {
@@ -378,7 +383,8 @@ export function CompanySetupForm() {
         companyLogoUrl: newCompanyLogoUrl,
         invoiceLogoUrl: newInvoiceLogoUrl,
         hideCompanyLogo: data.hideCompanyLogo,
-        hideCompanyName: data.hideCompanyName
+        hideCompanyName: data.hideCompanyName,
+        appVersion: data.appVersion
       });
       setCompanyLogoUrl(newCompanyLogoUrl);
       setInvoiceLogoUrl(newInvoiceLogoUrl);
@@ -506,6 +512,14 @@ export function CompanySetupForm() {
                 <FormItem>
                   <FormLabel>Phone Number</FormLabel>
                   <FormControl><Input type="tel" placeholder="e.g., +1 234 567 890" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="appVersion" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>App Version</FormLabel>
+                  <FormControl><Input placeholder="e.g., v1.1" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                  <FormDescription>Current software version (displayed in footer/sidebar).</FormDescription>
                   <FormMessage />
                 </FormItem>
               )} />

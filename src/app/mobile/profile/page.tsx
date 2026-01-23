@@ -34,6 +34,7 @@ import {
 import type { Employee, UserRole } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
 import { RoleBadge } from '@/components/ui/RoleBadge';
+import { ProfileSkeleton } from '@/components/mobile/skeletons/ProfileSkeleton';
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
     <svg
@@ -48,9 +49,9 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
 
 export default function MobileProfilePage() {
     const router = useRouter();
-    const { user, userRole } = useAuth();
-    const [employee, setEmployee] = useState<Employee | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { user, userRole, employeeData } = useAuth();
+    const [employee, setEmployee] = useState<Employee | null>(employeeData);
+    const [loading, setLoading] = useState(!employeeData);
     const [supervisorName, setSupervisorName] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'personal' | 'official' | 'others'>('personal');
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,8 +122,15 @@ export default function MobileProfilePage() {
     };
 
     useEffect(() => {
+        if (employeeData) {
+            setEmployee(employeeData);
+            setLoading(false);
+        }
+    }, [employeeData]);
+
+    useEffect(() => {
         async function fetchEmployee() {
-            if (!user?.email) return;
+            if (!user?.email || employeeData) return;
             try {
                 const q = query(
                     collection(firestore, 'employees'),
@@ -133,19 +141,6 @@ export default function MobileProfilePage() {
                 if (!querySnapshot.empty) {
                     const empData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as Employee;
                     setEmployee(empData);
-
-                    // Fetch Supervisor Name if ID exists
-                    if (empData.supervisorId) {
-                        try {
-                            const supervisorDocRef = doc(firestore, 'employees', empData.supervisorId);
-                            const supervisorDocSnap = await getDoc(supervisorDocRef);
-                            if (supervisorDocSnap.exists()) {
-                                setSupervisorName(supervisorDocSnap.data()?.fullName || null);
-                            }
-                        } catch (err) {
-                            console.error("Error fetching supervisor:", err);
-                        }
-                    }
                 }
             } catch (error) {
                 console.error("Error fetching employee profile:", error);
@@ -155,7 +150,25 @@ export default function MobileProfilePage() {
         }
 
         fetchEmployee();
-    }, [user]);
+    }, [user, employeeData]);
+
+    // Separate useEffect for supervisor to prevent blocking main content
+    useEffect(() => {
+        if (!employee?.supervisorId) return;
+
+        async function fetchSupervisor() {
+            try {
+                const supervisorDocRef = doc(firestore, 'employees', employee!.supervisorId!);
+                const supervisorDocSnap = await getDoc(supervisorDocRef);
+                if (supervisorDocSnap.exists()) {
+                    setSupervisorName(supervisorDocSnap.data()?.fullName || null);
+                }
+            } catch (err) {
+                console.error("Error fetching supervisor:", err);
+            }
+        }
+        fetchSupervisor();
+    }, [employee?.supervisorId]);
 
     const handleBack = () => {
         router.back();
@@ -241,11 +254,7 @@ export default function MobileProfilePage() {
     };
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-[#0a1e60]">
-                <Loader2 className="h-8 w-8 text-white animate-spin" />
-            </div>
-        );
+        return <ProfileSkeleton />;
     }
 
     if (!employee) {

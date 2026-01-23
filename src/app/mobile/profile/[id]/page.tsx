@@ -31,6 +31,7 @@ import {
 import type { Employee } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
 import { RoleBadge } from '@/components/ui/RoleBadge';
+import { ProfileSkeleton } from '@/components/mobile/skeletons/ProfileSkeleton';
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
     <svg
@@ -102,19 +103,6 @@ export default function MobileEmployeeProfilePage() {
                 if (docSnap.exists()) {
                     const empData = { id: docSnap.id, ...docSnap.data() } as Employee;
                     setEmployee(empData);
-
-                    // Fetch Supervisor Name if ID exists
-                    if (empData.supervisorId) {
-                        try {
-                            const supervisorDocRef = doc(firestore, 'employees', empData.supervisorId);
-                            const supervisorDocSnap = await getDoc(supervisorDocRef);
-                            if (supervisorDocSnap.exists()) {
-                                setSupervisorName(supervisorDocSnap.data()?.fullName || null);
-                            }
-                        } catch (err) {
-                            console.error("Error fetching supervisor:", err);
-                        }
-                    }
                 } else {
                     setError("Employee not found");
                 }
@@ -129,16 +117,30 @@ export default function MobileEmployeeProfilePage() {
         fetchEmployee();
     }, [employeeId]);
 
+    // Separate useEffect for supervisor to prevent blocking main content
+    useEffect(() => {
+        if (!employee?.supervisorId) return;
+
+        async function fetchSupervisor() {
+            try {
+                const supervisorDocRef = doc(firestore, 'employees', employee!.supervisorId!);
+                const supervisorDocSnap = await getDoc(supervisorDocRef);
+                if (supervisorDocSnap.exists()) {
+                    setSupervisorName(supervisorDocSnap.data()?.fullName || null);
+                }
+            } catch (err) {
+                console.error("Error fetching supervisor:", err);
+            }
+        }
+        fetchSupervisor();
+    }, [employee?.supervisorId]);
+
     const handleBack = () => {
         router.back();
     };
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-[#0a1e60]">
-                <Loader2 className="h-8 w-8 text-white animate-spin" />
-            </div>
-        );
+        return <ProfileSkeleton />;
     }
 
     if (error || !employee) {

@@ -20,7 +20,7 @@ import type { Employee } from '@/types';
 export function MobileDrawerSidebar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { user, logout, setViewMode } = useAuth();
+    const { user, logout, setViewMode, appVersion } = useAuth();
     const { setIsOpen } = useMobileSidebar();
     const [employee, setEmployee] = useState<Employee | null>(null);
 
@@ -160,7 +160,7 @@ export function MobileDrawerSidebar() {
                 <span className="font-bold">Log out</span>
             </Button>
 
-            <p className="text-white/40 text-[10px] mt-4 text-center">Version v1.1</p>
+            <p className="text-white/40 text-[10px] mt-4 text-center">Version {appVersion}</p>
         </div>
     );
 }
