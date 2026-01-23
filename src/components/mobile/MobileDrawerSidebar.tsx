@@ -55,7 +55,7 @@ export function MobileDrawerSidebar() {
     ];
 
     return (
-        <div className="fixed inset-y-0 left-0 w-[60%] bg-gradient-to-b from-[#5c42ff] to-[#4c35de] text-white z-0 flex flex-col pt-12 pb-6 px-6 overflow-y-auto shadow-2xl">
+        <div className="fixed inset-y-0 left-0 w-[60%] bg-[#4c35de] text-white z-0 flex flex-col pt-12 pb-6 px-6 overflow-y-auto shadow-2xl">
             {/* Profile Section */}
             <div className="mb-8 flex flex-col">
                 <div className="h-16 w-16 rounded-xl overflow-hidden border-2 border-white mb-3">
