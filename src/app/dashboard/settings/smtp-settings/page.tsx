@@ -53,6 +53,7 @@ export default function SmtpSettingsPage() {
         user: '',
         pass: '',
         fromEmail: '',
+        fromName: '',
         resendApiKey: '',
         isActive: false,
     });
@@ -88,6 +89,7 @@ export default function SmtpSettingsPage() {
             user: '',
             pass: '',
             fromEmail: '',
+            fromName: '',
             resendApiKey: '',
             isActive: false,
         });
@@ -309,6 +311,15 @@ export default function SmtpSettingsPage() {
                                 </div>
 
                                 <div className="grid w-full items-center gap-1.5">
+                                    <Label htmlFor="fromName">From Email Name</Label>
+                                    <Input
+                                        id="fromName"
+                                        placeholder="e.g. Acme Admin, HR Team"
+                                        value={formData.fromName || ''}
+                                        onChange={(e) => handleInputChange('fromName', e.target.value)}
+                                    />
+                                </div>
+                                <div className="grid w-full items-center gap-1.5">
                                     <Label htmlFor="fromEmail">From Email Address</Label>
                                     <Input
                                         id="fromEmail"
@@ -445,7 +456,9 @@ export default function SmtpSettingsPage() {
                                 <div className="space-y-2 text-sm text-muted-foreground mb-6">
                                     <div className="flex justify-between">
                                         <span>From:</span>
-                                        <span className="font-medium text-foreground">{config.fromEmail}</span>
+                                        <span className="font-medium text-foreground">
+                                            {config.fromName ? `${config.fromName} <${config.fromEmail}>` : config.fromEmail}
+                                        </span>
                                     </div>
                                     {config.serviceProvider === 'smtp' && (
                                         <div className="flex justify-between">

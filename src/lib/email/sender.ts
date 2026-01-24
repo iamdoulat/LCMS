@@ -191,7 +191,7 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
                 }));
 
                 const { data: res, error } = await resend.emails.send({
-                    from: config.fromEmail,
+                    from: `${config.fromName || 'LCMS'} <${config.fromEmail}>`,
                     to: toAddresses,
                     subject: subject,
                     html: body,
@@ -244,7 +244,7 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
                 });
 
                 const info = await transporter.sendMail({
-                    from: config.fromEmail,
+                    from: `"${config.fromName || 'LCMS'}" <${config.fromEmail}>`,
                     to: toAddresses.join(','),
                     subject: subject,
                     html: body,

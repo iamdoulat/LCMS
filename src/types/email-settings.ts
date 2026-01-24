@@ -8,6 +8,7 @@ export interface SmtpConfiguration {
     user?: string;
     pass?: string;
     fromEmail: string;
+    fromName?: string;
     resendApiKey?: string;
     isActive: boolean;
     createdAt?: any; // Firestore Timestamp
