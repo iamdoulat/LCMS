@@ -222,6 +222,36 @@ export default function MyLeaveBalancePage() {
 
     if (loading) return <SkeletonLoader />;
 
+    if (!leaveGroup && !loading) {
+        return (
+            <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden font-sans">
+                <div className="sticky top-0 z-50 bg-[#0a1e60] border-b border-white/5">
+                    <div className="flex items-center px-4 pt-[14px] pb-6">
+                        <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => router.back()}
+                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-lg bg-white/5 backdrop-blur-sm border border-white/10"
+                        >
+                            <ArrowLeft className="h-6 w-6" />
+                        </motion.button>
+                        <h1 className="text-xl font-bold ml-3 text-white">
+                            Leave Balance
+                        </h1>
+                    </div>
+                </div>
+                <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] flex flex-col items-center justify-center p-8 text-center bg-white">
+                    <div className="h-20 w-20 bg-amber-50 rounded-full flex items-center justify-center mb-4">
+                        <Info className="h-10 w-10 text-amber-500" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-800 mb-2">No Policy Assigned</h2>
+                    <p className="text-slate-500 text-sm">
+                        Your account is not linked to any leave policy. Please contact HR to update your employment details.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden font-sans">
             {/* Solid Header with App Color */}
@@ -445,6 +475,6 @@ export default function MyLeaveBalancePage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

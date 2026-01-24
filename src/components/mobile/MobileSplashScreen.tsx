@@ -12,7 +12,7 @@ interface MobileSplashScreenProps {
 
 export function MobileSplashScreen({ message = "Loading..." }: MobileSplashScreenProps) {
     const [branding, setBranding] = useState<{ name: string; logo: string }>({
-        name: 'NextSew',
+        name: 'LCMS',
         logo: '/icons/icon-192x192.png'
     });
 
@@ -35,7 +35,7 @@ export function MobileSplashScreen({ message = "Loading..." }: MobileSplashScree
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     const newBranding = {
-                        name: data.companyName || 'NextSew',
+                        name: data.companyName || 'LCMS',
                         logo: data.companyLogoUrl || '/icons/icon-192x192.png'
                     };
                     setBranding(newBranding);
