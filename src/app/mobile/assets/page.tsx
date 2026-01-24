@@ -20,7 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function AssetsPage() {
     const router = useRouter();
-    const { user, userRole, firestoreUser } = useAuth();
+    const { user, userRole, employeeData } = useAuth();
     const [activeTab, setActiveTab] = useState<'assigned' | 'requested' | 'requisition'>('assigned');
     const [filterStatus, setFilterStatus] = useState<string>('All');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -34,25 +34,29 @@ export default function AssetsPage() {
     // -- Queries --
 
     // 1. Assigned Assets (Distributions) for current user
+    // Use employeeData.id if available (linked employee record), otherwise fallback to user.uid
+    // This handles cases where distribution uses Employee Doc ID vs Auth UID
+    const employeeIdToUse = employeeData?.id || user?.uid;
+
     const { data: assignedAssets, isLoading: isLoadingAssigned, refetch: refetchAssigned } = useFirestoreQuery<AssetDistributionDocument[]>(
         query(
             collection(firestore, "asset_distributions"),
-            where("employeeId", "==", user?.uid || 'dummy')
+            where("employeeId", "==", employeeIdToUse || 'dummy')
         ),
         undefined,
         ['my_assigned_assets'],
-        !!user?.uid
+        !!employeeIdToUse
     );
 
     // 2. My Requested Assets (Requisitions)
     const { data: myRequestsRaw, isLoading: isLoadingRequests, refetch: refetchRequests } = useFirestoreQuery<AssetRequisitionDocument[]>(
         query(
             collection(firestore, "asset_requisitions"),
-            where("employeeId", "==", user?.uid || 'dummy')
+            where("employeeId", "==", employeeIdToUse || 'dummy')
         ),
         undefined,
         ['my_asset_requests'],
-        !!user?.uid
+        !!employeeIdToUse
     );
     // Sort client-side to avoid composite index requirement
     const myRequests = React.useMemo(() => {
@@ -90,6 +94,13 @@ export default function AssetsPage() {
             await updateDoc(doc(firestore, "asset_distributions", distribution.id), {
                 status: 'Occupied'
             });
+
+            // Ensure Asset status is 'Assigned'
+            await updateDoc(doc(firestore, "assets", distribution.assetId), {
+                status: 'Assigned',
+                updatedAt: new Date()
+            });
+
             refetchAssigned();
             Swal.fire({
                 icon: 'success',

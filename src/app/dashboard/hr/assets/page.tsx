@@ -401,10 +401,7 @@ export default function AssetsPage() {
 
   const distributionTotalPages = Math.ceil(filteredDistributions.length / rowsPerPage);
 
-  const handleAddDistributionClick = () => {
-    setEditingDistribution(null);
-    setIsDistributionModalOpen(true);
-  };
+
 
   const handleEditDistributionClick = (distribution: AssetDistributionDocument) => {
     setEditingDistribution(distribution);
@@ -644,9 +641,6 @@ export default function AssetsPage() {
                   onChange={(e) => setDistributionSearchTerm(e.target.value)}
                 />
               </div>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleAddDistributionClick} disabled={isReadOnly}>
-                <Plus className="mr-2 h-4 w-4" /> Add New
-              </Button>
             </div>
           </div>
         </CardHeader>

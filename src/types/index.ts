@@ -2235,6 +2235,7 @@ export interface Asset {
   status: AssetStatus;
   description?: string;
   documentUrl?: string;
+  assignedTo?: string;
   createdAt?: any;
   updatedAt?: any;
 }

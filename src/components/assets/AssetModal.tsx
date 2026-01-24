@@ -16,7 +16,7 @@ import { toast } from '@/components/ui/use-toast';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, query, orderBy, getDocs } from 'firebase/firestore';
 import { firestore, storage } from '@/lib/firebase/config';
-import type { AssetDocument, AssetCategoryDocument } from '@/types';
+import type { AssetDocument, AssetCategoryDocument, EmployeeDocument } from '@/types';
 import { assetStatusOptions } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,28 +47,38 @@ export function AssetModal({ isOpen, onClose, assetToEdit, onSuccess }: AssetMod
     const [description, setDescription] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+    const [assignedTo, setAssignedTo] = useState<string>('');
 
     const [categories, setCategories] = useState<AssetCategoryDocument[]>([]);
+    const [employees, setEmployees] = useState<EmployeeDocument[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+    const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
 
-    // Fetch categories when modal opens
+    // Fetch categories and employees when modal opens
     useEffect(() => {
         if (isOpen) {
-            const fetchCategories = async () => {
+            const fetchData = async () => {
                 setIsLoadingCategories(true);
+                setIsLoadingEmployees(true);
                 try {
-                    const q = query(collection(firestore, "asset_categories"), orderBy("name", "asc"));
-                    const snapshot = await getDocs(q);
-                    const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetCategoryDocument));
-                    setCategories(cats);
+                    // Fetch Categories
+                    const catQuery = query(collection(firestore, "asset_categories"), orderBy("name", "asc"));
+                    const catSnapshot = await getDocs(catQuery);
+                    setCategories(catSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetCategoryDocument)));
+
+                    // Fetch Employees
+                    const empQuery = query(collection(firestore, "employees"), orderBy("fullName", "asc"));
+                    const empSnapshot = await getDocs(empQuery);
+                    setEmployees(empSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmployeeDocument)));
                 } catch (error) {
-                    console.error("Failed to fetch categories", error);
+                    console.error("Failed to fetch data", error);
                 } finally {
                     setIsLoadingCategories(false);
+                    setIsLoadingEmployees(false);
                 }
             };
-            fetchCategories();
+            fetchData();
         }
     }, [isOpen]);
 
@@ -88,6 +98,7 @@ export function AssetModal({ isOpen, onClose, assetToEdit, onSuccess }: AssetMod
                 setStatus(assetToEdit.status);
                 setDescription(assetToEdit.description || '');
                 setExistingImageUrl(assetToEdit.documentUrl || null);
+                setAssignedTo(assetToEdit.assignedTo || ''); // Initialize assignedTo if it exists on asset
                 setFile(null);
             } else {
                 // Reset form
@@ -105,6 +116,7 @@ export function AssetModal({ isOpen, onClose, assetToEdit, onSuccess }: AssetMod
                 setDescription('');
                 setFile(null);
                 setExistingImageUrl(null);
+                setAssignedTo('');
             }
         }
     }, [isOpen, assetToEdit]);
@@ -161,19 +173,45 @@ export function AssetModal({ isOpen, onClose, assetToEdit, onSuccess }: AssetMod
                 warrantyPeriod,
                 status,
                 description,
+                assignedTo: status === 'Assigned' ? assignedTo : null, // Store active assignment ID
                 ...(downloadUrl && { documentUrl: downloadUrl }),
                 updatedAt: serverTimestamp(),
             };
 
+            let assetDocRef;
             if (assetToEdit) {
-                await updateDoc(doc(firestore, 'assets', assetToEdit.id), assetData);
+                assetDocRef = doc(firestore, 'assets', assetToEdit.id);
+                await updateDoc(assetDocRef, assetData);
                 toast({ title: "Success", description: "Asset updated successfully." });
             } else {
-                await addDoc(collection(firestore, 'assets'), {
+                const docRef = await addDoc(collection(firestore, 'assets'), {
                     ...assetData,
                     createdAt: serverTimestamp(),
                 });
+                assetDocRef = docRef;
                 toast({ title: "Success", description: "Asset created successfully." });
+            }
+
+            // If status is 'Assigned' and we have an assignee, create distribution record
+            if (status === 'Assigned' && assignedTo) {
+                const employee = employees.find(e => e.id === assignedTo);
+                if (employee && assetDocRef) {
+                    // Check if a distribution record already exists? Maybe later.
+                    // For now, create a new one.
+                    await addDoc(collection(firestore, "asset_distributions"), {
+                        assetId: assetToEdit ? assetToEdit.id : assetDocRef.id,
+                        assetName: title,
+                        employeeId: employee.id,
+                        employeeCode: employee.employeeCode || 'N/A',
+                        employeeName: employee.fullName,
+                        employeePhotoUrl: employee.photoURL || '',
+                        employeeDesignation: employee.designation || '',
+                        startDate: new Date().toISOString(), // Use current date as assignment date
+                        status: 'Occupied',
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp(),
+                    });
+                }
             }
 
             onSuccess();
@@ -280,6 +318,22 @@ export function AssetModal({ isOpen, onClose, assetToEdit, onSuccess }: AssetMod
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {status === 'Assigned' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="assignedTo">Assign To Employee <span className="text-destructive">*</span></Label>
+                            <Select value={assignedTo} onValueChange={setAssignedTo}>
+                                <SelectTrigger id="assignedTo">
+                                    <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select Employee"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {employees.map(emp => (
+                                        <SelectItem key={emp.id} value={emp.id!}>{emp.fullName} ({emp.employeeCode})</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
 
                     <div className="col-span-1 md:col-span-3 space-y-2">
                         <Label htmlFor="description">Description</Label>
