@@ -9,6 +9,7 @@ import { InstallPrompt } from '@/components/mobile/InstallPrompt';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { MobileSplashScreen } from '@/components/mobile/MobileSplashScreen';
 
 function MobileLayoutContent({ children }: { children: React.ReactNode }) {
     const { isOpen, setIsOpen, toggleSidebar } = useMobileSidebar();
@@ -113,8 +114,8 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
         }
     }, [user, loading, router, isLoginPage, userRole, viewMode]);
 
-    if (loading && !isLoginPage) return null;
-    if (!user && !isLoginPage) return null;
+    if (loading && !isLoginPage) return <MobileSplashScreen />;
+    if (!user && !isLoginPage) return <MobileSplashScreen />;
 
     if (isLoginPage) return <>{children}</>;
 

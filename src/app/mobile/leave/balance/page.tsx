@@ -53,7 +53,7 @@ import type {
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export default function MyLeaveBalancePage() {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [employee, setEmployee] = useState<EmployeeDocument | null>(null);
@@ -63,9 +63,23 @@ export default function MyLeaveBalancePage() {
     const [startX, setStartX] = useState(0);
     const [currentX, setCurrentX] = useState(0);
 
+    // 0. Handle Auth Loading
+    useEffect(() => {
+        // If auth is done loading and we have no user, redirect
+        // (Though layout should handle this, it's good to be safe)
+        if (!authLoading && !user) {
+            router.replace('/mobile/login');
+        }
+    }, [user, authLoading, router]);
+
     // Fetch Employee and Leave Data
     useEffect(() => {
-        if (!user?.email) return;
+        if (authLoading) return; // Wait for auth
+        if (!user?.email) {
+            // Should have redirected above, but if we are here and no email, stop loading
+            if (!authLoading) setLoading(false);
+            return;
+        }
 
         const fetchData = async () => {
             setLoading(true);
@@ -75,6 +89,7 @@ export default function MyLeaveBalancePage() {
                 const empSnap = await getDocs(empQuery);
 
                 if (empSnap.empty) {
+                    console.error("Employee not found for email:", user.email);
                     setLoading(false);
                     return;
                 }
@@ -115,7 +130,7 @@ export default function MyLeaveBalancePage() {
         };
 
         fetchData();
-    }, [user]);
+    }, [user, authLoading]);
 
     // Swipe logic for horizontal tab swap
     const handleTouchStart = (e: React.TouchEvent) => {
