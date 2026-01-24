@@ -2263,7 +2263,7 @@ export type AssetDistributionDocument = AssetDistribution & { id: string; create
 
 
 
-export type AssetRequisitionStatus = 'Pending' | 'Approved' | 'Rejected';
+export type AssetRequisitionStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 
 export interface AssetRequisition {
   id?: string;

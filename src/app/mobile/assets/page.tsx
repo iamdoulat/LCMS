@@ -34,18 +34,22 @@ export default function AssetsPage() {
     // -- Queries --
 
     // 1. Assigned Assets (Distributions) for current user
-    // Use employeeData.id if available (linked employee record), otherwise fallback to user.uid
-    // This handles cases where distribution uses Employee Doc ID vs Auth UID
-    const employeeIdToUse = employeeData?.id || user?.uid;
+    // Query by BOTH Auth UID and Employee Doc ID to ensure we catch all records regardless of how they were linked
+    const validEmployeeIds = React.useMemo(() => {
+        const ids = new Set<string>();
+        if (user?.uid) ids.add(user.uid);
+        if (employeeData?.id) ids.add(employeeData.id);
+        return Array.from(ids);
+    }, [user?.uid, employeeData?.id]);
 
     const { data: assignedAssets, isLoading: isLoadingAssigned, refetch: refetchAssigned } = useFirestoreQuery<AssetDistributionDocument[]>(
         query(
             collection(firestore, "asset_distributions"),
-            where("employeeId", "==", employeeIdToUse || 'dummy')
+            where("employeeId", "in", validEmployeeIds.length > 0 ? validEmployeeIds : ['dummy'])
         ),
         undefined,
-        ['my_assigned_assets', employeeIdToUse],
-        !!employeeIdToUse
+        ['my_assigned_assets', JSON.stringify(validEmployeeIds)],
+        validEmployeeIds.length > 0
     );
 
     // 2. My Requested Assets (Requisitions)
@@ -406,14 +410,12 @@ export default function AssetsPage() {
                                                                 confirmButtonColor: '#d33',
                                                                 cancelButtonColor: '#3085d6',
                                                                 confirmButtonText: 'Yes, cancel it!',
-                                                                allowOutsideClick: false // Prevent accidental close
+                                                                allowOutsideClick: false
                                                             }).then(async (result) => {
                                                                 if (result.isConfirmed) {
                                                                     try {
-                                                                        // switched to updateDoc 'Cancelled' to bypass delete permission issues
-                                                                        await updateDoc(doc(firestore, "asset_requisitions", req.id), {
-                                                                            status: 'Cancelled'
-                                                                        });
+                                                                        // Reverted to deleteDoc as rules now allow it for own pending requests
+                                                                        await deleteDoc(doc(firestore, "asset_requisitions", req.id));
                                                                         refetchRequests();
                                                                         Swal.fire({
                                                                             title: 'Cancelled',
@@ -429,10 +431,10 @@ export default function AssetsPage() {
                                                                 }
                                                             });
                                                         }}
-                                                        className="absolute -top-2 -right-1 p-1.5 bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all shadow-md z-10 cursor-pointer active:scale-95 border border-slate-100"
+                                                        className="absolute top-2 right-2 p-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-full transition-all shadow-sm z-20 cursor-pointer active:scale-95"
                                                         aria-label="Cancel Request"
                                                     >
-                                                        <X className="h-4 w-4" />
+                                                        <X className="h-3.5 w-3.5" />
                                                     </button>
                                                 )}
 
