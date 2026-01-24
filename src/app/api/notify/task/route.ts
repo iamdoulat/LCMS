@@ -114,6 +114,21 @@ async function processTask(taskDoc: any, targetUserIds: string[], type: string) 
                 notifications[employee.id].whatsapp = { success: !!result?.success, status: result?.status };
             } catch (err) { console.error(`Error sending WhatsApp to ${employee.phone}:`, err); }
         }
+
+        // Push Notification
+        try {
+            const { getUidFromEmployeeId } = await import('@/lib/notifications');
+            const uid = await getUidFromEmployeeId(employee.id);
+            if (uid) {
+                const { sendServerPushNotification } = await import('@/lib/services/notification-service');
+                await sendServerPushNotification({
+                    title: type === 'task_assigned' ? 'New Task Assigned 📌' : 'Task Updated 📝',
+                    body: `${taskTitle} (${priority}) - Project: ${projectTitle}`,
+                    userIds: [uid],
+                    url: '/mobile/dashboard'
+                });
+            }
+        } catch (err) { console.error(`Error sending push to ${employee.id}:`, err); }
     }
 
     // 5. Trigger Telegram Notification (Single group notification)

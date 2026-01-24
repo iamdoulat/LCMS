@@ -162,6 +162,35 @@ export async function POST(request: Request) {
         };
 
         // 5. Send Email/WhatsApp (Template Controlled)
+        const pushTitle = `${type.replace('_', ' ').toUpperCase()} Alert`;
+        const pushBody = `${employeeName} - ${time} - ${finalAddress}`;
+
+        // Employee Push
+        try {
+            const { getUidFromEmployeeId } = await import('@/lib/notifications');
+            const uid = await getUidFromEmployeeId(employeeId);
+            if (uid) {
+                const { sendServerPushNotification } = await import('@/lib/services/notification-service');
+                await sendServerPushNotification({
+                    title: pushTitle,
+                    body: pushBody,
+                    userIds: [uid],
+                    url: '/mobile/dashboard'
+                });
+            }
+        } catch (err) { console.error('Error sending push to employee:', err); }
+
+        // HR/Admin Push
+        try {
+            const { sendServerPushNotification } = await import('@/lib/services/notification-service');
+            await sendServerPushNotification({
+                title: `Team Attendance: ${pushTitle}`,
+                body: pushBody,
+                targetRoles: ['Admin', 'HR', 'Super Admin'],
+                url: '/dashboard/hr/attendance-reconciliation'
+            });
+        } catch (err) { console.error('Error sending push to HR/Admin:', err); }
+
         // Employee Email
         if (employeeEmail) {
             try {

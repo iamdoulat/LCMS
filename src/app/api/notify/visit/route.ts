@@ -102,6 +102,17 @@ export async function POST(request: Request) {
                 }
             }
 
+            // Push Notification to Admins
+            try {
+                const { sendServerPushNotification } = await import('@/lib/services/notification-service');
+                await sendServerPushNotification({
+                    title: 'New Visit Request 📍',
+                    body: `${employeeName} requested a visit to ${data?.customerName || 'Customer'}.`,
+                    targetRoles: ['Admin', 'HR', 'Super Admin'],
+                    url: '/dashboard/hr/visit-applications'
+                });
+            } catch (err) { console.error('Error sending push to admins:', err); }
+
             return NextResponse.json({ success: true, notified: 'admins' });
 
         } else if (type === 'decision') {
@@ -119,9 +130,14 @@ export async function POST(request: Request) {
             }
 
             let templateSlug = '';
-            if (status === 'Approved') templateSlug = 'employee_visit_application_approved';
-            else if (status === 'Rejected') templateSlug = 'employee_visit_application_rejected';
-            else return NextResponse.json({ message: 'Status requires no email.' });
+            let pushTitle = '';
+            if (status === 'Approved') {
+                templateSlug = 'employee_visit_application_approved';
+                pushTitle = 'Visit Approved ✅';
+            } else if (status === 'Rejected') {
+                templateSlug = 'employee_visit_application_rejected';
+                pushTitle = 'Visit Rejected ❌';
+            } else return NextResponse.json({ message: 'Status requires no email.' });
 
             await sendEmail({
                 to: employeeEmail,
@@ -149,6 +165,21 @@ export async function POST(request: Request) {
                     }
                 });
             }
+
+            // Push Notification to Employee
+            try {
+                const { getUidFromEmployeeId } = await import('@/lib/notifications');
+                const uid = await getUidFromEmployeeId(data?.employeeId);
+                if (uid) {
+                    const { sendServerPushNotification } = await import('@/lib/services/notification-service');
+                    await sendServerPushNotification({
+                        title: pushTitle,
+                        body: `Your visit request to ${data?.customerName || 'Customer'} has been ${status.toLowerCase()}.`,
+                        userIds: [uid],
+                        url: '/mobile/dashboard'
+                    });
+                }
+            } catch (err) { console.error('Error sending push to employee:', err); }
 
             return NextResponse.json({ success: true, notified: 'employee' });
         }

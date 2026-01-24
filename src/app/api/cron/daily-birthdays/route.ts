@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
+import { sendTelegram } from '@/lib/telegram/sender';
+import { getCompanyName } from '@/lib/settings/company';
 
 export async function GET(request: Request) {
     try {
@@ -14,6 +16,7 @@ export async function GET(request: Request) {
         const today = new Date();
         const currentMonth = today.getMonth() + 1; // 1-12
         const currentDay = today.getDate(); // 1-31
+        const companyName = await getCompanyName();
 
         // 2. Auto-Seed Templates if missing
         const templateSlug = 'employee_birthday_wish';
@@ -73,6 +76,21 @@ Best Wishes,
             });
         }
 
+        // Telegram Template
+        const teleTemplateRef = db.collection('telegram_templates').where('slug', '==', templateSlug).limit(1);
+        const teleTemplateSnap = await teleTemplateRef.get();
+        if (teleTemplateSnap.empty) {
+            await db.collection('telegram_templates').add({
+                name: 'Employee Birthday Wish',
+                slug: templateSlug,
+                body: `🎂 <b>Happy Birthday, {{employee_name}}!</b> 🎉\n\nOn this special day, we wish you a day filled with happiness and joy. We are lucky to have you in our team!\n\nBest Wishes,\n<b>{{company_name}}</b>`,
+                variables: ['employee_name', 'company_name'],
+                isActive: true,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
         // 3. Fetch Active Employees
         const snapshot = await db.collection('employees').where('isActive', '==', true).get();
         const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
@@ -87,25 +105,32 @@ Best Wishes,
             if (emp.dateOfBirth.toDate) {
                 dobDate = emp.dateOfBirth.toDate();
             } else if (typeof emp.dateOfBirth === 'string') {
-                dobDate = new Date(emp.dateOfBirth);
+                // Handle different string formats (YYYY-MM-DD or DD-MM-YYYY)
+                const parts = emp.dateOfBirth.split(/[-/]/);
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) { // YYYY-MM-DD
+                        dobDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    } else if (parts[2].length === 4) { // DD-MM-YYYY
+                        dobDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                    }
+                }
+                if (!dobDate || isNaN(dobDate.getTime())) {
+                    dobDate = new Date(emp.dateOfBirth);
+                }
             }
 
-            if (dobDate) {
+            if (dobDate && !isNaN(dobDate.getTime())) {
                 const dobMonth = dobDate.getMonth() + 1;
                 const dobDay = dobDate.getDate();
 
                 if (dobMonth === currentMonth && dobDay === currentDay) {
+                    const employeeName = emp.fullName || emp.name || 'Employee';
+                    const data = { employee_name: employeeName, company_name: companyName };
+
                     // Send Email
                     if (emp.email) {
                         try {
-                            await sendEmail({
-                                to: emp.email,
-                                templateSlug: templateSlug,
-                                data: {
-                                    employee_name: emp.fullName || emp.name || 'Employee'
-                                }
-                            });
-                            sentCount++;
+                            await sendEmail({ to: emp.email, templateSlug, data });
                         } catch (e) { console.error(`Failed to send Birthday Email to ${emp.id}`, e); }
                     }
 
@@ -113,17 +138,29 @@ Best Wishes,
                     if (emp.phone) {
                         try {
                             const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
-                            await sendWhatsApp({
-                                to: emp.phone,
-                                templateSlug: templateSlug,
-                                data: {
-                                    employee_name: emp.fullName || emp.name || 'Employee'
-                                }
-                            });
-                        } catch (e) {
-                            console.error(`Failed to send Birthday WA to ${emp.id}`, e);
-                        }
+                            await sendWhatsApp({ to: emp.phone, templateSlug, data });
+                        } catch (e) { console.error(`Failed to send Birthday WA to ${emp.id}`, e); }
                     }
+
+                    // Send Telegram
+                    try {
+                        await sendTelegram({ templateSlug, data });
+                    } catch (e) { console.error(`Failed to send Birthday Telegram for ${emp.id}`, e); }
+
+                    // Send FCM Push Notification
+                    try {
+                        if (emp.uid) {
+                            const { sendServerPushNotification } = await import('@/lib/services/notification-service');
+                            await sendServerPushNotification({
+                                title: 'Happy Birthday! 🎉',
+                                body: `Wishing you a fantastic day, ${employeeName}! 🎂`,
+                                userIds: [emp.uid],
+                                url: '/mobile/dashboard'
+                            });
+                        }
+                    } catch (e) { console.error(`Failed to send Birthday Push for ${emp.id}`, e); }
+
+                    sentCount++;
                 }
             }
         }

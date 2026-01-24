@@ -78,6 +78,17 @@ export async function POST(request: Request) {
                 }
             }
 
+            // Push Notification to Admins
+            try {
+                const { sendServerPushNotification } = await import('@/lib/services/notification-service');
+                await sendServerPushNotification({
+                    title: 'New Advance Salary Request 💰',
+                    body: `${employeeName} requested an advance of ${data?.amount || 0}.`,
+                    targetRoles: ['Admin', 'HR', 'Super Admin'],
+                    url: '/dashboard/hr/payroll/advance-salary'
+                });
+            } catch (err) { console.error('Error sending push to admins:', err); }
+
             return NextResponse.json({ success: true, notified: 'admins' });
 
         } else if (type === 'decision') {
@@ -95,9 +106,14 @@ export async function POST(request: Request) {
             }
 
             let templateSlug = '';
-            if (status === 'Approved') templateSlug = 'employee_advance_salary_approved';
-            else if (status === 'Rejected') templateSlug = 'employee_advance_salary_rejected';
-            else return NextResponse.json({ message: 'Status requires no email.' });
+            let pushTitle = '';
+            if (status === 'Approved') {
+                templateSlug = 'employee_advance_salary_approved';
+                pushTitle = 'Advance Salary Approved ✅';
+            } else if (status === 'Rejected') {
+                templateSlug = 'employee_advance_salary_rejected';
+                pushTitle = 'Advance Salary Rejected ❌';
+            } else return NextResponse.json({ message: 'Status requires no email.' });
 
             await sendEmail({
                 to: employeeEmail,
@@ -123,6 +139,21 @@ export async function POST(request: Request) {
                     }
                 });
             }
+
+            // Push Notification to Employee
+            try {
+                const { getUidFromEmployeeId } = await import('@/lib/notifications');
+                const uid = await getUidFromEmployeeId(data?.employeeId);
+                if (uid) {
+                    const { sendServerPushNotification } = await import('@/lib/services/notification-service');
+                    await sendServerPushNotification({
+                        title: pushTitle,
+                        body: `Your advance salary request for ${data?.amount || 0} has been ${status.toLowerCase()}.`,
+                        userIds: [uid],
+                        url: '/mobile/dashboard'
+                    });
+                }
+            } catch (err) { console.error('Error sending push to employee:', err); }
 
             return NextResponse.json({ success: true, notified: 'employee' });
         }
