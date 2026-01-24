@@ -1,10 +1,9 @@
-
-"use client"; // This page needs to be a client component to use hooks
+"use client";
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { MobileSplashScreen } from '@/components/mobile/MobileSplashScreen';
 
 export default function HomePage() {
   const { user, userRole, loading, viewMode } = useAuth();
@@ -31,11 +30,6 @@ export default function HomePage() {
     }
   }, [user, userRole, loading, router, viewMode]);
 
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-background">
-      <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      <p className="mt-4 text-muted-foreground">Loading Indent & LC Management System...</p>
-    </main>
-  );
+  return <MobileSplashScreen message="Indent & LC Management System" />;
 }
 

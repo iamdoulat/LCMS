@@ -615,7 +615,7 @@ export default function MobileDashboardPage() {
                     )}></div>
                 </div>
 
-                <div className="px-4 pt-6 pb-[120px] space-y-6">
+                <div className="px-4 pt-6 pb-[calc(140px+env(safe-area-inset-bottom))] space-y-6">
                     {/* Attendance Cards */}
                     <div className="grid grid-cols-2 gap-4">
                         {/* In Time Card */}
