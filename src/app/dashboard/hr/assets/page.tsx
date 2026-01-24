@@ -6,7 +6,7 @@ import { Package, Search, Plus, MoreHorizontal, FileEdit, Trash2, Filter, CheckC
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy, deleteDoc, doc, updateDoc, getDoc, where, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, deleteDoc, doc, updateDoc, getDoc, where, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { AssetCategoryDocument, AssetDocument, AssetDistributionDocument, AssetRequisitionDocument } from '@/types';
 import { AssetCategoryModal } from '@/components/assets/AssetCategoryModal';
@@ -156,14 +156,36 @@ export default function AssetsPage() {
       }
 
       const requisition = { id: reqDoc.id, ...reqDoc.data() } as AssetRequisitionDocument;
+      let finalAssetId = requisition.preferredAssetId;
+      let finalAssetName = requisition.preferredAssetName;
 
-      // If a preferred asset was selected, assign it
-      if (requisition.preferredAssetId) {
-        // Get the asset to verify it's still available
-        const assetDoc = await getDoc(doc(firestore, "assets", requisition.preferredAssetId));
+      // If no specific asset requested, try to find an available one from the category
+      if (!finalAssetId && requisition.assetCategoryName) {
+        const availableAssetsQuery = query(
+          collection(firestore, "assets"),
+          where("categoryName", "==", requisition.assetCategoryName),
+          where("status", "==", "Available"),
+          orderBy("createdAt", "asc") // Assign oldest available first? Or random?
+        );
+        const availableSnap = await getDocs(availableAssetsQuery);
+
+        if (!availableSnap.empty) {
+          const firstAvailable = availableSnap.docs[0];
+          finalAssetId = firstAvailable.id;
+          finalAssetName = firstAvailable.data().title;
+        } else {
+          Swal.fire('Error', `No available assets found in category "${requisition.assetCategoryName}". Please assign specific asset manually.`, 'error');
+          return;
+        }
+      }
+
+      // If we have an asset (either preferred or auto-found), assign it
+      if (finalAssetId) {
+        // Get the asset to verify it's still available (double check)
+        const assetDoc = await getDoc(doc(firestore, "assets", finalAssetId));
 
         if (!assetDoc.exists()) {
-          Swal.fire('Error', 'Selected asset no longer exists.', 'error');
+          Swal.fire('Error', 'Asset no longer exists.', 'error');
           return;
         }
 
@@ -176,8 +198,8 @@ export default function AssetsPage() {
 
         // Create asset distribution
         await addDoc(collection(firestore, "asset_distributions"), {
-          assetId: requisition.preferredAssetId,
-          assetName: requisition.preferredAssetName || asset.title,
+          assetId: finalAssetId,
+          assetName: finalAssetName || asset.title,
           employeeId: requisition.employeeId,
           employeeCode: requisition.employeeCode || 'N/A',
           employeeName: requisition.employeeName,
@@ -190,12 +212,18 @@ export default function AssetsPage() {
         });
 
         // Update asset status to Assigned
-        await updateDoc(doc(firestore, "assets", requisition.preferredAssetId), {
+        await updateDoc(doc(firestore, "assets", finalAssetId), {
           status: 'Assigned',
           updatedAt: serverTimestamp(),
         });
 
         refetchAssets();
+      } else {
+        // Should have been caught by the "available assets" check above, but purely generic requests without assets technically allowed if we just approve the *idea*?
+        // User requested functionality: "Approved Assets... showing for confirmation". 
+        // This implies we MUST assign an asset.
+        Swal.fire('Error', 'Unable to resolve an asset for this requisition.', 'error');
+        return;
       }
 
       // Update requisition status to Approved
@@ -207,13 +235,13 @@ export default function AssetsPage() {
       // Push Notification
       sendPushNotification({
         title: "Asset Requisition Approved",
-        body: `Your requisition for ${requisition.assetCategoryName} has been approved. ${requisition.preferredAssetId ? 'An asset has been assigned to you.' : ''}`,
+        body: `Your requisition for ${requisition.assetCategoryName} has been approved. An asset has been assigned to you.`,
         userIds: [requisition.employeeId],
         url: '/mobile/dashboard'
       });
 
       refetchRequisitions();
-      Swal.fire('Approved', requisition.preferredAssetId ? 'Requisition approved and asset assigned successfully.' : 'Requisition has been approved.', 'success');
+      Swal.fire('Approved', 'Requisition approved and asset assigned successfully.', 'success');
     } catch (error) {
       console.error("Error approving requisition:", error);
       Swal.fire('Error', 'Failed to approve requisition.', 'error');
