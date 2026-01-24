@@ -111,106 +111,104 @@ export default function ApplyForLeavePage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8fafc]">
+        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden font-sans">
             {/* Header */}
-            <div className="bg-[#0a1e60] text-white p-6 pb-8 rounded-b-[2rem] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-20 -mt-20 blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-400/10 rounded-full -ml-10 -mb-10 blur-2xl" />
-
-                <div className="relative flex items-center justify-between">
+            <div className="sticky top-0 z-50 bg-[#0a1e60] border-b border-white/5">
+                <div className="flex items-center px-4 pt-[14px] pb-6">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors"
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-lg bg-white/5 backdrop-blur-sm border border-white/10"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold tracking-tight">Apply for Leave</h1>
-                    <div className="w-10" />
+                    <h1 className="text-xl font-bold ml-3 text-white">Apply for Leave</h1>
                 </div>
             </div>
 
-            {/* Form */}
-            <div className="px-5 pt-6 pb-24">
-                <div className="bg-white rounded-2xl p-6 shadow-sm">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Leave Type */}
-                        <div>
-                            <Label className="text-sm font-bold text-slate-700 mb-2 block">
-                                Leave Type <span className="text-red-500">*</span>
-                            </Label>
-                            <Select
-                                value={formData.leaveType}
-                                onValueChange={(value) => setFormData({ ...formData, leaveType: value })}
+            {/* Content Sheet */}
+            <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain shadow-[0_-8px_30px_rgba(0,0,0,0.2)]">
+                <div className="px-5 pt-8 pb-[120px] space-y-8">
+                    <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Leave Type */}
+                            <div>
+                                <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                                    Leave Type <span className="text-red-500">*</span>
+                                </Label>
+                                <Select
+                                    value={formData.leaveType}
+                                    onValueChange={(value) => setFormData({ ...formData, leaveType: value })}
+                                >
+                                    <SelectTrigger className="w-full h-12 rounded-xl border-slate-200">
+                                        <SelectValue placeholder="Select an option" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {leaveTypes.length > 0 ? (
+                                            leaveTypes.map(type => (
+                                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                                            ))
+                                        ) : (
+                                            <>
+                                                <SelectItem value="Casual Leave">Casual Leave</SelectItem>
+                                                <SelectItem value="Sick Leave">Sick Leave</SelectItem>
+                                                <SelectItem value="Annual Leave">Annual Leave</SelectItem>
+                                            </>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* From Date */}
+                            <div>
+                                <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                                    From Date <span className="text-red-500">*</span>
+                                </Label>
+                                <input
+                                    type="date"
+                                    value={formData.fromDate}
+                                    onChange={(e) => setFormData({ ...formData, fromDate: e.target.value })}
+                                    className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                                    min={format(new Date(), 'yyyy-MM-dd')}
+                                />
+                            </div>
+
+                            {/* To Date */}
+                            <div>
+                                <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                                    To Date <span className="text-red-500">*</span>
+                                </Label>
+                                <input
+                                    type="date"
+                                    value={formData.toDate}
+                                    onChange={(e) => setFormData({ ...formData, toDate: e.target.value })}
+                                    className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                                    min={formData.fromDate || format(new Date(), 'yyyy-MM-dd')}
+                                />
+                            </div>
+
+                            {/* Reason */}
+                            <div>
+                                <Label className="text-sm font-bold text-slate-700 mb-2 block">
+                                    Reason <span className="text-red-500">*</span>
+                                </Label>
+                                <Textarea
+                                    value={formData.purpose}
+                                    onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                                    placeholder="Enter the reason for your leave..."
+                                    className="w-full min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
+                                />
+                            </div>
+
+                            {/* Submit Button */}
+                            <Button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-2xl shadow-lg shadow-blue-200 active:scale-98 transition-all"
                             >
-                                <SelectTrigger className="w-full h-12 rounded-xl border-slate-200">
-                                    <SelectValue placeholder="Select an option" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {leaveTypes.length > 0 ? (
-                                        leaveTypes.map(type => (
-                                            <SelectItem key={type} value={type}>{type}</SelectItem>
-                                        ))
-                                    ) : (
-                                        <>
-                                            <SelectItem value="Casual Leave">Casual Leave</SelectItem>
-                                            <SelectItem value="Sick Leave">Sick Leave</SelectItem>
-                                            <SelectItem value="Annual Leave">Annual Leave</SelectItem>
-                                        </>
-                                    )}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* From Date */}
-                        <div>
-                            <Label className="text-sm font-bold text-slate-700 mb-2 block">
-                                From Date <span className="text-red-500">*</span>
-                            </Label>
-                            <input
-                                type="date"
-                                value={formData.fromDate}
-                                onChange={(e) => setFormData({ ...formData, fromDate: e.target.value })}
-                                className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                                min={format(new Date(), 'yyyy-MM-dd')}
-                            />
-                        </div>
-
-                        {/* To Date */}
-                        <div>
-                            <Label className="text-sm font-bold text-slate-700 mb-2 block">
-                                To Date <span className="text-red-500">*</span>
-                            </Label>
-                            <input
-                                type="date"
-                                value={formData.toDate}
-                                onChange={(e) => setFormData({ ...formData, toDate: e.target.value })}
-                                className="w-full h-12 px-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                                min={formData.fromDate || format(new Date(), 'yyyy-MM-dd')}
-                            />
-                        </div>
-
-                        {/* Reason */}
-                        <div>
-                            <Label className="text-sm font-bold text-slate-700 mb-2 block">
-                                Reason <span className="text-red-500">*</span>
-                            </Label>
-                            <Textarea
-                                value={formData.purpose}
-                                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                                placeholder="Enter the reason for your leave..."
-                                className="w-full min-h-[120px] px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
-                            />
-                        </div>
-
-                        {/* Submit Button */}
-                        <Button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-2xl shadow-lg shadow-blue-200 active:scale-98 transition-all"
-                        >
-                            {loading ? 'Submitting...' : 'Apply for Leave'}
-                        </Button>
-                    </form>
+                                {loading ? 'Submitting...' : 'Apply for Leave'}
+                            </Button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
