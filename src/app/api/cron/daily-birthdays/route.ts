@@ -4,6 +4,8 @@ import { sendEmail } from '@/lib/email/sender';
 import { sendTelegram } from '@/lib/telegram/sender';
 import { getCompanyName } from '@/lib/settings/company';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
     try {
         // 1. Authenticate Cron Job

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { format, subMonths } from 'date-fns';
 import { sendMonthlyReports } from '@/lib/services/report-service';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
     try {
         // Authenticate Cron Job

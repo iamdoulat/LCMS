@@ -1,7 +1,7 @@
-"use client";
-
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { firestore } from '@/lib/firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
 import Image from 'next/image';
 
 interface MobileSplashScreenProps {
@@ -15,17 +15,41 @@ export function MobileSplashScreen({ message = "Loading..." }: MobileSplashScree
     });
 
     useEffect(() => {
-        // Try to get branding from localStorage for instant display
-        if (typeof window !== 'undefined') {
-            const cachedName = localStorage.getItem('appCompanyName');
-            const cachedLogo = localStorage.getItem('appCompanyLogoUrl');
-            if (cachedName || cachedLogo) {
-                setBranding({
-                    name: cachedName || 'NextSew',
-                    logo: cachedLogo || '/icons/icon-192x192.png'
-                });
+        const loadBranding = async () => {
+            // 1. Try localStorage first (fastest)
+            if (typeof window !== 'undefined') {
+                const cachedName = localStorage.getItem('appCompanyName');
+                const cachedLogo = localStorage.getItem('appCompanyLogoUrl');
+                if (cachedName && cachedLogo) {
+                    setBranding({ name: cachedName, logo: cachedLogo });
+                    return;
+                }
             }
-        }
+
+            // 2. Fallback to Firestore
+            try {
+                const docRef = doc(firestore, 'financial_settings', 'main_settings');
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const newBranding = {
+                        name: data.companyName || 'NextSew',
+                        logo: data.companyLogoUrl || '/icons/icon-192x192.png'
+                    };
+                    setBranding(newBranding);
+
+                    // Cache for next time
+                    if (typeof window !== 'undefined') {
+                        localStorage.setItem('appCompanyName', newBranding.name);
+                        localStorage.setItem('appCompanyLogoUrl', newBranding.logo);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch branding in splash screen:", err);
+            }
+        };
+
+        loadBranding();
     }, []);
 
     return (
