@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, orderBy, getDocs, limit, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, limit, doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, ChevronLeft, Bell } from 'lucide-react';
 import { format } from 'date-fns';
@@ -34,8 +34,8 @@ export default function MobileNotificationsPage() {
             if (!user) return;
 
             try {
-                // 1. Fetch recent notifications
-                const q = query(collection(firestore, 'push_notifications'), orderBy('sentAt', 'desc'), limit(20)); // Limit if needed
+                // 1. Fetch recent notifications (fetch more to ensure we have enough after filtering)
+                const q = query(collection(firestore, 'push_notifications'), orderBy('sentAt', 'desc'), limit(100));
                 const snapshot = await getDocs(q);
                 const allNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PushNotification[];
 
@@ -54,7 +54,17 @@ export default function MobileNotificationsPage() {
                     return false;
                 });
 
-                setNotifications(visibleNotifications);
+                // Keep only latest 20
+                setNotifications(visibleNotifications.slice(0, 20));
+
+                // Auto-delete excess notifications from DB
+                if (visibleNotifications.length > 20) {
+                    const toDelete = visibleNotifications.slice(20);
+                    // Fire and forget deletion to not block UI
+                    Promise.allSettled(toDelete.map(n => deleteDoc(doc(firestore, 'push_notifications', n.id))))
+                        .then(() => console.log(`Deleted ${toDelete.length} excess notifications`))
+                        .catch(err => console.error("Error deleting excess notifications:", err));
+                }
 
                 // 2. Fetch Read Status
                 const readSnap = await getDocs(collection(firestore, `users/${user.uid}/read_notifications`));

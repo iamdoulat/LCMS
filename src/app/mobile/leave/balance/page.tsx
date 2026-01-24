@@ -94,7 +94,6 @@ export default function MyLeaveBalancePage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                console.log(`Fetching employee data for: ${user.email}`);
 
                 // 1. Fetch Employee
                 const empQuery = query(collection(firestore, 'employees'), where('email', '==', user.email));
@@ -111,16 +110,15 @@ export default function MyLeaveBalancePage() {
 
                 // 2. Fetch Leave Group Policy
                 if (empData.leaveGroupId) {
-                    console.log(`Fetching Leave Group: ${empData.leaveGroupId}`);
                     const groupRef = doc(firestore, 'hrm_settings', 'leave_groups', 'items', empData.leaveGroupId);
                     const groupSnap = await getDoc(groupRef);
                     if (groupSnap.exists()) {
                         if (isMounted) setLeaveGroup({ id: groupSnap.id, ...groupSnap.data() } as LeaveGroupDocument);
                     } else {
-                        console.warn(`Leave Group doc not found: ${empData.leaveGroupId}`);
+                        // console.warn(`Leave Group doc not found: ${empData.leaveGroupId}`);
                     }
                 } else {
-                    console.warn("No Leave Group ID found in employee record.");
+                    // console.warn("No Leave Group ID found in employee record.");
                 }
 
                 // 3. Fetch Personal Leaves (Real-time listener for history)

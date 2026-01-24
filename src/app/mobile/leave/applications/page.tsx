@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, parseISO, differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
 import Swal from 'sweetalert2';
+import type { LeaveApplicationDocument, EmployeeDocument } from '@/types';
 import { cn } from '@/lib/utils';
 import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
 import { DateRange } from 'react-day-picker';
