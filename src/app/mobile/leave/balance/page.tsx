@@ -222,35 +222,7 @@ export default function MyLeaveBalancePage() {
 
     if (loading) return <SkeletonLoader />;
 
-    if (!leaveGroup && !loading) {
-        return (
-            <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden font-sans">
-                <div className="sticky top-0 z-50 bg-[#0a1e60] border-b border-white/5">
-                    <div className="flex items-center px-4 pt-[14px] pb-6">
-                        <motion.button
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => router.back()}
-                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-lg bg-white/5 backdrop-blur-sm border border-white/10"
-                        >
-                            <ArrowLeft className="h-6 w-6" />
-                        </motion.button>
-                        <h1 className="text-xl font-bold ml-3 text-white">
-                            Leave Balance
-                        </h1>
-                    </div>
-                </div>
-                <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] flex flex-col items-center justify-center p-8 text-center bg-white">
-                    <div className="h-20 w-20 bg-amber-50 rounded-full flex items-center justify-center mb-4">
-                        <Info className="h-10 w-10 text-amber-500" />
-                    </div>
-                    <h2 className="text-xl font-bold text-slate-800 mb-2">No Policy Assigned</h2>
-                    <p className="text-slate-500 text-sm">
-                        Your account is not linked to any leave policy. Please contact HR to update your employment details.
-                    </p>
-                </div>
-            </div>
-        );
-    }
+    // if (!leaveGroup && !loading) { ... } // Removed blocking check to allow history to show
 
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden font-sans">
@@ -279,144 +251,160 @@ export default function MyLeaveBalancePage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-lg font-black tracking-tight text-slate-800 flex items-center gap-2">
-                                    <TrendingUp className="h-5 w-5 text-indigo-500" />
-                                    Visual Summary
-                                </CardTitle>
-                                {/* Horizontal Tabs */}
-                                <div className="flex items-center justify-center gap-2 pt-4">
-                                    {(['pie', 'bar'] as const).map((mode) => (
-                                        <button
-                                            key={mode}
-                                            onClick={() => setViewMode(mode)}
-                                            className={cn(
-                                                "py-2 px-6 rounded-full text-xs font-bold transition-all duration-300",
-                                                viewMode === mode
-                                                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-200 scale-105"
-                                                    : "bg-slate-50 text-slate-400 hover:bg-slate-100"
-                                            )}
-                                        >
-                                            {mode === 'pie' ? 'Overview' : 'Details'}
-                                        </button>
-                                    ))}
-                                </div>
-                            </CardHeader>
-                            <CardContent
-                                className="pt-4 px-2"
-                                onTouchStart={handleTouchStart}
-                                onTouchMove={handleTouchMove}
-                                onTouchEnd={handleTouchEnd}
-                            >
-                                <div className="h-[280px] w-full relative">
-                                    <AnimatePresence mode="wait">
-                                        <motion.div
-                                            key={viewMode}
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="h-full w-full"
-                                        >
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                {viewMode === 'pie' ? (
-                                                    <PieChart>
-                                                        <Pie
-                                                            data={pieData}
-                                                            cx="50%"
-                                                            cy="50%"
-                                                            innerRadius={65}
-                                                            outerRadius={90}
-                                                            paddingAngle={8}
-                                                            dataKey="value"
-                                                            animationDuration={1500}
-                                                            animationBegin={200}
-                                                        >
-                                                            {pieData.map((entry, index) => (
-                                                                <Cell
-                                                                    key={`cell-${index}`}
-                                                                    fill={entry.color}
-                                                                    strokeWidth={0}
-                                                                />
-                                                            ))}
-                                                        </Pie>
-                                                        <RechartsTooltip
-                                                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
-                                                        />
-                                                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                                                    </PieChart>
-                                                ) : (
-                                                    <BarChart
-                                                        data={balanceData}
-                                                        margin={{ top: 20, right: 30, left: -20, bottom: 20 }}
-                                                    >
-                                                        <defs>
-                                                            <linearGradient id="barUsed" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8} />
-                                                                <stop offset="100%" stopColor="#ef4444" stopOpacity={0.3} />
-                                                            </linearGradient>
-                                                            <linearGradient id="barRem" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8} />
-                                                                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                                            </linearGradient>
-                                                        </defs>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                        <XAxis
-                                                            dataKey="name"
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                            tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
-                                                        />
-                                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
-                                                        <BarTooltip
-                                                            cursor={{ fill: 'rgba(51, 65, 85, 0.05)' }}
-                                                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-                                                        />
-                                                        <Bar dataKey="used" fill="url(#barUsed)" radius={[8, 8, 0, 0]} barSize={16} animationDuration={1500} />
-                                                        <Bar dataKey="remaining" fill="url(#barRem)" radius={[8, 8, 0, 0]} barSize={16} animationDuration={1500} />
-                                                    </BarChart>
+                        {!leaveGroup ? (
+                            <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden">
+                                <CardContent className="flex flex-col items-center justify-center p-8 text-center min-h-[300px]">
+                                    <div className="h-20 w-20 bg-amber-50 rounded-full flex items-center justify-center mb-4">
+                                        <Info className="h-10 w-10 text-amber-500" />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-slate-800 mb-2">No Policy Assigned</h2>
+                                    <p className="text-slate-500 text-sm">
+                                        Your account is not linked to any leave policy. Please contact HR to update your employment details.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-lg font-black tracking-tight text-slate-800 flex items-center gap-2">
+                                        <TrendingUp className="h-5 w-5 text-indigo-500" />
+                                        Visual Summary
+                                    </CardTitle>
+                                    {/* Horizontal Tabs */}
+                                    <div className="flex items-center justify-center gap-2 pt-4">
+                                        {(['pie', 'bar'] as const).map((mode) => (
+                                            <button
+                                                key={mode}
+                                                onClick={() => setViewMode(mode)}
+                                                className={cn(
+                                                    "py-2 px-6 rounded-full text-xs font-bold transition-all duration-300",
+                                                    viewMode === mode
+                                                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-200 scale-105"
+                                                        : "bg-slate-50 text-slate-400 hover:bg-slate-100"
                                                 )}
-                                            </ResponsiveContainer>
-                                        </motion.div>
-                                    </AnimatePresence>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                            >
+                                                {mode === 'pie' ? 'Overview' : 'Details'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </CardHeader>
+                                <CardContent
+                                    className="pt-4 px-2"
+                                    onTouchStart={handleTouchStart}
+                                    onTouchMove={handleTouchMove}
+                                    onTouchEnd={handleTouchEnd}
+                                >
+                                    <div className="h-[280px] w-full relative">
+                                        <AnimatePresence mode="wait">
+                                            <motion.div
+                                                key={viewMode}
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.95 }}
+                                                transition={{ duration: 0.3 }}
+                                                className="h-full w-full"
+                                            >
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    {viewMode === 'pie' ? (
+                                                        <PieChart>
+                                                            <Pie
+                                                                data={pieData}
+                                                                cx="50%"
+                                                                cy="50%"
+                                                                innerRadius={65}
+                                                                outerRadius={90}
+                                                                paddingAngle={8}
+                                                                dataKey="value"
+                                                                animationDuration={1500}
+                                                                animationBegin={200}
+                                                            >
+                                                                {pieData.map((entry, index) => (
+                                                                    <Cell
+                                                                        key={`cell-${index}`}
+                                                                        fill={entry.color}
+                                                                        strokeWidth={0}
+                                                                    />
+                                                                ))}
+                                                            </Pie>
+                                                            <RechartsTooltip
+                                                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', fontWeight: 'bold' }}
+                                                            />
+                                                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                                        </PieChart>
+                                                    ) : (
+                                                        <BarChart
+                                                            data={balanceData}
+                                                            margin={{ top: 20, right: 30, left: -20, bottom: 20 }}
+                                                        >
+                                                            <defs>
+                                                                <linearGradient id="barUsed" x1="0" y1="0" x2="0" y2="1">
+                                                                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.8} />
+                                                                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0.3} />
+                                                                </linearGradient>
+                                                                <linearGradient id="barRem" x1="0" y1="0" x2="0" y2="1">
+                                                                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8} />
+                                                                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                                                </linearGradient>
+                                                            </defs>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                            <XAxis
+                                                                dataKey="name"
+                                                                axisLine={false}
+                                                                tickLine={false}
+                                                                tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }}
+                                                            />
+                                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} />
+                                                            <BarTooltip
+                                                                cursor={{ fill: 'rgba(51, 65, 85, 0.05)' }}
+                                                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                                                            />
+                                                            <Bar dataKey="used" fill="url(#barUsed)" radius={[8, 8, 0, 0]} barSize={16} animationDuration={1500} />
+                                                            <Bar dataKey="remaining" fill="url(#barRem)" radius={[8, 8, 0, 0]} barSize={16} animationDuration={1500} />
+                                                        </BarChart>
+                                                    )}
+                                                </ResponsiveContainer>
+                                            </motion.div>
+                                        </AnimatePresence>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
                     </motion.div>
 
-                    {/* Breakdown List */}
-                    <div className="space-y-5">
-                        <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 px-1">
-                            <span className="h-8 w-1.5 rounded-full bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]" />
-                            Leave Breakdown
-                        </h2>
-                        <div className="grid grid-cols-1 gap-4">
-                            {balanceData.map((item, index) => (
-                                <motion.div
-                                    key={index}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-all duration-300 group touch-none"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                            <Calendar className="h-6 w-6 text-indigo-600" />
+                    {/* Breakdown List - Only show if policy exists */}
+                    {leaveGroup && (
+                        <div className="space-y-5">
+                            <h2 className="text-xl font-black text-slate-800 flex items-center gap-3 px-1">
+                                <span className="h-8 w-1.5 rounded-full bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]" />
+                                Leave Breakdown
+                            </h2>
+                            <div className="grid grid-cols-1 gap-4">
+                                {balanceData.map((item, index) => (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                        className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-all duration-300 group touch-none"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                                <Calendar className="h-6 w-6 text-indigo-600" />
+                                            </div>
+                                            <div>
+                                                <div className="text-base font-black text-slate-800">{item.name}</div>
+                                                <div className="text-xs text-slate-400 font-bold uppercase tracking-tight">Total: {item.allowed} Days</div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="text-base font-black text-slate-800">{item.name}</div>
-                                            <div className="text-xs text-slate-400 font-bold uppercase tracking-tight">Total: {item.allowed} Days</div>
+                                        <div className="flex flex-col items-end">
+                                            <div className="text-2xl font-black text-indigo-600 leading-none">{item.remaining}</div>
+                                            <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Left</div>
                                         </div>
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <div className="text-2xl font-black text-indigo-600 leading-none">{item.remaining}</div>
-                                        <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Left</div>
-                                    </div>
-                                </motion.div>
-                            ))}
+                                    </motion.div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* History Section */}
                     <div className="space-y-5 pb-10">
