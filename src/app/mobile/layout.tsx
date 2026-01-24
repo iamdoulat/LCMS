@@ -11,10 +11,41 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 function MobileLayoutContent({ children }: { children: React.ReactNode }) {
-    const { isOpen, toggleSidebar } = useMobileSidebar();
+    const { isOpen, setIsOpen, toggleSidebar } = useMobileSidebar();
     const pathname = usePathname();
     const router = useRouter();
     const { user, loading, userRole, viewMode } = useAuth();
+
+    // Swipe Gesture State
+    const [touchStart, setTouchStart] = React.useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
+
+    // Minimum swipe distance (pixels)
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe && isOpen) {
+            // Close sidebar on swipe left
+            setIsOpen(false);
+        } else if (isRightSwipe && !isOpen && touchStart < 50) {
+            // Open sidebar on swipe right from the left edge (first 50px)
+            setIsOpen(true);
+        }
+    };
 
     // If login page, maybe don't show the sidebar logic? 
     // But wrapper is fine, just contents might handle it.
@@ -99,6 +130,9 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
                 userSelect: 'none'
             }}
             onContextMenu={(e) => e.preventDefault()}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
         >
             {/* The Sidebar (Backend) */}
             <MobileDrawerSidebar />

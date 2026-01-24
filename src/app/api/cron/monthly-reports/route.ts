@@ -6,7 +6,14 @@ export async function GET(request: Request) {
     try {
         // Authenticate Cron Job
         const authHeader = request.headers.get('authorization');
+
+        if (!process.env.CRON_SECRET) {
+            console.error("CRON_SECRET is not defined in environment variables.");
+            return new NextResponse('Cron Secret Missing', { status: 500 });
+        }
+
         if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            console.warn(`Unauthorized cron attempt from ${request.headers.get('host')}. Auth header: ${authHeader ? 'Present' : 'Missing'}`);
             return new NextResponse('Unauthorized', { status: 401 });
         }
 

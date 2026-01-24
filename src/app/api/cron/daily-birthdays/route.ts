@@ -8,7 +8,14 @@ export async function GET(request: Request) {
     try {
         // 1. Authenticate Cron Job
         const authHeader = request.headers.get('authorization');
+
+        if (!process.env.CRON_SECRET) {
+            console.error("CRON_SECRET is not defined in environment variables.");
+            return new NextResponse('Cron Secret Missing', { status: 500 });
+        }
+
         if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+            console.warn(`Unauthorized cron attempt from ${request.headers.get('host')}. Auth header: ${authHeader ? 'Present' : 'Missing'}`);
             return new NextResponse('Unauthorized', { status: 401 });
         }
 
@@ -165,6 +172,15 @@ Best Wishes,
             }
         }
 
+        // 5. Log Execution to Firestore
+        await db.collection('cron_logs').add({
+            job: 'daily-birthdays',
+            status: 'success',
+            checkedCount: employees.length,
+            sentCount: sentCount,
+            executedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
         return NextResponse.json({
             success: true,
             message: `Checked ${employees.length} employees. Sent ${sentCount} birthday wishes.`,
@@ -173,6 +189,16 @@ Best Wishes,
 
     } catch (error: any) {
         console.error("Birthday Cron Error:", error);
+        // Log failure
+        try {
+            await admin.firestore().collection('cron_logs').add({
+                job: 'daily-birthdays',
+                status: 'error',
+                error: error.message,
+                executedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (logErr) { }
+
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
