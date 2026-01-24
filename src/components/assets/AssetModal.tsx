@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Paperclip, CalendarIcon } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc, updateDoc, doc, serverTimestamp, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, serverTimestamp, query, orderBy, getDocs, deleteDoc, where } from 'firebase/firestore';
 import { firestore, storage } from '@/lib/firebase/config';
 import type { AssetDocument, AssetCategoryDocument, EmployeeDocument } from '@/types';
 import { assetStatusOptions } from '@/types';
@@ -182,6 +182,19 @@ export function AssetModal({ isOpen, onClose, assetToEdit, onSuccess }: AssetMod
             if (assetToEdit) {
                 assetDocRef = doc(firestore, 'assets', assetToEdit.id);
                 await updateDoc(assetDocRef, assetData);
+
+                // If status changed to Available, remove any active distributions
+                if (status === 'Available' && assetToEdit.status !== 'Available') {
+                    const distQuery = query(
+                        collection(firestore, "asset_distributions"),
+                        where("assetId", "==", assetToEdit.id),
+                        where("status", "in", ["Occupied", "Pending For Acknowledgement"])
+                    );
+                    const distSnap = await getDocs(distQuery);
+                    const deletePromises = distSnap.docs.map(d => deleteDoc(doc(firestore, "asset_distributions", d.id)));
+                    await Promise.all(deletePromises);
+                }
+
                 toast({ title: "Success", description: "Asset updated successfully." });
             } else {
                 const docRef = await addDoc(collection(firestore, 'assets'), {
