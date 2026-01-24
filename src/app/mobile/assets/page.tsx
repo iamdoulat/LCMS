@@ -49,14 +49,15 @@ export default function AssetsPage() {
     );
 
     // 2. My Requested Assets (Requisitions)
+    // Requisitions are created with user.uid (Auth ID) as per AssetDistributionModal
     const { data: myRequestsRaw, isLoading: isLoadingRequests, refetch: refetchRequests } = useFirestoreQuery<AssetRequisitionDocument[]>(
         query(
             collection(firestore, "asset_requisitions"),
-            where("employeeId", "==", employeeIdToUse || 'dummy')
+            where("employeeId", "==", user?.uid || 'dummy')
         ),
         undefined,
         ['my_asset_requests'],
-        !!employeeIdToUse
+        !!user?.uid
     );
     // Sort client-side to avoid composite index requirement
     const myRequests = React.useMemo(() => {
@@ -385,7 +386,7 @@ export default function AssetsPage() {
                                         return req.status === filterStatus;
                                     }).map(req => (
                                         <Card key={req.id} className="p-4 rounded-2xl border-none shadow-sm bg-white">
-                                            <div className="flex justify-between items-start mb-2">
+                                            <div className="flex justify-between items-start mb-2 relative">
                                                 <Badge variant="outline" className={cn(
                                                     "border-0",
                                                     req.status === 'Approved' ? "bg-green-100 text-green-700" :
@@ -394,7 +395,27 @@ export default function AssetsPage() {
                                                 )}>
                                                     {req.status}
                                                 </Badge>
-                                                <span className="text-[10px] text-slate-400 font-medium">
+
+                                                {req.status === 'Pending' && (
+                                                    <button
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            // Delete logic
+                                                            try {
+                                                                await deleteDoc(doc(firestore, "asset_requisitions", req.id));
+                                                                refetchRequests();
+                                                                // Use a small toast or just silent update? user asked for x button functionality
+                                                            } catch (err) {
+                                                                console.error("Failed to delete request", err);
+                                                            }
+                                                        }}
+                                                        className="absolute -top-1 -right-1 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                )}
+
+                                                <span className="text-[10px] text-slate-400 font-medium ml-auto mr-6">
                                                     {req.createdAt?.seconds ? format(new Date(req.createdAt.seconds * 1000), 'MMM dd, yyyy') : 'Just now'}
                                                 </span>
                                             </div>

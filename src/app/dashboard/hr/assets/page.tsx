@@ -505,11 +505,10 @@ export default function AssetsPage() {
                   <TableHead>Employee Name</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Job Status</TableHead>
-                  <TableHead>Asset Category</TableHead>
+                  <TableHead>Asset Name</TableHead>
                   <TableHead>Requisition Status</TableHead>
                   <TableHead>Requisition Details</TableHead>
-                  <TableHead>From Date</TableHead>
-                  <TableHead>To Date</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -524,7 +523,6 @@ export default function AssetsPage() {
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
                     </TableRow>
@@ -547,7 +545,7 @@ export default function AssetsPage() {
                       </TableCell>
                       <TableCell className="align-middle">{req.employeeDesignation}</TableCell>
                       <TableCell className="align-middle">{req.jobStatus || 'Active'}</TableCell>
-                      <TableCell className="align-middle">{req.assetCategoryName}</TableCell>
+                      <TableCell className="align-middle">{req.preferredAssetName || req.assetCategoryName}</TableCell>
                       <TableCell className="align-middle">
                         <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
                           {req.status}
@@ -555,7 +553,6 @@ export default function AssetsPage() {
                       </TableCell>
                       <TableCell className="align-middle max-w-[250px]">{req.details}</TableCell>
                       <TableCell className="align-middle">{safeFormatDate(req.fromDate)}</TableCell>
-                      <TableCell className="align-middle">{safeFormatDate(req.toDate)}</TableCell>
                       <TableCell className="text-right align-middle">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
