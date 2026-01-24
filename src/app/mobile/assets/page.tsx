@@ -394,20 +394,42 @@ export default function AssetsPage() {
 
                                                 {req.status === 'Pending' && (
                                                     <button
-                                                        onClick={async (e) => {
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
                                                             e.stopPropagation();
-                                                            // Delete logic
-                                                            try {
-                                                                await deleteDoc(doc(firestore, "asset_requisitions", req.id));
-                                                                refetchRequests();
-                                                                // Use a small toast or just silent update? user asked for x button functionality
-                                                            } catch (err) {
-                                                                console.error("Failed to delete request", err);
-                                                            }
+
+                                                            Swal.fire({
+                                                                title: 'Cancel Request?',
+                                                                text: "Are you sure you want to cancel this asset request?",
+                                                                icon: 'warning',
+                                                                showCancelButton: true,
+                                                                confirmButtonColor: '#d33',
+                                                                cancelButtonColor: '#3085d6',
+                                                                confirmButtonText: 'Yes, cancel it!',
+                                                                allowOutsideClick: false // Prevent accidental close
+                                                            }).then(async (result) => {
+                                                                if (result.isConfirmed) {
+                                                                    try {
+                                                                        await deleteDoc(doc(firestore, "asset_requisitions", req.id));
+                                                                        refetchRequests();
+                                                                        Swal.fire({
+                                                                            title: 'Cancelled',
+                                                                            text: 'Request has been cancelled.',
+                                                                            icon: 'success',
+                                                                            timer: 1500,
+                                                                            showConfirmButton: false
+                                                                        });
+                                                                    } catch (err) {
+                                                                        console.error("Failed to delete request", err);
+                                                                        Swal.fire('Error', 'Failed to cancel request.', 'error');
+                                                                    }
+                                                                }
+                                                            });
                                                         }}
-                                                        className="absolute -top-1 -right-1 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                                        className="absolute -top-3 -right-3 p-3 bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all shadow-lg z-50 cursor-pointer active:scale-95 border border-slate-100"
+                                                        aria-label="Cancel Request"
                                                     >
-                                                        <X className="h-4 w-4" />
+                                                        <X className="h-5 w-5" />
                                                     </button>
                                                 )}
 
