@@ -81,32 +81,53 @@ export default function MyLeaveBalancePage() {
             return;
         }
 
+        let isMounted = true;
+
+        // 1. Safety Timeout - Force stop loading after 10 seconds if something hangs
+        const safetyTimeout = setTimeout(() => {
+            if (isMounted && loading) {
+                console.warn("Leave Balance data fetch timed out. Creating empty state.");
+                setLoading(false);
+            }
+        }, 10000);
+
         const fetchData = async () => {
             setLoading(true);
             try {
+                console.log(`Fetching employee data for: ${user.email}`);
+
                 // 1. Fetch Employee
                 const empQuery = query(collection(firestore, 'employees'), where('email', '==', user.email));
                 const empSnap = await getDocs(empQuery);
 
                 if (empSnap.empty) {
                     console.error("Employee not found for email:", user.email);
-                    setLoading(false);
+                    if (isMounted) setLoading(false);
                     return;
                 }
 
                 const empData = { id: empSnap.docs[0].id, ...empSnap.docs[0].data() } as EmployeeDocument;
-                setEmployee(empData);
+                if (isMounted) setEmployee(empData);
 
                 // 2. Fetch Leave Group Policy
                 if (empData.leaveGroupId) {
+                    console.log(`Fetching Leave Group: ${empData.leaveGroupId}`);
                     const groupRef = doc(firestore, 'hrm_settings', 'leave_groups', 'items', empData.leaveGroupId);
                     const groupSnap = await getDoc(groupRef);
                     if (groupSnap.exists()) {
-                        setLeaveGroup({ id: groupSnap.id, ...groupSnap.data() } as LeaveGroupDocument);
+                        if (isMounted) setLeaveGroup({ id: groupSnap.id, ...groupSnap.data() } as LeaveGroupDocument);
+                    } else {
+                        console.warn(`Leave Group doc not found: ${empData.leaveGroupId}`);
                     }
+                } else {
+                    console.warn("No Leave Group ID found in employee record.");
                 }
 
                 // 3. Fetch Personal Leaves (Real-time listener for history)
+                // We rely on onSnapshot to turn off loading usually, but if there are no leaves?
+                // Actually onSnapshot fires immediately with empty array if nothing found.
+                // But just in case, we will toggle loading off here for the initial fetch part.
+
                 const leavesQuery = query(
                     collection(firestore, 'leave_applications'),
                     where('employeeId', '==', empData.id),
@@ -118,18 +139,30 @@ export default function MyLeaveBalancePage() {
                         id: doc.id,
                         ...doc.data()
                     } as LeaveApplicationDocument));
-                    setLeaves(updatedLeaves);
-                    setLoading(false);
+
+                    if (isMounted) {
+                        setLeaves(updatedLeaves);
+                        // Important: Turn off loading now that we have data!
+                        setLoading(false);
+                    }
+                }, (error) => {
+                    console.error("Error in leave snapshot listener:", error);
+                    if (isMounted) setLoading(false);
                 });
 
                 return () => unsubscribe();
             } catch (error) {
                 console.error("Error fetching leave data:", error);
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
 
         fetchData();
+
+        return () => {
+            isMounted = false;
+            clearTimeout(safetyTimeout);
+        };
     }, [user, authLoading]);
 
     // Swipe logic for horizontal tab swap
