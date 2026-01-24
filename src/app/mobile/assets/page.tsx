@@ -44,7 +44,7 @@ export default function AssetsPage() {
             where("employeeId", "==", employeeIdToUse || 'dummy')
         ),
         undefined,
-        ['my_assigned_assets'],
+        ['my_assigned_assets', employeeIdToUse],
         !!employeeIdToUse
     );
 
@@ -410,7 +410,10 @@ export default function AssetsPage() {
                                                             }).then(async (result) => {
                                                                 if (result.isConfirmed) {
                                                                     try {
-                                                                        await deleteDoc(doc(firestore, "asset_requisitions", req.id));
+                                                                        // switched to updateDoc 'Cancelled' to bypass delete permission issues
+                                                                        await updateDoc(doc(firestore, "asset_requisitions", req.id), {
+                                                                            status: 'Cancelled'
+                                                                        });
                                                                         refetchRequests();
                                                                         Swal.fire({
                                                                             title: 'Cancelled',
@@ -420,16 +423,16 @@ export default function AssetsPage() {
                                                                             showConfirmButton: false
                                                                         });
                                                                     } catch (err) {
-                                                                        console.error("Failed to delete request", err);
+                                                                        console.error("Failed to cancel request", err);
                                                                         Swal.fire('Error', 'Failed to cancel request.', 'error');
                                                                     }
                                                                 }
                                                             });
                                                         }}
-                                                        className="absolute -top-3 -right-3 p-3 bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all shadow-lg z-50 cursor-pointer active:scale-95 border border-slate-100"
+                                                        className="absolute -top-2 -right-1 p-1.5 bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all shadow-md z-10 cursor-pointer active:scale-95 border border-slate-100"
                                                         aria-label="Cancel Request"
                                                     >
-                                                        <X className="h-5 w-5" />
+                                                        <X className="h-4 w-4" />
                                                     </button>
                                                 )}
 
