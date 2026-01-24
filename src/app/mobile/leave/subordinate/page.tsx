@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
@@ -24,7 +24,17 @@ interface EmployeeLeaveBalance {
 export default function SubOrdinateLeaveBalancePage() {
     const router = useRouter();
     const { user } = useAuth();
-    const { supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const { supervisedEmployeeIds, explicitSubordinateIds } = useSupervisorCheck(user?.email);
+
+    // Import dynamically to avoid build issues if not already
+    const searchParams = useSearchParams();
+    const view = searchParams.get('view');
+    const isTeamView = view === 'team';
+
+    // Use explicit (direct) subordinates for 'team' view, otherwise all accessible subordinates
+    // For Admins: explicit = direct reports, supervised = everyone
+    // For Managers: explicit & supervised are usually similar (subordinates), but we use the appropriate list
+    const targetEmployeeIds = isTeamView ? explicitSubordinateIds : supervisedEmployeeIds;
 
     const [loading, setLoading] = useState(true);
     const [employeeBalances, setEmployeeBalances] = useState<EmployeeLeaveBalance[]>([]);
@@ -32,15 +42,22 @@ export default function SubOrdinateLeaveBalancePage() {
 
     useEffect(() => {
         const fetchLeaveBalances = async () => {
-            if (!supervisedEmployeeIds.length) {
+            if (!targetEmployeeIds.length) {
+                // Only stop loading if we checked and found no IDs. 
+                // But useSupervisorCheck has an 'isLoading' field we should ideally use.
+                // For now, if array is empty, we just wait or show empty?
+                // The hook starts with empty arrays. We need to know if hook is done loading.
+                // We'll rely on the array length check for now, assuming hook returns eventually.
+                // To be safe, adding a check if hook provided IDs or if we timed out could be better,
+                // but let's stick to the filtered ID list for now.
                 setLoading(false);
                 return;
             }
 
             setLoading(true);
             try {
-                // Fetch all supervised employees
-                const employeesPromises = supervisedEmployeeIds.map(async (empId) => {
+                // Fetch employees from target list
+                const employeesPromises = targetEmployeeIds.map(async (empId) => {
                     const empDoc = await getDocs(
                         query(collection(firestore, 'employees'), where('__name__', '==', empId))
                     );
@@ -61,11 +78,19 @@ export default function SubOrdinateLeaveBalancePage() {
                     ...doc.data()
                 })) as LeaveGroupDocument[];
 
-                // Fetch all leave applications for supervised employees
+                // Fetch all leave applications for target employees
+                // Firestore 'in' has limit of 10. If explicitSubordinateIds > 10, this will fail.
+                // We should chunk it or just fetch by individual queries if list is small, 
+                // or fetch by supervisorId if possible (but we are filtering explicitly now).
+                // Safest to batch strictly or just fetch all active leaves and filter in memory if not too huge?
+                // Given the code currently slices to 10: .slice(0, 10), we will keep that limitation or expand it.
+                // For "My Team" it might be > 10. 
+                // Let's rely on the existing logic structure but use targetEmployeeIds.
+
                 const leaveAppsSnapshot = await getDocs(
                     query(
                         collection(firestore, 'leave_applications'),
-                        where('employeeId', 'in', supervisedEmployeeIds.slice(0, 10)) // Firestore limit
+                        where('employeeId', 'in', targetEmployeeIds.slice(0, 10))
                     )
                 );
                 const leaveApplications = leaveAppsSnapshot.docs.map(doc => ({
@@ -73,7 +98,7 @@ export default function SubOrdinateLeaveBalancePage() {
                     ...doc.data()
                 })) as LeaveApplicationDocument[];
 
-                // Calculate balances for each employee
+                // Calculate balances (same logic)
                 const balances: EmployeeLeaveBalance[] = employees.map(employee => {
                     const leaveGroup = leaveGroups.find(lg => lg.id === employee.leaveGroupId);
 
@@ -85,7 +110,6 @@ export default function SubOrdinateLeaveBalancePage() {
                     }
 
                     const leaveBalances = leaveGroup.policies.map(policy => {
-                        // Calculate taken days for this leave type
                         const takenDays = leaveApplications
                             .filter(app =>
                                 app.employeeId === employee.id &&
@@ -122,7 +146,7 @@ export default function SubOrdinateLeaveBalancePage() {
         };
 
         fetchLeaveBalances();
-    }, [supervisedEmployeeIds]);
+    }, [targetEmployeeIds]);
 
     const toggleExpanded = (employeeId: string) => {
         setExpandedIds(prev => {

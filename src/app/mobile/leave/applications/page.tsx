@@ -2,16 +2,16 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Plus, Calendar as CalendarIcon, Info, Filter as FilterIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Calendar as CalendarIcon, Info, Filter as FilterIcon, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, parseISO, differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
-import type { LeaveApplicationDocument, EmployeeDocument } from '@/types';
+import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
 import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
 import { DateRange } from 'react-day-picker';
@@ -124,6 +124,57 @@ export default function MyLeaveApplicationsPage() {
         }
     };
 
+    const handleDeleteApplication = async (appId: string, event: React.MouseEvent) => {
+        event.stopPropagation(); // Prevent opening the modal
+
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "Do you want to cancel this leave application?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, cancel it!',
+            cancelButtonText: 'No, keep it',
+            reverseButtons: true,
+            customClass: {
+                popup: 'rounded-3xl',
+                confirmButton: 'rounded-xl',
+                cancelButton: 'rounded-xl'
+            }
+        });
+
+        if (result.isConfirmed) {
+            try {
+                setLoading(true);
+                await deleteDoc(doc(firestore, 'leave_applications', appId));
+
+                // Update local state
+                setApplications(prev => prev.filter(app => app.id !== appId));
+
+                Swal.fire({
+                    title: 'Cancelled!',
+                    text: 'Your leave application has been removed.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    customClass: { popup: 'rounded-3xl' }
+                });
+            } catch (error) {
+                console.error("Error cancelling leave:", error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Failed to cancel the application. Please try again.',
+                    icon: 'error',
+                    confirmButtonColor: '#3b82f6',
+                    customClass: { popup: 'rounded-3xl' }
+                });
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
     // Filter Logic
     const filteredApplications = React.useMemo(() => {
         return applications.filter(app => {
@@ -209,12 +260,21 @@ export default function MyLeaveApplicationsPage() {
                                 setIsModalOpen(true);
                             }}
                         >
-                            <div className="p-4">
+                            <div className="p-4 relative">
+                                {app.status === 'Pending' && (
+                                    <button
+                                        onClick={(e) => handleDeleteApplication(app.id, e)}
+                                        className="absolute top-4 right-4 h-6 w-6 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center hover:bg-rose-100 active:bg-rose-200 transition-colors z-10"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+
                                 <Badge className={cn("text-xs font-bold uppercase mb-2", getStatusColor(app.status))}>
                                     {app.status}
                                 </Badge>
 
-                                <h3 className="font-bold text-[#0a1e60] mb-1 line-clamp-2">
+                                <h3 className="font-bold text-[#0a1e60] mb-1 line-clamp-2 pr-6">
                                     {app.reason}
                                 </h3>
 
