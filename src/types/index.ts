@@ -1951,6 +1951,7 @@ export interface Payroll {
   totalDeductions: number;
   totalNetSalary: number;
   totalOvertimeAmount?: number;
+  totalBonusAmount?: number;
   status: 'Generated' | 'Approved' | 'Paid';
 }
 
@@ -1977,6 +1978,7 @@ export interface Payslip {
   excessBreakMinutes?: number;
   overtimeAmount?: number;
   overtimeMinutes?: number;
+  bonusAmount?: number;
   createdAt?: any; // Timestamp
   updatedAt?: any; // Timestamp
   paymentDate?: any; // Timestamp

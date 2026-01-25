@@ -21,6 +21,7 @@ import type { BranchDocument, DepartmentDocument, UnitDocument, EmployeeDocument
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
+import { getSalaryCalculationSettings } from '@/lib/settings/salary-calculation';
 import { format, getDaysInMonth, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWithinInterval, parseISO } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { sendPushNotification } from '@/lib/notifications';
@@ -151,12 +152,13 @@ export default function SalaryGenerationPage() {
             const startDate = startOfMonth(new Date(year, monthIndex));
             const endDate = endOfMonth(new Date(year, monthIndex));
 
-            const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, policySnapshot, breaksSnapshot] = await Promise.all([
+            const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, policySnapshot, breaksSnapshot, calcSettings] = await Promise.all([
                 getDocs(query(collection(firestore, "attendance"), where("date", ">=", format(startDate, "yyyy-MM-dd'T'00:00:00.000xxx")), where("date", "<=", format(endDate, "yyyy-MM-dd'T'23:59:59.999xxx")))),
                 getDocs(query(collection(firestore, "leave_applications"), where("status", "==", "Approved"))),
                 getDocs(collection(firestore, "holidays")),
                 getDoc(doc(firestore, 'hrm_settings', 'salary_generation_policy')),
-                getDocs(query(collection(firestore, "break_time"), where("date", ">=", format(startDate, "yyyy-MM-dd")), where("date", "<=", format(endDate, "yyyy-MM-dd")), where("status", "!=", "rejected")))
+                getDocs(query(collection(firestore, "break_time"), where("date", ">=", format(startDate, "yyyy-MM-dd")), where("date", "<=", format(endDate, "yyyy-MM-dd")), where("status", "!=", "rejected"))),
+                getSalaryCalculationSettings()
             ]);
 
             const attendanceRecs = attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument);
@@ -196,12 +198,16 @@ export default function SalaryGenerationPage() {
                 : {};
 
             const batch = writeBatch(firestore);
-            let totalGrossSalary = 0, totalDeductions = 0, totalOvertime = 0, processedCount = 0;
+            let totalGrossSalary = 0, totalDeductions = 0, totalOvertime = 0, totalBonus = 0, processedCount = 0;
             const employeeIds: string[] = [];
+
+            const payrollId = `PAYROLL-${data.year}-${data.month.toUpperCase()}`;
+            const payPeriod = `${data.month}, ${data.year}`;
 
             for (const empDoc of employeesSnapshot.docs) {
                 const employee = { id: empDoc.id, ...empDoc.data() } as EmployeeDocument;
-                if (!employee.salaryStructure || !employee.salaryStructure.grossSalary) continue;
+                const salaryStructure = employee.salaryStructure;
+                if (!salaryStructure || !salaryStructure.grossSalary) continue;
 
                 // FIX: Use optional chaining and provide default values
                 const daysInMonth = salaryPolicy?.dayConsideration === 'Fixed Days'
@@ -269,13 +275,24 @@ export default function SalaryGenerationPage() {
                     });
                 }
 
-                const basicItem = employee.salaryStructure.salaryBreakup?.find(sb => sb.breakupName === 'Basic');
+                const basicItem = salaryStructure.salaryBreakup?.find(sb => sb.breakupName === 'Basic');
                 const basicSalary = (basicItem?.amount || 0) + (basicItem?.increaseAmount || 0);
                 const dailyBasic = basicSalary / 30;
                 const hourlyBasic = dailyBasic / 8;
                 const overtimeAmount = (totalMonthlyOTMinutes / 60) * hourlyBasic;
 
-                const fullGrossSalary = employee.salaryStructure.grossSalary;
+                // --- Bonus Calculation Logic ---
+                let bonusAmount = 0;
+                if (data.includeBonus && calcSettings.bonusSettings) {
+                    for (const bonus of calcSettings.bonusSettings) {
+                        if (bonus.isEnabled) {
+                            const base = bonus.calculationBase === 'Gross' ? salaryStructure.grossSalary : basicSalary;
+                            bonusAmount += (base * (bonus.percentage / 100));
+                        }
+                    }
+                }
+
+                const fullGrossSalary = salaryStructure.grossSalary;
                 const perDaySalary = fullGrossSalary / daysInMonth;
                 const deductionForAbsence = absentDays * perDaySalary;
 
@@ -288,6 +305,7 @@ export default function SalaryGenerationPage() {
                 totalGrossSalary += fullGrossSalary;
                 totalDeductions += totalEmployeeDeductions;
                 totalOvertime += overtimeAmount;
+                totalBonus += bonusAmount;
                 processedCount++;
 
                 const payslipId = `PAYSLIP-${data.year}-${data.month.toUpperCase()}-${employee.id}`;
@@ -295,12 +313,13 @@ export default function SalaryGenerationPage() {
                 const payslipData: Payslip = {
                     id: payslipId, payrollId, employeeId: employee.id, employeeName: employee.fullName, employeeCode: employee.employeeCode,
                     designation: employee.designation, payPeriod,
-                    grossSalary: employee.salaryStructure.grossSalary,
-                    salaryBreakup: employee.salaryStructure.salaryBreakup,
+                    grossSalary: salaryStructure.grossSalary,
+                    salaryBreakup: salaryStructure.salaryBreakup,
                     totalDeductions: totalEmployeeDeductions,
                     overtimeAmount: overtimeAmount,
                     overtimeMinutes: totalMonthlyOTMinutes,
-                    netSalary: fullGrossSalary - totalEmployeeDeductions + overtimeAmount,
+                    bonusAmount: bonusAmount,
+                    netSalary: fullGrossSalary - totalEmployeeDeductions + overtimeAmount + bonusAmount,
                     absentDeduction: deductionForAbsence,
                     absentDays: absentDays,
                     breakDeduction: breakDeduction,
@@ -316,7 +335,9 @@ export default function SalaryGenerationPage() {
                 batch.set(payrollDocRef, {
                     id: payrollId, month: data.month, year: parseInt(data.year),
                     generationDate: serverTimestamp(), generatedBy: user?.displayName || user?.email,
-                    totalEmployees: processedCount, totalGrossSalary, totalDeductions, totalOvertimeAmount: totalOvertime, totalNetSalary: totalGrossSalary - totalDeductions + totalOvertime,
+                    totalEmployees: processedCount, totalGrossSalary, totalDeductions,
+                    totalOvertimeAmount: totalOvertime, totalBonusAmount: totalBonus,
+                    totalNetSalary: totalGrossSalary - totalDeductions + totalOvertime + totalBonus,
                     status: 'Generated',
                 }, { merge: true });
             }

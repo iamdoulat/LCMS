@@ -1,22 +1,33 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { DollarSign, RotateCcw, Save, Loader2 } from 'lucide-react';
-import { getSalaryCalculationSettings, updateSalaryCalculationSettings, resetSalaryCalculationSettings, DEFAULT_SALARY_SETTINGS } from '@/lib/settings/salary-calculation';
+import { DollarSign, RotateCcw, Save, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { getSalaryCalculationSettings, updateSalaryCalculationSettings, resetSalaryCalculationSettings, DEFAULT_SALARY_SETTINGS, type BonusSetting } from '@/lib/settings/salary-calculation';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
+
+const bonusSettingSchema = z.object({
+    id: z.string(),
+    name: z.string().min(1, 'Name is required'),
+    isEnabled: z.boolean().default(false),
+    calculationBase: z.enum(['Gross', 'Basic']),
+    percentage: z.number().min(0, 'Must be a positive number'),
+});
 
 const salarySettingsSchema = z.object({
     medicalAllowance: z.number().min(0, 'Must be a positive number'),
     conveyanceAllowance: z.number().min(0, 'Must be a positive number'),
     foodAllowance: z.number().min(0, 'Must be a positive number'),
+    bonusSettings: z.array(bonusSettingSchema),
 });
 
 type SalarySettingsFormValues = z.infer<typeof salarySettingsSchema>;
@@ -32,7 +43,13 @@ export default function SalaryCalculationSettingsPage() {
             medicalAllowance: DEFAULT_SALARY_SETTINGS.medicalAllowance,
             conveyanceAllowance: DEFAULT_SALARY_SETTINGS.conveyanceAllowance,
             foodAllowance: DEFAULT_SALARY_SETTINGS.foodAllowance,
+            bonusSettings: DEFAULT_SALARY_SETTINGS.bonusSettings,
         },
+    });
+
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: "bonusSettings",
     });
 
     React.useEffect(() => {
@@ -47,6 +64,7 @@ export default function SalaryCalculationSettingsPage() {
                 medicalAllowance: settings.medicalAllowance,
                 conveyanceAllowance: settings.conveyanceAllowance,
                 foodAllowance: settings.foodAllowance,
+                bonusSettings: settings.bonusSettings,
             });
         } catch (error) {
             console.error('Failed to load settings:', error);
@@ -214,6 +232,120 @@ export default function SalaryCalculationSettingsPage() {
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-medium">Bonus Calculation Settings</h3>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => append({ id: `bonus-${Date.now()}`, name: '', isEnabled: true, calculationBase: 'Gross', percentage: 0 })}
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Bonus Variation
+                                    </Button>
+                                </div>
+                                <div className="grid grid-cols-1 gap-4">
+                                    {fields.map((field, index) => (
+                                        <Card key={field.id} className="bg-muted/30">
+                                            <CardContent className="pt-6">
+                                                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                                                    <div className="md:col-span-1 flex items-center justify-center pb-2">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`bonusSettings.${index}.isEnabled`}
+                                                            render={({ field }) => (
+                                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                                                    <FormControl>
+                                                                        <Checkbox
+                                                                            checked={field.value}
+                                                                            onCheckedChange={field.onChange}
+                                                                        />
+                                                                    </FormControl>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </div>
+                                                    <div className="md:col-span-4">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`bonusSettings.${index}.name`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Bonus Name</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input placeholder="e.g. Festival Bonus" {...field} />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </div>
+                                                    <div className="md:col-span-3">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`bonusSettings.${index}.calculationBase`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Based On</FormLabel>
+                                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                                        <FormControl>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Select base" />
+                                                                            </SelectTrigger>
+                                                                        </FormControl>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="Gross">Gross Salary</SelectItem>
+                                                                            <SelectItem value="Basic">Basic Salary</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </div>
+                                                    <div className="md:col-span-3">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`bonusSettings.${index}.percentage`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Percentage (%)</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input
+                                                                            type="number"
+                                                                            placeholder="50"
+                                                                            {...field}
+                                                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                                                        />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </div>
+                                                    <div className="md:col-span-1 flex items-center justify-center pb-1">
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => remove(index)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                    {fields.length === 0 && (
+                                        <p className="text-sm text-muted-foreground text-center py-4 italic">No bonus variations configured.</p>
+                                    )}
+                                </div>
+                            </div>
+
 
                             <div className="flex items-center gap-3">
                                 <Button type="submit" disabled={isSaving}>

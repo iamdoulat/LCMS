@@ -118,8 +118,9 @@ Best Wishes,
             });
         }
 
-        // 3. Fetch Active Employees
-        const snapshot = await db.collection('employees').where('isActive', '==', true).get();
+        // 3. Fetch Non-Terminated Employees
+        // Using 'status' field as per EmployeeSchema. Any status except 'Terminated' should receive wishes.
+        const snapshot = await db.collection('employees').where('status', 'in', ['Active', 'On Leave']).get();
         const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
         let sentCount = 0;

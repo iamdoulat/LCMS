@@ -1,10 +1,19 @@
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
+export interface BonusSetting {
+    id: string;
+    name: string;
+    isEnabled: boolean;
+    calculationBase: 'Gross' | 'Basic';
+    percentage: number;
+}
+
 export interface SalaryCalculationSettings {
     medicalAllowance: number;
     conveyanceAllowance: number;
     foodAllowance: number;
+    bonusSettings: BonusSetting[];
     updatedAt?: any;
     updatedBy?: string;
 }
@@ -14,6 +23,10 @@ export const DEFAULT_SALARY_SETTINGS: SalaryCalculationSettings = {
     medicalAllowance: 750,
     conveyanceAllowance: 450,
     foodAllowance: 1250,
+    bonusSettings: [
+        { id: 'bonus-1', name: 'Festival Bonus 1', isEnabled: false, calculationBase: 'Gross', percentage: 50 },
+        { id: 'bonus-2', name: 'Festival Bonus 2', isEnabled: false, calculationBase: 'Gross', percentage: 50 },
+    ]
 };
 
 /**
@@ -31,6 +44,7 @@ export async function getSalaryCalculationSettings(): Promise<SalaryCalculationS
                 medicalAllowance: data.medicalAllowance ?? DEFAULT_SALARY_SETTINGS.medicalAllowance,
                 conveyanceAllowance: data.conveyanceAllowance ?? DEFAULT_SALARY_SETTINGS.conveyanceAllowance,
                 foodAllowance: data.foodAllowance ?? DEFAULT_SALARY_SETTINGS.foodAllowance,
+                bonusSettings: data.bonusSettings ?? DEFAULT_SALARY_SETTINGS.bonusSettings,
                 updatedAt: data.updatedAt,
                 updatedBy: data.updatedBy,
             };
