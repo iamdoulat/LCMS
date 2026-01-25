@@ -12,6 +12,7 @@ import {
     orderBy,
     getDoc
 } from 'firebase/firestore';
+import { format } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { determineAttendanceFlag } from './utils';
 import type {
@@ -187,7 +188,9 @@ export const approveReconciliation = async (
                 // robustly construct ISO date from YYYY-MM-DD
                 let isoDate;
                 try {
-                    isoDate = new Date(`${datePart}T00:00:00`).toISOString();
+                    // Use format with local offset to avoid timezone shifts between client and server
+                    // Splitting T00:00:00 to ensure we start at local midnight
+                    isoDate = format(new Date(`${datePart}T00:00:00`), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
                 } catch (e) {
                     isoDate = new Date().toISOString();
                 }

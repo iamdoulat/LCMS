@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Loader2, Users, Smartphone } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Loader2, Users, Smartphone, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -575,6 +575,25 @@ export default function HrmSettingsPage() {
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">Review and approve employee device changes</p>
+                        </CardContent>
+                    </Card>
+
+                    {/* Salary Calculation Settings Section */}
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium flex items-center gap-2">
+                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                Salary Calculation Settings
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex justify-between items-center">
+                                <div className="text-2xl font-bold">Configure</div>
+                                <Button asChild size="sm" variant="outline">
+                                    <Link href="/dashboard/settings/salary-calculation">Open</Link>
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">Set default allowances for salary breakdown</p>
                         </CardContent>
                     </Card>
 

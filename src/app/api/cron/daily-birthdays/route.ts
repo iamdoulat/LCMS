@@ -7,6 +7,24 @@ import { getCompanyName } from '@/lib/settings/company';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
+    /**
+     * CRON JOB TIMEZONE NOTES:
+     * 
+     * This cron job runs based on the schedule defined in vercel.json, which uses UTC time.
+     * The company timezone setting (stored in financial_settings/main_settings) is for 
+     * display and reference purposes.
+     * 
+     * To adjust when this job runs in your local timezone:
+     * 1. Determine your timezone offset from UTC
+     * 2. Calculate: UTC_hour = local_hour - timezone_offset
+     * 3. Update vercel.json cron schedule accordingly
+     * 
+     * Example: For 9:00 AM Bangladesh Time (UTC+6):
+     * - 9:00 AM local - 6 hours = 3:00 AM UTC
+     * - vercel.json: "schedule": "0 3 * * *"
+     * 
+     * Current schedule in vercel.json sends notifications at the configured UTC time.
+     */
     try {
         // 1. Authenticate Cron Job
         const authHeader = request.headers.get('authorization');

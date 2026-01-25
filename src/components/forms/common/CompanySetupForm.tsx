@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getCroppedImg } from '@/lib/image-utils';
 import { Separator } from '@/components/ui/separator';
 
@@ -54,6 +55,7 @@ interface FinancialSettingsProfile {
   binNumber?: string;
   tinNumber?: string;
   appVersion?: string;
+  timezone?: string;
   updatedAt?: any;
 }
 
@@ -81,6 +83,7 @@ const financialSettingsSchema = z.object({
   binNumber: z.string().optional(),
   tinNumber: z.string().optional(),
   appVersion: z.string().optional().or(z.literal('')),
+  timezone: z.string().optional(),
 });
 
 type FinancialSettingsFormValues = z.infer<typeof financialSettingsSchema>;
@@ -201,6 +204,7 @@ export function CompanySetupForm() {
       binNumber: '',
       tinNumber: '',
       appVersion: DEFAULT_APP_VERSION,
+      timezone: 'Asia/Dhaka',
     },
   });
 
@@ -365,6 +369,7 @@ export function CompanySetupForm() {
         pwaAppName: data.pwaAppName,
         pwaShortName: data.pwaShortName,
         pwaDescription: data.pwaDescription,
+        timezone: data.timezone || 'Asia/Dhaka',
         updatedAt: serverTimestamp(),
       };
 
@@ -560,6 +565,39 @@ export function CompanySetupForm() {
                   </FormItem>
                 )} />
               </div>
+
+              <FormField control={form.control} name="timezone" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Time Zone</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isReadOnly}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select time zone" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Asia/Dhaka">Bangladesh - Dhaka (UTC+6)</SelectItem>
+                      <SelectItem value="Asia/Kolkata">India - Kolkata (UTC+5:30)</SelectItem>
+                      <SelectItem value="Asia/Karachi">Pakistan - Karachi (UTC+5)</SelectItem>
+                      <SelectItem value="Asia/Dubai">UAE - Dubai (UTC+4)</SelectItem>
+                      <SelectItem value="Europe/London">UK - London (UTC+0/+1)</SelectItem>
+                      <SelectItem value="Europe/Paris">France - Paris (UTC+1/+2)</SelectItem>
+                      <SelectItem value="America/New_York">USA - New York (UTC-5/-4)</SelectItem>
+                      <SelectItem value="America/Chicago">USA - Chicago (UTC-6/-5)</SelectItem>
+                      <SelectItem value="America/Los_Angeles">USA - Los Angeles (UTC-8/-7)</SelectItem>
+                      <SelectItem value="Asia/Tokyo">Japan - Tokyo (UTC+9)</SelectItem>
+                      <SelectItem value="Asia/Shanghai">China - Shanghai (UTC+8)</SelectItem>
+                      <SelectItem value="Asia/Singapore">Singapore (UTC+8)</SelectItem>
+                      <SelectItem value="Australia/Sydney">Australia - Sydney (UTC+10/+11)</SelectItem>
+                      <SelectItem value="UTC">UTC (GMT+0)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription className="text-xs">
+                    This timezone will be used for scheduling notifications and cron jobs. Note: Vercel cron schedules use UTC time.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )} />
             </CardContent>
           </Card>
         </div>

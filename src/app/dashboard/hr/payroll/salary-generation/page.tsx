@@ -40,6 +40,7 @@ const salaryGenerationSchema = z.object({
     month: z.string().min(1, "Month is required."),
     recalculate: z.boolean().default(false),
     includeBonus: z.boolean().default(false),
+    includeOverTime: z.boolean().default(false),
 });
 
 type SalaryGenerationFormValues = z.infer<typeof salaryGenerationSchema>;
@@ -81,6 +82,7 @@ export default function SalaryGenerationPage() {
             month: monthOptions[new Date().getMonth()],
             recalculate: false,
             includeBonus: false,
+            includeOverTime: false,
         },
     });
 
@@ -149,16 +151,44 @@ export default function SalaryGenerationPage() {
             const startDate = startOfMonth(new Date(year, monthIndex));
             const endDate = endOfMonth(new Date(year, monthIndex));
 
-            const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, policySnapshot] = await Promise.all([
+            const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, policySnapshot, breaksSnapshot] = await Promise.all([
                 getDocs(query(collection(firestore, "attendance"), where("date", ">=", format(startDate, "yyyy-MM-dd'T'00:00:00.000xxx")), where("date", "<=", format(endDate, "yyyy-MM-dd'T'23:59:59.999xxx")))),
                 getDocs(query(collection(firestore, "leave_applications"), where("status", "==", "Approved"))),
                 getDocs(collection(firestore, "holidays")),
-                getDoc(doc(firestore, 'hrm_settings', 'salary_generation_policy'))
+                getDoc(doc(firestore, 'hrm_settings', 'salary_generation_policy')),
+                getDocs(query(collection(firestore, "break_time"), where("date", ">=", format(startDate, "yyyy-MM-dd")), where("date", "<=", format(endDate, "yyyy-MM-dd")), where("status", "!=", "rejected")))
             ]);
 
             const attendanceRecs = attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument);
             const approvedLeaves = leavesSnapshot.docs.map(d => d.data() as LeaveApplicationDocument);
             const holidays = holidaysSnapshot.docs.map(d => d.data() as HolidayDocument);
+
+            // Create a break lookup map: employeeId_date -> totalDurationMinutes
+            const breaksMap: Record<string, number> = {};
+            breaksSnapshot.docs.forEach(d => {
+                const data = d.data();
+                const key = `${data.employeeId}_${data.date}`;
+                breaksMap[key] = (breaksMap[key] || 0) + (data.durationMinutes || 0);
+            });
+
+            // Helper for time parsing moved outside for performance
+            const getTimeInMinutes = (timeStr: string | undefined): number | null => {
+                if (!timeStr) return null;
+                try {
+                    let h = 0, m = 0;
+                    const t12 = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+                    if (t12) {
+                        h = parseInt(t12[1], 10); m = parseInt(t12[2], 10);
+                        const p = t12[3].toUpperCase();
+                        if (p === 'PM' && h !== 12) h += 12; else if (p === 'AM' && h === 12) h = 0;
+                    } else {
+                        const t24 = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+                        if (t24) { h = parseInt(t24[1], 10); m = parseInt(t24[2], 10); }
+                        else { const d = new Date(timeStr); if (!isNaN(d.getTime())) { h = d.getHours(); m = d.getMinutes(); } else return null; }
+                    }
+                    return h * 60 + m;
+                } catch { return null; }
+            };
 
             // FIX: Properly handle the salary policy with default values
             const salaryPolicy: Partial<SalaryGenerationPolicy> = policySnapshot.exists()
@@ -166,7 +196,7 @@ export default function SalaryGenerationPage() {
                 : {};
 
             const batch = writeBatch(firestore);
-            let totalGrossSalary = 0, totalDeductions = 0, processedCount = 0;
+            let totalGrossSalary = 0, totalDeductions = 0, totalOvertime = 0, processedCount = 0;
             const employeeIds: string[] = [];
 
             for (const empDoc of employeesSnapshot.docs) {
@@ -204,21 +234,46 @@ export default function SalaryGenerationPage() {
                     }
                 });
 
-                // --- Break Time Deduction Logic ---
+                // --- Break Time Deduction Logic (Optimized from Map) ---
                 let totalExcessBreakMinutes = 0;
                 const threshold = salaryPolicy?.breakDeductionThreshold ?? 60;
 
-                // We need to fetch break records for EACH day of the month for this employee
-                // This might be slow if there are many employees. 
-                // However, the current logic is already doing a loop over daysInterval for attendance.
-                // To optimize, we could fetch ALL break records for the month once, but let's stick to the daily calculation for accuracy first.
-
                 for (const day of daysInterval) {
-                    const breakMinutes = await getDailyBreakMinutes(employee.id, format(day, 'yyyy-MM-dd'));
+                    const dateKey = format(day, 'yyyy-MM-dd');
+                    const breakMinutes = breaksMap[`${employee.id}_${dateKey}`] || 0;
                     if (breakMinutes > threshold) {
                         totalExcessBreakMinutes += (breakMinutes - threshold);
                     }
                 }
+
+                // --- OverTime Calculation Logic ---
+                let totalMonthlyOTMinutes = 0;
+                if (data.includeOverTime) {
+                    daysInterval.forEach(day => {
+                        const attendance = attendanceRecs.find(a => a.employeeId === employee.id && format(new Date(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+                        if (attendance && attendance.inTime && attendance.outTime) {
+                            const inMin = getTimeInMinutes(attendance.inTime);
+                            const outMin = getTimeInMinutes(attendance.outTime);
+
+                            if (inMin !== null && outMin !== null) {
+                                let workedMin = outMin - inMin;
+                                // Handle overnight shift if necessary (outMin < inMin)
+                                if (workedMin < 0) workedMin += 1440;
+
+                                const extraMin = workedMin - 480; // 8 hours = 480 min
+                                if (extraMin >= 30) {
+                                    totalMonthlyOTMinutes += extraMin;
+                                }
+                            }
+                        }
+                    });
+                }
+
+                const basicItem = employee.salaryStructure.salaryBreakup?.find(sb => sb.breakupName === 'Basic');
+                const basicSalary = (basicItem?.amount || 0) + (basicItem?.increaseAmount || 0);
+                const dailyBasic = basicSalary / 30;
+                const hourlyBasic = dailyBasic / 8;
+                const overtimeAmount = (totalMonthlyOTMinutes / 60) * hourlyBasic;
 
                 const fullGrossSalary = employee.salaryStructure.grossSalary;
                 const perDaySalary = fullGrossSalary / daysInMonth;
@@ -232,6 +287,7 @@ export default function SalaryGenerationPage() {
 
                 totalGrossSalary += fullGrossSalary;
                 totalDeductions += totalEmployeeDeductions;
+                totalOvertime += overtimeAmount;
                 processedCount++;
 
                 const payslipId = `PAYSLIP-${data.year}-${data.month.toUpperCase()}-${employee.id}`;
@@ -242,7 +298,9 @@ export default function SalaryGenerationPage() {
                     grossSalary: employee.salaryStructure.grossSalary,
                     salaryBreakup: employee.salaryStructure.salaryBreakup,
                     totalDeductions: totalEmployeeDeductions,
-                    netSalary: fullGrossSalary - totalEmployeeDeductions,
+                    overtimeAmount: overtimeAmount,
+                    overtimeMinutes: totalMonthlyOTMinutes,
+                    netSalary: fullGrossSalary - totalEmployeeDeductions + overtimeAmount,
                     absentDeduction: deductionForAbsence,
                     absentDays: absentDays,
                     breakDeduction: breakDeduction,
@@ -258,7 +316,7 @@ export default function SalaryGenerationPage() {
                 batch.set(payrollDocRef, {
                     id: payrollId, month: data.month, year: parseInt(data.year),
                     generationDate: serverTimestamp(), generatedBy: user?.displayName || user?.email,
-                    totalEmployees: processedCount, totalGrossSalary, totalDeductions, totalNetSalary: totalGrossSalary - totalDeductions,
+                    totalEmployees: processedCount, totalGrossSalary, totalDeductions, totalOvertimeAmount: totalOvertime, totalNetSalary: totalGrossSalary - totalDeductions + totalOvertime,
                     status: 'Generated',
                 }, { merge: true });
             }
@@ -331,9 +389,10 @@ export default function SalaryGenerationPage() {
                                     <p>Generation Date: {generationDate ? generationDate.toLocaleString() : '...'}</p>
                                 </div>
 
-                                <div className="flex items-center space-x-4 pt-4">
-                                    <FormField control={form.control} name="recalculate" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal cursor-pointer">Recalculate Old</FormLabel></FormItem>)} />
-                                    <FormField control={form.control} name="includeBonus" render={({ field }) => (<FormItem className="flex items-center space-x-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal cursor-pointer">Calculate Bonus With Salary</FormLabel></FormItem>)} />
+                                <div className="flex flex-wrap items-center gap-6 pt-4">
+                                    <FormField control={form.control} name="recalculate" render={({ field }) => (<FormItem className="flex items-center space-x-2 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal cursor-pointer">Recalculate Old</FormLabel></FormItem>)} />
+                                    <FormField control={form.control} name="includeBonus" render={({ field }) => (<FormItem className="flex items-center space-x-2 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal cursor-pointer">Calculate Bonus With Salary</FormLabel></FormItem>)} />
+                                    <FormField control={form.control} name="includeOverTime" render={({ field }) => (<FormItem className="flex items-center space-x-2 space-y-0"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel className="font-normal cursor-pointer">Include OverTime (Minimum 30 Min Extra Daily)</FormLabel></FormItem>)} />
                                 </div>
 
                                 <Button type="submit" disabled={isGenerating || isLoadingOptions} className="w-full md:w-auto">

@@ -63,6 +63,9 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
   const [isUploading, setIsUploading] = React.useState(false);
   const [showExternalUrlField, setShowExternalUrlField] = React.useState(!!employee.photoURL && employee.photoURL.startsWith('http') && !employee.photoURL.includes('firebasestorage'));
 
+  // State for automatic salary calculation
+  const [grossSalaryInput, setGrossSalaryInput] = React.useState('');
+
 
   // Use the hook to fetch data
   const { data: designations, isLoading: isLoadingDesignations } = useFirestoreQuery<DesignationDocument[]>(firestoreQuery(collection(firestore, "designations"), orderBy("name")), undefined, ['designations']);
@@ -361,6 +364,54 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       setIsSubmitting(false);
     }
   }
+
+  // Function to auto-fill salary breakdown based on gross salary
+  const handleAutoFillSalary = async () => {
+    const grossSalary = Number(grossSalaryInput);
+
+    if (!grossSalary || grossSalary <= 0) {
+      Swal.fire('Invalid Amount', 'Please enter a valid gross salary amount', 'warning');
+      return;
+    }
+
+    try {
+      // Fetch allowance settings (with fallback to defaults)
+      const { getSalaryCalculationSettings } = await import('@/lib/settings/salary-calculation');
+      const settings = await getSalaryCalculationSettings();
+
+      const medicalAllowance = settings.medicalAllowance;
+      const conveyanceAllowance = settings.conveyanceAllowance;
+      const foodAllowance = settings.foodAllowance;
+      const othersAllowance = medicalAllowance + conveyanceAllowance + foodAllowance;
+
+      // Calculate Basic and House Rent
+      const basic = Math.round((grossSalary - othersAllowance) / 1.5);
+      const houseRent = Math.round(basic / 2);
+
+      // Create salary breakdown items
+      const breakdownItems = [
+        { breakupName: 'Basic', amount: basic, increaseAmount: 0 },
+        { breakupName: 'House Rent', amount: houseRent, increaseAmount: 0 },
+        { breakupName: 'Medical Allowance', amount: medicalAllowance, increaseAmount: 0 },
+        { breakupName: 'Conveyance Allowance', amount: conveyanceAllowance, increaseAmount: 0 },
+        { breakupName: 'Food Allowance', amount: foodAllowance, increaseAmount: 0 },
+      ];
+
+      setValue('salaryStructure.salaryBreakup', breakdownItems);
+
+      Swal.fire({
+        title: 'Success!',
+        text: 'Salary breakdown filled successfully',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error('Error in salary calculation:', error);
+      Swal.fire('Error', 'Failed to calculate salary breakdown', 'error');
+    }
+  };
+
 
 
   return (
@@ -756,6 +807,39 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               )} />
             </div>
             <Separator />
+
+            {/* Automatic Salary Calculation */}
+            <div className="bg-muted/30 p-4 rounded-lg border border-primary/20">
+              <div className="space-y-3">
+                <Label htmlFor="grossSalaryInputEdit" className="text-sm font-medium">
+                  Gross Salary Amount (Auto-fill)
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="grossSalaryInputEdit"
+                    type="number"
+                    placeholder="Enter gross salary (e.g., 40000)"
+                    value={grossSalaryInput}
+                    onChange={(e) => setGrossSalaryInput(e.target.value)}
+                    className="font-mono flex-1"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAutoFillSalary}
+                    variant="default"
+                    disabled={!grossSalaryInput}
+                  >
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Fill Breakdown
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Enter amount and click Fill to auto-calculate breakdown</span>
+                  <span className="text-[10px]">Click to Generate</span>
+                </div>
+              </div>
+            </div>
+
             <FormItem>
               <div>
                 <Label>Add Salary Breakup*</Label>

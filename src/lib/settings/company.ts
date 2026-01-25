@@ -20,3 +20,23 @@ export const getCompanyName = async (): Promise<string> => {
     }
     return process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
 };
+
+export const getCompanyTimezone = async (): Promise<string> => {
+    try {
+        if (typeof window === 'undefined') {
+            const { admin } = await import('@/lib/firebase/admin');
+            const docSnap = await admin.firestore().collection('financial_settings').doc('main_settings').get();
+            if (docSnap.exists) {
+                return docSnap.data()?.timezone || 'Asia/Dhaka';
+            }
+        } else {
+            const docSnap = await getDoc(doc(firestore, 'financial_settings', 'main_settings'));
+            if (docSnap.exists()) {
+                return docSnap.data()?.timezone || 'Asia/Dhaka';
+            }
+        }
+    } catch (error) {
+        console.error("Error fetching company timezone:", error);
+    }
+    return 'Asia/Dhaka';
+};
