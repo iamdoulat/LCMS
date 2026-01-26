@@ -291,11 +291,15 @@ export function AddEmployeeForm() {
         'Direct supervision': data.supervisorId !== 'unassigned' ? data.supervisorId : null,
       };
 
+      // Get Auth Token
+      const token = await user.getIdToken();
+
       // Call API
       const response = await fetch('/api/employees/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(apiPayload),
       });

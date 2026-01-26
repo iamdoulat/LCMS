@@ -17,6 +17,8 @@ import { firestore } from '@/lib/firebase/config';
 import type { MultipleCheckInOutConfiguration } from '@/types';
 import Swal from 'sweetalert2';
 
+import { useAuth } from '@/context/AuthContext';
+
 interface MultipleCheckInOutFormProps {
     employeeId: string;
     employeeName: string;
@@ -31,6 +33,7 @@ interface FormData {
 }
 
 export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, onCancel }: MultipleCheckInOutFormProps) {
+    const { user } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
     const [capturedImage, setCapturedImage] = useState<File | null>(null);
@@ -183,21 +186,33 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
             // Send notifications (non-blocking)
             const now = new Date();
             // Try to get more employee details if we have them, otherwise just enough for the notification
-            fetch('/api/notify/attendance', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: data.type === 'Check In' ? 'check_in' : 'check_out',
-                    employeeId: employeeId,
-                    employeeName: employeeName,
-                    time: new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).format(now),
-                    date: new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).format(now),
-                    location: location,
-                    companyName: data.companyName,
-                    remarks: data.remarks,
-                    photoUrl: imageURL
-                })
-            }).catch(err => console.error('Notification error:', err));
+            const triggerNotification = async () => {
+                if (!user) return;
+                try {
+                    const token = await user.getIdToken();
+                    fetch('/api/notify/attendance', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            type: data.type === 'Check In' ? 'check_in' : 'check_out',
+                            employeeId: employeeId,
+                            employeeName: employeeName,
+                            time: new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).format(now),
+                            date: new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).format(now),
+                            location: location,
+                            companyName: data.companyName,
+                            remarks: data.remarks,
+                            photoUrl: imageURL
+                        })
+                    });
+                } catch (err) {
+                    console.error('Failed to trigger notification:', err);
+                }
+            };
+            triggerNotification();
 
             Swal.fire('Success', `${data.type} recorded successfully!`, 'success');
             onSuccess?.();

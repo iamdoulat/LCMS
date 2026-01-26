@@ -1044,16 +1044,27 @@ export default function AccountDetailsPage() {
       const newReconciliationId = await createReconciliationRequest(data, user.uid);
 
       // Trigger Email Notification (Non-blocking)
-      fetch('/api/attendance/notify-reconciliation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeName: employeeData.fullName,
-          attendanceDate: dateKey,
-          reason: [reconciliationForm.inTimeRemarks, reconciliationForm.outTimeRemarks].filter(Boolean).join(' | '),
-          reconciliationId: newReconciliationId
-        })
-      }).catch(err => console.error("Failed to trigger notification email:", err));
+      const triggerReconNotify = async () => {
+        try {
+          const token = await user.getIdToken();
+          fetch('/api/attendance/notify-reconciliation', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              employeeName: employeeData.fullName,
+              attendanceDate: dateKey,
+              reason: [reconciliationForm.inTimeRemarks, reconciliationForm.outTimeRemarks].filter(Boolean).join(' | '),
+              reconciliationId: newReconciliationId
+            })
+          });
+        } catch (err) {
+          console.error("Failed to trigger notification email:", err);
+        }
+      };
+      triggerReconNotify();
 
       // Refresh list
       const docs = await getEmployeeReconciliations(employeeData.id);
@@ -1587,23 +1598,34 @@ export default function AccountDetailsPage() {
         await setDoc(docRef, dataToSet, { merge: true });
         setDailyAttendance(dataToSet as AttendanceDocument);
 
-        fetch('/api/notify/attendance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'in_time',
-            employeeId: employeeData.id,
-            employeeName: employeeData.fullName,
-            employeeCode: employeeData.employeeCode,
-            employeeEmail: employeeData.email,
-            employeePhone: employeeData.phone,
-            time: currentTime,
-            date: format(now, 'PPP'),
-            flag: flag,
-            location: attendanceLocation,
-            remarks: attendanceRemarks
-          })
-        }).catch(err => console.error('Notification error:', err));
+        const triggerInNotify = async () => {
+          try {
+            const token = await user.getIdToken();
+            fetch('/api/notify/attendance', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                type: 'in_time',
+                employeeId: employeeData.id,
+                employeeName: employeeData.fullName,
+                employeeCode: employeeData.employeeCode,
+                employeeEmail: employeeData.email,
+                employeePhone: employeeData.phone,
+                time: currentTime,
+                date: format(now, 'PPP'),
+                flag: flag,
+                location: attendanceLocation,
+                remarks: attendanceRemarks
+              })
+            });
+          } catch (err) {
+            console.error('Notification error:', err);
+          }
+        };
+        triggerInNotify();
 
         Swal.fire("Clocked In!", `Your arrival at ${currentTime} has been recorded.`, "success");
       } else {
@@ -1623,22 +1645,33 @@ export default function AccountDetailsPage() {
         await updateDoc(docRef, dataToSet);
         setDailyAttendance(prev => prev ? { ...prev, ...dataToSet } as AttendanceDocument : null);
 
-        fetch('/api/notify/attendance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'out_time',
-            employeeId: employeeData.id,
-            employeeName: employeeData.fullName,
-            employeeCode: employeeData.employeeCode,
-            employeeEmail: employeeData.email,
-            employeePhone: employeeData.phone,
-            time: currentTime,
-            date: format(now, 'PPP'),
-            location: attendanceLocation,
-            remarks: attendanceRemarks
-          })
-        }).catch(err => console.error('Notification error:', err));
+        const triggerOutNotify = async () => {
+          try {
+            const token = await user.getIdToken();
+            fetch('/api/notify/attendance', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                type: 'out_time',
+                employeeId: employeeData.id,
+                employeeName: employeeData.fullName,
+                employeeCode: employeeData.employeeCode,
+                employeeEmail: employeeData.email,
+                employeePhone: employeeData.phone,
+                time: currentTime,
+                date: format(now, 'PPP'),
+                location: attendanceLocation,
+                remarks: attendanceRemarks
+              })
+            });
+          } catch (err) {
+            console.error('Notification error:', err);
+          }
+        };
+        triggerOutNotify();
 
         Swal.fire("Clocked Out!", `Your departure at ${currentTime} has been recorded.`, "success");
       }
