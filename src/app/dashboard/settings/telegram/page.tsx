@@ -28,7 +28,7 @@ export default function TelegramSettingsPage() {
     const { user } = useAuth();
     const [configs, setConfigs] = useState<TelegramConfiguration[]>([]);
     const [loading, setLoading] = useState(true);
-    const [companyName, setCompanyName] = useState('Nextsew');
+    const [companyName, setCompanyName] = useState('LCMS');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentId, setCurrentId] = useState<string | null>(null);

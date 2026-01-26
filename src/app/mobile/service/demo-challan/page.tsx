@@ -28,9 +28,11 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import Swal from 'sweetalert2';
 import { DemoChallanPrintTemplate } from '@/components/print/DemoChallanPrintTemplate';
+import { useAuth } from '@/context/AuthContext';
 
 export default function MobileDemoChallanPage() {
     const router = useRouter();
+    const { companyName } = useAuth();
     const [challans, setChallans] = useState<DemoChallanDocument[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isPaginating, setIsPaginating] = useState(false);
@@ -470,7 +472,7 @@ export default function MobileDemoChallanPage() {
                                                 </div>
                                                 <div>
                                                     <p className="text-[9px] font-bold text-slate-400 uppercase leading-none mb-1">Brand</p>
-                                                    <p className="text-xs font-black text-slate-700">Nextsew</p>
+                                                    <p className="text-xs font-black text-slate-700">{companyName || 'LCMS'}</p>
                                                 </div>
                                             </div>
                                         ))}

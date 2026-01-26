@@ -422,7 +422,7 @@ export function SendEmailForm() {
                                                     .replace(/{{password}}/g, '********')
 
                                                     // System / Other
-                                                    .replace(/{{company_name}}/g, process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew')
+                                                    .replace(/{{company_name}}/g, process.env.NEXT_PUBLIC_APP_NAME || 'LCMS')
                                                     .replace(/{{date}}/g, new Date().toLocaleDateString())
                                                     .replace(/{{login_url}}/g, 'https://app.nextsew.com/login')
                                                     .replace(/{{amount}}/g, '$500.00')

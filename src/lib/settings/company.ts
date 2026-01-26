@@ -7,18 +7,18 @@ export const getCompanyName = async (): Promise<string> => {
             const { admin } = await import('@/lib/firebase/admin');
             const docSnap = await admin.firestore().collection('financial_settings').doc('main_settings').get();
             if (docSnap.exists) {
-                return docSnap.data()?.companyName || process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
+                return docSnap.data()?.companyName || process.env.NEXT_PUBLIC_APP_NAME || 'LCMS';
             }
         } else {
             const docSnap = await getDoc(doc(firestore, 'financial_settings', 'main_settings'));
             if (docSnap.exists()) {
-                return docSnap.data()?.companyName || process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
+                return docSnap.data()?.companyName || process.env.NEXT_PUBLIC_APP_NAME || 'LCMS';
             }
         }
     } catch (error) {
         console.error("Error fetching company name:", error);
     }
-    return process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew';
+    return process.env.NEXT_PUBLIC_APP_NAME || 'LCMS';
 };
 
 export const getCompanyTimezone = async (): Promise<string> => {

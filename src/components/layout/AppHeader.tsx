@@ -75,7 +75,7 @@ export function AppHeader() {
               )}
             >
               <span className="hidden md:inline">Indenting & LC Management System Portal</span>
-              <span className="inline md:hidden">{companyName || 'NextSew'}</span>
+              <span className="inline md:hidden">{companyName || 'LCMS'}</span>
             </span>
           </Link>
         )}

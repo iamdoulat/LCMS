@@ -14,6 +14,7 @@ import { doc, getDoc, addDoc, updateDoc, collection, serverTimestamp, query, whe
 import { firestore } from '@/lib/firebase/config';
 import { EmailTemplate } from '@/types/email-settings';
 import { Badge } from '@/components/ui/badge';
+import { getCompanyName } from '@/lib/settings/company';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Eye } from 'lucide-react';
@@ -34,6 +35,7 @@ export default function EditEmailTemplatePage() {
 
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
+    const [companyName, setCompanyName] = useState('LCMS');
 
     const [formData, setFormData] = useState<Partial<EmailTemplate>>({
         name: '',
@@ -46,6 +48,8 @@ export default function EditEmailTemplatePage() {
     const [variableInput, setVariableInput] = useState('');
 
     useEffect(() => {
+        getCompanyName().then(setCompanyName);
+
         if (!isNew && id) {
             const fetchTemplate = async () => {
                 try {
@@ -302,7 +306,7 @@ export default function EditEmailTemplatePage() {
                                                 .replace(/{{user_name}}/g, 'johndoe123')
                                                 .replace(/{{department}}/g, 'Production')
                                                 .replace(/{{designation}}/g, 'Manager')
-                                                .replace(/{{company_name}}/g, 'Nextsew')
+                                                .replace(/{{company_name}}/g, companyName)
                                                 .replace(/{{date}}/g, new Date().toLocaleDateString())
                                                 .replace(/{{apply_date}}/g, new Date().toLocaleDateString())
                                                 .replace(/{{visit_start}}/g, '10:00 AM')

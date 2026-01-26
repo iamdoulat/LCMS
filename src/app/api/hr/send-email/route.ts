@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
                     data: {
                         // company_name and date are handled by default in sender.ts if not provided here
                         // but we can pass explicit overrides if needed
-                        company_name: process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew',
+                        company_name: process.env.NEXT_PUBLIC_APP_NAME || 'LCMS',
                     }
                 });
 

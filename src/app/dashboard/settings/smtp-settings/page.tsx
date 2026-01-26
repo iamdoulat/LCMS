@@ -37,7 +37,7 @@ export default function SmtpSettingsPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [currentId, setCurrentId] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
-    const [companyName, setCompanyName] = useState('Nextsew');
+    const [companyName, setCompanyName] = useState('LCMS');
 
     // Test Email State
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);

@@ -35,7 +35,7 @@ export async function POST(req: Request) {
         <p>If you have any questions, please contact the HR department.</p>
         <br/>
         <p>Best regards,</p>
-        <p><strong>${process.env.NEXT_PUBLIC_APP_NAME || 'Nextsew'} Team</strong></p>
+        <p><strong>${process.env.NEXT_PUBLIC_APP_NAME || 'LCMS'} Team</strong></p>
       </div>
     `;
 

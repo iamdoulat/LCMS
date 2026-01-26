@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export function InstallPrompt() {
+    const { companyName } = useAuth();
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [showPrompt, setShowPrompt] = useState(false);
 
@@ -65,7 +67,7 @@ export function InstallPrompt() {
                     </div>
                     <div className="flex-1">
                         <h3 className="text-white font-bold text-base mb-1">
-                            Install NextSew App
+                            Install {companyName || 'LCMS'} App
                         </h3>
                         <p className="text-white/90 text-sm">
                             Install to your home screen for quick access

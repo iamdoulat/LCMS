@@ -30,7 +30,7 @@ export default function EditWhatsAppTemplatePage() {
     const params = useParams();
     const id = params.id as string;
     const isNew = id === 'new';
-    const [companyName, setCompanyName] = useState('Nextsew');
+    const [companyName, setCompanyName] = useState('LCMS');
 
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);

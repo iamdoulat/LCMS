@@ -185,7 +185,7 @@ export default function CommissionReportPage() {
             // Company Info (Left Aligned)
             doc.setFontSize(22);
             doc.setTextColor(40, 40, 40);
-            doc.text(companyName || 'NextSew', textX, 16);
+            doc.text(companyName || 'LCMS', textX, 16);
 
             doc.setFontSize(9);
             doc.setTextColor(100, 100, 100);

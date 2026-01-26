@@ -396,7 +396,7 @@ export function SendWhatsAppForm() {
                                                 // Simple mock replacements for preview
                                                 .replace(/{{name}}/g, 'John')
                                                 .replace(/{{employee_name}}/g, 'John Doe')
-                                                .replace(/{{company_name}}/g, companyName || 'NextSew')
+                                                .replace(/{{company_name}}/g, companyName || 'LCMS')
                                             }
                                             <div className="text-[10px] text-right mt-2 opacity-60">
                                                 {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

@@ -24,7 +24,7 @@ import { getCompanyName } from '@/lib/settings/company';
 export default function WhatsAppSettingsPage() {
     const [configs, setConfigs] = useState<WhatsAppGatewayConfig[]>([]);
     const [loading, setLoading] = useState(true);
-    const [companyName, setCompanyName] = useState('Nextsew');
+    const [companyName, setCompanyName] = useState('LCMS');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentId, setCurrentId] = useState<string | null>(null);
