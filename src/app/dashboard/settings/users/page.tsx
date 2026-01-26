@@ -5,17 +5,20 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { Loader2, Users as UsersIcon, PlusCircle, FileEdit, Trash2, ShieldAlert, MoreHorizontal, UserCheck, UserX, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { Loader2, Users as UsersIcon, PlusCircle, FileEdit, Trash2, ShieldAlert, MoreHorizontal, UserCheck, UserX, ChevronLeft, ChevronRight, Settings, Filter, XCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, deleteDoc, doc, updateDoc, serverTimestamp, getDoc, setDoc } from 'firebase/firestore';
 import type { UserDocumentForAdmin, UserRole } from '@/types';
+import { userRoles } from '@/types';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +42,12 @@ export default function UserListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [registrationEnabled, setRegistrationEnabled] = useState<boolean>(true);
   const [isTogglingRegistration, setIsTogglingRegistration] = useState(false);
+
+  // Filter States
+  const [filterName, setFilterName] = useState('');
+  const [filterEmail, setFilterEmail] = useState('');
+  const [filterRole, setFilterRole] = useState('ALL');
+  const [filterStatus, setFilterStatus] = useState('ALL');
   const isAdminOrSuperAdmin = useMemo(() => userRole?.some(role => ['Super Admin', 'Admin'].includes(role)), [userRole]);
   const isSuperAdmin = useMemo(() => userRole?.includes('Super Admin'), [userRole]);
   const isReadOnly = useMemo(() => userRole?.includes('Viewer'), [userRole]);
@@ -204,17 +213,47 @@ export default function UserListPage() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
+  // Filtering Logic
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => {
+      const nameMatch = !filterName || u.displayName?.toLowerCase().includes(filterName.toLowerCase());
+      const emailMatch = !filterEmail || u.email?.toLowerCase().includes(filterEmail.toLowerCase());
+
+      const roles = Array.isArray(u.role) ? u.role : (u.role ? [u.role] : []);
+      const roleMatch = filterRole === 'ALL' || roles.includes(filterRole as UserRole);
+
+      const isDisabled = u.disabled === true;
+      const statusMatch = filterStatus === 'ALL' ||
+        (filterStatus === 'ACTIVE' && !isDisabled) ||
+        (filterStatus === 'DISABLED' && isDisabled);
+
+      return nameMatch && emailMatch && roleMatch && statusMatch;
+    });
+  }, [users, filterName, filterEmail, filterRole, filterStatus]);
+
   // Pagination Logic
   const paginatedUsers = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    return users.slice(startIndex, endIndex);
-  }, [users, currentPage]);
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage]);
 
-  const totalPages = Math.ceil(users.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterName, filterEmail, filterRole, filterStatus]);
+
+  const clearFilters = () => {
+    setFilterName('');
+    setFilterEmail('');
+    setFilterRole('ALL');
+    setFilterStatus('ALL');
   };
 
   const getPageNumbers = () => {
@@ -287,6 +326,62 @@ export default function UserListPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <Card className="mb-6 shadow-md p-4">
+            <CardHeader className="p-2 pb-4">
+              <CardTitle className="text-xl flex items-center"><Filter className="mr-2 h-5 w-5 text-primary" /> Filter Options</CardTitle>
+            </CardHeader>
+            <CardContent className="p-2 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                <div className="space-y-1">
+                  <Label htmlFor="userNameFilter">User Name</Label>
+                  <Input
+                    id="userNameFilter"
+                    placeholder="Search Name..."
+                    value={filterName}
+                    onChange={(e) => setFilterName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="emailFilter">Email</Label>
+                  <Input
+                    id="emailFilter"
+                    placeholder="Search Email..."
+                    value={filterEmail}
+                    onChange={(e) => setFilterEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="roleFilter">Role</Label>
+                  <Select value={filterRole} onValueChange={setFilterRole}>
+                    <SelectTrigger id="roleFilter"><SelectValue placeholder="All Roles" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All Roles</SelectItem>
+                      {userRoles.map(role => (
+                        <SelectItem key={role} value={role}>{role}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="statusFilter">Status</Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger id="statusFilter"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All Statuses</SelectItem>
+                      <SelectItem value="ACTIVE">Active</SelectItem>
+                      <SelectItem value="DISABLED">Disabled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="pt-6">
+                  <Button onClick={clearFilters} variant="outline" className="w-full">
+                    <XCircle className="mr-2 h-4 w-4" /> Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {fetchError && (
             <Alert variant="destructive" className="mb-4">
               <ShieldAlert className="h-4 w-4" />
@@ -381,7 +476,7 @@ export default function UserListPage() {
               </TableBody>
               <TableCaption>
                 Showing {paginatedUsers.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-
-                {Math.min(currentPage * ITEMS_PER_PAGE, users.length)} of {users.length} users.
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length)} of {filteredUsers.length} users.
               </TableCaption>
             </Table>
           </div>
