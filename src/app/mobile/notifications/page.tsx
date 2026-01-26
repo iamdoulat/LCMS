@@ -135,7 +135,7 @@ export default function MobileNotificationsPage() {
 
             {/* Content */}
             <main className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col">
-                <div className="flex-1 overflow-y-auto px-4 pt-8 pb-32 space-y-3 overscroll-contain">
+                <div className="flex-1 overflow-y-auto px-4 pt-8 pb-40 space-y-3 overscroll-contain">
                     {loading ? (
                         <NotificationSkeleton />
                     ) : notifications.length === 0 ? (
