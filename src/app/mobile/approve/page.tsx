@@ -70,7 +70,7 @@ export default function ApproveApplicationsPage() {
 
     // Filter State - Default to All
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [filters, setFilters] = useState<FilterState>({ status: 'All' });
+    const [filters, setFilters] = useState<FilterState>({ status: 'Pending' });
 
     // Computed filtered lists (Date Range Logic)
     const filteredLeaveApps = React.useMemo(() => {
