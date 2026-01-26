@@ -269,12 +269,15 @@ export default function MobileDashboardPage() {
             let pendingLeaveCount = 0;
             leaveData?.forEach(doc => {
                 if (doc.status === 'Approved' && doc.fromDate && doc.toDate) {
-                    const start = parseISO(doc.fromDate);
-                    const end = parseISO(doc.toDate);
-                    const overlapStart = max([start, startOfCurrYear]);
-                    const overlapEnd = min([end, endOfCurrYear]);
-                    if (overlapEnd >= overlapStart) {
-                        leafSpent += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
+                    // Only count MY spent leave
+                    if (doc.employeeId === (currentEmployeeId || user?.uid)) {
+                        const start = parseISO(doc.fromDate);
+                        const end = parseISO(doc.toDate);
+                        const overlapStart = max([start, startOfCurrYear]);
+                        const overlapEnd = min([end, endOfCurrYear]);
+                        if (overlapEnd >= overlapStart) {
+                            leafSpent += differenceInCalendarDays(overlapEnd, overlapStart) + 1;
+                        }
                     }
                 } else if (doc.status === 'Pending') {
                     pendingLeaveCount++;
@@ -286,12 +289,15 @@ export default function MobileDashboardPage() {
             let pendingVisitCount = 0;
             visitData?.forEach(doc => {
                 if (doc.status === 'Approved' && doc.fromDate && doc.toDate) {
-                    const start = parseISO(doc.fromDate);
-                    const end = parseISO(doc.toDate);
-                    const overlapStart = max([start, startOfCurrYear]);
-                    const overlapEnd = min([end, endOfCurrYear]);
-                    if (overlapEnd >= overlapStart) {
-                        visitCount += doc.day ? Number(doc.day) : (differenceInCalendarDays(overlapEnd, overlapStart) + 1);
+                    // Only count MY visits
+                    if (doc.employeeId === (currentEmployeeId || user?.uid)) {
+                        const start = parseISO(doc.fromDate);
+                        const end = parseISO(doc.toDate);
+                        const overlapStart = max([start, startOfCurrYear]);
+                        const overlapEnd = min([end, endOfCurrYear]);
+                        if (overlapEnd >= overlapStart) {
+                            visitCount += doc.day ? Number(doc.day) : (differenceInCalendarDays(overlapEnd, overlapStart) + 1);
+                        }
                     }
                 } else if (doc.status === 'Pending') {
                     pendingVisitCount++;
