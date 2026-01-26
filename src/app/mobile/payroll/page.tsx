@@ -27,8 +27,14 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh';
 
 export default function MobilePayrollPage() {
     const router = useRouter();
-    const { user, companyName, companyLogoUrl, address } = useAuth();
+    const { user, userRole, companyName, companyLogoUrl, address } = useAuth();
     const { currentEmployeeId } = useSupervisorCheck(user?.email);
+
+    // Check for Admin or HR role
+    const isAdminOrHR = React.useMemo(() => {
+        if (!userRole) return false;
+        return userRole.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+    }, [userRole]);
 
     // UI State
     const [activeTab, setActiveTab] = useState<'salary' | 'advance'>('salary');
@@ -48,53 +54,10 @@ export default function MobilePayrollPage() {
     // Filter State
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState<FilterState>({});
-    const [logoBase64, setLogoBase64] = useState<string | null>(null);
-
-    // Pre-fetch logo as Base64 to avoid CORS issues in PDF generation
-    React.useEffect(() => {
-        if (companyLogoUrl) {
-            const fetchLogo = async () => {
-                try {
-                    const response = await fetch(companyLogoUrl); // Try simple fetch first
-                    const blob = await response.blob();
-                    const reader = new FileReader();
-                    reader.onloadend = () => setLogoBase64(reader.result as string);
-                    reader.readAsDataURL(blob);
-                } catch (error) {
-                    console.error("Error pre-loading logo for PDF:", error);
-                }
-            };
-            fetchLogo();
-        }
-    }, [companyLogoUrl]);
 
     // --- Queries ---
 
-    // 1. Payslips Query
-    const { data: payslips, isLoading: isLoadingPayslips, error: errorPayslips, refetch: refetchPayslips } = useFirestoreQuery<any[]>(
-        currentEmployeeId ? query(
-            collection(firestore, 'payslips'),
-            where('employeeId', '==', currentEmployeeId),
-            orderBy('createdAt', 'desc')
-        ) : null,
-        undefined,
-        ['mobile_payslips', currentEmployeeId || 'none'],
-        !!currentEmployeeId
-    );
-
-    // 2. Advance Salary Query
-    const { data: advanceRequests, isLoading: isLoadingAdvances, error: errorAdvances, refetch: refetchAdvances } = useFirestoreQuery<any[]>(
-        user?.uid ? query(
-            collection(firestore, 'advance_salary'),
-            where('employeeId', '==', user.uid),
-            orderBy('applyDate', 'desc')
-        ) : null,
-        undefined,
-        ['mobile_advance_salary', user?.uid || 'none'],
-        !!user?.uid
-    );
-
-    // 3. Employee Profile Query (to get readable ID)
+    // 1. Employee Profile Query (to get readable ID) - First to provide employeeCode
     const { data: employeeProfile } = useFirestoreQuery<any[]>(
         user?.uid ? query(
             collection(firestore, 'employees'),
@@ -106,22 +69,60 @@ export default function MobilePayrollPage() {
         !!user?.uid
     );
 
+    const currentEmployeeIdValue = employeeProfile?.[0]?.employeeId || employeeProfile?.[0]?.id;
+
+    // 2. Payslips Query - Filter by own employeeId only
+    const payslipQuery = React.useMemo(() => {
+        if (!currentEmployeeIdValue) return null;
+        return query(
+            collection(firestore, 'payslips'),
+            where('employeeId', '==', currentEmployeeIdValue),
+            orderBy('createdAt', 'desc')
+        );
+    }, [currentEmployeeIdValue]);
+
+    const { data: payslips, isLoading: isLoadingPayslips, error: errorPayslips, refetch: refetchPayslips } = useFirestoreQuery<any[]>(
+        payslipQuery,
+        undefined,
+        ['mobile_payslips', currentEmployeeIdValue || 'none'],
+        !!currentEmployeeIdValue
+    );
+
+    // 3. Advance Salary Query
+    const { data: advanceRequests, isLoading: isLoadingAdvances, error: errorAdvances, refetch: refetchAdvances } = useFirestoreQuery<any[]>(
+        user?.uid ? query(
+            collection(firestore, 'advance_salary'),
+            where('employeeId', '==', user.uid),
+            orderBy('applyDate', 'desc')
+        ) : null,
+        undefined,
+        ['mobile_advance_salary', user?.uid || 'none'],
+        !!user?.uid
+    );
+
     // Filtered Lists Logic (after queries)
     const filteredPayslips = React.useMemo(() => {
         if (!payslips) return [];
-        return payslips.filter(slip => {
-            if (filters.year) {
-                let slipYear: number | undefined;
-                if (slip.createdAt?.toDate) {
-                    slipYear = getYear(slip.createdAt.toDate());
-                } else if (slip.payPeriod) {
-                    const parts = slip.payPeriod.split(' ');
-                    if (parts.length > 1) slipYear = parseInt(parts[1]);
+        return payslips
+            .filter(slip => {
+                if (filters.year) {
+                    let slipYear: number | undefined;
+                    if (slip.createdAt?.toDate) {
+                        slipYear = getYear(slip.createdAt.toDate());
+                    } else if (slip.payPeriod) {
+                        const parts = slip.payPeriod.split(' ');
+                        if (parts.length > 1) slipYear = parseInt(parts[1]);
+                    }
+                    if (slipYear && slipYear.toString() !== filters.year) return false;
                 }
-                if (slipYear && slipYear.toString() !== filters.year) return false;
-            }
-            return true;
-        });
+                return true;
+            })
+            .sort((a, b) => {
+                // Sort by employeeId numerically as requested
+                const codeA = a.employeeId || '';
+                const codeB = b.employeeId || '';
+                return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+            });
     }, [payslips, filters.year]);
 
     const filteredAdvanceRequests = React.useMemo(() => {
@@ -212,7 +213,7 @@ export default function MobilePayrollPage() {
             const imgHeight = canvas.height;
             const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
             const imgX = (pdfWidth - imgWidth * ratio) / 2;
-            const imgY = 10;
+            const imgY = 5;
 
             pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
             pdf.save(`Payslip_${selectedSlip.employeeName}_${selectedSlip.payPeriod}.pdf`);
@@ -264,7 +265,7 @@ export default function MobilePayrollPage() {
             const imgHeight = canvas.height;
             const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
             const imgX = (pdfWidth - imgWidth * ratio) / 2;
-            const imgY = 10;
+            const imgY = 5;
 
             pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
 
@@ -536,21 +537,13 @@ export default function MobilePayrollPage() {
                 <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24 w-full">
                     {/* PDF Offscreen Render */}
                     <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0, pointerEvents: 'none' }}>
-                        <div ref={pdfRef} className="bg-white p-8 text-slate-900" style={{ width: '800px' }}>
+                        <div ref={pdfRef} className="bg-white pt-4 px-8 pb-8 text-slate-900" style={{ width: '800px' }}>
                             <div className="flex justify-between items-start mb-8 border-b-2 pb-4">
                                 <div>
                                     <div className="flex items-center gap-3 mb-2">
-                                        {(logoBase64 || companyLogoUrl) && (
-                                            <img
-                                                src={logoBase64 || companyLogoUrl}
-                                                alt="Logo"
-                                                className="h-8 w-8 object-contain"
-                                                crossOrigin="anonymous"
-                                            />
-                                        )}
-                                        <h1 className="text-2xl font-bold">{companyName}</h1>
+                                        <h1 className="text-2xl font-bold text-left">{companyName}</h1>
                                     </div>
-                                    <p className="text-sm text-slate-500 max-w-xs">{address}</p>
+                                    <p className="text-sm text-slate-500 max-w-xs text-left">{address}</p>
                                 </div>
                                 <div className="text-right">
                                     <h2 className="text-xl font-bold text-slate-700">PAYSLIP</h2>

@@ -67,19 +67,26 @@ export default function PayslipListPage() {
 
   const filteredPayslips = useMemo(() => {
     if (!payslips) return [];
-    return payslips.filter(p => {
-      const payPeriodParts = p.payPeriod?.split(', ');
-      const monthMatch = filterMonth === 'All' || (payPeriodParts && payPeriodParts[0] === filterMonth);
-      const yearMatch = filterYear === 'All' || (payPeriodParts && payPeriodParts[1] === filterYear);
+    return payslips
+      .filter(p => {
+        const payPeriodParts = p.payPeriod?.split(', ');
+        const monthMatch = filterMonth === 'All' || (payPeriodParts && payPeriodParts[0] === filterMonth);
+        const yearMatch = filterYear === 'All' || (payPeriodParts && payPeriodParts[1] === filterYear);
 
-      return (
-        (!filterEmployeeCode || p.employeeCode?.toLowerCase().includes(filterEmployeeCode.toLowerCase())) &&
-        (!filterEmployeeName || p.employeeName?.toLowerCase().includes(filterEmployeeName.toLowerCase())) &&
-        monthMatch &&
-        yearMatch &&
-        (!filterDesignation || filterDesignation === 'All' || p.designation === filterDesignation)
-      )
-    });
+        return (
+          (!filterEmployeeCode || p.employeeCode?.toLowerCase().includes(filterEmployeeCode.toLowerCase())) &&
+          (!filterEmployeeName || p.employeeName?.toLowerCase().includes(filterEmployeeName.toLowerCase())) &&
+          monthMatch &&
+          yearMatch &&
+          (!filterDesignation || filterDesignation === 'All' || p.designation === filterDesignation)
+        )
+      })
+      .sort((a, b) => {
+        // Sort by employeeCode numerically if possible, else string sort
+        const codeA = a.employeeCode || '';
+        const codeB = b.employeeCode || '';
+        return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+      });
   }, [payslips, filterEmployeeCode, filterEmployeeName, filterYear, filterMonth, filterDesignation]);
 
   const clearFilters = () => {
