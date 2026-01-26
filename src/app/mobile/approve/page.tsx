@@ -398,7 +398,7 @@ export default function ApproveApplicationsPage() {
 
         return (
             <Card
-                className="mb-4 overflow-hidden border-none shadow-md relative active:scale-95 transition-all"
+                className="mb-4 overflow-hidden border-none shadow-md relative transition-all active:bg-slate-50"
                 onClick={() => {
                     if (type === 'leave') {
                         setSelectedLeave(app);

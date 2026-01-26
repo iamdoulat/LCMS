@@ -268,8 +268,9 @@ export default function MobilePayrollPage() {
 
             pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
 
-            // Use Blob -> FileReader approach to avoid "The string did not match the expected pattern" DOMException
-            const pdfBlob = pdf.output('blob');
+            // Use arraybuffer approach to avoid "The string did not match the expected pattern" DOMException on mobile
+            const pdfOutput = pdf.output('arraybuffer');
+            const pdfBlob = new Blob([pdfOutput], { type: 'application/pdf' });
 
             const pdfDataUri = await new Promise<string>((resolve, reject) => {
                 const reader = new FileReader();
@@ -402,7 +403,7 @@ export default function MobilePayrollPage() {
                     <Card
                         key={slip.id}
                         onClick={() => { setSelectedSlip(slip); setIsQuickViewOpen(true); }}
-                        className="p-4 rounded-3xl border-none shadow-md active:scale-[0.98] transition-all bg-white flex items-center justify-between"
+                        className="p-4 rounded-3xl border-none shadow-md active:bg-slate-50 transition-all bg-white flex items-center justify-between"
                     >
                         <div className="flex items-center gap-4">
                             <div className="h-14 w-14 rounded-2xl bg-white flex items-center justify-center text-blue-600 shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100">

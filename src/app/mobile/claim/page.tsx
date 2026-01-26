@@ -296,7 +296,7 @@ export default function ClaimListPage() {
                                         }
                                     }}
                                     className={cn(
-                                        "p-4 border-none shadow-sm rounded-xl bg-white relative overflow-hidden transition-all active:scale-[0.98] select-none",
+                                        "p-4 border-none shadow-sm rounded-xl bg-white relative overflow-hidden transition-all active:bg-slate-50 select-none",
                                         claim.status === 'Claimed' && activeTab === 'My Claims' ? "cursor-pointer hover:shadow-md border-l-4 border-l-blue-500" : "border-l-4 border-l-blue-400"
                                     )}
                                 >
