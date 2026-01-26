@@ -24,7 +24,8 @@ import { dataScoper } from '@/lib/data/dataScoper';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
-    { id: 'pending', label: 'Pending', subLabel: 'Approval', value: '0', icon: Clock, bgColor: 'bg-amber-50', textColor: 'text-amber-500' },
+    { id: 'pending', label: 'Pending', subLabel: 'Attendance', value: '0', icon: Clock, bgColor: 'bg-amber-50', textColor: 'text-amber-500' },
+    { id: 'pending_app', label: 'Pending', subLabel: 'Application', value: '0', icon: ListTodo, bgColor: 'bg-rose-50', textColor: 'text-rose-500' },
     { id: 'missed', label: 'Missed', subLabel: 'Attendance', value: '0', icon: CalendarX, bgColor: 'bg-slate-100', textColor: 'text-slate-500' },
     { id: 'visit', label: 'Visit', subLabel: 'Taken', value: '0.0', icon: ArrowRight, bgColor: 'bg-orange-50', textColor: 'text-orange-500' },
     { id: 'notices', label: 'New', subLabel: 'Notices', value: '2', icon: Bell, bgColor: 'bg-blue-50', textColor: 'text-blue-500' },
@@ -104,7 +105,7 @@ export default function MobileDashboardPage() {
     };
     const router = useRouter();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [selectedIds, setSelectedIds] = useState<string[]>(['leave', 'pending', 'missed', 'visit', 'notices']);
+    const [selectedIds, setSelectedIds] = useState<string[]>(['leave', 'pending', 'pending_app', 'missed', 'visit', 'notices']);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -144,6 +145,7 @@ export default function MobileDashboardPage() {
         leaveSpent: 0,
         visitCount: 0,
         pendingCount: 0,
+        pendingAppCount: 0,
         missedAttendance: 0,
         teamMissedToday: 0,
         pendingAttendanceCount: 0,
@@ -224,8 +226,11 @@ export default function MobileDashboardPage() {
                     isLoading = visitLoading;
                     return { ...item, value: stats.visitCount.toFixed(1), isLoading };
                 case 'pending':
-                    isLoading = attendanceLoading || leaveLoading || visitLoading;
+                    isLoading = attendanceLoading;
                     return { ...item, value: stats.pendingCount.toString(), isLoading };
+                case 'pending_app':
+                    isLoading = leaveLoading || visitLoading;
+                    return { ...item, value: stats.pendingAppCount.toString(), isLoading };
                 case 'missed':
                     isLoading = attendanceLoading;
                     return { ...item, value: (isSupervisor ? stats.teamMissedToday : stats.missedAttendance).toString(), isLoading };
@@ -379,7 +384,8 @@ export default function MobileDashboardPage() {
                 missedAttendance: missedAttendanceCount,
                 teamMissedToday: teamMissedToday,
                 pendingAttendanceCount: pendingAttendanceCount,
-                pendingCount: pendingLeaveCount + pendingVisitCount + pendingAttendanceCount
+                pendingAppCount: pendingLeaveCount + pendingVisitCount,
+                pendingCount: pendingAttendanceCount
             }));
         };
 
@@ -780,6 +786,14 @@ export default function MobileDashboardPage() {
                                 if (item.id === 'pending') {
                                     return (
                                         <Link key={item.id} href="/mobile/attendance/remote-approval" className="flex-shrink-0 transition-transform active:scale-95">
+                                            {content}
+                                        </Link>
+                                    );
+                                }
+
+                                if (item.id === 'pending_app') {
+                                    return (
+                                        <Link key={item.id} href="/mobile/approve" className="flex-shrink-0 transition-transform active:scale-95">
                                             {content}
                                         </Link>
                                     );
