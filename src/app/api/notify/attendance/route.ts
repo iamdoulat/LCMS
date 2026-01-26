@@ -207,21 +207,23 @@ export async function POST(request: Request) {
             } catch (err) { console.error('Error sending WhatsApp to employee:', err); }
         }
 
-        // HR/Admin Email
+        // HR/Admin Email (Using separate template)
         if (hrAdminEmails.length > 0) {
             try {
-                const result = await sendEmail({ to: hrAdminEmails, templateSlug, data: notificationData });
+                const adminTemplateSlug = `admin_attendance_${type}`;
+                const result = await sendEmail({ to: hrAdminEmails, templateSlug: adminTemplateSlug, data: notificationData });
                 notifications.hrEmail = { success: !!result?.success, sent: result?.status !== 'skipped', skipped: result?.status === 'skipped' };
             } catch (err) { console.error('Error sending email to HR/Admin:', err); }
         }
 
-        // HR/Admin WhatsApp
+        // HR/Admin WhatsApp (Using separate template)
         if (hrAdminPhones.length > 0) {
             try {
+                const adminTemplateSlug = `admin_attendance_${type}`;
                 let anySent = false;
                 let anySkipped = false;
                 for (const phone of hrAdminPhones) {
-                    const result = await sendWhatsApp({ to: phone, templateSlug, data: notificationData });
+                    const result = await sendWhatsApp({ to: phone, templateSlug: adminTemplateSlug, data: notificationData });
                     if (result.success && result.status !== 'skipped') anySent = true;
                     if (result.status === 'skipped') anySkipped = true;
                 }

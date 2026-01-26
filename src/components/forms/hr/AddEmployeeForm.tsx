@@ -486,7 +486,7 @@ export function AddEmployeeForm() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <FormField control={control} name="nationalId" render={({ field }) => (<FormItem><FormLabel>NID/SSN</FormLabel><FormControl><Input placeholder="Enter here" {...field} /></FormControl><FormMessage /></FormItem>)} />
           <FormField control={control} name="nationality" render={({ field }) => (<FormItem><FormLabel>Nationality</FormLabel><FormControl><Input placeholder="Bangladeshi" {...field} /></FormControl><FormMessage /></FormItem>)} />
-          <FormField control={control} name="email" render={({ field }) => (<FormItem><FormLabel>Email*</FormLabel><FormControl><Input type="email" placeholder="smartsollutions21@gmail.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="email" render={({ field }) => (<FormItem><FormLabel>Email*</FormLabel><FormControl><Input type="email" placeholder="youremail@gmail.com" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -522,7 +522,7 @@ export function AddEmployeeForm() {
               </FormItem>
             )}
           />
-          <FormField control={control} name="phone" render={({ field }) => (<FormItem><FormLabel>Mobile No*</FormLabel><FormControl><Input type="tel" placeholder="Enter mobile number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+          <FormField control={control} name="phone" render={({ field }) => (<FormItem><FormLabel>Mobile No*</FormLabel><FormControl><Input type="tel" placeholder="+8801851046320" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
 
         <FormField control={control} name="status" render={({ field }) => (
