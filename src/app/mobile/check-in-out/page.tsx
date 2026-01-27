@@ -16,8 +16,9 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar as CalendarIcon, X, Search, MapPin, ArrowRight } from 'lucide-react';
-import Image from 'next/image';
 import { startOfDay, endOfDay } from 'date-fns';
+import { DynamicStorageImage } from '@/components/ui/DynamicStorageImage';
+
 
 interface GroupedRecords {
     date: string;
@@ -487,7 +488,11 @@ export default function MobileCheckInOutPage() {
                                                             disabled={!visit.checkOut?.imageURL}
                                                         >
                                                             {visit.checkOut?.imageURL ? (
-                                                                <Image src={visit.checkOut.imageURL} alt="Visit Out" fill className="object-cover" />
+                                                                <DynamicStorageImage
+                                                                    path={visit.checkOut.imageURL}
+                                                                    alt="Visit Out"
+                                                                    className="w-full h-full object-cover"
+                                                                />
                                                             ) : (
                                                                 <div className="h-full w-full flex items-center justify-center text-slate-400">
                                                                     <MapPin className="h-5 w-5" />
@@ -512,7 +517,11 @@ export default function MobileCheckInOutPage() {
                                                                 <div className="mt-3 pt-2 border-t border-slate-50 flex items-center gap-2">
                                                                     <div className="h-8 w-8 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[10px] font-bold text-slate-500 relative shrink-0">
                                                                         {photoURL ? (
-                                                                            <Image src={photoURL} alt={visit.employeeName} fill className="object-cover" />
+                                                                            <DynamicStorageImage
+                                                                                path={photoURL}
+                                                                                alt={visit.employeeName}
+                                                                                className="w-full h-full object-cover"
+                                                                            />
                                                                         ) : (
                                                                             visit.employeeName?.substring(0, 2).toUpperCase()
                                                                         )}
@@ -547,7 +556,11 @@ export default function MobileCheckInOutPage() {
                                                         disabled={!visit.checkIn.imageURL}
                                                     >
                                                         {visit.checkIn.imageURL ? (
-                                                            <Image src={visit.checkIn.imageURL} alt="Visit In" fill className="object-cover" />
+                                                            <DynamicStorageImage
+                                                                path={visit.checkIn.imageURL}
+                                                                alt="Visit In"
+                                                                className="w-full h-full object-cover"
+                                                            />
                                                         ) : (
                                                             <div className="h-full w-full flex items-center justify-center text-slate-400">
                                                                 <MapPin className="h-5 w-5" />
@@ -572,7 +585,11 @@ export default function MobileCheckInOutPage() {
                                                             <div className="mt-3 pt-2 border-t border-slate-50 flex items-center gap-2">
                                                                 <div className="h-8 w-8 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[10px] font-bold text-slate-500 relative shrink-0">
                                                                     {photoURL ? (
-                                                                        <Image src={photoURL} alt={visit.employeeName} fill className="object-cover" />
+                                                                        <DynamicStorageImage
+                                                                            path={photoURL}
+                                                                            alt={visit.employeeName}
+                                                                            className="w-full h-full object-cover"
+                                                                        />
                                                                     ) : (
                                                                         visit.employeeName?.substring(0, 2).toUpperCase()
                                                                     )}
@@ -747,8 +764,8 @@ export default function MobileCheckInOutPage() {
                     </button>
                     {selectedImageUrl && (
                         <div className="relative w-full h-full flex items-center justify-center p-4">
-                            <img
-                                src={selectedImageUrl}
+                            <DynamicStorageImage
+                                path={selectedImageUrl}
                                 alt="Check-in/out"
                                 className="max-w-full max-h-[90vh] object-contain rounded-lg"
                             />

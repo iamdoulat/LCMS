@@ -12,19 +12,25 @@ export async function POST(req: NextRequest) {
         const configId = formData.get('configId') as string;
 
         if (!file || !path || !configId) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+            return NextResponse.json({ error: 'Missing required fields: file, path, or configId' }, { status: 400 });
         }
+
+        console.log(`[UPLOAD API] Starting upload for path: ${path} using config: ${configId}`);
 
         // Fetch config from Firestore (Server-side)
         if (!firestore) {
+            console.error('[UPLOAD API] Firestore Admin not initialized');
             return NextResponse.json({ error: 'Firestore not initialized' }, { status: 500 });
         }
+
         const configDoc = await firestore.collection('storage_settings').doc(configId).get();
         if (!configDoc.exists) {
+            console.error(`[UPLOAD API] Storage config not found: ${configId}`);
             return NextResponse.json({ error: 'Storage configuration not found' }, { status: 404 });
         }
 
         const config = configDoc.data() as StorageConfiguration;
+        console.log(`[UPLOAD API] Provider: ${config.provider}, Bucket: ${config.bucketName}`);
 
         // Initialize S3 Client
         const s3Config: any = {
@@ -33,10 +39,15 @@ export async function POST(req: NextRequest) {
                 accessKeyId: config.accessKeyId!,
                 secretAccessKey: config.secretAccessKey!,
             },
+            forcePathStyle: true, // Recommended for R2 and some S3-compatible providers
         };
 
         // Cloudflare R2 Endpoint
         if (config.provider === 'r2') {
+            if (!config.accountId) {
+                console.error('[UPLOAD API] R2 Account ID is missing');
+                return NextResponse.json({ error: 'R2 Account ID is missing from configuration' }, { status: 400 });
+            }
             s3Config.endpoint = `https://${config.accountId}.r2.cloudflarestorage.com`;
         } else if (config.provider === 's3' && config.region === 'auto') {
             // S3 usually needs a specific region, but some providers use 'auto'
@@ -49,6 +60,8 @@ export async function POST(req: NextRequest) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
+        console.log(`[UPLOAD API] Uploading ${buffer.length} bytes to ${config.provider}...`);
+
         const uploadCommand = new PutObjectCommand({
             Bucket: config.bucketName!,
             Key: path,
@@ -58,25 +71,31 @@ export async function POST(req: NextRequest) {
         });
 
         await s3Client.send(uploadCommand);
+        console.log(`[UPLOAD API] Successfully uploaded to ${config.provider}: ${path}`);
 
         // Construct public URL
         let publicUrl = '';
         if (config.publicUrl) {
-            publicUrl = `${config.publicUrl.replace(/\/$/, '')}/${path}`;
+            publicUrl = `${config.publicUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
         } else if (config.provider === 'r2') {
             // R2 doesn't have a standard public URL format without a custom domain or public bucket URL
-            return NextResponse.json({
-                success: true,
-                url: path,
-                message: 'Upload successful. Public URL not configured.'
-            });
+            publicUrl = path; // Return path as fallback
+            console.warn('[UPLOAD API] R2 upload successful but no publicUrl configured');
         } else {
-            publicUrl = `https://${config.bucketName}.s3.${config.region}.amazonaws.com/${path}`;
+            // Default S3 public URL format
+            publicUrl = `https://${config.bucketName}.s3.${config.region}.amazonaws.com/${path.replace(/^\//, '')}`;
         }
 
-        return NextResponse.json({ success: true, url: publicUrl });
+        return NextResponse.json({
+            success: true,
+            url: publicUrl,
+            message: 'Upload successful'
+        });
     } catch (error: any) {
-        console.error("Server-side upload error:", error);
-        return NextResponse.json({ error: error.message || 'Server upload failed' }, { status: 500 });
+        console.error("[UPLOAD API] Server-side upload error:", error);
+        return NextResponse.json({
+            error: error.message || 'Server upload failed',
+            details: error.name || 'UnknownError'
+        }, { status: 500 });
     }
 }

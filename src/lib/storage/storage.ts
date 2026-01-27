@@ -33,11 +33,13 @@ export async function getActiveStorageConfig(): Promise<StorageConfiguration | n
             ...snapshot.docs[0].data()
         } as StorageConfiguration;
 
+        console.log(`[STORAGE] Active config fetched: ${config?.name || 'None (Defaulting to Firebase)'} (${config?.provider || 'firebase'})`);
+
         // Update cache
         activeConfigCache = { config, timestamp: now };
         return config;
     } catch (error) {
-        console.error("Error fetching active storage config:", error);
+        console.error("[STORAGE] Error fetching active storage config:", error);
         // If fetch fails, return cached config even if stale as a fallback
         return activeConfigCache?.config || null;
     }
@@ -60,7 +62,7 @@ export async function getFileUrl(path: string, fallbackUrl?: string): Promise<st
             const storageRef = ref(firebaseStorage, path);
             return await getDownloadURL(storageRef);
         } catch (error) {
-            console.error("Error getting Firebase download URL:", error);
+            console.error("[STORAGE] Error getting Firebase download URL:", error);
             return fallbackUrl || '';
         }
     }
@@ -71,7 +73,9 @@ export async function getFileUrl(path: string, fallbackUrl?: string): Promise<st
     }
 
     if (config.provider === 'r2') {
-        // R2 requires publicUrl to be configured for a readable URL
+        // R2 requires publicUrl to be configured for a readable URL.
+        // If not configured, we return the path so the caller can handle it or use a default if known.
+        console.warn(`[STORAGE] R2 provider used without publicUrl configured for path: ${path}`);
         return fallbackUrl || path;
     }
 
@@ -87,10 +91,13 @@ export async function uploadFile(file: File, path: string): Promise<string> {
 
     // Default to Firebase if no config or firebase is explicitly active
     if (!config || config.provider === 'firebase') {
+        console.log(`[STORAGE] Uploading to Firebase: ${path}`);
         const storageRef = ref(firebaseStorage, path);
         await uploadBytes(storageRef, file);
         return await getDownloadURL(storageRef);
     }
+
+    console.log(`[STORAGE] Uploading to ${config.provider.toUpperCase()}: ${path} (Config: ${config.name})`);
 
     // For S3 and R2, we use a server-side API to handle the upload
     const formData = new FormData();
@@ -98,18 +105,24 @@ export async function uploadFile(file: File, path: string): Promise<string> {
     formData.append('path', path);
     formData.append('configId', config.id!);
 
-    const response = await fetch('/api/storage/upload', {
-        method: 'POST',
-        body: formData,
-    });
+    try {
+        const response = await fetch('/api/storage/upload', {
+            method: 'POST',
+            body: formData,
+        });
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload file to external storage');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Server returned ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log(`[STORAGE] ${config.provider.toUpperCase()} Upload Success:`, result.url);
+        return result.url;
+    } catch (error: any) {
+        console.error(`[STORAGE] ${config.provider.toUpperCase()} Upload Failed:`, error);
+        throw new Error(`Failed to upload to ${config.name}: ${error.message}`);
     }
-
-    const result = await response.json();
-    return result.url;
 }
 
 /**
