@@ -278,11 +278,10 @@ export default function RemoteAttendanceApprovalPage() {
     };
 
     const handleCardClick = (record: UnifiedApprovalRecord) => {
-        if (record.status === 'Pending' || !record.status) {
+        const status = record.status || 'Pending';
+        if (status === 'Pending' || status === 'Rejected') {
             setSelectedRecord(record);
             setIsDialogOpen(true);
-        } else {
-            router.push(`/mobile/attendance/remote-approval/details?id=${record.id}`);
         }
     };
 
