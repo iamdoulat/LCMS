@@ -7,9 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Calendar as CalendarIcon, Save, X, Paperclip } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, Timestamp, runTransaction, doc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/lib/storage/storage';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -188,9 +188,8 @@ export function TaskForm({ initialData, docId, initialStatus, isMobile, backRout
                 if (selectedFiles.length > 0) {
                     for (const file of selectedFiles) {
                         const uniqueName = `${Date.now()}_${file.name}`;
-                        const storageRef = ref(storage, `tasks/${initialData.taskId}/attachments/${uniqueName}`);
-                        await uploadBytes(storageRef, file);
-                        const url = await getDownloadURL(storageRef);
+                        const path = `tasks/${initialData.taskId}/attachments/${uniqueName}`;
+                        const url = await uploadFile(file, path);
                         attachments.push({
                             name: file.name,
                             url: url,
@@ -273,9 +272,8 @@ export function TaskForm({ initialData, docId, initialStatus, isMobile, backRout
                     if (selectedFiles.length > 0) {
                         for (const file of selectedFiles) {
                             const uniqueName = `${Date.now()}_${file.name}`;
-                            const storageRef = ref(storage, `tasks/${customTaskId}/attachments/${uniqueName}`);
-                            await uploadBytes(storageRef, file);
-                            const url = await getDownloadURL(storageRef);
+                            const path = `tasks/${customTaskId}/attachments/${uniqueName}`;
+                            const url = await uploadFile(file, path);
                             attachments.push({
                                 name: file.name,
                                 url: url,

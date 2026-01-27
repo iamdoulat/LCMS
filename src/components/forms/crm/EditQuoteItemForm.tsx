@@ -5,9 +5,9 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/lib/storage/storage';
 import type { QuoteItemFormValues, ItemDocument, SupplierDocument } from '@/types';
 import { quoteItemSchema } from '@/types';
 import Image from 'next/image';
@@ -123,9 +123,8 @@ export function EditQuoteItemForm({ initialData, itemId }: EditQuoteItemFormProp
       // Upload new image if exists
       if (imageFile) {
         try {
-          const imageRef = ref(storage, `quote_items/${itemId}/product_image.jpg`);
-          await uploadBytes(imageRef, imageFile);
-          const downloadURL = await getDownloadURL(imageRef);
+          const path = `quote_items/${itemId}/product_image.jpg`;
+          const downloadURL = await uploadFile(imageFile as File, path);
           dataToSave.imageUrl = downloadURL;
           dataToSave.photoURL = downloadURL;
         } catch (uploadError) {

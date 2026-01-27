@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { firestore, storage } from '@/lib/firebase/config';
 import { doc, onSnapshot, getDoc, collection, addDoc, query, orderBy, serverTimestamp, where, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/lib/storage/storage';
 import { getAuth } from 'firebase/auth';
+import { firestore } from '@/lib/firebase/config';
 import { Task } from '@/types/projectManagement';
 import { EmployeeDocument } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -148,9 +148,8 @@ export default function TaskDetailsPage() {
             let attachmentName = '';
 
             if (selectedFile) {
-                const storageRef = ref(storage, `tasks/${taskId}/attachments/${Date.now()}_${selectedFile.name}`);
-                await uploadBytes(storageRef, selectedFile);
-                attachmentUrl = await getDownloadURL(storageRef);
+                const path = `tasks/${taskId}/attachments/${Date.now()}_${selectedFile.name}`;
+                attachmentUrl = await uploadFile(selectedFile, path);
                 attachmentType = selectedFile.type.startsWith('image/') ? 'image' : 'file';
                 attachmentName = selectedFile.name;
             }

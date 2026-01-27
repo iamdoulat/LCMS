@@ -9,9 +9,9 @@ import { Loader2, Save, Image as ImageIcon, Crop as CropIcon, Settings } from 'l
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/lib/storage/storage';
 import type { CompanyProfile } from '@/types';
 import Image from 'next/image';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
@@ -159,9 +159,8 @@ export default function PISettingsPage() {
     try {
       if (selectedFile) {
         setIsUploading(true);
-        const storageRef = ref(storage, `piLayoutSettings/pi_logo.jpg`);
-        const snapshot = await uploadBytes(storageRef, selectedFile);
-        finalLogoUrl = await getDownloadURL(snapshot.ref);
+        const path = `piLayoutSettings/pi_logo.jpg`;
+        finalLogoUrl = await uploadFile(selectedFile, path);
         setIsUploading(false);
       }
 

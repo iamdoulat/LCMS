@@ -13,9 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Paperclip, CalendarIcon } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, query, orderBy, getDocs, deleteDoc, where } from 'firebase/firestore';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
+import { uploadFile } from '@/lib/storage/storage';
 import type { AssetDocument, AssetCategoryDocument, EmployeeDocument } from '@/types';
 import { assetStatusOptions } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -141,9 +141,8 @@ export function AssetModal({ isOpen, onClose, assetToEdit, onSuccess }: AssetMod
             let downloadUrl = existingImageUrl;
 
             if (file) {
-                const fileRef = ref(storage, `assets/${Date.now()}_${file.name}`);
-                await uploadBytes(fileRef, file);
-                downloadUrl = await getDownloadURL(fileRef);
+                const path = `assets/${Date.now()}_${file.name}`;
+                downloadUrl = await uploadFile(file, path);
             }
 
             const selectedCategory = categories.find(c => c.id === categoryId);

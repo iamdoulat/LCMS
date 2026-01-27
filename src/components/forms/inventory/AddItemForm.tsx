@@ -4,9 +4,9 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, doc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile } from '@/lib/storage/storage';
 import type { ItemFormValues, Item, SupplierDocument, PettyCashCategoryDocument, ItemSectionDocument, ItemVariationDocument, CurrencyDocument, WarehouseDocument } from '@/types';
 import { itemSchema, itemTypeOptions } from '@/types';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
@@ -202,9 +202,8 @@ export function AddItemForm() {
       if (selectedFile) {
         // We need an ID for the image path, so we create a doc ref first
         const newDocRef = doc(collection(firestore, "items"));
-        const storageRef = ref(storage, `itemImages/${newDocRef.id}/profile.jpg`);
-        await uploadBytes(storageRef, selectedFile);
-        photoDownloadURL = await getDownloadURL(storageRef);
+        const filePath = `itemImages/${newDocRef.id}/profile.jpg`;
+        photoDownloadURL = await uploadFile(selectedFile, filePath);
 
         // Add photoURL to the cleaned data
         baseData.photoURL = photoDownloadURL;

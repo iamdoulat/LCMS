@@ -6,9 +6,9 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/lib/storage/storage';
 import type { QuoteItemFormValues, Item, SupplierDocument } from '@/types';
 import { quoteItemSchema } from '@/types';
 
@@ -99,9 +99,8 @@ export function AddQuoteItemForm() {
       // 2. Upload image if exists
       if (imageFile) {
         try {
-          const imageRef = ref(storage, `items/${docRef.id}/product_image.jpg`);
-          await uploadBytes(imageRef, imageFile);
-          const downloadURL = await getDownloadURL(imageRef);
+          const path = `items/${docRef.id}/product_image.jpg`;
+          const downloadURL = await uploadFile(imageFile as File, path);
 
           // Update the document with the image URL
           // We need to import updateDoc but since we just added it, we can't easily update imports in this chunk. 

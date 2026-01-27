@@ -73,6 +73,18 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'public.easyinvoice.cloud',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.nextsewbd.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.smartsolution-bd.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   webpack: (config, { isServer }) => {

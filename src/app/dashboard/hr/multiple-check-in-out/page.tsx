@@ -10,8 +10,8 @@ import { MapPin, Image as ImageIcon, Loader2, Clock, AlertCircle, Building2, Use
 import { getCheckInOutRecords, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, where, getDocs, doc, deleteDoc, onSnapshot } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
+import { deleteFile } from '@/lib/storage/storage';
 import type { MultipleCheckInOutRecord, CheckInOutType } from '@/types/checkInOut';
 import type { EmployeeDocument, MultipleCheckInOutConfiguration } from '@/types';
 import { format } from 'date-fns';
@@ -270,8 +270,7 @@ export default function MultipleCheckInOutPage() {
                 // Delete images from storage if they exist
                 if (visit.checkIn.imageURL) {
                     try {
-                        const imageRef = ref(storage, visit.checkIn.imageURL);
-                        await deleteObject(imageRef);
+                        await deleteFile(visit.checkIn.imageURL);
                     } catch (err) {
                         console.error('Error deleting check-in image:', err);
                     }
@@ -279,8 +278,7 @@ export default function MultipleCheckInOutPage() {
 
                 if (visit.checkOut?.imageURL) {
                     try {
-                        const imageRef = ref(storage, visit.checkOut.imageURL);
-                        await deleteObject(imageRef);
+                        await deleteFile(visit.checkOut.imageURL);
                     } catch (err) {
                         console.error('Error deleting check-out image:', err);
                     }

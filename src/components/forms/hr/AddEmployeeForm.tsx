@@ -7,9 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon, ImageIcon, Link2 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query as firestoreQuery, orderBy, setDoc, doc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile } from '@/lib/storage/storage';
 import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument, LeaveGroupDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
@@ -244,16 +244,9 @@ export function AddEmployeeForm() {
 
       // Process image upload first (client-side)
       if (selectedFile) {
-        // We need an ID for the image path. Since we don't have the UID yet (server generates it), 
-        // we can use a temporary ID or a timestamp-based ID for storage, 
-        // OR better, we can let the server handle image? No, client upload is standard for Firebase.
-        // Let's use a random ID for the storage path to avoid collisions before we have the UID.
-        // Or we can assume the server cleans it up? 
-        // Let's us a temporary random string for the path.
         const tempId = Math.random().toString(36).substring(2, 15);
-        const photoRef = ref(storage, `employeeImages/${tempId}/profile.jpg`);
-        await uploadBytes(photoRef, selectedFile);
-        photoDownloadURL = await getDownloadURL(photoRef);
+        const filePath = `employeeImages/${tempId}/profile.jpg`;
+        photoDownloadURL = await uploadFile(selectedFile, filePath);
       } else if (externalUrl) {
         photoDownloadURL = externalUrl;
       }

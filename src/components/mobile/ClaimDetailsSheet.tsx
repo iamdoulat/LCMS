@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase/config';
+import { uploadFile } from '@/lib/storage/storage';
 import { Loader2, X, Calendar, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -135,9 +134,8 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category }: ClaimDe
                             try {
                                 let downloadUrl = '';
                                 if (attachmentFile) {
-                                    const storageRef = ref(storage, `claim-attachments/${Date.now()}_${attachmentFile.name}`);
-                                    const snapshot = await uploadBytes(storageRef, attachmentFile);
-                                    downloadUrl = await getDownloadURL(snapshot.ref);
+                                    const path = `claim-attachments/${Date.now()}_${attachmentFile.name}`;
+                                    downloadUrl = await uploadFile(attachmentFile, path);
                                 }
 
                                 onSave({

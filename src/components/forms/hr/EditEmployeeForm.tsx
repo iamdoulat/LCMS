@@ -7,9 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, UserPlus, Save, History, Building, GraduationCap, PlusCircle, Trash2, Banknote, DollarSign, Upload, Crop as CropIcon, Image as ImageIcon, Link2 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, updateDoc, doc, query as firestoreQuery, orderBy } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile } from '@/lib/storage/storage';
 import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument, LeaveGroupDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
@@ -271,9 +271,8 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
 
       if (selectedFile) {
         // Use the employee's document ID for the path, which is always available.
-        const storageRef = ref(storage, `employeeImages/${employee.id}/profile.jpg`);
-        await uploadBytes(storageRef, selectedFile);
-        photoDownloadURL = await getDownloadURL(storageRef);
+        const path = `employeeImages/${employee.id}/profile.jpg`;
+        photoDownloadURL = await uploadFile(selectedFile, path);
       } else if (externalUrl) {
         // Use the external URL if provided and no file selected
         photoDownloadURL = externalUrl;

@@ -7,9 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Save, Laptop, Activity, Cog, Hash, FileText, FileBadge, Image as ImageIcon, Crop as CropIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/lib/storage/storage';
 import type { DemoMachineDocument, DemoMachineOwnerOption, DemoMachineStatusOption } from '@/types';
 import { demoMachineOwnerOptions, demoMachineStatusOptions } from '@/types';
 import Image from 'next/image';
@@ -49,7 +49,7 @@ interface EditDemoMachineFormProps {
 export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineFormProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const isInitialMountRef = React.useRef(true);
-  
+
   const [imgSrc, setImgSrc] = React.useState('');
   const [crop, setCrop] = React.useState<Crop>();
   const [completedCrop, setCompletedCrop] = React.useState<PixelCrop>();
@@ -136,44 +136,43 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
 
   const handleCropAndUpload = async () => {
     if (!completedCrop || !imgRef.current || !selectedFile) {
-        Swal.fire("Error", "Could not process image crop. Please try again.", "error");
-        return;
+      Swal.fire("Error", "Could not process image crop. Please try again.", "error");
+      return;
     }
     setIsUploading(true);
     try {
-        const croppedImageBlob = await getCroppedImg(
-            imgRef.current,
-            completedCrop,
-            selectedFile.name,
-            512, 512
-        );
-        if (!croppedImageBlob) {
-            throw new Error("Failed to create cropped image blob.");
-        }
-        const storageRef = ref(storage, `demoMachineImages/${machineId}/image.jpg`);
-        const snapshot = await uploadBytes(storageRef, croppedImageBlob);
-        const downloadURL = await getDownloadURL(snapshot.ref);
+      const croppedImageBlob = await getCroppedImg(
+        imgRef.current,
+        completedCrop,
+        selectedFile.name,
+        512, 512
+      );
+      if (!croppedImageBlob) {
+        throw new Error("Failed to create cropped image blob.");
+      }
+      const path = `demoMachineImages/${machineId}/image.jpg`;
+      const downloadURL = await uploadFile(croppedImageBlob, path);
 
-        await updateDoc(doc(firestore, "demo_machines", machineId), {
-            imageUrl: downloadURL,
-            updatedAt: serverTimestamp(),
-        });
-        
-        setValue("imageUrl", downloadURL, { shouldDirty: true });
-        
-        setIsCroppingDialogOpen(false);
-        Swal.fire({
-            title: "Image Updated",
-            icon: "success",
-            timer: 1000,
-            showConfirmButton: false,
-        });
+      await updateDoc(doc(firestore, "demo_machines", machineId), {
+        imageUrl: downloadURL,
+        updatedAt: serverTimestamp(),
+      });
+
+      setValue("imageUrl", downloadURL, { shouldDirty: true });
+
+      setIsCroppingDialogOpen(false);
+      Swal.fire({
+        title: "Image Updated",
+        icon: "success",
+        timer: 1000,
+        showConfirmButton: false,
+      });
 
     } catch (err: any) {
-        console.error("Error uploading demo machine image:", err);
-        Swal.fire("Upload Failed", `Failed to upload image: ${err.message}`, "error");
+      console.error("Error uploading demo machine image:", err);
+      Swal.fire("Upload Failed", `Failed to upload image: ${err.message}`, "error");
     } finally {
-        setIsUploading(false);
+      setIsUploading(false);
     }
   };
 
@@ -191,7 +190,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
         imageUrl: data.imageUrl || undefined,
         updatedAt: serverTimestamp(),
       };
-      
+
       const optionalFields: (keyof DemoMachineEditFormValues)[] = [
         'motorOrControlBoxModel',
         'controlBoxSerialNo',
@@ -201,10 +200,10 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
       optionalFields.forEach(field => {
         const value = data[field];
         if (value) {
-            (dataToUpdate as any)[field] = value;
+          (dataToUpdate as any)[field] = value;
         }
-    });
-      
+      });
+
       const cleanedDataToUpdate: { [key: string]: any } = {};
       for (const key in dataToUpdate) {
         const value = (dataToUpdate as any)[key];
@@ -275,7 +274,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             name="machineSerial"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center"><Hash className="mr-1 h-3.5 w-3.5 text-muted-foreground"/>Machine Serial*</FormLabel>
+                <FormLabel className="flex items-center"><Hash className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Machine Serial*</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter machine serial number" {...field} />
                 </FormControl>
@@ -283,12 +282,12 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
               </FormItem>
             )}
           />
-           <FormField
+          <FormField
             control={form.control}
             name="motorOrControlBoxModel"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center"><Cog className="mr-1 h-3.5 w-3.5 text-muted-foreground"/>Motor or Control Box Model</FormLabel>
+                <FormLabel className="flex items-center"><Cog className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Motor or Control Box Model</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter model" {...field} value={field.value ?? ''} />
                 </FormControl>
@@ -301,7 +300,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             name="controlBoxSerialNo"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center"><Hash className="mr-1 h-3.5 w-3.5 text-muted-foreground"/>Control Box Serial No.</FormLabel>
+                <FormLabel className="flex items-center"><Hash className="mr-1 h-3.5 w-3.5 text-muted-foreground" />Control Box Serial No.</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter serial number" {...field} value={field.value ?? ''} />
                 </FormControl>
@@ -310,7 +309,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             )}
           />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -366,7 +365,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             )}
           />
         </div>
-         <FormField
+        <FormField
           control={form.control}
           name="machineReturned"
           render={({ field }) => (
@@ -389,48 +388,48 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             </FormItem>
           )}
         />
-        
+
         <Dialog open={isCroppingDialogOpen} onOpenChange={setIsCroppingDialogOpen}>
-            <DialogContent className="max-w-md">
-                <DialogHeader><DialogTitle>Crop Machine Image (1:1)</DialogTitle></DialogHeader>
-                {imgSrc && (
-                    <ReactCrop
-                        crop={crop}
-                        onChange={(_, percentCrop) => setCrop(percentCrop)}
-                        onComplete={(c) => setCompletedCrop(c)}
-                        aspect={1}
-                        minWidth={100}
-                    >
-                        <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
-                    </ReactCrop>
-                )}
-                <DialogFooter>
-                    <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
-                    <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
-                        {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Upload</>}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle>Crop Machine Image (1:1)</DialogTitle></DialogHeader>
+            {imgSrc && (
+              <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={1}
+                minWidth={100}
+              >
+                <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }} />
+              </ReactCrop>
+            )}
+            <DialogFooter>
+              <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
+              <Button onClick={handleCropAndUpload} disabled={isUploading || !completedCrop?.width}>
+                {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Upload</>}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
 
         <FormItem>
           <FormLabel>Machine Image</FormLabel>
           <div className="flex items-center gap-4">
-              <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
-                  {currentImageUrl ? (
-                       <Image
-                        src={currentImageUrl}
-                        alt="Machine preview"
-                        width={96}
-                        height={96}
-                        className="object-cover"
-                        data-ai-hint="sewing machine"
-                      />
-                  ) : (
-                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                  )}
-              </div>
-              <Input id="machine-image-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" />
+            <div className="w-24 h-24 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+              {currentImageUrl ? (
+                <Image
+                  src={currentImageUrl}
+                  alt="Machine preview"
+                  width={96}
+                  height={96}
+                  className="object-cover"
+                  data-ai-hint="sewing machine"
+                />
+              ) : (
+                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+              )}
+            </div>
+            <Input id="machine-image-upload" type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="flex-1" />
           </div>
           <FormDescription>Upload a 512x512 image for the demo machine.</FormDescription>
         </FormItem>
@@ -456,7 +455,7 @@ export function EditDemoMachineForm({ initialData, machineId }: EditDemoMachineF
             <FormItem>
               <FormLabel className="flex items-center"><FileText className="mr-2 h-4 w-4 text-muted-foreground" />Note:</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter any additional notes for this machine" {...field} rows={3} value={field.value ?? ''}/>
+                <Textarea placeholder="Enter any additional notes for this machine" {...field} rows={3} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>

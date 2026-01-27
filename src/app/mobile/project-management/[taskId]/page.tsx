@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { firestore, storage } from '@/lib/firebase/config';
 import { doc, onSnapshot, getDoc, collection, addDoc, query, orderBy, serverTimestamp, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/lib/storage/storage';
+import { firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
 import { Task } from '@/types/projectManagement';
 import { EmployeeDocument } from '@/types';
@@ -158,9 +158,8 @@ export default function MobileTaskDetailsPage() {
             let attachmentName = '';
 
             if (selectedFile) {
-                const storageRef = ref(storage, `tasks/${taskId}/attachments/${Date.now()}_${selectedFile.name}`);
-                await uploadBytes(storageRef, selectedFile);
-                attachmentUrl = await getDownloadURL(storageRef);
+                const path = `tasks/${taskId}/attachments/${Date.now()}_${selectedFile.name}`;
+                attachmentUrl = await uploadFile(selectedFile, path);
                 attachmentType = selectedFile.type.startsWith('image/') ? 'image' : 'file';
                 attachmentName = selectedFile.name;
             }

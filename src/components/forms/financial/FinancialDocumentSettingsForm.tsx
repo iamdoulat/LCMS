@@ -8,9 +8,9 @@ import { z } from 'zod';
 import { Loader2, Save, Upload, Crop as CropIcon, Image as ImageIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile } from '@/lib/storage/storage';
 import type { CompanyProfile } from '@/types';
 import Image from 'next/image';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
@@ -164,9 +164,8 @@ export function FinancialDocumentSettingsForm() {
         throw new Error("Failed to create cropped image blob.");
       }
 
-      const storageRef = ref(storage, 'companyLogos/invoice_logo.jpg');
-      const snapshot = await uploadBytes(storageRef, croppedImageBlob);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      const path = 'companyLogos/invoice_logo.jpg';
+      const downloadURL = await uploadFile(croppedImageBlob, path);
 
       setInvoiceLogoUrl(downloadURL); // Update state for preview
       setInvoiceLogoSelectedFile(null); // Clear selected file after upload

@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
-import { auth, firestore, storage } from '@/lib/firebase/config';
+import { auth, firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, limit, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/lib/storage/storage';
 import Swal from 'sweetalert2';
 import {
     ChevronLeft,
@@ -202,10 +202,7 @@ export default function MobileProfilePage() {
             const timestamp = Date.now();
             const fileName = `${timestamp}_${file.name.replace(/\s+/g, '_')}`;
             const storagePath = `profileImages/${user.uid}/${fileName}`;
-            const storageRef = ref(storage, storagePath);
-
-            await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(storageRef);
+            const downloadURL = await uploadFile(file, storagePath);
 
             // Update Firestore - employees collection
             const employeeRef = doc(firestore, 'employees', employee.id);

@@ -35,4 +35,6 @@ if (!admin.apps.length && hasCredentials) {
 }
 
 
-export { admin };
+const firestore = admin.apps.length ? admin.firestore() : null;
+
+export { admin, firestore };

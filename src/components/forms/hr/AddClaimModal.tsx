@@ -5,9 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Swal from 'sweetalert2';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, updateDoc, doc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadFile } from '@/lib/storage/storage';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { sendPushNotification } from '@/lib/notifications';
@@ -261,9 +261,8 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
 
             if (attachmentFile) {
                 setIsUploading(true);
-                const storageRef = ref(storage, `claim-attachments/${Date.now()}_${attachmentFile.name}`);
-                const snapshot = await uploadBytes(storageRef, attachmentFile);
-                downloadUrl = await getDownloadURL(snapshot.ref);
+                const path = `claim-attachments/${Date.now()}_${attachmentFile.name}`;
+                downloadUrl = await uploadFile(attachmentFile, path);
                 setIsUploading(false);
             }
 

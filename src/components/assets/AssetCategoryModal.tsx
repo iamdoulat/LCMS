@@ -12,9 +12,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Paperclip, X } from 'lucide-react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
+import { uploadFile } from '@/lib/storage/storage';
 import type { AssetCategoryDocument } from '@/types';
 import Swal from 'sweetalert2';
 
@@ -81,9 +81,8 @@ export function AssetCategoryModal({ isOpen, onClose, categoryToEdit, onSuccess 
             let downloadUrl = existingImageUrl;
 
             if (file) {
-                const fileRef = ref(storage, `asset-categories/${Date.now()}_${file.name}`);
-                await uploadBytes(fileRef, file);
-                downloadUrl = await getDownloadURL(fileRef);
+                const path = `asset-categories/${Date.now()}_${file.name}`;
+                downloadUrl = await uploadFile(file, path);
             }
 
             if (categoryToEdit) {

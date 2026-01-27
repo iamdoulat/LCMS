@@ -11,7 +11,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, deleteDoc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile } from '@/lib/storage/storage';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { Task } from '@/types/projectManagement';
@@ -1790,9 +1790,8 @@ export default function AccountDetailsPage() {
     }
 
     try {
-      const storageRef = ref(storage, `profileImages/${user.uid}/profile.jpg`);
-      const snapshot = await uploadBytes(storageRef, croppedImageBlob);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      const path = `profileImages/${user.uid}/profile.jpg`;
+      const downloadURL = await uploadFile(croppedImageBlob, path);
 
       await updateProfile(auth.currentUser, { photoURL: downloadURL });
       form.setValue('photoURL', downloadURL, { shouldDirty: true }); // Update form state

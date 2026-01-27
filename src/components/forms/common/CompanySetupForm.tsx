@@ -8,9 +8,9 @@ import { z } from 'zod';
 import { Loader2, Save, Upload, Crop as CropIcon, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile } from '@/lib/storage/storage';
 import type { CompanyProfile } from '@/types';
 import Image from 'next/image';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
@@ -289,9 +289,7 @@ export function CompanySetupForm() {
     storagePath: string
   ): Promise<string | undefined> => {
     if (!file) return undefined;
-    const storageRef = ref(storage, storagePath);
-    const snapshot = await uploadBytes(storageRef, file);
-    return await getDownloadURL(snapshot.ref);
+    return await uploadFile(file, storagePath);
   };
 
 

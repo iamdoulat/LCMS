@@ -12,14 +12,14 @@ import {
     orderBy,
     getDoc
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { firestore, storage } from './config';
+import { firestore } from './config';
+import { uploadFile, deleteFile } from '../storage/storage';
 import type { MachineryCatalogue, ErrorCodeRecord } from '@/types/warranty';
 
 // --- Storage Helpers ---
 
 /**
- * Upload a file to Firebase Storage under a specific catalogue's folder
+ * Upload a file to active storage under a specific catalogue's folder
  */
 export const uploadCatalogueFile = async (
     file: File,
@@ -28,22 +28,43 @@ export const uploadCatalogueFile = async (
 ): Promise<string> => {
     const timestamp = new Date().getTime();
     const cleanFileName = fileName || `${timestamp}_${file.name.replace(/\s+/g, '_')}`;
-    const storageRef = ref(storage, `warranty/catalogues/${category}/${cleanFileName}`);
+    const path = `warranty/catalogues/${category}/${cleanFileName}`;
 
-    await uploadBytes(storageRef, file);
-    return await getDownloadURL(storageRef);
+    return await uploadFile(file, path);
 };
 
 /**
- * Delete a file from Firebase Storage given its absolute URL
+ * Delete a file from storage given its absolute URL or path
  */
 export const deleteFileByUrl = async (url: string) => {
     try {
-        const fileRef = ref(storage, url);
-        await deleteObject(fileRef);
+        // If it's a firebase URL, we need to extract the path for deleteFile
+        // However, deleteFile in storage.ts already handles firebase via ref(storage, path)
+        // If path is a full URL, ref(storage, url) works for Firebase.
+        // For S3/R2, we need the relative path.
+
+        let path = url;
+        if (url.includes('firebasestorage.googleapis.com')) {
+            // Firebase ref handles full URL
+            await deleteFile(url);
+        } else if (url.includes('cloudflarestorage.com') || url.includes('amazonaws.com') || url.includes('r2.dev')) {
+            // For S3/R2, extract path from URL
+            // This is a bit tricky depending on the URL structure.
+            // For now, let's assume the path is the part after the domain.
+            try {
+                const urlObj = new URL(url);
+                path = urlObj.pathname.startsWith('/') ? urlObj.pathname.substring(1) : urlObj.pathname;
+                await deleteFile(path);
+            } catch (e) {
+                console.error("Failed to parse URL for deletion:", url);
+                await deleteFile(url);
+            }
+        } else {
+            // Fallback
+            await deleteFile(url);
+        }
     } catch (error) {
         console.error("Error deleting file from storage:", error);
-        // We don't throw here to avoid blocking record deletion if the file is already gone
     }
 };
 
@@ -77,13 +98,11 @@ export const updateCatalogue = async (id: string, data: Partial<Omit<MachineryCa
  * Delete a Machinery Catalogue record and its associated files
  */
 export const deleteCatalogue = async (catalogue: MachineryCatalogue) => {
-    const isFirebaseUrl = (url?: string) => url?.includes('firebasestorage.googleapis.com');
-
-    // Delete files first (only if they are stored in Firebase)
-    if (isFirebaseUrl(catalogue.thumbnailUrl)) await deleteFileByUrl(catalogue.thumbnailUrl!);
-    if (isFirebaseUrl(catalogue.fileUrl)) await deleteFileByUrl(catalogue.fileUrl!);
-    if (isFirebaseUrl(catalogue.insManualsUrl)) await deleteFileByUrl(catalogue.insManualsUrl!);
-    if (isFirebaseUrl(catalogue.videoUrl)) await deleteFileByUrl(catalogue.videoUrl!);
+    // Delete files first
+    if (catalogue.thumbnailUrl) await deleteFileByUrl(catalogue.thumbnailUrl!);
+    if (catalogue.fileUrl) await deleteFileByUrl(catalogue.fileUrl!);
+    if (catalogue.insManualsUrl) await deleteFileByUrl(catalogue.insManualsUrl!);
+    if (catalogue.videoUrl) await deleteFileByUrl(catalogue.videoUrl!);
 
     // Delete record
     await deleteDoc(doc(firestore, 'machinery_catalogues', catalogue.id));

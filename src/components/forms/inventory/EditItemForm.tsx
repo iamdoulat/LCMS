@@ -4,9 +4,9 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
-import { firestore, storage } from '@/lib/firebase/config';
+import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp, collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadFile } from '@/lib/storage/storage';
 import type { ItemFormValues, ItemDocument, SupplierDocument, ItemCategoryDocument, ItemSectionDocument, ItemVariationDocument, PettyCashCategoryDocument, CurrencyDocument, WarehouseDocument } from '@/types';
 import { itemSchema, itemTypeOptions } from '@/types';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
@@ -223,9 +223,8 @@ export function EditItemForm({ initialData, itemId }: EditItemFormProps) {
 
     try {
       if (selectedFile) {
-        const storageRef = ref(storage, `itemImages/${itemId}/profile.jpg`);
-        await uploadBytes(storageRef, selectedFile);
-        photoDownloadURL = await getDownloadURL(storageRef);
+        const path = `itemImages/${itemId}/profile.jpg`;
+        photoDownloadURL = await uploadFile(selectedFile, path);
       } else if (externalUrl) {
         photoDownloadURL = externalUrl;
       }

@@ -1,8 +1,8 @@
 // Firebase helper functions for Multiple Check In/Out
 
 import { collection, addDoc, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { firestore, storage } from './config';
+import { firestore } from './config';
+import { uploadFile } from '../storage/storage';
 import type { MultipleCheckInOutRecord, CheckInOutType, MultipleCheckInOutLocation } from '@/types/checkInOut';
 
 /**
@@ -125,11 +125,9 @@ export const uploadCheckInOutImage = async (
 ): Promise<string> => {
     const timestamp = new Date().getTime();
     const fileName = `${timestamp}_${type.replace(' ', '_')}.jpg`;
-    const storageRef = ref(storage, `check_inout_images/${employeeId}/${fileName}`);
+    const path = `check_inout_images/${employeeId}/${fileName}`;
 
-    await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
+    return await uploadFile(file, path);
 };
 
 /**
