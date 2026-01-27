@@ -1,11 +1,25 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { firestore } from '@/lib/firebase/admin';
+import { firestore, admin } from '@/lib/firebase/admin';
 
 export async function GET(req: NextRequest) {
     try {
         if (!firestore) {
             return NextResponse.json({ error: 'Firestore Admin not initialized' }, { status: 500 });
+        }
+
+        // Verify Authentication
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
+        }
+
+        const token = authHeader.split('Bearer ')[1];
+        try {
+            await admin.auth().verifyIdToken(token);
+        } catch (authErr) {
+            console.error("[STORAGE CONFIG API] Auth Verification Failed:", authErr);
+            return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
         }
 
         // Fetch active config

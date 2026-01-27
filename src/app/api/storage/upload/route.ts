@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { firestore } from '@/lib/firebase/admin'; // Use admin for server-side
+import { firestore, admin } from '@/lib/firebase/admin'; // Use admin for server-side
 import { StorageConfiguration } from '@/types/storage';
 
 export async function POST(req: NextRequest) {
@@ -11,11 +11,26 @@ export async function POST(req: NextRequest) {
         const path = formData.get('path') as string;
         const configId = formData.get('configId') as string;
 
+        // Verify Authentication
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
+        }
+
+        const tokenToken = authHeader.split('Bearer ')[1];
+        let authUser;
+        try {
+            authUser = await admin.auth().verifyIdToken(tokenToken);
+        } catch (authErr) {
+            console.error("[UPLOAD API] Auth Verification Failed:", authErr);
+            return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+        }
+
         if (!file || !path || !configId) {
             return NextResponse.json({ error: 'Missing required fields: file, path, or configId' }, { status: 400 });
         }
 
-        console.log(`[UPLOAD API] Starting upload for path: ${path} using config: ${configId}`);
+        console.log(`[UPLOAD API] Starting upload by user: ${authUser.email} for path: ${path} using config: ${configId}`);
 
         // Fetch config from Firestore (Server-side)
         if (!firestore) {

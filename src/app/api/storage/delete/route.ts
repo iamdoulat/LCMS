@@ -1,15 +1,31 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { firestore } from '@/lib/firebase/admin';
+import { firestore, admin } from '@/lib/firebase/admin';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 export async function POST(request: NextRequest) {
     try {
         const { path, configId } = await request.json();
 
+        // Verify Authentication
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json({ error: 'Unauthorized: Missing or invalid token' }, { status: 401 });
+        }
+
+        const tokenToken = authHeader.split('Bearer ')[1];
+        let authUser;
+        try {
+            authUser = await admin.auth().verifyIdToken(tokenToken);
+        } catch (authErr) {
+            console.error("[DELETE API] Auth Verification Failed:", authErr);
+            return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+        }
+
         if (!path || !configId) {
             return NextResponse.json({ error: 'Missing path or configId' }, { status: 400 });
         }
+
+        console.log(`[DELETE API] Request by ${authUser.email} for path: ${path}`);
 
         // Fetch the configuration from Firestore using Admin SDK
         if (!firestore) {

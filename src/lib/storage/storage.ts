@@ -1,5 +1,5 @@
 
-import { firestore } from '@/lib/firebase/config';
+import { firestore, auth } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { StorageConfiguration } from '@/types/storage';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -22,7 +22,15 @@ export async function getActiveStorageConfig(): Promise<StorageConfiguration | n
 
     try {
         console.log(`[STORAGE] Fetching active configuration from API...`);
-        const response = await fetch('/api/storage/config');
+
+        // Get auth token
+        const token = await auth.currentUser?.getIdToken();
+        const headers: HeadersInit = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch('/api/storage/config', { headers });
 
         if (!response.ok) {
             throw new Error(`API returned ${response.status}`);
@@ -104,9 +112,17 @@ export async function uploadFile(file: File, path: string): Promise<string> {
     formData.append('configId', config.id!);
 
     try {
+        // Get auth token
+        const token = await auth.currentUser?.getIdToken();
+        const headers: HeadersInit = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch('/api/storage/upload', {
             method: 'POST',
             body: formData,
+            headers,
         });
 
         if (!response.ok) {
@@ -144,11 +160,18 @@ export async function deleteFile(path: string): Promise<void> {
     }
 
     // For S3 and R2, we use a server-side API to handle the deletion
+    // Get auth token
+    const token = await auth.currentUser?.getIdToken();
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch('/api/storage/delete', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
             path,
             configId: config.id,
