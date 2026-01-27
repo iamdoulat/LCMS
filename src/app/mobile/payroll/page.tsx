@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, where, orderBy, addDoc, serverTimestamp, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, addDoc, serverTimestamp, limit, doc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { ArrowLeft, Banknote, Calendar, Loader2, Download, Eye, Wallet, TrendingUp, TrendingDown, Clock, Printer, X, Plus, Filter as FilterIcon, Mail } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -30,14 +30,19 @@ export default function MobilePayrollPage() {
     const { user, userRole, companyName, companyLogoUrl, address } = useAuth();
     const { currentEmployeeId } = useSupervisorCheck(user?.email);
 
-    // Check for Admin or HR role
+    // Check for Admin or HR/Accounts role
     const isAdminOrHR = React.useMemo(() => {
         if (!userRole) return false;
         return userRole.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
     }, [userRole]);
 
+    const isAccountOrAdmin = React.useMemo(() => {
+        if (!userRole) return false;
+        return userRole.some(role => ['Super Admin', 'Admin', 'Accounts'].includes(role));
+    }, [userRole]);
+
     // UI State
-    const [activeTab, setActiveTab] = useState<'salary' | 'advance'>('salary');
+    const [activeTab, setActiveTab] = useState<'salary' | 'advance' | 'requisition'>('salary');
     const [selectedSlip, setSelectedSlip] = useState<any>(null);
     const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
     const [isAdvanceRequestOpen, setIsAdvanceRequestOpen] = useState(false);
@@ -49,7 +54,14 @@ export default function MobilePayrollPage() {
     const [duration, setDuration] = useState('');
     const [reason, setReason] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<string>('');
+    // Management State for Requisition
+    const [selectedRequisition, setSelectedRequisition] = useState<any>(null);
+    const [isModifyRequisitionOpen, setIsModifyRequisitionOpen] = useState(false);
+    const [modifyAmount, setModifyAmount] = useState('');
+    const [modifyStatus, setModifyStatus] = useState<string>('');
+    const [modifyComment, setModifyComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isRequisitionSubmitting, setIsRequisitionSubmitting] = useState(false);
 
     // Filter State
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -88,7 +100,7 @@ export default function MobilePayrollPage() {
         !!currentEmployeeIdValue
     );
 
-    // 3. Advance Salary Query
+    // 3. Advance Salary Query (Own)
     const { data: advanceRequests, isLoading: isLoadingAdvances, error: errorAdvances, refetch: refetchAdvances } = useFirestoreQuery<any[]>(
         user?.uid ? query(
             collection(firestore, 'advance_salary'),
@@ -98,6 +110,17 @@ export default function MobilePayrollPage() {
         undefined,
         ['mobile_advance_salary', user?.uid || 'none'],
         !!user?.uid
+    );
+
+    // 4. All Advance Salary Query (For Requisition Tab - Accounts/Admin only)
+    const { data: allRequisitions, isLoading: isLoadingAllRequisitions, error: errorAllRequisitions, refetch: refetchAllRequisitions } = useFirestoreQuery<any[]>(
+        isAccountOrAdmin ? query(
+            collection(firestore, 'advance_salary'),
+            orderBy('applyDate', 'desc')
+        ) : null,
+        undefined,
+        ['mobile_all_advance_salary', user?.uid || 'none'],
+        isAccountOrAdmin
     );
 
     // Filtered Lists Logic (after queries)
@@ -145,12 +168,44 @@ export default function MobilePayrollPage() {
         });
     }, [advanceRequests, filters.status, filters.dateRange]);
 
+    const filteredAllRequisitions = React.useMemo(() => {
+        if (!allRequisitions) return [];
+        return allRequisitions.filter(req => {
+            // Apply similar filters
+            if (filters.status && filters.status !== 'All') {
+                if (Array.isArray(filters.status)) {
+                    if (!filters.status.includes(req.status)) return false;
+                } else {
+                    if (req.status !== filters.status) return false;
+                }
+            }
+            if (filters.dateRange?.from) {
+                const reqDate = req.applyDate ? parseISO(req.applyDate) : null;
+                if (!reqDate) return false;
+                if (reqDate < startOfDay(filters.dateRange.from)) return false;
+                if (filters.dateRange.to && reqDate > endOfDay(filters.dateRange.to)) return false;
+            }
+            // Search filter (by name or code)
+            if (filters.search) {
+                const search = filters.search.toLowerCase();
+                const name = (req.employeeName || '').toLowerCase();
+                const code = (req.employeeCode || '').toLowerCase();
+                if (!name.includes(search) && !code.includes(search)) return false;
+            }
+            return true;
+        });
+    }, [allRequisitions, filters.status, filters.dateRange, filters.search]);
+
     const formatMoney = (val: number) => {
         return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(val);
     };
 
     const refreshData = async () => {
-        await Promise.all([refetchPayslips(), refetchAdvances()]);
+        await Promise.all([
+            refetchPayslips(),
+            refetchAdvances(),
+            isAccountOrAdmin ? refetchAllRequisitions() : Promise.resolve()
+        ]);
     };
 
     // Swipe Handling
@@ -173,11 +228,13 @@ export default function MobilePayrollPage() {
         const isLeftSwipe = distance > minSwipeDistance;
         const isRightSwipe = distance < -minSwipeDistance;
 
-        if (isLeftSwipe && activeTab === 'salary') {
-            setActiveTab('advance');
+        if (isLeftSwipe) {
+            if (activeTab === 'salary') setActiveTab('advance');
+            else if (activeTab === 'advance' && isAccountOrAdmin) setActiveTab('requisition');
         }
-        if (isRightSwipe && activeTab === 'advance') {
-            setActiveTab('salary');
+        if (isRightSwipe) {
+            if (activeTab === 'requisition') setActiveTab('advance');
+            else if (activeTab === 'advance') setActiveTab('salary');
         }
     };
 
@@ -372,6 +429,63 @@ export default function MobilePayrollPage() {
         }
     };
 
+    const handleModifyRequisitionSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedRequisition || !modifyAmount || !modifyStatus) {
+            Swal.fire('Error', 'Please fill in all required fields.', 'error');
+            return;
+        }
+
+        setIsRequisitionSubmitting(true);
+        try {
+            const numericAmount = parseFloat(modifyAmount);
+            const docRef = doc(firestore, 'advance_salary', selectedRequisition.id);
+
+            await updateDoc(docRef, {
+                advanceAmount: numericAmount,
+                dueAmount: numericAmount, // Resetting due amount for now, similar to web logic for simple edits
+                status: modifyStatus,
+                approverComment: modifyComment,
+                updatedAt: serverTimestamp()
+            });
+
+            // Notify Employee on Decision
+            if (modifyStatus === 'Approved' || modifyStatus === 'Rejected') {
+                try {
+                    fetch('/api/notify/advance-salary', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: 'decision',
+                            requestId: selectedRequisition.id,
+                            status: modifyStatus,
+                            rejectionReason: modifyComment
+                        })
+                    });
+                } catch (err) {
+                    console.error("Failed to trigger decision notification", err);
+                }
+            }
+
+            setIsModifyRequisitionOpen(false);
+            refetchAllRequisitions();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Updated!',
+                text: 'The requisition has been updated successfully.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+        } catch (error: any) {
+            console.error("Error updating requisition:", error);
+            Swal.fire('Error', 'Failed to update: ' + error.message, 'error');
+        } finally {
+            setIsRequisitionSubmitting(false);
+        }
+    };
+
     if (!user) return null;
 
     // --- Sub-components for Cleaner Render ---
@@ -496,6 +610,86 @@ export default function MobilePayrollPage() {
                         {req.approverComment && (
                             <div className="mt-2 text-xs text-slate-500 bg-orange-50/50 p-2 rounded-lg border border-orange-100">
                                 <span className="font-bold text-orange-700">Note: </span>{req.approverComment}
+                            </div>
+                        )}
+                    </Card>
+                ))}
+            </div>
+        );
+    };
+
+    const RequisitionList = () => {
+        if (isLoadingAllRequisitions) {
+            return (
+                <div className="flex flex-col items-center justify-center pt-20">
+                    <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-4" />
+                    <p className="text-slate-500 font-medium">Loading requisitions...</p>
+                </div>
+            );
+        }
+        if (errorAllRequisitions) return <div className="p-8 text-center text-rose-500">Failed to load requisitions.</div>;
+
+        if (!filteredAllRequisitions || filteredAllRequisitions.length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center pt-32 text-slate-400">
+                    <div className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center mb-6">
+                        <Banknote className="h-10 w-10 opacity-30" />
+                    </div>
+                    <p className="font-bold text-lg mb-1">No Requisitions Found</p>
+                    <p className="text-sm">Requests from employees will appear here.</p>
+                </div>
+            );
+        }
+
+        const handleOpenModify = (req: any) => {
+            setSelectedRequisition(req);
+            setModifyAmount(req.advanceAmount.toString());
+            setModifyStatus(req.status);
+            setModifyComment(req.approverComment || '');
+            setIsModifyRequisitionOpen(true);
+        };
+
+        return (
+            <div className="space-y-4 pb-20">
+                {filteredAllRequisitions.map((req: any) => (
+                    <Card
+                        key={req.id}
+                        onClick={() => handleOpenModify(req)}
+                        className="p-4 rounded-3xl border-none shadow-md bg-white relative overflow-hidden active:bg-slate-50"
+                    >
+                        <div className="flex justify-between items-start mb-2">
+                            <div>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Employee</p>
+                                <p className="text-sm font-bold text-slate-800">{req.employeeName}</p>
+                                <p className="text-[10px] font-semibold text-slate-500">Code: {req.employeeCode}</p>
+                            </div>
+                            <Badge className={cn("rounded-full px-3 py-1 text-[10px]",
+                                req.status === 'Approved' ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" :
+                                    req.status === 'Rejected' ? "bg-rose-100 text-rose-700 hover:bg-rose-100" :
+                                        req.status === 'Paid' ? "bg-blue-100 text-blue-700 hover:bg-blue-100" :
+                                            req.status === 'Partially Paid' ? "bg-purple-100 text-purple-700 hover:bg-purple-100" :
+                                                "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                            )}>
+                                {req.status}
+                            </Badge>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-3">
+                            <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                                    <Banknote className="h-4 w-4" />
+                                </div>
+                                <span className="text-xl font-bold text-slate-800">{formatMoney(req.advanceAmount)}</span>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Date</p>
+                                <p className="text-[11px] font-bold text-slate-600">{req.applyDate ? format(new Date(req.applyDate), 'dd MMM, yy') : 'N/A'}</p>
+                            </div>
+                        </div>
+
+                        {req.reason && (
+                            <div className="mt-3 text-xs text-slate-500 line-clamp-1 italic">
+                                "{req.reason}"
                             </div>
                         )}
                     </Card>
@@ -695,28 +889,42 @@ export default function MobilePayrollPage() {
                     <div className="flex items-center justify-between p-1 bg-slate-50 rounded-full mb-2 shadow-inner">
                         <button
                             onClick={() => setActiveTab('salary')}
-                            className={`flex-1 py-3 text-sm font-bold rounded-full transition-all duration-200 ${activeTab === 'salary'
+                            className={`flex-1 py-3 text-xs font-bold rounded-full transition-all duration-200 ${activeTab === 'salary'
                                 ? 'bg-white text-blue-600 shadow-sm'
                                 : 'text-slate-400 hover:text-slate-600'
                                 }`}
                         >
-                            <span className="flex items-center justify-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${activeTab === 'salary' ? 'bg-yellow-400' : 'bg-transparent'}`}></span>
+                            <span className="flex items-center justify-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${activeTab === 'salary' ? 'bg-yellow-400' : 'bg-transparent'}`}></span>
                                 Salary
                             </span>
                         </button>
                         <button
                             onClick={() => setActiveTab('advance')}
-                            className={`flex-1 py-3 text-sm font-bold rounded-full transition-all duration-200 ${activeTab === 'advance'
+                            className={`flex-1 py-3 text-xs font-bold rounded-full transition-all duration-200 ${activeTab === 'advance'
                                 ? 'bg-white text-blue-600 shadow-sm'
                                 : 'text-slate-400 hover:text-slate-600'
                                 }`}
                         >
-                            <span className="flex items-center justify-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${activeTab === 'advance' ? 'bg-yellow-400' : 'bg-transparent'}`}></span>
-                                Advance Salary
+                            <span className="flex items-center justify-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${activeTab === 'advance' ? 'bg-yellow-400' : 'bg-transparent'}`}></span>
+                                Advance
                             </span>
                         </button>
+                        {isAccountOrAdmin && (
+                            <button
+                                onClick={() => setActiveTab('requisition')}
+                                className={`flex-1 py-3 text-xs font-bold rounded-full transition-all duration-200 ${activeTab === 'requisition'
+                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                    }`}
+                            >
+                                <span className="flex items-center justify-center gap-1.5">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${activeTab === 'requisition' ? 'bg-yellow-400' : 'bg-transparent'}`}></span>
+                                    Requisition
+                                </span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -728,7 +936,7 @@ export default function MobilePayrollPage() {
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
                 >
-                    {activeTab === 'salary' ? <PayslipList /> : <AdvanceList />}
+                    {activeTab === 'salary' ? <PayslipList /> : activeTab === 'advance' ? <AdvanceList /> : <RequisitionList />}
                 </div>
 
                 {/* FAB for Advance Request - Only shows when activeTab is advance */}
@@ -842,12 +1050,23 @@ export default function MobilePayrollPage() {
                 onOpenChange={setIsFilterOpen}
                 onApply={setFilters}
                 onReset={() => setFilters({})}
-                showDateRange={activeTab === 'advance'}
-                showStatus={activeTab === 'advance'}
-                statusOptions={['Pending', 'Approved', 'Rejected']}
+                showDateRange={activeTab === 'advance' || activeTab === 'requisition'}
+                showStatus={activeTab === 'advance' || activeTab === 'requisition'}
+                statusOptions={activeTab === 'requisition' ? ['Pending', 'Approved', 'Rejected', 'Paid', 'Partially Paid'] : ['Pending', 'Approved', 'Rejected']}
                 currentFilters={filters}
-                title={activeTab === 'salary' ? "Filter Payslips" : "Filter Requests"}
+                title={activeTab === 'salary' ? "Filter Payslips" : activeTab === 'advance' ? "Filter Requests" : "Filter Requisitions"}
             >
+                {activeTab === 'requisition' && (
+                    <div className="space-y-3">
+                        <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Search</h4>
+                        <Input
+                            placeholder="Name or Employee Code"
+                            value={filters.search || ''}
+                            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                            className="h-12 rounded-xl border-slate-200"
+                        />
+                    </div>
+                )}
                 {activeTab === 'salary' && (
                     <div className="space-y-3">
                         <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Year</h4>
@@ -868,6 +1087,79 @@ export default function MobilePayrollPage() {
                     </div>
                 )}
             </MobileFilterSheet>
+
+            {/* Modify Requisition Sheet (Admin/Accounts) */}
+            <Sheet open={isModifyRequisitionOpen} onOpenChange={setIsModifyRequisitionOpen}>
+                <SheetContent side="bottom" className="rounded-t-[2rem] p-6 pb-10 max-h-[90vh] overflow-y-auto">
+                    <SheetHeader className="mb-6 text-left">
+                        <SheetTitle className="text-xl font-bold italic">Manage Requisition</SheetTitle>
+                    </SheetHeader>
+
+                    {selectedRequisition && (
+                        <div className="mb-6 p-4 bg-slate-50 rounded-2xl space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-xs text-slate-400 font-bold uppercase">Employee</span>
+                                <span className="text-sm font-bold text-slate-700">{selectedRequisition.employeeName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-xs text-slate-400 font-bold uppercase">Code</span>
+                                <span className="text-sm font-bold text-slate-700">{selectedRequisition.employeeCode}</span>
+                            </div>
+                            <div className="pt-2 border-t border-slate-200 mt-2">
+                                <p className="text-xs text-slate-400 font-bold uppercase mb-1">Reason</p>
+                                <p className="text-sm text-slate-600 italic">"{selectedRequisition.reason || 'No reason provided'}"</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleModifyRequisitionSubmit} className="space-y-5">
+                        <div className="space-y-2">
+                            <Label>Approved Amount (BDT) <span className="text-red-500">*</span></Label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">৳</span>
+                                <Input
+                                    type="number"
+                                    className="pl-8 text-lg font-bold"
+                                    value={modifyAmount}
+                                    onChange={(e) => setModifyAmount(e.target.value)}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Status <span className="text-red-500">*</span></Label>
+                            <Select value={modifyStatus} onValueChange={setModifyStatus} required>
+                                <SelectTrigger className="h-12 rounded-xl">
+                                    <SelectValue placeholder="Select Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Pending">Pending</SelectItem>
+                                    <SelectItem value="Approved">Approved</SelectItem>
+                                    <SelectItem value="Rejected">Rejected</SelectItem>
+                                    <SelectItem value="Paid">Paid</SelectItem>
+                                    <SelectItem value="Partially Paid">Partially Paid</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Approver Comment</Label>
+                            <Textarea
+                                placeholder="Add a note for the employee..."
+                                value={modifyComment}
+                                onChange={(e) => setModifyComment(e.target.value)}
+                                className="resize-none rounded-xl"
+                            />
+                        </div>
+
+                        <Button type="submit" size="lg" className="w-full text-base py-6 rounded-xl mt-4 bg-blue-600 hover:bg-blue-700" disabled={isRequisitionSubmitting}>
+                            {isRequisitionSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+                            Update Requisition
+                        </Button>
+                    </form>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

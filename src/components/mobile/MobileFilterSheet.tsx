@@ -16,6 +16,7 @@ export interface FilterState {
     month?: string;
     priority?: 'Low' | 'Medium' | 'High' | 'Urgency';
     project?: string;
+    search?: string;
 }
 
 interface MobileFilterSheetProps {
