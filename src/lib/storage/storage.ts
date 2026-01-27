@@ -10,7 +10,7 @@ let activeConfigCache: { config: StorageConfiguration | null; timestamp: number 
 const CACHE_DURATION = 60000; // 1 minute
 
 /**
- * Fetches the currently active storage configuration from Firestore with caching
+ * Fetches the currently active storage configuration from a secure server-side API with caching
  */
 export async function getActiveStorageConfig(): Promise<StorageConfiguration | null> {
     const now = Date.now();
@@ -21,26 +21,24 @@ export async function getActiveStorageConfig(): Promise<StorageConfiguration | n
     }
 
     try {
-        const q = query(
-            collection(firestore, 'storage_settings'),
-            where('isActive', '==', true),
-            limit(1)
-        );
-        const snapshot = await getDocs(q);
+        console.log(`[STORAGE] Fetching active configuration from API...`);
+        const response = await fetch('/api/storage/config');
 
-        const config = snapshot.empty ? null : {
-            id: snapshot.docs[0].id,
-            ...snapshot.docs[0].data()
-        } as StorageConfiguration;
+        if (!response.ok) {
+            throw new Error(`API returned ${response.status}`);
+        }
 
-        console.log(`[STORAGE] Active config fetched: ${config?.name || 'None (Defaulting to Firebase)'} (${config?.provider || 'firebase'})`);
+        const config = await response.json() as StorageConfiguration;
+
+        console.log(`[STORAGE] Active config fetched via API: ${config?.name || 'None'} (${config?.provider || 'firebase'})`);
 
         // Update cache
         activeConfigCache = { config, timestamp: now };
         return config;
     } catch (error) {
-        console.error("[STORAGE] Error fetching active storage config:", error);
+        console.error("[STORAGE] Error fetching active storage config via API:", error);
         // If fetch fails, return cached config even if stale as a fallback
+        // If No cache, will return null which defaults to firebase
         return activeConfigCache?.config || null;
     }
 }
