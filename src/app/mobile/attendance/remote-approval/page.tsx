@@ -328,7 +328,7 @@ export default function RemoteAttendanceApprovalPage() {
                 }
             } else if (selectedRecord.type === 'Out Time') {
                 const snap = await getDoc(docRef);
-                const currentData = snap.data(); // Not strictly needed unless checking state
+                const currentData = snap.data();
 
                 const updates: any = {
                     outTimeApprovalStatus: action,
@@ -344,9 +344,7 @@ export default function RemoteAttendanceApprovalPage() {
                         updates.approvalStatus = 'Approved';
                     }
                 } else {
-                    // If outTime is rejected, maybe we keep approvalStatus as Pending or set to 'Rejected'?
-                    // Usually rejection of out-time doesn't negate the in-time, but for simplicity:
-                    // updates.approvalStatus = 'Rejected'; 
+                    // Rejection of OutTime does not affect overall flag or approval status per user request
                 }
 
                 await updateDoc(docRef, updates);
