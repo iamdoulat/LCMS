@@ -2108,7 +2108,7 @@ export type LeaveApplicationDocument = LeaveApplication & { id: string };
 // --- Advance Salary Types ---
 export const advanceSalaryStatusOptions = ["Pending", "Approved", "Rejected", "Paid", "Partially Paid"] as const;
 export type AdvanceSalaryStatus = typeof advanceSalaryStatusOptions[number];
-export const advanceSalaryPaymentMethodOptions = ["Salary Deduction", "Cash"] as const;
+export const advanceSalaryPaymentMethodOptions = ["Salary Deduction", "Cash", "salary_deduction", "cash"] as const;
 export type AdvanceSalaryPaymentMethod = typeof advanceSalaryPaymentMethodOptions[number];
 
 export const AdvanceSalarySchema = z.object({

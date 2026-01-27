@@ -54,6 +54,7 @@ export function EditAdvanceSalaryForm({ initialData }: EditAdvanceSalaryFormProp
       paymentStartsFrom: parseISO(initialData.paymentStartsFrom),
       status: initialData.status,
       approverComment: initialData.approverComment || '',
+      paymentMethod: initialData.paymentMethod === 'salary_deduction' ? 'Salary Deduction' : (initialData.paymentMethod === 'cash' ? 'Cash' : (initialData.paymentMethod || 'Salary Deduction')),
     },
   });
 
@@ -68,7 +69,7 @@ export function EditAdvanceSalaryForm({ initialData }: EditAdvanceSalaryFormProp
       return;
     }
 
-    const canApprove = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+    const canApprove = userRole?.some(role => ['Super Admin', 'Admin', 'HR', 'Accounts'].includes(role));
     if (!canApprove) {
       Swal.fire("Permission Denied", "You do not have permission to approve or reject this request.", "error");
       return;
@@ -77,19 +78,28 @@ export function EditAdvanceSalaryForm({ initialData }: EditAdvanceSalaryFormProp
     setIsSubmitting(true);
     const selectedEmployee = employeeOptions.find(emp => emp.value === data.employeeId);
 
-    const dataToUpdate = {
+    const dataToUpdate: any = {
       ...data,
       employeeName: selectedEmployee?.label.split(' (')[0] || initialData.employeeName,
       employeeCode: selectedEmployee?.label.match(/\(([^)]+)\)/)?.[1] || initialData.employeeCode,
       applyDate: format(data.applyDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       paymentStartsFrom: format(data.paymentStartsFrom, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-      dueAmount: data.advanceAmount, // This might need more complex logic if partial payments are possible
       updatedAt: serverTimestamp(),
       approverComment: data.approverComment || '',
     };
 
-    // Remove fields that should not be updated
-    delete (dataToUpdate as any).createdAt;
+    // Smart logic for dueAmount/paidAmount if we're marking as Paid
+    if (data.status === 'Paid') {
+      dataToUpdate.dueAmount = 0;
+      dataToUpdate.paidAmount = data.advanceAmount;
+    } else if (data.status === 'Approved' && initialData.status === 'Pending') {
+      dataToUpdate.dueAmount = data.advanceAmount;
+      dataToUpdate.paidAmount = 0;
+    }
+
+    // Remove fields that should not be updated in the document content
+    delete dataToUpdate.createdAt;
+    delete dataToUpdate.id;
 
     try {
       const docRef = doc(firestore, "advance_salary", initialData.id);
@@ -189,6 +199,26 @@ export function EditAdvanceSalaryForm({ initialData }: EditAdvanceSalaryFormProp
               <FormItem>
                 <FormLabel>Payment Duration (Months)*</FormLabel>
                 <FormControl><Input type="number" placeholder="e.g., 6" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10) || 1)} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="paymentMethod"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Payment Method*</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger><SelectValue placeholder="Select method" /></SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {["Salary Deduction", "Cash"].map(opt => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
