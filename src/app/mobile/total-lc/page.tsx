@@ -218,10 +218,7 @@ export default function MobileTotalLCPage() {
 
     const applicants = Array.from(new Set(lcs.map(lc => lc.applicantName).filter(Boolean)));
     const beneficiaries = Array.from(new Set(lcs.map(lc => lc.beneficiaryName).filter(Boolean)));
-    const years = Array.from(new Set(lcs.map(lc => {
-        const date = lc.createdAt && (lc.createdAt as any).toDate ? (lc.createdAt as any).toDate() : new Date(lc.createdAt || '');
-        return isValid(date) ? date.getFullYear().toString() : null;
-    }).filter(Boolean))).sort((a, b) => b!.localeCompare(a!));
+    const years = Array.from({ length: 2030 - 2015 + 1 }, (_, i) => (2030 - i).toString());
 
     const clearFilters = () => {
         setSearchTerm('');
@@ -874,19 +871,6 @@ export default function MobileTotalLCPage() {
                                     )}
                                 </button>
 
-                                {/* Infinite Scroll Trigger */}
-                                <div
-                                    ref={(el) => {
-                                        if (!el || !hasMore || loadingMore || isLoading) return;
-                                        const observer = new IntersectionObserver((entries) => {
-                                            if (entries[0].isIntersecting) {
-                                                fetchLCs(false, true);
-                                            }
-                                        }, { threshold: 0.1 });
-                                        observer.observe(el);
-                                    }}
-                                    className="h-10 w-full"
-                                />
                             </div>
                         )}
 
