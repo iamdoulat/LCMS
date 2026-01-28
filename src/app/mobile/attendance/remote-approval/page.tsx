@@ -6,7 +6,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import { ChevronLeft, MapPin, Map as MapIcon, ArrowRight, Loader2, Calendar, Check, X, ArrowLeft, Filter } from 'lucide-react';
+import { ChevronLeft, MapPin, Map as MapIcon, ArrowRight, Loader2, Calendar, Check, X, ArrowLeft, Filter, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { MultipleCheckInOutRecord } from '@/types/checkInOut';
 import { Button } from '@/components/ui/button';
@@ -409,97 +409,106 @@ export default function RemoteAttendanceApprovalPage() {
                         <h1 className="text-xl font-bold text-white ml-2">Remote Att. Approval</h1>
                     </div>
 
-                    <Sheet>
-                        <SheetTrigger asChild>
-                            <button className="relative p-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]">
-                                <Filter className="h-6 w-6" />
-                                {getActiveFiltersCount() > 0 && (
-                                    <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#0a1e60]">
-                                        {getActiveFiltersCount()}
-                                    </span>
-                                )}
-                            </button>
-                        </SheetTrigger>
-                        <SheetContent side="right" className="w-[85%] sm:w-[540px] border-l-0 bg-slate-50 p-0 [&>button]:text-white [&>button]:opacity-100">
-                            <div className="bg-[#0a1e60] p-6 pt-10">
-                                <SheetHeader className="text-left">
-                                    <SheetTitle className="text-white text-xl font-bold">Filter Attendance</SheetTitle>
-                                </SheetHeader>
-                            </div>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => fetchRemoteAttendance()}
+                            disabled={loading}
+                            className="p-2 text-white hover:bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(0,0,0,0.4)] active:scale-95 bg-[#1a2b6d] disabled:opacity-50"
+                        >
+                            <RefreshCw className={`h-6 w-6 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
 
-                            <div className="p-6 space-y-6">
-                                <div className="space-y-3">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Select Month ({new Date().getFullYear()})</label>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {months.map((month, index) => (
-                                            <button
-                                                key={month}
-                                                onClick={() => setSelectedMonth(index)}
-                                                className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${selectedMonth === index
-                                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-100'
-                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-200'
-                                                    }`}
-                                            >
-                                                {month}
-                                            </button>
-                                        ))}
+                        <Sheet>
+                            <SheetTrigger asChild>
+                                <button className="relative p-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]">
+                                    <Filter className="h-6 w-6" />
+                                    {getActiveFiltersCount() > 0 && (
+                                        <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#0a1e60]">
+                                            {getActiveFiltersCount()}
+                                        </span>
+                                    )}
+                                </button>
+                            </SheetTrigger>
+                            <SheetContent side="right" className="w-[85%] sm:w-[540px] border-l-0 bg-slate-50 p-0 [&>button]:text-white [&>button]:opacity-100">
+                                <div className="bg-[#0a1e60] p-6 pt-10">
+                                    <SheetHeader className="text-left">
+                                        <SheetTitle className="text-white text-xl font-bold">Filter Attendance</SheetTitle>
+                                    </SheetHeader>
+                                </div>
+
+                                <div className="p-6 space-y-6">
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Select Month ({new Date().getFullYear()})</label>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {months.map((month, index) => (
+                                                <button
+                                                    key={month}
+                                                    onClick={() => setSelectedMonth(index)}
+                                                    className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${selectedMonth === index
+                                                        ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-100'
+                                                        : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-200'
+                                                        }`}
+                                                >
+                                                    {month}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Status</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {['All', 'Pending', 'Approved', 'Rejected'].map((status) => (
+                                                <button
+                                                    key={status}
+                                                    onClick={() => setStatusFilter(status as any)}
+                                                    className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${statusFilter === status
+                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100'
+                                                        : 'bg-white text-slate-600 border-slate-200'
+                                                        }`}
+                                                >
+                                                    {status}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Type Filter</label>
+                                        <div className="flex gap-2">
+                                            {['All', 'In Time', 'Out Time'].map((type) => (
+                                                <button
+                                                    key={type}
+                                                    onClick={() => setTypeFilter(type as any)}
+                                                    className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-1 border ${typeFilter === type
+                                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100'
+                                                        : 'bg-white text-slate-600 border-slate-200'
+                                                        }`}
+                                                >
+                                                    {type}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 mt-auto">
+                                        <button
+                                            onClick={() => {
+                                                setStatusFilter('Pending');
+                                                setTypeFilter('All');
+                                                setSelectedMonth(currentMonthIndex);
+                                            }}
+                                            className="w-full py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm"
+                                        >
+                                            Reset to Defaults
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Status</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {['All', 'Pending', 'Approved', 'Rejected'].map((status) => (
-                                            <button
-                                                key={status}
-                                                onClick={() => setStatusFilter(status as any)}
-                                                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${statusFilter === status
-                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100'
-                                                    : 'bg-white text-slate-600 border-slate-200'
-                                                    }`}
-                                            >
-                                                {status}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Type Filter</label>
-                                    <div className="flex gap-2">
-                                        {['All', 'In Time', 'Out Time'].map((type) => (
-                                            <button
-                                                key={type}
-                                                onClick={() => setTypeFilter(type as any)}
-                                                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-1 border ${typeFilter === type
-                                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100'
-                                                    : 'bg-white text-slate-600 border-slate-200'
-                                                    }`}
-                                            >
-                                                {type}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 mt-auto">
-                                    <button
-                                        onClick={() => {
-                                            setStatusFilter('Pending');
-                                            setTypeFilter('All');
-                                            setSelectedMonth(currentMonthIndex);
-                                        }}
-                                        className="w-full py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm"
-                                    >
-                                        Reset to Defaults
-                                    </button>
-                                </div>
-                            </div>
-                        </SheetContent>
-                    </Sheet>
+                            </SheetContent>
+                        </Sheet>
+                    </div>
                 </div>
             </div>
-
             <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col pt-6 relative z-10">
 
                 <div className="flex-1 px-6 pb-[120px] space-y-4">
@@ -670,6 +679,6 @@ export default function RemoteAttendanceApprovalPage() {
                     )}
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 }

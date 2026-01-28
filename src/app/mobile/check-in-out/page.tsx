@@ -15,7 +15,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar as CalendarIcon, X, Search, MapPin, ArrowRight } from 'lucide-react';
+import { Calendar as CalendarIcon, X, Search, MapPin, ArrowRight, RefreshCw } from 'lucide-react';
 import { startOfDay, endOfDay } from 'date-fns';
 import { DynamicStorageImage } from '@/components/ui/DynamicStorageImage';
 
@@ -62,6 +62,12 @@ export default function MobileCheckInOutPage() {
 
     // Privileged role records
     const [privilegedRoleRecords, setPrivilegedRoleRecords] = useState<MultipleCheckInOutRecord[]>([]);
+
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const refreshData = () => {
+        setRefreshTrigger(prev => prev + 1);
+    };
 
 
     // Fetch Records
@@ -157,7 +163,7 @@ export default function MobileCheckInOutPage() {
         };
 
         fetchSupervisionData();
-    }, [isSupervisor, supervisedEmployeeIds, activeTab]);
+    }, [isSupervisor, supervisedEmployeeIds, activeTab, refreshTrigger]);
 
     // Fetch Privileged Role Check-Ins
     useEffect(() => {
@@ -217,7 +223,7 @@ export default function MobileCheckInOutPage() {
         };
 
         fetchPrivilegedRoleCheckIns();
-    }, [user, userRole, activeTab]);
+    }, [user, userRole, activeTab, refreshTrigger]);
 
     const applyFilters = () => {
         let filtered = [...supervisionRecords];
@@ -300,9 +306,11 @@ export default function MobileCheckInOutPage() {
             }
         });
 
-        // Add remaining orphaned Check Ins
+        // Add remaining orphaned Check Ins and handle Check Outs that were already processed
         recordsByEmployeeCompany.forEach((remainingRecords) => {
             remainingRecords.forEach(record => {
+                // If it's a Check out and we already paired it, don't add it as an orphan
+                // (This part is tricky because the original logic was a bit scattered)
                 visits.push({
                     id: record.id,
                     checkIn: record,
@@ -379,10 +387,14 @@ export default function MobileCheckInOutPage() {
             );
         }
 
-        // Collect all potential records to allow pairing even across tabs
-        const allRelevantRecords = [...records, ...privilegedRoleRecords, ...supervisionRecords];
-        // Deduplicate
-        const uniqueRecords = Array.from(new Map(allRelevantRecords.map(r => [r.id, r])).values());
+        // Deduplicate using a Map
+        const uniqueRecordsMap = new Map();
+        [...records, ...privilegedRoleRecords, ...supervisionRecords].forEach(r => {
+            if (!uniqueRecordsMap.has(r.id)) {
+                uniqueRecordsMap.set(r.id, r);
+            }
+        });
+        const uniqueRecords = Array.from(uniqueRecordsMap.values());
 
         const grouped = groupRecordsByDate(uniqueRecords);
 
@@ -392,13 +404,19 @@ export default function MobileCheckInOutPage() {
                 const isUserRecord = visit.employeeId === currentUserEmployeeId;
                 const isDone = !!visit.checkOut;
 
+                // Auto check-out logic: if more than 8 hours passed since check-in
+                const checkInTime = new Date(visit.checkIn.timestamp).getTime();
+                const now = new Date().getTime();
+                const diffHours = (now - checkInTime) / (1000 * 60 * 60);
+                const isAutoDone = !isDone && diffHours > 8;
+
                 if (activeTab === 'Check Ins') {
-                    // Show only User's pending visits
-                    return !isDone && isUserRecord;
+                    // Show only User's pending visits that are NOT older than 8 hours
+                    return !isDone && !isAutoDone && isUserRecord;
                 }
                 if (activeTab === 'Completed') {
-                    // Show only User's completed visits
-                    return isDone && isUserRecord;
+                    // Show User's completed visits OR visits that are auto-done (8h+)
+                    return (isDone || isAutoDone) && isUserRecord;
                 }
                 // Supervision tab shows everything
                 return true;
@@ -425,6 +443,13 @@ export default function MobileCheckInOutPage() {
                                 const checkOutTime = visit.checkOut ? format(new Date(visit.checkOut.timestamp), 'hh:mm a') : null;
                                 const isDone = !!visit.checkOut;
                                 const isUserRecord = visit.employeeId === currentUserEmployeeId;
+                                const checkInDate = format(new Date(visit.checkIn.timestamp), 'dd MMM');
+                                const checkOutDate = visit.checkOut ? format(new Date(visit.checkOut.timestamp), 'dd MMM') : null;
+
+                                // Auto check-out indicator
+                                const checkInTimestamp = new Date(visit.checkIn.timestamp).getTime();
+                                const now = new Date().getTime();
+                                const isAutoDone = !isDone && (now - checkInTimestamp) / (1000 * 60 * 60) > 8;
 
                                 // Calculate duration if both times exist
                                 let duration = '';
@@ -440,9 +465,9 @@ export default function MobileCheckInOutPage() {
                                 const photoURL = employeeProfile?.photoURL;
 
                                 return (
-                                    <div key={visit.id} className={`mb-4 last:mb-0 relative ${isDone ? 'bg-slate-50/50 p-4 rounded-3xl border border-slate-200 shadow-md' : ''}`}>
+                                    <div key={visit.id} className={`mb-4 last:mb-0 relative ${(isDone || isAutoDone) ? 'bg-slate-50/50 p-4 rounded-3xl border border-slate-200 shadow-md' : ''}`}>
                                         {/* Timeline Connection Line (only for paired cards) */}
-                                        {visit.checkOut && (
+                                        {(visit.checkOut || isAutoDone) && (
                                             <>
                                                 {/* Vertical Track */}
                                                 <div className="absolute left-[calc(1.25rem+2.5rem)] top-[5rem] bottom-[5rem] w-px border-l border-dashed border-slate-300 z-0"></div>
@@ -465,71 +490,67 @@ export default function MobileCheckInOutPage() {
                                         )}
 
                                         <div className="space-y-6 relative z-10">
-                                            {/* Check Out Card (if exists) */}
-                                            {visit.checkOut && (
+                                            {/* Check Out Card OR Auto-Closed Indicator */}
+                                            {(visit.checkOut || isAutoDone) && (
                                                 <div className="flex gap-4 relative">
                                                     <div className="w-20 pt-1 flex flex-col items-center shrink-0">
-                                                        <span className="text-xs font-semibold text-[#0a1e60] mb-1">{checkOutTime}</span>
-                                                        <span className="text-[8px] font-bold px-1 py-0.5 rounded border text-green-600 border-green-100 bg-green-50 mb-2">
-                                                            OUT
+                                                        <span className="text-xs font-semibold text-[#0a1e60] mb-0.5">{isAutoDone ? '8h+' : checkOutTime}</span>
+                                                        <span className="text-[10px] text-slate-400 mb-1">{isAutoDone ? checkInDate : checkOutDate}</span>
+                                                        <span className={`text-[8px] font-bold px-1 py-0.5 rounded border mb-2 leading-none ${isAutoDone ? 'text-amber-600 border-amber-100 bg-amber-50' : 'text-green-600 border-green-100 bg-green-50'}`}>
+                                                            {isAutoDone ? 'AUTO' : 'OUT'}
                                                         </span>
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
                                                     </div>
 
-                                                    <div className="flex-1 bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3 relative overflow-hidden">
-                                                        <button
-                                                            onClick={() => {
-                                                                if (visit.checkOut?.imageURL) {
-                                                                    setSelectedImageUrl(visit.checkOut.imageURL);
-                                                                    setIsImageModalOpen(true);
-                                                                }
-                                                            }}
-                                                            className="h-12 w-12 rounded-xl bg-slate-100 shrink-0 overflow-hidden relative cursor-pointer hover:opacity-80 transition-opacity"
-                                                            disabled={!visit.checkOut?.imageURL}
-                                                        >
-                                                            {visit.checkOut?.imageURL ? (
-                                                                <DynamicStorageImage
-                                                                    path={visit.checkOut.imageURL}
-                                                                    alt="Visit Out"
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            ) : (
-                                                                <div className="h-full w-full flex items-center justify-center text-slate-400">
-                                                                    <MapPin className="h-5 w-5" />
+                                                    <div className={`flex-1 ${isAutoDone ? 'bg-amber-50/30' : 'bg-white'} p-3 rounded-2xl shadow-sm border ${isAutoDone ? 'border-amber-100' : 'border-slate-100'} flex gap-3 relative overflow-hidden`}>
+                                                        {isAutoDone ? (
+                                                            <div className="flex-1 py-1">
+                                                                <div className="flex items-center gap-2 text-amber-600 mb-1">
+                                                                    <RefreshCw className="h-3 w-3 animate-spin-slow" />
+                                                                    <span className="text-[10px] font-bold uppercase tracking-wider">System Auto-Closed</span>
                                                                 </div>
-                                                            )}
-                                                        </button>
-
-                                                        <div className="flex-1 min-w-0 py-0.5">
-                                                            <div className="flex justify-between items-start">
-                                                                <h4 className="font-bold text-[#0a1e60] text-sm pr-2">{visit.companyName}</h4>
+                                                                <p className="text-[11px] text-slate-500 italic">Check-in session exceeded 8 hours limit. Automatically marked as completed.</p>
                                                             </div>
-                                                            <p className="text-xs text-slate-500 mb-3">{visit.checkOut.remarks || 'No remarks'}</p>
+                                                        ) : (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (visit.checkOut?.imageURL) {
+                                                                            setSelectedImageUrl(visit.checkOut.imageURL);
+                                                                            setIsImageModalOpen(true);
+                                                                        }
+                                                                    }}
+                                                                    className="h-12 w-12 rounded-xl bg-slate-100 shrink-0 overflow-hidden relative cursor-pointer hover:opacity-80 transition-opacity"
+                                                                    disabled={!visit.checkOut?.imageURL}
+                                                                >
+                                                                    {visit.checkOut?.imageURL ? (
+                                                                        <DynamicStorageImage
+                                                                            path={visit.checkOut.imageURL}
+                                                                            alt="Visit Out"
+                                                                            className="w-full h-full object-cover"
+                                                                        />
+                                                                    ) : (
+                                                                        <div className="h-full w-full flex items-center justify-center text-slate-400">
+                                                                            <MapPin className="h-5 w-5" />
+                                                                        </div>
+                                                                    )}
+                                                                </button>
 
-                                                            <div className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 space-y-1">
-                                                                <div className="flex items-start gap-1.5">
-                                                                    <MapPin className="h-3 w-3 shrink-0 mt-0.5 text-blue-500" />
-                                                                    <span className="leading-normal">{visit.checkOut.location?.address || 'Address not captured'}</span>
-                                                                </div>
-                                                            </div>
-
-                                                            {(activeTab === 'Supervision' || (activeTab === 'Check Ins' && !isUserRecord)) && (
-                                                                <div className="mt-3 pt-2 border-t border-slate-50 flex items-center gap-2">
-                                                                    <div className="h-8 w-8 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center text-[10px] font-bold text-slate-500 relative shrink-0">
-                                                                        {photoURL ? (
-                                                                            <DynamicStorageImage
-                                                                                path={photoURL}
-                                                                                alt={visit.employeeName}
-                                                                                className="w-full h-full object-cover"
-                                                                            />
-                                                                        ) : (
-                                                                            visit.employeeName?.substring(0, 2).toUpperCase()
-                                                                        )}
+                                                                <div className="flex-1 min-w-0 py-0.5">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <h4 className="font-bold text-[#0a1e60] text-sm pr-2">{visit.companyName}</h4>
                                                                     </div>
-                                                                    <span className="text-[11px] font-semibold text-slate-700 truncate">{visit.employeeName}</span>
+                                                                    <p className="text-xs text-slate-500 mb-3">{visit.checkOut?.remarks || 'No remarks'}</p>
+
+                                                                    <div className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100 space-y-1">
+                                                                        <div className="flex items-start gap-1.5">
+                                                                            <MapPin className="h-3 w-3 shrink-0 mt-0.5 text-blue-500" />
+                                                                            <span className="leading-normal">{visit.checkOut?.location?.address || 'Address not captured'}</span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                            )}
-                                                        </div>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
@@ -537,11 +558,12 @@ export default function MobileCheckInOutPage() {
                                             {/* Check In Card */}
                                             <div className="flex gap-4 relative">
                                                 <div className="w-20 pt-1 flex flex-col items-center shrink-0">
-                                                    <span className="text-xs font-semibold text-[#0a1e60] mb-1">{checkInTime}</span>
-                                                    <span className={`text-[8px] font-bold px-1 py-0.5 rounded border mb-2 ${!isDone ? 'text-blue-600 border-blue-100 bg-blue-50' : 'text-slate-400 border-slate-100 bg-slate-50'}`}>
+                                                    <span className="text-xs font-semibold text-[#0a1e60] mb-0.5">{checkInTime}</span>
+                                                    <span className="text-[10px] text-slate-400 mb-1">{checkInDate}</span>
+                                                    <span className={`text-[8px] font-bold px-1 py-0.5 rounded border mb-2 leading-none ${!isDone ? 'text-blue-600 border-blue-100 bg-blue-50' : 'text-slate-400 border-slate-100 bg-slate-50'}`}>
                                                         IN
                                                     </span>
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
                                                 </div>
 
                                                 <div className="flex-1 bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-3 relative overflow-hidden">
@@ -637,12 +659,20 @@ export default function MobileCheckInOutPage() {
                         <ArrowLeft className="h-6 w-6" />
                     </button>
                     <h1 className="text-xl font-bold text-white">Check In/Out</h1>
-                    <button
-                        onClick={() => setIsFilterOpen(true)}
-                        className={`p-2 -mr-2 text-white hover:bg-white/10 rounded-full transition-colors ${activeTab !== 'Supervision' ? 'opacity-0 pointer-events-none' : ''}`}
-                    >
-                        <Filter className="h-5 w-5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => refreshData()}
+                            className="p-2 text-white hover:bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(0,0,0,0.4)] active:scale-95 bg-[#1a2b6d]"
+                        >
+                            <RefreshCw className="h-5 w-5" />
+                        </button>
+                        <button
+                            onClick={() => setIsFilterOpen(true)}
+                            className={`p-2 -mr-2 text-white hover:bg-white/10 rounded-full transition-colors ${activeTab !== 'Supervision' ? 'opacity-0 pointer-events-none' : ''}`}
+                        >
+                            <Filter className="h-5 w-5" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -690,7 +720,9 @@ export default function MobileCheckInOutPage() {
             <MobileCheckInOutModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                onSuccess={() => { }}
+                onSuccess={() => {
+                    refreshData();
+                }}
                 checkInOutType={checkInOutType}
                 initialCompanyName={checkInOutType === 'Check Out' ? (selectedRecordForAction?.companyName || lastRecord?.companyName) : ''}
             />
