@@ -33,9 +33,18 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
     const [currentLocation, setCurrentLocation] = useState<any>(null);
     const [todayAttendance, setTodayAttendance] = useState<any>(null);
     const [showStopConfirmation, setShowStopConfirmation] = useState(false);
+    const [hasAttemptedAutoCapture, setHasAttemptedAutoCapture] = useState(false);
 
     const isOnBreak = externalIsOnBreak !== undefined ? externalIsOnBreak : internalIsOnBreak;
     const activeBreakRecord = externalBreakRecord !== undefined ? externalBreakRecord : internalActiveBreakRecord;
+
+    // Reset capture flag when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            setHasAttemptedAutoCapture(false);
+            setCurrentLocation(null);
+        }
+    }, [isOpen]);
 
     // Fetch employee data and today's attendance
     useEffect(() => {
@@ -63,6 +72,14 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
 
         fetchData();
     }, [user, isOpen]);
+
+    // Auto-capture location on open
+    useEffect(() => {
+        if (isOpen && !currentLocation && !isLoadingLocation && !hasAttemptedAutoCapture) {
+            setHasAttemptedAutoCapture(true);
+            captureLocation();
+        }
+    }, [isOpen, currentLocation, isLoadingLocation, hasAttemptedAutoCapture]);
 
     // Real-time listener for active break (Only if external state not provided)
     useEffect(() => {
@@ -118,13 +135,18 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
 
     const captureLocation = async () => {
         setIsLoadingLocation(true);
+        // Minimum delay to ensure animation is visible
+        const animationDelay = new Promise(resolve => setTimeout(resolve, 1500));
+
         try {
             const location = await getCurrentLocation({ forceRefresh: true });
             const address = await reverseGeocode(location.latitude, location.longitude);
             const locData = { ...location, address };
+            await animationDelay;
             setCurrentLocation(locData);
             return locData;
         } catch (error: any) {
+            await animationDelay;
             console.error('Error capturing location for break:', error);
             Swal.fire({
                 title: 'Location Error',
@@ -345,11 +367,7 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
                                 onClick={captureLocation}
                                 disabled={isLoadingLocation}
                             >
-                                {isLoadingLocation ? (
-                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                ) : (
-                                    <RefreshCw className="h-3 w-3 mr-1" />
-                                )}
+                                <RefreshCw className={`h-3 w-3 mr-1 ${isLoadingLocation ? 'animate-spin' : ''}`} />
                                 Auto-capturing location...
                             </Button>
                         )}

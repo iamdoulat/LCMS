@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { Button } from '@/components/ui/button';
 import { Plus, ArrowLeft, Filter, Loader2, LogOut } from 'lucide-react';
@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Calendar as CalendarIcon, X, Search, MapPin, ArrowRight, RefreshCw } from 'lucide-react';
 import { startOfDay, endOfDay } from 'date-fns';
 import { DynamicStorageImage } from '@/components/ui/DynamicStorageImage';
+import { cn } from '@/lib/utils';
 
 
 interface GroupedRecords {
@@ -64,8 +65,13 @@ export default function MobileCheckInOutPage() {
     const [privilegedRoleRecords, setPrivilegedRoleRecords] = useState<MultipleCheckInOutRecord[]>([]);
 
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [pullDistance, setPullDistance] = useState(0);
+    const [touchStartY, setTouchStartY] = useState<number | null>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const refreshData = () => {
+        setIsRefreshing(true);
         setRefreshTrigger(prev => prev + 1);
     };
 
@@ -159,6 +165,8 @@ export default function MobileCheckInOutPage() {
                 setFilteredSupervisionRecords(allSupRecords);
             } catch (err) {
                 console.error("Error fetching supervision records:", err);
+            } finally {
+                setIsRefreshing(false);
             }
         };
 
@@ -219,6 +227,8 @@ export default function MobileCheckInOutPage() {
                 setPrivilegedRoleRecords(allPrivRecords);
             } catch (err) {
                 console.error("Error fetching privileged role records:", err);
+            } finally {
+                setIsRefreshing(false);
             }
         };
 
@@ -351,13 +361,31 @@ export default function MobileCheckInOutPage() {
     const onTouchStart = (e: React.TouchEvent) => {
         setTouchEnd(null);
         setTouchStart(e.targetTouches[0].clientX);
+        setTouchStartY(e.targetTouches[0].clientY);
     };
 
     const onTouchMove = (e: React.TouchEvent) => {
         setTouchEnd(e.targetTouches[0].clientX);
+
+        // Vertical swipe for Pull-to-refresh
+        if (touchStartY !== null && scrollContainerRef.current?.scrollTop === 0) {
+            const currentY = e.targetTouches[0].clientY;
+            const diffY = currentY - touchStartY;
+            if (diffY > 0) {
+                // Apply a resistance factor for the smooth "elastic" feel
+                const pulls = Math.min(diffY * 0.4, 120);
+                setPullDistance(pulls);
+            }
+        }
     };
 
     const onTouchEnd = () => {
+        if (pullDistance > 70) {
+            refreshData();
+        }
+        setPullDistance(0);
+        setTouchStartY(null);
+
         if (!touchStart || !touchEnd) return;
         const distance = touchStart - touchEnd;
         const isLeftSwipe = distance > minSwipeDistance;
@@ -662,9 +690,10 @@ export default function MobileCheckInOutPage() {
                     <div className="flex items-center gap-1">
                         <button
                             onClick={() => refreshData()}
-                            className="p-2 text-white hover:bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(0,0,0,0.4)] active:scale-95 bg-[#1a2b6d]"
+                            disabled={isLoading || isRefreshing}
+                            className="p-2 text-white hover:bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(0,0,0,0.4)] active:scale-95 bg-[#1a2b6d] disabled:opacity-50"
                         >
-                            <RefreshCw className="h-5 w-5" />
+                            <RefreshCw className={`h-5 w-5 ${(isLoading || isRefreshing) ? 'animate-spin' : ''}`} />
                         </button>
                         <button
                             onClick={() => setIsFilterOpen(true)}
@@ -677,11 +706,19 @@ export default function MobileCheckInOutPage() {
             </div>
 
             <div
-                className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col relative"
+                className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col relative transition-transform duration-200 ease-out"
+                style={{ transform: `translateY(${pullDistance}px)` }}
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
             >
+                {/* Pull-to-refresh indicator */}
+                <div
+                    className="absolute -top-12 left-0 right-0 flex justify-center items-center h-12"
+                    style={{ opacity: Math.min(pullDistance / 60, 1) }}
+                >
+                    <RefreshCw className={cn("text-blue-600 transition-all", pullDistance > 70 ? "animate-spin scale-110" : "scale-100")} />
+                </div>
 
                 {/* Tabs Section */}
                 <div className="bg-white px-6 pt-6 pb-2 rounded-t-[2rem] shadow-sm z-10 shrink-0">
@@ -704,7 +741,10 @@ export default function MobileCheckInOutPage() {
                 </div>
 
                 {/* Main Content List */}
-                <div className="flex-1 overflow-y-auto px-[5px] py-4 space-y-8 pb-24 overscroll-contain">
+                <div
+                    ref={scrollContainerRef}
+                    className="flex-1 overflow-y-auto px-[5px] py-4 space-y-8 pb-24 overscroll-contain"
+                >
                     {renderContent()}
                 </div>
 
