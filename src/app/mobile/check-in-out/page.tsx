@@ -792,12 +792,14 @@ export default function MobileCheckInOutPage() {
                 </div>
 
                 {/* Floating Action Button - Moved to 99px layout (79 + 20) */}
-                <Button
-                    className="absolute bottom-[99px] right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95"
-                    onClick={handleAddClick}
-                >
-                    <Plus className="h-8 w-8 text-white" />
-                </Button>
+                {activeTab === 'Check Ins' && (
+                    <Button
+                        className="absolute bottom-[99px] right-6 h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-xl flex items-center justify-center z-50 transition-transform active:scale-95"
+                        onClick={handleAddClick}
+                    >
+                        <Plus className="h-8 w-8 text-white" />
+                    </Button>
+                )}
             </div>
 
             <MobileCheckInOutModal
