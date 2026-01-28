@@ -973,6 +973,19 @@ export default function MobileDashboardPage() {
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Assets</span>
                             </Link>
+
+                            {/* LC Module Card - Only for Admin, Commercial, Viewer */}
+                            {globalUserRole?.some(role => ['Super Admin', 'Admin', 'Commercial', 'Viewer'].includes(role)) && (
+                                <Link
+                                    href="/mobile/total-lc"
+                                    className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
+                                >
+                                    <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-blue-200 group-hover:scale-110">
+                                        <Banknote className="h-7 w-7" />
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-600 text-center">LC OR TT</span>
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>
