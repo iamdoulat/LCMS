@@ -114,14 +114,14 @@ export default function MobileTotalLCPage() {
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [filterTerms, setFilterTerms] = useState<string>('All');
     const [sortBy, setSortBy] = useState<string>('Issue Date');
-    const canEdit = userRole?.some(role => ['Super Admin', 'Admin', 'Commercial'].includes(role));
+    const canEdit = React.useMemo(() => userRole?.some(role => ['Super Admin', 'Admin', 'Commercial'].includes(role)), [userRole]);
 
     // Pagination State
     const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
-    const fetchLCs = async (isManual = false, isLoadMore = false) => {
+    const fetchLCs = React.useCallback(async (isManual = false, isLoadMore = false) => {
         if (isLoadMore) setLoadingMore(true);
         else if (isManual) setIsRefreshing(true);
         else setIsLoading(true);
@@ -162,7 +162,7 @@ export default function MobileTotalLCPage() {
             else if (isManual) setTimeout(() => setIsRefreshing(false), 600);
             else setIsLoading(false);
         }
-    };
+    }, [lastDoc]);
 
     useEffect(() => {
         const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Commercial', 'Viewer'].includes(role));
@@ -172,7 +172,7 @@ export default function MobileTotalLCPage() {
         }
 
         fetchLCs();
-    }, [userRole, router]);
+    }, [userRole, router, fetchLCs]);
 
     const toggleCardExpansion = (id: string) => {
         setExpandedCards(prev => ({
@@ -185,41 +185,45 @@ export default function MobileTotalLCPage() {
         fetchLCs(true);
     };
 
-    const filteredLcs = lcs.filter(lc => {
-        const matchesSearch =
-            (lc.documentaryCreditNumber?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (lc.applicantName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (lc.beneficiaryName?.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredLcs = React.useMemo(() => {
+        return lcs.filter(lc => {
+            const matchesSearch =
+                (lc.documentaryCreditNumber?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (lc.applicantName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (lc.beneficiaryName?.toLowerCase().includes(searchTerm.toLowerCase()));
 
-        const statusArray = Array.isArray(lc.status) ? lc.status : [lc.status];
-        const matchesStatus = filterStatus === 'All' || statusArray.includes(filterStatus as LCStatus);
+            const statusArray = Array.isArray(lc.status) ? lc.status : [lc.status];
+            const matchesStatus = filterStatus === 'All' || statusArray.includes(filterStatus as LCStatus);
 
-        const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
-        const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
+            const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
+            const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
 
-        let matchesYear = true;
-        if (filterYear !== 'All') {
-            const date = lc.createdAt && (lc.createdAt as any).toDate ? (lc.createdAt as any).toDate() : new Date(lc.createdAt || '');
-            matchesYear = isValid(date) && date.getFullYear().toString() === filterYear;
-        }
+            let matchesYear = true;
+            if (filterYear !== 'All') {
+                const date = lc.createdAt && (lc.createdAt as any).toDate ? (lc.createdAt as any).toDate() : new Date(lc.createdAt || '');
+                matchesYear = isValid(date) && date.getFullYear().toString() === filterYear;
+            }
 
-        const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
+            const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
 
-        return matchesSearch && matchesStatus && matchesApplicant && matchesBeneficiary && matchesYear && matchesTerms;
-    }).sort((a, b) => {
-        if (sortBy === 'Amount') {
-            return Number(b.amount || 0) - Number(a.amount || 0);
-        }
-        if (sortBy === 'LC Number') {
-            return (a.documentaryCreditNumber || '').localeCompare(b.documentaryCreditNumber || '');
-        }
-        // Default to Issue Date (createdAt)
-        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-    });
+            return matchesSearch && matchesStatus && matchesApplicant && matchesBeneficiary && matchesYear && matchesTerms;
+        }).sort((a, b) => {
+            if (sortBy === 'Amount') {
+                return Number(b.amount || 0) - Number(a.amount || 0);
+            }
+            if (sortBy === 'LC Number') {
+                return (a.documentaryCreditNumber || '').localeCompare(b.documentaryCreditNumber || '');
+            }
+            // Default to Issue Date (createdAt) - stable Timestamp handling
+            const dateA = a.createdAt && (a.createdAt as any).toDate ? (a.createdAt as any).toDate() : new Date(a.createdAt || 0);
+            const dateB = b.createdAt && (b.createdAt as any).toDate ? (b.createdAt as any).toDate() : new Date(b.createdAt || 0);
+            return dateB.getTime() - dateA.getTime();
+        });
+    }, [lcs, searchTerm, filterStatus, filterApplicant, filterBeneficiary, filterYear, filterTerms, sortBy]);
 
-    const applicants = Array.from(new Set(lcs.map(lc => lc.applicantName).filter(Boolean)));
-    const beneficiaries = Array.from(new Set(lcs.map(lc => lc.beneficiaryName).filter(Boolean)));
-    const years = Array.from({ length: 2030 - 2015 + 1 }, (_, i) => (2030 - i).toString());
+    const applicants = React.useMemo(() => Array.from(new Set(lcs.map(lc => lc.applicantName).filter(Boolean))), [lcs]);
+    const beneficiaries = React.useMemo(() => Array.from(new Set(lcs.map(lc => lc.beneficiaryName).filter(Boolean))), [lcs]);
+    const years = React.useMemo(() => Array.from({ length: 2030 - 2015 + 1 }, (_, i) => (2030 - i).toString()), []);
 
     const clearFilters = () => {
         setSearchTerm('');
@@ -396,7 +400,7 @@ export default function MobileTotalLCPage() {
                     </div>
                 </div>
 
-                <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto z-10 p-4 pb-20">
+                <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto z-10 p-4 pb-32">
                     {/* Search and Filter */}
                     <div className="mb-6 space-y-4">
                         <div className="relative">

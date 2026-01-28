@@ -445,16 +445,8 @@ export default function MobileCheckInOutPage() {
     };
 
 
-    const renderContent = () => {
-        if (isLoading) {
-            return (
-                <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400">
-                    <Loader2 className="h-8 w-8 animate-spin mb-2" />
-                    <p>Loading records...</p>
-                </div>
-            );
-        }
-
+    // Memoized record processing
+    const filteredGroupedRecords = React.useMemo(() => {
         // Deduplicate using a Map
         const uniqueRecordsMap = new Map();
         [...records, ...privilegedRoleRecords, ...supervisionRecords].forEach(r => {
@@ -467,7 +459,7 @@ export default function MobileCheckInOutPage() {
         const grouped = groupRecordsByDate(uniqueRecords);
 
         // Filter visits based on active tab
-        const filteredGrouped = grouped.map(group => {
+        return grouped.map(group => {
             const filteredVisits = group.visits.filter(visit => {
                 const isUserRecord = visit.employeeId === currentUserEmployeeId;
                 const isDone = !!visit.checkOut;
@@ -491,8 +483,19 @@ export default function MobileCheckInOutPage() {
             });
             return { ...group, visits: filteredVisits };
         }).filter(group => group.visits.length > 0);
+    }, [records, privilegedRoleRecords, supervisionRecords, activeTab, currentUserEmployeeId]);
 
-        if (filteredGrouped.length === 0) {
+    const renderContent = () => {
+        if (isLoading) {
+            return (
+                <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400">
+                    <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                    <p>Loading records...</p>
+                </div>
+            );
+        }
+
+        if (filteredGroupedRecords.length === 0) {
             return (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400">
                     <p>No data to show</p>
@@ -502,7 +505,7 @@ export default function MobileCheckInOutPage() {
 
         return (
             <div className="px-[5px] py-4 space-y-6 pb-24">
-                {filteredGrouped.map((group) => (
+                {filteredGroupedRecords.map((group) => (
                     <div key={group.date}>
                         <h3 className="text-[#0a1e60] font-bold text-base mb-6">{group.date}</h3>
                         <div className="relative">
