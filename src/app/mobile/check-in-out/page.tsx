@@ -697,7 +697,7 @@ export default function MobileCheckInOutPage() {
                         </button>
                         <button
                             onClick={() => setIsFilterOpen(true)}
-                            className={`p-2 -mr-2 text-white hover:bg-white/10 rounded-full transition-colors ${activeTab !== 'Supervision' ? 'opacity-0 pointer-events-none' : ''}`}
+                            className={`p-2 text-white hover:bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d] active:scale-95 ${activeTab !== 'Supervision' ? 'opacity-0 pointer-events-none' : ''}`}
                         >
                             <Filter className="h-5 w-5" />
                         </button>
