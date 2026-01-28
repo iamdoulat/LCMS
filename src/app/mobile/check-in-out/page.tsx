@@ -19,6 +19,7 @@ import { Calendar as CalendarIcon, X, Search, MapPin, ArrowRight, RefreshCw } fr
 import { startOfDay, endOfDay } from 'date-fns';
 import { DynamicStorageImage } from '@/components/ui/DynamicStorageImage';
 import { cn } from '@/lib/utils';
+import Swal from 'sweetalert2';
 
 
 interface GroupedRecords {

@@ -114,6 +114,7 @@ export default function MobileTotalLCPage() {
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [filterTerms, setFilterTerms] = useState<string>('All');
     const [sortBy, setSortBy] = useState<string>('Issue Date');
+    const canEdit = userRole?.some(role => ['Super Admin', 'Admin', 'Commercial'].includes(role));
 
     // Pagination State
     const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
@@ -459,29 +460,31 @@ export default function MobileTotalLCPage() {
                                                     {lc.documentaryCreditNumber || 'N/A'}
                                                 </h3>
                                             </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <button className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-[0_4px_10px_rgba(37,99,235,0.3)] active:scale-90 transition-transform">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2 shadow-2xl border-slate-100">
-                                                    <DropdownMenuItem
-                                                        onClick={() => router.push(`/mobile/total-lc/${lc.id}/edit`)}
-                                                        className="flex items-center gap-2.5 p-3 rounded-xl focus:bg-blue-50 focus:text-blue-600 cursor-pointer group"
-                                                    >
-                                                        <Settings2 className="h-4 w-4 text-slate-400 group-focus:text-blue-600" />
-                                                        <span className="font-bold text-xs uppercase tracking-wider">Edit Details</span>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => window.open(`/dashboard/total-lc/${lc.id}/edit`, '_blank')}
-                                                        className="flex items-center gap-2.5 p-3 rounded-xl focus:bg-slate-50 cursor-pointer group"
-                                                    >
-                                                        <Globe className="h-4 w-4 text-slate-400 group-focus:text-slate-600" />
-                                                        <span className="font-bold text-xs uppercase tracking-wider">Web Version</span>
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                            {canEdit && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <button className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-[0_4px_10px_rgba(37,99,235,0.3)] active:scale-90 transition-transform">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2 shadow-2xl border-slate-100">
+                                                        <DropdownMenuItem
+                                                            onClick={() => router.push(`/mobile/total-lc/${lc.id}/edit`)}
+                                                            className="flex items-center gap-2.5 p-3 rounded-xl focus:bg-blue-50 focus:text-blue-600 cursor-pointer group"
+                                                        >
+                                                            <Settings2 className="h-4 w-4 text-slate-400 group-focus:text-blue-600" />
+                                                            <span className="font-bold text-xs uppercase tracking-wider">Edit Details</span>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => window.open(`/dashboard/total-lc/${lc.id}/edit`, '_blank')}
+                                                            className="flex items-center gap-2.5 p-3 rounded-xl focus:bg-slate-50 cursor-pointer group"
+                                                        >
+                                                            <Globe className="h-4 w-4 text-slate-400 group-focus:text-slate-600" />
+                                                            <span className="font-bold text-xs uppercase tracking-wider">Web Version</span>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
                                         </div>
 
                                         {/* Amount Section */}
