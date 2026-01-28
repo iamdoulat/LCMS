@@ -22,7 +22,7 @@ const INVOICE_LOGO_URL_STORAGE_KEY = 'appInvoiceLogoUrl';
 const APP_VERSION_STORAGE_KEY = 'appVersion';
 const DEFAULT_COMPANY_NAME = 'LCMS';
 const DEFAULT_COMPANY_LOGO_URL = "/icons/icon-192x192.png";
-const DEFAULT_APP_VERSION = 'v1.1';
+const DEFAULT_APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || 'v1.1';
 
 // Helper function to parse emails from environment variables
 const getEmailsFromEnv = (envVar?: string): string[] => {
@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const newAddress = profileData.address || '';
         const newHideLogo = !!profileData.hideCompanyLogo;
         const newHideName = !!profileData.hideCompanyName;
-        const newVersion = profileData.appVersion || DEFAULT_APP_VERSION;
+        const newVersion = DEFAULT_APP_VERSION;
 
         setCompanyName(newName);
         setCompanyLogoUrl(newLogoUrl);

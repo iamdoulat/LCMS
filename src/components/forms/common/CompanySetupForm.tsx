@@ -371,6 +371,11 @@ export function CompanySetupForm() {
         updatedAt: serverTimestamp(),
       };
 
+      // Ensure appVersion is handled by environment variables, remove from save object
+      if ('appVersion' in dataToSave) {
+        delete (dataToSave as any).appVersion;
+      }
+
       Object.keys(dataToSave).forEach(key => {
         const typedKey = key as keyof FinancialSettingsProfile;
         if (dataToSave[typedKey] === undefined) {
@@ -387,7 +392,6 @@ export function CompanySetupForm() {
         invoiceLogoUrl: newInvoiceLogoUrl,
         hideCompanyLogo: data.hideCompanyLogo,
         hideCompanyName: data.hideCompanyName,
-        appVersion: data.appVersion
       });
       setCompanyLogoUrl(newCompanyLogoUrl);
       setInvoiceLogoUrl(newInvoiceLogoUrl);
@@ -521,8 +525,10 @@ export function CompanySetupForm() {
               <FormField control={form.control} name="appVersion" render={({ field }) => (
                 <FormItem>
                   <FormLabel>App Version</FormLabel>
-                  <FormControl><Input placeholder="e.g., v1.1" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
-                  <FormDescription>Current software version (displayed in footer/sidebar).</FormDescription>
+                  <FormControl><Input placeholder="e.g., v1.1" {...field} value={field.value || ""} disabled={true} /></FormControl>
+                  <FormDescription className="text-xs font-semibold text-blue-600">
+                    Managed via environment variables (.env). Manual editing is disabled.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )} />
