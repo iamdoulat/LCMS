@@ -262,12 +262,51 @@ export default function MobileCheckInOutPage() {
 
 
     const handleAddClick = () => {
+        // Enforce single active check-in logic
+        const activeCheckIn = records.find(r => {
+            const isCheckIn = r.type === 'Check In';
+            const isUserRecord = r.employeeId === currentUserEmployeeId;
+            const hasNoCheckOut = !records.find(out => out.type === 'Check Out' && out.companyName === r.companyName && new Date(out.timestamp).getTime() > new Date(r.timestamp).getTime());
+
+            // Check if it's within the 8 hour auto-done window
+            const checkInTime = new Date(r.timestamp).getTime();
+            const now = new Date().getTime();
+            const isWithinWindow = (now - checkInTime) / (1000 * 60 * 60) <= 8;
+
+            return isCheckIn && isUserRecord && hasNoCheckOut && isWithinWindow;
+        });
+
+        if (activeCheckIn) {
+            Swal.fire({
+                title: "Multiple Check Ins Not Allowed",
+                text: "First Check Out Then Check In again",
+                icon: "error",
+                confirmButtonColor: "#0a1e60"
+            });
+            return;
+        }
+
         setCheckInOutType('Check In');
         setSelectedRecordForAction(null);
         setIsModalOpen(true);
     };
 
     const handleCheckOutClick = (record: MultipleCheckInOutRecord) => {
+        // Enforce minimum 10-minute stay logic
+        const checkInTime = new Date(record.timestamp).getTime();
+        const now = new Date().getTime();
+        const diffMinutes = (now - checkInTime) / (1000 * 60);
+
+        if (diffMinutes < 10) {
+            Swal.fire({
+                title: "Stay Too Short",
+                text: "Minimum 10 minutes required before Check Out.",
+                icon: "warning",
+                confirmButtonColor: "#0a1e60"
+            });
+            return;
+        }
+
         setCheckInOutType('Check Out');
         setSelectedRecordForAction(record);
         setIsModalOpen(true);
