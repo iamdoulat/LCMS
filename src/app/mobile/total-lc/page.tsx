@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -114,14 +114,14 @@ export default function MobileTotalLCPage() {
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [filterTerms, setFilterTerms] = useState<string>('All');
     const [sortBy, setSortBy] = useState<string>('Issue Date');
-    const canEdit = React.useMemo(() => userRole?.some(role => ['Super Admin', 'Admin', 'Commercial'].includes(role)), [userRole]);
+    const canEdit = useMemo(() => userRole?.some(role => ['Super Admin', 'Admin', 'Commercial'].includes(role)), [userRole]);
 
     // Pagination State
-    const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+    const lastDocRef = useRef<QueryDocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
-    const fetchLCs = React.useCallback(async (isManual = false, isLoadMore = false) => {
+    const fetchLCs = useCallback(async (isManual = false, isLoadMore = false) => {
         if (isLoadMore) setLoadingMore(true);
         else if (isManual) setIsRefreshing(true);
         else setIsLoading(true);
@@ -133,8 +133,8 @@ export default function MobileTotalLCPage() {
                 limit(10)
             ];
 
-            if (isLoadMore && lastDoc) {
-                constraints.push(startAfter(lastDoc));
+            if (isLoadMore && lastDocRef.current) {
+                constraints.push(startAfter(lastDocRef.current));
             }
 
             const lcQuery = query(constraints[0], ...constraints.slice(1));
@@ -152,7 +152,7 @@ export default function MobileTotalLCPage() {
             }
 
             const lastVisible = snapshot.docs[snapshot.docs.length - 1];
-            setLastDoc((lastVisible as QueryDocumentSnapshot) || null);
+            lastDocRef.current = (lastVisible as QueryDocumentSnapshot) || null;
             setHasMore(snapshot.docs.length === 10);
 
         } catch (error) {
@@ -162,7 +162,8 @@ export default function MobileTotalLCPage() {
             else if (isManual) setTimeout(() => setIsRefreshing(false), 600);
             else setIsLoading(false);
         }
-    }, [lastDoc]);
+    }, []);
+    // Note: Dependencies are empty because lastDoc is now a Ref
 
     useEffect(() => {
         const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Commercial', 'Viewer'].includes(role));
@@ -185,7 +186,7 @@ export default function MobileTotalLCPage() {
         fetchLCs(true);
     };
 
-    const filteredLcs = React.useMemo(() => {
+    const filteredLcs = useMemo(() => {
         return lcs.filter(lc => {
             const matchesSearch =
                 (lc.documentaryCreditNumber?.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -221,9 +222,9 @@ export default function MobileTotalLCPage() {
         });
     }, [lcs, searchTerm, filterStatus, filterApplicant, filterBeneficiary, filterYear, filterTerms, sortBy]);
 
-    const applicants = React.useMemo(() => Array.from(new Set(lcs.map(lc => lc.applicantName).filter(Boolean))), [lcs]);
-    const beneficiaries = React.useMemo(() => Array.from(new Set(lcs.map(lc => lc.beneficiaryName).filter(Boolean))), [lcs]);
-    const years = React.useMemo(() => Array.from({ length: 2030 - 2015 + 1 }, (_, i) => (2030 - i).toString()), []);
+    const applicants = useMemo(() => Array.from(new Set(lcs.map(lc => lc.applicantName).filter(Boolean))), [lcs]);
+    const beneficiaries = useMemo(() => Array.from(new Set(lcs.map(lc => lc.beneficiaryName).filter(Boolean))), [lcs]);
+    const years = useMemo(() => Array.from({ length: 2030 - 2015 + 1 }, (_, i) => (2030 - i).toString()), []);
 
     const clearFilters = () => {
         setSearchTerm('');
@@ -866,7 +867,7 @@ export default function MobileTotalLCPage() {
                                 <button
                                     onClick={() => fetchLCs(false, true)}
                                     disabled={loadingMore}
-                                    className="px-8 py-3 bg-white border border-slate-200 rounded-full text-slate-600 font-bold text-sm shadow-sm active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50"
+                                    className="px-8 py-3 bg-blue-50 border border-blue-100 rounded-full text-blue-600 font-bold text-sm shadow-sm active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 mb-[5px]"
                                 >
                                     {loadingMore ? (
                                         <>
