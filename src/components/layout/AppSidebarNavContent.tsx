@@ -308,8 +308,8 @@ export function AppSidebarNavContent() {
 
   return (
     <>
-      <SidebarHeader className="border-b sticky top-0 bg-sidebar z-50">
-        <div className="flex items-center justify-between p-2 gap-2">
+      <SidebarHeader className="border-b sticky top-0 bg-sidebar z-50 h-16 p-0">
+        <div className="flex items-center justify-between h-full px-4 gap-2">
           {user && ( // Only show the link and logo if a user is logged in
             <Link href="/dashboard" className="flex items-center gap-2 min-w-0 flex-1">
               {!hideCompanyLogo && (
@@ -430,20 +430,22 @@ export function AppSidebarNavContent() {
           })}
         </Accordion>
       </SidebarContent>
-      <SidebarFooter className="mt-auto border-t p-2 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          className="flex-grow justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
-          onClick={logout}
-          disabled={authLoading}
-        >
-          {authLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <LogOut className="h-5 w-5" />
-          )}
-          <span className="group-data-[collapsible=icon]:hidden">Logout</span>
-        </Button>
+      <SidebarFooter className="mt-auto border-t p-0 h-14 flex items-center justify-between">
+        <div className="flex items-center justify-between w-full h-full px-4">
+          <Button
+            variant="ghost"
+            className="flex-grow justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center"
+            onClick={logout}
+            disabled={authLoading}
+          >
+            {authLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <LogOut className="h-5 w-5" />
+            )}
+            <span className="group-data-[collapsible=icon]:hidden">Logout</span>
+          </Button>
+        </div>
       </SidebarFooter>
     </>
   );

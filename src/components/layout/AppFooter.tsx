@@ -11,9 +11,8 @@ export function AppFooter() {
   const { appVersion } = useAuth();
 
   return (
-    <footer className="mt-auto hidden md:block noprint">
-      <Separator />
-      <div className="w-full px-5 py-4 text-center text-sm text-muted-foreground">
+    <footer className="mt-auto hidden md:block noprint h-14 border-t">
+      <div className="w-full px-6 h-full flex items-center justify-center text-sm text-muted-foreground whitespace-nowrap">
         <p>
           &copy; {currentYear} - Designed and Developed by{" "}
           <Link
