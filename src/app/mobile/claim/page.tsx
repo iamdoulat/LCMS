@@ -233,19 +233,21 @@ export default function ClaimListPage() {
 
                 {/* Tabs Section */}
                 <div className="bg-white px-6 pt-6 pb-2 rounded-t-[2rem] shadow-sm z-10 shrink-0">
-                    <div className="flex items-center justify-between p-1 bg-white rounded-full mb-4">
+                    <div className="flex items-center justify-between p-1 bg-slate-50 border border-slate-100 rounded-full mb-4">
                         {['My Claims', 'Claim Requests'].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab as any)}
-                                className={`flex-1 py-3 text-sm font-bold transition-all duration-200 ${activeTab === tab
-                                    ? 'text-blue-600'
-                                    : 'text-blue-300 hover:text-blue-400'
-                                    }`}
+                                className={cn(
+                                    "flex-1 py-2.5 text-sm font-bold transition-all duration-200 rounded-full",
+                                    activeTab === tab
+                                        ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-100'
+                                        : 'text-slate-400 hover:text-slate-600'
+                                )}
                             >
                                 <span className="flex items-center justify-center gap-2">
                                     {activeTab === tab && (
-                                        <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
                                     )}
                                     {tab}
                                 </span>

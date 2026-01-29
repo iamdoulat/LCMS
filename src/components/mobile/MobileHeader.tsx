@@ -13,7 +13,11 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, orderBy, limit, getDocs, where, onSnapshot, doc } from 'firebase/firestore';
 import { NoticeBoardSettings } from '@/types';
 
-export function MobileHeader() {
+interface MobileHeaderProps {
+    rightAction?: React.ReactNode;
+}
+
+export function MobileHeader({ rightAction }: MobileHeaderProps) {
     const { user, userRole, companyLogoUrl } = useAuth();
     const pathname = usePathname();
     const { toggleSidebar } = useMobileSidebar();
@@ -190,6 +194,13 @@ export function MobileHeader() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {/* Custom Right Action (e.g. Filter button) */}
+                    {rightAction && (
+                        <div className="flex items-center">
+                            {rightAction}
+                        </div>
+                    )}
+
                     <Link href="/mobile/notifications">
                         <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full h-7 w-7 p-0 relative min-w-0 flex items-center justify-center">
                             <Bell className="!h-7 !w-7" />

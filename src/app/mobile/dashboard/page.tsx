@@ -6,7 +6,7 @@ import { MobileAttendanceModal } from '@/components/mobile/MobileAttendanceModal
 // MobileBreakTimeModal is now global via Context
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer, QrCode, Banknote } from 'lucide-react';
+import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer, QrCode, Banknote, Box, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
@@ -215,8 +215,15 @@ export default function MobileDashboardPage() {
         }
     }, [todayAttendanceData]);
 
+    const isInventoryAllowed = useMemo(() => {
+        return globalUserRole?.some(role => ['Super Admin', 'Admin', 'Accountant', 'Viewer'].includes(role));
+    }, [globalUserRole]);
+
     const visibleItems = useMemo(() => {
-        return allSummaryItems.filter(item => selectedIds.includes(item.id)).map(item => {
+        return allSummaryItems.filter(item => {
+            if (item.id === 'inventory' && !isInventoryAllowed) return false;
+            return selectedIds.includes(item.id);
+        }).map(item => {
             let isLoading = false;
             switch (item.id) {
                 case 'leave':
@@ -249,10 +256,12 @@ export default function MobileDashboardPage() {
                 case 'disbursed':
                     isLoading = claimLoading;
                     return { ...item, value: `৳ ${stats.disbursedAmount.toLocaleString()}`, isLoading };
+                case 'inventory':
+                    return { ...item, value: item.value || 'Store', isLoading: false };
                 default: return { ...item, isLoading: false };
             }
         });
-    }, [selectedIds, stats, todayAttendance, isSupervisor, leaveLoading, visitLoading, attendanceLoading, noticesLoading, todayLoading, claimLoading]);
+    }, [selectedIds, stats, todayAttendance, isSupervisor, leaveLoading, visitLoading, attendanceLoading, noticesLoading, todayLoading, claimLoading, isInventoryAllowed]);
 
     // Derived stats from real-time data
     useEffect(() => {
@@ -821,6 +830,14 @@ export default function MobileDashboardPage() {
                                     );
                                 }
 
+                                if (item.id === 'inventory') {
+                                    return (
+                                        <Link key={item.id} href="/mobile/inventory" className="flex-shrink-0 transition-transform active:scale-95">
+                                            {content}
+                                        </Link>
+                                    );
+                                }
+
                                 if (item.id === 'missed') {
                                     return (
                                         <Link key={item.id} href="/mobile/attendance/team-attendance" className="flex-shrink-0 transition-transform active:scale-95">
@@ -969,7 +986,7 @@ export default function MobileDashboardPage() {
                                 className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
                             >
                                 <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-blue-200 group-hover:scale-110">
-                                    <UserCheck className="h-7 w-7" />
+                                    <Monitor className="h-7 w-7" />
                                 </div>
                                 <span className="text-sm font-medium text-slate-600 text-center">Assets</span>
                             </Link>
@@ -984,6 +1001,19 @@ export default function MobileDashboardPage() {
                                         <Banknote className="h-7 w-7" />
                                     </div>
                                     <span className="text-sm font-medium text-slate-600 text-center">LC OR TT</span>
+                                </Link>
+                            )}
+
+                            {/* Inventory Module Card - Only for Admin, Accountant, Viewer */}
+                            {isInventoryAllowed && (
+                                <Link
+                                    href="/mobile/inventory"
+                                    className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
+                                >
+                                    <div className="bg-blue-100 p-4 rounded-full text-blue-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-blue-200 group-hover:scale-110">
+                                        <Box className="h-7 w-7" />
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-600 text-center">Inventory</span>
                                 </Link>
                             )}
                         </div>
