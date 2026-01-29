@@ -23,9 +23,11 @@ import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import type { LCEntryDocument, LCStatus } from '@/types';
+import { lcStatusOptions } from '@/types';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
 import { format } from 'date-fns';
+import { MultiSelect } from '@/components/ui/multi-select';
 
 export default function MobileEditLCPage() {
     const params = useParams();
@@ -345,17 +347,12 @@ export default function MobileEditLCPage() {
                             <div className="grid grid-cols-1 gap-4">
                                 <div className="space-y-1.5">
                                     <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Current Status</Label>
-                                    <select
-                                        value={Array.isArray(lcDetail.status) ? lcDetail.status[0] : lcDetail.status}
-                                        onChange={(e) => handleChange('status', [e.target.value])}
-                                        className="w-full rounded-xl border-slate-100 bg-white p-3 font-bold text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                    >
-                                        <option value="Draft">Draft</option>
-                                        <option value="Shipment Pending">Shipment Pending</option>
-                                        <option value="Payment Pending">Payment Pending</option>
-                                        <option value="Payment Done">Payment Done</option>
-                                        <option value="Shipment Done">Shipment Done</option>
-                                    </select>
+                                    <MultiSelect
+                                        options={lcStatusOptions.map(status => ({ value: status, label: status }))}
+                                        selected={Array.isArray(lcDetail.status) ? lcDetail.status : lcDetail.status ? [lcDetail.status] : []}
+                                        onChange={(value) => handleChange('status', value)}
+                                        placeholder="Select statuses..."
+                                    />
                                 </div>
                             </div>
                         </div>
