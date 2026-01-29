@@ -65,6 +65,9 @@ export default function MobileCheckInOutPage() {
     // Privileged role records
     const [privilegedRoleRecords, setPrivilegedRoleRecords] = useState<MultipleCheckInOutRecord[]>([]);
 
+    // Extra profiles for avatars not in supervisedEmployees
+    const [extraProfiles, setExtraProfiles] = useState<{ [id: string]: any }>({});
+
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
@@ -235,6 +238,53 @@ export default function MobileCheckInOutPage() {
 
         fetchPrivilegedRoleCheckIns();
     }, [user, userRole, activeTab, refreshTrigger]);
+
+    // Fetch missing profiles for avatars
+    useEffect(() => {
+        const fetchMissingProfiles = async () => {
+            const allVisitEmployeeIds = new Set<string>();
+            filteredGroupedRecords.forEach(group => {
+                group.visits.forEach(visit => {
+                    if (visit.employeeId) {
+                        allVisitEmployeeIds.add(visit.employeeId);
+                    }
+                });
+            });
+
+            const missingIds = Array.from(allVisitEmployeeIds).filter(id =>
+                !supervisedEmployees.find(emp => emp.id === id) &&
+                !extraProfiles[id]
+            );
+
+            if (missingIds.length === 0) return;
+
+            try {
+                const chunks = [];
+                for (let i = 0; i < missingIds.length; i += 10) {
+                    chunks.push(missingIds.slice(i, i + 10));
+                }
+
+                const newProfiles: { [id: string]: any } = {};
+                for (const chunk of chunks) {
+                    const q = query(collection(firestore, 'employees'), where('__name__', 'in', chunk));
+                    const snap = await getDocs(q);
+                    snap.docs.forEach(doc => {
+                        newProfiles[doc.id] = { id: doc.id, ...doc.data() };
+                    });
+                }
+
+                if (Object.keys(newProfiles).length > 0) {
+                    setExtraProfiles(prev => ({ ...prev, ...newProfiles }));
+                }
+            } catch (err) {
+                console.error("Error fetching missing employee profiles:", err);
+            }
+        };
+
+        if (filteredGroupedRecords.length > 0) {
+            fetchMissingProfiles();
+        }
+    }, [filteredGroupedRecords, supervisedEmployees]);
 
     const applyFilters = () => {
         let filtered = [...supervisionRecords];
@@ -532,7 +582,7 @@ export default function MobileCheckInOutPage() {
                                 }
 
                                 // Find employee profile for Supervision/Team view
-                                const employeeProfile = supervisedEmployees.find(emp => emp.id === visit.employeeId);
+                                const employeeProfile = supervisedEmployees.find(emp => emp.id === visit.employeeId) || extraProfiles[visit.employeeId];
                                 const photoURL = employeeProfile?.photoURL;
 
                                 return (
