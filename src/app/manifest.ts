@@ -7,9 +7,9 @@ const COMPANY_PROFILE_DOC_ID = 'main_settings';
 export const dynamic = 'force-dynamic';
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-    let name = 'App Name';
-    let shortName = 'App Name';
-    let description = 'App Name - LC & HR Management System - Employee Portal';
+    let name = 'LCMS';
+    let shortName = 'LCMS';
+    let description = 'LCMS - LC & HR Management System - Employee Portal';
 
     let icon192 = '/icons/icon-192x192.png';
     let icon512 = '/icons/icon-512x512.png';

@@ -15,7 +15,7 @@ import { admin } from '@/lib/firebase/admin';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
 const COMPANY_PROFILE_DOC_ID = 'main_settings';
-const DEFAULT_FAVICON_URL = 'https://res.cloudinary.com/iamdoulat/image/upload/v1735712111/favicon_pjr3zn.ico';
+const DEFAULT_FAVICON_URL = '/src/favicon.ico';
 export const viewport: Viewport = {
   themeColor: '#0a1e60',
   width: 'device-width',
@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const docSnap = await docRef.get();
 
     let faviconUrl = DEFAULT_FAVICON_URL;
-    let title = 'NextSew';
+    let title = 'LCMS';
 
     if (docSnap.exists) {
       const data = docSnap.data();
@@ -54,7 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
   } catch (error) {
     console.error('Error generating metadata:', error);
     return {
-      title: 'NextSew',
+      title: 'LCMS',
       icons: {
         icon: DEFAULT_FAVICON_URL,
       },
