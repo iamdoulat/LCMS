@@ -95,7 +95,7 @@ export function MobileSplashScreen({ message = "Loading..." }: MobileSplashScree
                         transition={{ delay: 0.5, duration: 0.6 }}
                         className="text-blue-200/60 text-sm font-medium uppercase tracking-widest"
                     >
-                        Indent & LC Management
+                        Indent & LC Management System
                     </motion.p>
                 </div>
 

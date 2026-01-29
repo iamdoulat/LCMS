@@ -286,15 +286,19 @@ export default function MultipleCheckInOutPage() {
                     }
                 }
 
-                // Delete check-in
-                await deleteDoc(doc(firestore, 'multiple_check_inout', visit.checkIn.id!));
-
-                // Delete check-out if exists
-                if (visit.checkOut) {
-                    await deleteDoc(doc(firestore, 'multiple_check_inout', visit.checkOut.id!));
+                // Delete check-in from 'multiple_check_inout' collection
+                if (visit.checkIn.id) {
+                    await deleteDoc(doc(firestore, 'multiple_check_inout', visit.checkIn.id));
+                } else {
+                    console.error('Check-in ID is missing, cannot delete document');
                 }
 
-                Swal.fire('Deleted!', 'The visit records have been deleted.', 'success');
+                // Delete check-out if exists from 'multiple_check_inout' collection
+                if (visit.checkOut && visit.checkOut.id) {
+                    await deleteDoc(doc(firestore, 'multiple_check_inout', visit.checkOut.id));
+                }
+
+                Swal.fire('Deleted!', 'The visit records have been deleted from multiple_check_inout.', 'success');
 
                 // Refresh records list
                 setRecords(prev => prev.filter(r =>
