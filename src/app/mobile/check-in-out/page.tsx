@@ -240,51 +240,6 @@ export default function MobileCheckInOutPage() {
     }, [user, userRole, activeTab, refreshTrigger]);
 
     // Fetch missing profiles for avatars
-    useEffect(() => {
-        const fetchMissingProfiles = async () => {
-            const allVisitEmployeeIds = new Set<string>();
-            filteredGroupedRecords.forEach(group => {
-                group.visits.forEach(visit => {
-                    if (visit.employeeId) {
-                        allVisitEmployeeIds.add(visit.employeeId);
-                    }
-                });
-            });
-
-            const missingIds = Array.from(allVisitEmployeeIds).filter(id =>
-                !supervisedEmployees.find(emp => emp.id === id) &&
-                !extraProfiles[id]
-            );
-
-            if (missingIds.length === 0) return;
-
-            try {
-                const chunks = [];
-                for (let i = 0; i < missingIds.length; i += 10) {
-                    chunks.push(missingIds.slice(i, i + 10));
-                }
-
-                const newProfiles: { [id: string]: any } = {};
-                for (const chunk of chunks) {
-                    const q = query(collection(firestore, 'employees'), where('__name__', 'in', chunk));
-                    const snap = await getDocs(q);
-                    snap.docs.forEach(doc => {
-                        newProfiles[doc.id] = { id: doc.id, ...doc.data() };
-                    });
-                }
-
-                if (Object.keys(newProfiles).length > 0) {
-                    setExtraProfiles(prev => ({ ...prev, ...newProfiles }));
-                }
-            } catch (err) {
-                console.error("Error fetching missing employee profiles:", err);
-            }
-        };
-
-        if (filteredGroupedRecords.length > 0) {
-            fetchMissingProfiles();
-        }
-    }, [filteredGroupedRecords, supervisedEmployees]);
 
     const applyFilters = () => {
         let filtered = [...supervisionRecords];
@@ -534,6 +489,53 @@ export default function MobileCheckInOutPage() {
             return { ...group, visits: filteredVisits };
         }).filter(group => group.visits.length > 0);
     }, [records, privilegedRoleRecords, supervisionRecords, activeTab, currentUserEmployeeId]);
+
+    // Fetch missing profiles for avatars
+    useEffect(() => {
+        const fetchMissingProfiles = async () => {
+            const allVisitEmployeeIds = new Set<string>();
+            filteredGroupedRecords.forEach(group => {
+                group.visits.forEach(visit => {
+                    if (visit.employeeId) {
+                        allVisitEmployeeIds.add(visit.employeeId);
+                    }
+                });
+            });
+
+            const missingIds = Array.from(allVisitEmployeeIds).filter(id =>
+                !supervisedEmployees.find(emp => emp.id === id) &&
+                !extraProfiles[id]
+            );
+
+            if (missingIds.length === 0) return;
+
+            try {
+                const chunks = [];
+                for (let i = 0; i < missingIds.length; i += 10) {
+                    chunks.push(missingIds.slice(i, i + 10));
+                }
+
+                const newProfiles: { [id: string]: any } = {};
+                for (const chunk of chunks) {
+                    const q = query(collection(firestore, 'employees'), where('__name__', 'in', chunk));
+                    const snap = await getDocs(q);
+                    snap.docs.forEach(doc => {
+                        newProfiles[doc.id] = { id: doc.id, ...doc.data() };
+                    });
+                }
+
+                if (Object.keys(newProfiles).length > 0) {
+                    setExtraProfiles(prev => ({ ...prev, ...newProfiles }));
+                }
+            } catch (err) {
+                console.error("Error fetching missing employee profiles:", err);
+            }
+        };
+
+        if (filteredGroupedRecords.length > 0) {
+            fetchMissingProfiles();
+        }
+    }, [filteredGroupedRecords, supervisedEmployees]);
 
     const renderContent = () => {
         if (isLoading) {
