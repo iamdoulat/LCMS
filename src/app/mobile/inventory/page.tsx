@@ -7,7 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, ChevronLeft, Package, MapPin, Loader2, ImageIcon, ScanLine, Filter, X, Clock, Building2, MoreVertical, Eye, EyeOff, Warehouse, RefreshCw } from 'lucide-react';
+import { Search, ChevronLeft, Package, MapPin, Loader2, ImageIcon, ScanLine, Filter, X, Clock, Building2, MoreVertical, Eye, EyeOff, Warehouse, RefreshCw, Edit, Plus } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { collection, query, orderBy, getDocs, limit, startAfter } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
@@ -26,6 +32,7 @@ export default function MobileInventoryPage() {
     const [visiblePriceItems, setVisiblePriceItems] = useState<Record<string, boolean>>({});
     const [visibleCount, setVisibleCount] = useState(10);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
 
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState({
@@ -78,7 +85,12 @@ export default function MobileInventoryPage() {
     };
 
     const handleLoadMore = () => {
-        setVisibleCount(prev => prev + 10);
+        setIsLoadingMore(true);
+        // Simulate a small delay for better UX/realism
+        setTimeout(() => {
+            setVisibleCount(prev => prev + 10);
+            setIsLoadingMore(false);
+        }, 800);
     };
 
     // Apply filters based on tab, search, and specific filters
@@ -332,9 +344,24 @@ export default function MobileInventoryPage() {
                                                         <h3 className="font-bold text-blue-600 text-sm leading-tight">
                                                             {item.itemName}
                                                         </h3>
-                                                        <button className="text-slate-400 hover:text-slate-600 shrink-0">
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </button>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <button className="w-8 h-8 rounded-full bg-white shadow-[0_0_10px_rgba(59,130,246,0.2)] hover:shadow-[0_0_15px_rgba(59,130,246,0.4)] border border-blue-50 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all shrink-0">
+                                                                    <MoreVertical className="h-4 w-4" />
+                                                                </button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                                                                {userRole?.some(role => ['Super Admin', 'Admin', 'Accountant'].includes(role)) && (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => router.push(`/mobile/inventory/edit/${item.id}`)}
+                                                                        className="flex items-center gap-2 text-slate-600 cursor-pointer"
+                                                                    >
+                                                                        <Edit className="h-4 w-4" />
+                                                                        <span>Edit</span>
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </div>
 
                                                     {/* Item Code & Company - Single Line */}
@@ -352,7 +379,7 @@ export default function MobileInventoryPage() {
                                                     {/* Supplier with building icon */}
                                                     {item.supplierName && (
                                                         <div className="flex items-center gap-1 text-[11px] text-slate-500 mb-3">
-                                                            <Building2 className="h-3 w-3" />
+                                                            <Building2 className="h-3 w-3 text-blue-500" />
                                                             <span>{item.supplierName}</span>
                                                         </div>
                                                     )}
@@ -381,8 +408,8 @@ export default function MobileInventoryPage() {
                                                                         className="ml-0.5 text-slate-400 hover:text-slate-600"
                                                                     >
                                                                         {visiblePriceItems[item.id]
-                                                                            ? <EyeOff className="h-3 w-3" />
-                                                                            : <Eye className="h-3 w-3" />}
+                                                                            ? <EyeOff className="h-3 w-3 text-amber-500" />
+                                                                            : <Eye className="h-3 w-3 text-amber-500" />}
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -426,7 +453,7 @@ export default function MobileInventoryPage() {
                                                             {/* Location */}
                                                             {item.location && (
                                                                 <div className="flex items-center gap-1 text-slate-500">
-                                                                    <MapPin className="h-3 w-3" />
+                                                                    <MapPin className="h-3 w-3 text-rose-500" />
                                                                     <span className="text-[11px] font-medium">
                                                                         {item.location}
                                                                     </span>
@@ -436,7 +463,7 @@ export default function MobileInventoryPage() {
                                                             {/* Warehouse */}
                                                             {item.warehouseName && (
                                                                 <div className="flex items-center gap-1 text-slate-500">
-                                                                    <Warehouse className="h-3 w-3" />
+                                                                    <Warehouse className="h-3 w-3 text-indigo-500" />
                                                                     <span className="text-[11px] font-medium">
                                                                         {item.warehouseName}
                                                                     </span>
@@ -457,9 +484,17 @@ export default function MobileInventoryPage() {
                                     <Button
                                         onClick={handleLoadMore}
                                         variant="outline"
-                                        className="bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 min-w-[150px] shadow-sm"
+                                        disabled={isLoadingMore}
+                                        className="bg-blue-50 border-blue-100 text-blue-600 hover:bg-blue-100 hover:text-blue-700 min-w-[150px] shadow-[0_4px_12px_rgba(59,130,246,0.15)] hover:shadow-[0_6px_20px_rgba(59,130,246,0.25)] font-medium"
                                     >
-                                        Load More
+                                        {isLoadingMore ? (
+                                            <div className="flex items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                <span>Loading...</span>
+                                            </div>
+                                        ) : (
+                                            <span>Load More</span>
+                                        )}
                                     </Button>
                                 </div>
                             )}
@@ -467,6 +502,15 @@ export default function MobileInventoryPage() {
                     )}
                 </div>
             </div >
-        </div >
+            {/* Floating Action Button */}
+            {userRole?.some(role => ['Super Admin', 'Admin', 'Accountant'].includes(role)) && (
+                <button
+                    onClick={() => router.push('/mobile/inventory/add')}
+                    className="fixed right-6 bottom-24 w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-blue-400 hover:scale-110 active:scale-95 transition-all z-50"
+                >
+                    <Plus className="h-8 w-8 text-white" />
+                </button>
+            )}
+        </div>
     );
 }

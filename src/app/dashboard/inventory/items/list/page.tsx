@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Filter, XCircle, MapPin, MoreHorizontal, ImageIcon } from 'lucide-react';
+import { PlusCircle, FileEdit, Trash2, Loader2, ChevronLeft, ChevronRight, Info, Package as PackageIcon, Filter, XCircle, MapPin, MoreHorizontal, ImageIcon, Download, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -24,6 +24,17 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
+import { writeBatch, serverTimestamp, setDoc } from 'firebase/firestore';
+import { format } from 'date-fns';
+
+const escapeCsvCell = (value: any) => {
+  if (value === null || value === undefined) return '""';
+  const stringValue = String(value);
+  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  }
+  return stringValue;
+};
 
 const ITEMS_PER_PAGE = 10;
 
@@ -147,6 +158,234 @@ export default function ItemsListPage() {
     setCurrentPage(1);
   };
 
+  const handleExportCSV = () => {
+    if (!displayedItems || displayedItems.length === 0) {
+      Swal.fire("No Data", "There are no items to export.", "info");
+      return;
+    }
+
+    const headers = [
+      "Item Name", "Item Code", "Model Number", "Category", "Section",
+      "Item Type", "Variation", "Variation Option", "Brand Name",
+      "Origin", "Currency", "Unit", "Sales Price", "Purchase Price",
+      "Manage Stock", "Current Qty", "Ideal Qty", "Warning Qty",
+      "Location", "Supplier", "Warehouse", "Description"
+    ];
+
+    const csvRows = displayedItems.map(item => [
+      escapeCsvCell(item.itemName),
+      escapeCsvCell(item.itemCode),
+      escapeCsvCell(item.modelNumber),
+      escapeCsvCell(item.category),
+      escapeCsvCell(item.itemSection),
+      escapeCsvCell(item.itemType),
+      escapeCsvCell(item.itemVariation),
+      escapeCsvCell(item.variationOption),
+      escapeCsvCell(item.brandName),
+      escapeCsvCell(item.countryOfOrigin),
+      escapeCsvCell(item.currency),
+      escapeCsvCell(item.unit),
+      item.salesPrice ?? "",
+      item.purchasePrice ?? "",
+      item.manageStock ? "Yes" : "No",
+      item.currentQuantity ?? "",
+      item.idealQuantity ?? "",
+      item.warningQuantity ?? "",
+      escapeCsvCell(item.location),
+      escapeCsvCell(item.supplierName),
+      escapeCsvCell(item.warehouseName),
+      escapeCsvCell(item.description)
+    ]);
+
+    const csvContent = [headers.join(","), ...csvRows.map(row => row.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `inventory_export_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDownloadSample = () => {
+    const headers = [
+      "Item Name", "Item Code", "Model Number", "Category", "Section",
+      "Item Type", "Variation", "Variation Option", "Brand Name",
+      "Origin", "Currency", "Unit", "Sales Price", "Purchase Price",
+      "Manage Stock", "Current Qty", "Ideal Qty", "Warning Qty",
+      "Location", "Supplier", "Warehouse", "Description"
+    ];
+    const sampleData = [
+      "Example Item", "SKU123", "MOD-001", "Tools", "Hand Tools",
+      "Single", "", "", "Example Brand",
+      "Bangladesh", "BDT", "pcs", "1500", "1200",
+      "Yes", "50", "100", "10",
+      "Shelf A1", "Reliable Supplier", "Main Warehouse", "This is an example item description."
+    ];
+
+    const csvContent = headers.join(",") + "\n" + sampleData.map(escapeCsvCell).join(",");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "inventory_sample_file.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const csvData = event.target?.result as string;
+      const rows = csvData.split(/\r?\n/).filter(row => row.trim() !== "");
+      if (rows.length < 2) {
+        Swal.fire("Invalid File", "The CSV file appears to be empty or missing data rows.", "error");
+        return;
+      }
+
+      const parseCSVLine = (line: string) => {
+        const result = [];
+        let cur = '';
+        let inQuote = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            if (inQuote && line[i + 1] === '"') {
+              cur += '"';
+              i++;
+            } else {
+              inQuote = !inQuote;
+            }
+          } else if (char === ',' && !inQuote) {
+            result.push(cur.trim());
+            cur = '';
+          } else {
+            cur += char;
+          }
+        }
+        result.push(cur.trim());
+        return result;
+      };
+
+      const columns = rows.slice(1).map(row => parseCSVLine(row));
+
+      Swal.fire({
+        title: 'Importing...',
+        text: `Found ${columns.length} items to import. Proceed?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, import'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            Swal.fire({ title: 'Processing...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            const [suppliersSnap, warehousesSnap, categoriesSnap, sectionsSnap, variationsSnap] = await Promise.all([
+              getDocs(collection(firestore, "suppliers")),
+              getDocs(collection(firestore, "warehouses")),
+              getDocs(collection(firestore, "item_categories")),
+              getDocs(collection(firestore, "item_sections")),
+              getDocs(collection(firestore, "item_variations"))
+            ]);
+
+            const supplierMap = new Map(suppliersSnap.docs.map(d => [d.data().beneficiaryName?.toLowerCase(), d.id]));
+            const warehouseMap = new Map(warehousesSnap.docs.map(d => [d.data().name?.toLowerCase(), d.id]));
+            const categoryMap = new Map(categoriesSnap.docs.map(d => [d.data().name?.toLowerCase(), d.id]));
+            const sectionMap = new Map(sectionsSnap.docs.map(d => [d.data().name?.toLowerCase(), d.id]));
+            const variationMap = new Map(variationsSnap.docs.map(d => [d.data().name?.toLowerCase(), d.id]));
+
+            const batch = writeBatch(firestore);
+            let importedCount = 0;
+
+            for (const item of columns) {
+              if (item.length < 1 || !item[0]) continue;
+
+              const newItemRef = doc(collection(firestore, "items"));
+              const itemName = item[0];
+              const itemCode = item[1] || "";
+              const modelNumber = item[2] || "";
+              const catName = item[3]?.toLowerCase();
+              const secName = item[4]?.toLowerCase();
+              const itemType = (item[5] === "Variant" ? "Variant" : "Single") as "Single" | "Variant";
+              const varName = item[6]?.toLowerCase();
+              const varOption = item[7] || "";
+              const brandName = item[8] || "";
+              const origin = item[9] || "";
+              const currency = item[10] || "BDT";
+              const unit = item[11] || "";
+              const salesPrice = parseFloat(item[12]) || 0;
+              const purchasePrice = parseFloat(item[13]) || 0;
+              const manageStock = item[14]?.toLowerCase() === "yes";
+              const currentQty = parseInt(item[15]) || 0;
+              const idealQty = parseInt(item[16]) || 0;
+              const warningQty = parseInt(item[17]) || 0;
+              const location = item[18] || "";
+              const supName = item[19]?.toLowerCase();
+              const whName = item[20]?.toLowerCase();
+              const description = item[21] || "";
+
+              const itemData: any = {
+                itemName,
+                itemCode,
+                modelNumber,
+                category: categoryMap.get(catName) || (item[3] || ""),
+                itemSection: sectionMap.get(secName) || (item[4] || ""),
+                itemType,
+                itemVariation: variationMap.get(varName) || (item[6] || ""),
+                variationOption: varOption,
+                brandName,
+                countryOfOrigin: origin,
+                currency,
+                unit,
+                salesPrice,
+                purchasePrice,
+                manageStock,
+                currentQuantity: manageStock ? currentQty : 0,
+                idealQuantity: idealQty || undefined,
+                warningQuantity: warningQty || undefined,
+                location,
+                supplierId: supplierMap.get(supName) || "",
+                supplierName: item[19] || "",
+                warehouseId: warehouseMap.get(whName) || "",
+                warehouseName: item[20] || "",
+                description,
+                photoURL: null,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+              };
+
+              // Cleanup undefined
+              Object.keys(itemData).forEach(key => itemData[key] === undefined && delete itemData[key]);
+
+              batch.set(newItemRef, itemData);
+              importedCount++;
+            }
+
+            await batch.commit();
+
+            const itemsCollectionRef = collection(firestore, "items");
+            const q = query(itemsCollectionRef, orderBy("createdAt", "desc"));
+            const querySnapshot = await getDocs(q);
+            setAllItems(querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ItemDocument)));
+
+            Swal.fire("Success", `${importedCount} items imported successfully.`, "success");
+            e.target.value = '';
+          } catch (error: any) {
+            console.error("Import error:", error);
+            Swal.fire("Error", `Failed to import: ${error.message}`, "error");
+          }
+        }
+      });
+    };
+    reader.readAsText(file);
+  };
+
   const totalPages = Math.ceil(displayedItems.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
@@ -201,12 +440,39 @@ export default function ItemsListPage() {
                 Browse, filter, and manage all your inventory items.
               </CardDescription>
             </div>
-            <Link href="/dashboard/inventory/items/add" passHref>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Add New Item
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href="/dashboard/inventory/items/add" passHref>
+                <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isReadOnly}>
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Add New Item
+                </Button>
+              </Link>
+              <Button variant="outline" onClick={handleExportCSV} disabled={isLoading}>
+                <Download className="mr-2 h-4 w-4" /> Export CSV
               </Button>
-            </Link>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleImportCSV}
+                  className="hidden"
+                  id="inventory-csv-import"
+                  disabled={isReadOnly || isLoading}
+                />
+                <Label
+                  htmlFor="inventory-csv-import"
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 cursor-pointer",
+                    (isReadOnly || isLoading) && "opacity-50 pointer-events-none"
+                  )}
+                >
+                  <Upload className="mr-2 h-4 w-4" /> Import CSV
+                </Label>
+              </div>
+              <Button variant="ghost" onClick={handleDownloadSample} className="text-muted-foreground">
+                <Info className="mr-2 h-4 w-4" /> Sample
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
