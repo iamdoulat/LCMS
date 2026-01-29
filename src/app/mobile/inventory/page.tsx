@@ -25,7 +25,6 @@ export default function MobileInventoryPage() {
     const router = useRouter();
     const { userRole } = useAuth();
     const [items, setItems] = useState<ItemDocument[]>([]);
-    const [filteredItems, setFilteredItems] = useState<ItemDocument[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'All Items' | 'Low Stock' | 'Managed'>('All Items');
@@ -94,24 +93,24 @@ export default function MobileInventoryPage() {
     };
 
     // Apply filters based on tab, search, and specific filters
-    const applyFiltersAndSearch = (itemsList: ItemDocument[], search: string, tab: string, activeFilters: typeof filters) => {
-        let filtered = [...itemsList];
+    const filteredItems = React.useMemo(() => {
+        let filtered = [...items];
 
         // Apply tab filter
-        if (tab === 'Low Stock') {
+        if (activeTab === 'Low Stock') {
             filtered = filtered.filter(item => {
                 if (!item.manageStock) return false;
                 const current = item.currentQuantity || 0;
                 const warning = item.warningQuantity || 0;
                 return current <= warning;
             });
-        } else if (tab === 'Managed') {
+        } else if (activeTab === 'Managed') {
             filtered = filtered.filter(item => item.manageStock === true);
         }
 
         // Apply search
-        if (search.trim()) {
-            const queryLower = search.toLowerCase();
+        if (searchQuery.trim()) {
+            const queryLower = searchQuery.toLowerCase();
             filtered = filtered.filter(item =>
                 item.itemName.toLowerCase().includes(queryLower) ||
                 item.itemCode?.toLowerCase().includes(queryLower) ||
@@ -120,26 +119,21 @@ export default function MobileInventoryPage() {
         }
 
         // Apply specific filters
-        if (activeFilters.name) {
-            filtered = filtered.filter(item => item.itemName.toLowerCase().includes(activeFilters.name.toLowerCase()));
+        if (filters.name) {
+            filtered = filtered.filter(item => item.itemName.toLowerCase().includes(filters.name.toLowerCase()));
         }
-        if (activeFilters.code) {
-            filtered = filtered.filter(item => item.itemCode?.toLowerCase().includes(activeFilters.code.toLowerCase()));
+        if (filters.code) {
+            filtered = filtered.filter(item => item.itemCode?.toLowerCase().includes(filters.code.toLowerCase()));
         }
-        if (activeFilters.brand) {
-            filtered = filtered.filter(item => item.brandName?.toLowerCase().includes(activeFilters.brand.toLowerCase()));
+        if (filters.brand) {
+            filtered = filtered.filter(item => item.brandName?.toLowerCase().includes(filters.brand.toLowerCase()));
         }
-        if (activeFilters.supplier) {
-            filtered = filtered.filter(item => item.supplierName?.toLowerCase().includes(activeFilters.supplier.toLowerCase()));
+        if (filters.supplier) {
+            filtered = filtered.filter(item => item.supplierName?.toLowerCase().includes(filters.supplier.toLowerCase()));
         }
 
-        setFilteredItems(filtered);
-    };
-
-    // Search Logic
-    useEffect(() => {
-        applyFiltersAndSearch(items, searchQuery, activeTab, filters);
-    }, [searchQuery, activeTab, items, filters]);
+        return filtered;
+    }, [items, searchQuery, activeTab, filters]);
 
     const formatCurrency = (value?: number) => {
         if (value === undefined || value === null) return 'N/A';
@@ -162,7 +156,7 @@ export default function MobileInventoryPage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-[#0a1e60]">
+        <div className="flex flex-col h-dvh bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
                 <div className="flex items-center justify-between px-4 pt-4 pb-6">
@@ -302,7 +296,7 @@ export default function MobileInventoryPage() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto px-4 pb-8">
+                <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                             <Loader2 className="h-8 w-8 animate-spin mb-2" />
@@ -317,12 +311,12 @@ export default function MobileInventoryPage() {
                             </p>
                         </div>
                     ) : (
-                        <div className="space-y-3 pb-20"> {/* Add padding bottom for Load More button space */}
+                        <div className="space-y-3 pb-32"> {/* Add padding bottom for Load More button space */}
                             {filteredItems.slice(0, visibleCount).map((item) => {
                                 const stockStatus = getStockStatus(item);
 
                                 return (
-                                    <Card key={item.id} className="bg-white border-slate-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] overflow-hidden hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.15)] transition-shadow">
+                                    <Card key={item.id} className="bg-white border-slate-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] overflow-hidden hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.15)] transition-shadow transform-gpu will-change-transform">
                                         <div className="p-4">
                                             <div className="flex gap-3">
                                                 {/* Icon/Image */}
@@ -480,7 +474,7 @@ export default function MobileInventoryPage() {
 
                             {/* Load More Button */}
                             {visibleCount < filteredItems.length && (
-                                <div className="mt-6 mb-8 text-center">
+                                <div className="mt-6 mb-[70px] text-center">
                                     <Button
                                         onClick={handleLoadMore}
                                         variant="outline"
