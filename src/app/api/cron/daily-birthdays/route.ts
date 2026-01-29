@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
 import { sendTelegram } from '@/lib/telegram/sender';
-import { getCompanyName } from '@/lib/settings/company';
+import { getCompanyName, getCompanyTimezone } from '@/lib/settings/company';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,10 +40,18 @@ export async function GET(request: Request) {
         }
 
         const db = admin.firestore();
-        const today = new Date();
-        const currentMonth = today.getMonth() + 1; // 1-12
-        const currentDay = today.getDate(); // 1-31
         const companyName = await getCompanyName();
+
+        // Use dynamic company timezone for date comparisons
+        const tz = await getCompanyTimezone();
+        const today = new Date();
+        const currentMonthDay = new Intl.DateTimeFormat('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            timeZone: tz
+        }).format(today);
+
+        console.log(`Birthday Cron checking for: ${currentMonthDay} (${tz})`);
 
         // 2. Auto-Seed Templates if missing
         const templateSlug = 'employee_birthday_wish';
@@ -148,10 +156,13 @@ Best Wishes,
             }
 
             if (dobDate && !isNaN(dobDate.getTime())) {
-                const dobMonth = dobDate.getMonth() + 1;
-                const dobDay = dobDate.getDate();
+                const dobMonthDay = new Intl.DateTimeFormat('en-US', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    timeZone: tz
+                }).format(dobDate);
 
-                if (dobMonth === currentMonth && dobDay === currentDay) {
+                if (dobMonthDay === currentMonthDay) {
                     const employeeName = emp.fullName || emp.name || 'Employee';
                     const data = { employee_name: employeeName, company_name: companyName };
 
