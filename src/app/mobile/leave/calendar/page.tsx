@@ -18,7 +18,8 @@ import {
     addMonths,
     subMonths,
     isSameDay,
-    parseISO
+    parseISO,
+    isWithinInterval
 } from 'date-fns';
 import type { LeaveApplicationDocument, EmployeeDocument, HolidayDocument } from '@/types';
 import { cn } from '@/lib/utils';
@@ -122,10 +123,6 @@ export default function LeaveCalendarPage() {
             start: parseISO(h.fromDate),
             end: parseISO(h.toDate || h.fromDate)
         }));
-    };
-
-    const isWithinInterval = (date: Date, interval: { start: Date; end: Date }) => {
-        return date >= interval.start && date <= interval.end;
     };
 
     const weekDays = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
