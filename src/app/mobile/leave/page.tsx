@@ -101,10 +101,21 @@ export default function MobileLeavePage() {
                 const fromDate = parseISO(leave.fromDate);
                 const toDate = parseISO(leave.toDate);
                 return isWithinInterval(date, { start: fromDate, end: toDate });
-            }).map(leave => ({
-                ...leave,
-                employee: employees?.find(e => e.id === leave.employeeId)
-            })) || [];
+            }).map(leave => {
+                const employee = employees?.find(e => e.id === leave.employeeId);
+                if (employee && format(date, 'yyyy-MM-dd') === '2026-01-28') {
+                    console.log('🔍 Leave Avatar Debug for Jan 28:', {
+                        employeeName: employee.fullName,
+                        photoURL: employee.photoURL,
+                        hasPhoto: !!employee.photoURL,
+                        photoURLType: typeof employee.photoURL
+                    });
+                }
+                return {
+                    ...leave,
+                    employee
+                };
+            }) || [];
 
             // Find visits for this day
             const dayVisits = visits?.filter(visit => {
@@ -361,24 +372,32 @@ export default function MobileLeavePage() {
                                                 ))}
 
                                                 {/* Leave avatars */}
-                                                {dayObj.leaves.slice(0, 2).map((leave, idx) => (
-                                                    <div key={`leave-${idx}`} className="relative">
-                                                        <Avatar className="h-5 w-5 border border-white shadow-sm">
-                                                            <AvatarImage
-                                                                src={leave.employee?.photoURL || ''}
-                                                                alt={leave.employee?.fullName || leave.employeeName}
-                                                                className="object-cover"
-                                                            />
-                                                            <AvatarFallback className="text-[7px] bg-emerald-100 text-emerald-700 font-semibold uppercase">
-                                                                {getInitials(leave.employee?.fullName || leave.employeeName)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div className={cn(
-                                                            "absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full border-[0.5px] border-white",
-                                                            leave.status === 'Approved' ? "bg-emerald-500" : "bg-amber-500"
-                                                        )} />
-                                                    </div>
-                                                ))}
+                                                {dayObj.leaves.slice(0, 2).map((leave, idx) => {
+                                                    const photoURL = leave.employee?.photoURL || '';
+                                                    if (photoURL) {
+                                                        console.log('🖼️ Rendering avatar with photoURL:', photoURL);
+                                                    }
+                                                    return (
+                                                        <div key={`leave-${idx}`} className="relative">
+                                                            <Avatar className="h-5 w-5 border border-white shadow-sm">
+                                                                <AvatarImage
+                                                                    src={photoURL}
+                                                                    alt={leave.employee?.fullName || leave.employeeName}
+                                                                    className="object-cover"
+                                                                    onError={() => console.log('❌ Image failed to load:', photoURL)}
+                                                                    onLoad={() => console.log('✅ Image loaded successfully:', photoURL)}
+                                                                />
+                                                                <AvatarFallback className="text-[7px] bg-emerald-100 text-emerald-700 font-semibold uppercase">
+                                                                    {getInitials(leave.employee?.fullName || leave.employeeName)}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div className={cn(
+                                                                "absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full border-[0.5px] border-white",
+                                                                leave.status === 'Approved' ? "bg-emerald-500" : "bg-amber-500"
+                                                            )} />
+                                                        </div>
+                                                    );
+                                                })}
 
                                                 {/* Visit avatars */}
                                                 {dayObj.visits.slice(0, 2 - dayObj.leaves.length).map((visit, idx) => (

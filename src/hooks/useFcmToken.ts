@@ -17,6 +17,24 @@ export const useFcmToken = () => {
     const retrieveToken = useCallback(async () => {
         try {
             if (typeof window !== 'undefined' && 'serviceWorker' in navigator && messaging) {
+                // Initialize service worker with Firebase config
+                const registration = await navigator.serviceWorker.ready;
+                if (registration.active) {
+                    // Send Firebase config to service worker
+                    registration.active.postMessage({
+                        type: 'INIT_FIREBASE',
+                        config: {
+                            apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+                            authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+                            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+                            storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+                            messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+                            appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+                            measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+                        }
+                    });
+                }
+
                 // Request notification permission
                 const permission = await Notification.requestPermission();
                 setNotificationPermission(permission);
