@@ -84,6 +84,13 @@ export default function LeaveCalendarPage() {
         fetchData();
     }, [employeeData?.id]);
 
+    // Debug: Check if data is loaded
+    console.log('📅 Calendar Data:', {
+        leaveCount: leaveApplications.length,
+        holidayCount: holidays.length,
+        employeeCount: allEmployees.length
+    });
+
     const goToPreviousMonth = () => {
         setCurrentMonth(prev => subMonths(prev, 1));
     };
@@ -204,10 +211,37 @@ export default function LeaveCalendarPage() {
                                             : 'text-slate-300'
                                     )}
                                     onClick={() => {
+                                        const details = [];
+
                                         if (holiday) {
+                                            details.push(`<strong>🎉 Holiday:</strong> ${holiday.name}<br/><small>${holiday.type}</small>`);
+                                        }
+
+                                        if (leave) {
+                                            const statusEmoji = leave.status === 'Approved' ? '✅' : '⏳';
+                                            const leaveType = leave.leaveType || 'Leave';
+                                            details.push(`<strong>${statusEmoji} ${leaveType}:</strong> ${leave.status}<br/><small>${format(parseISO(leave.fromDate), 'MMM d')} - ${format(parseISO(leave.toDate), 'MMM d, yyyy')}</small>`);
+                                        }
+
+                                        if (birthday) {
+                                            const birthdayEmployees = allEmployees.filter(emp => {
+                                                if (!emp.dateOfBirth) return false;
+                                                try {
+                                                    const dob = parseISO(emp.dateOfBirth);
+                                                    return format(dob, 'MM-dd') === format(day, 'MM-dd');
+                                                } catch { return false; }
+                                            });
+
+                                            if (birthdayEmployees.length > 0) {
+                                                const names = birthdayEmployees.map(e => e.fullName || 'Unknown').join(', ');
+                                                details.push(`<strong>🎂 Birthday:</strong><br/>${names}`);
+                                            }
+                                        }
+
+                                        if (details.length > 0) {
                                             Swal.fire({
-                                                title: holiday.name,
-                                                text: `${holiday.type} announcement.`,
+                                                title: format(day, 'MMMM d, yyyy'),
+                                                html: details.join('<br/><br/>'),
                                                 icon: 'info',
                                                 confirmButtonColor: '#3b82f6'
                                             });
