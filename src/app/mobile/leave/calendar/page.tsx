@@ -84,12 +84,6 @@ export default function LeaveCalendarPage() {
         fetchData();
     }, [employeeData?.id]);
 
-    // Debug: Check if data is loaded
-    console.log('📅 Calendar Data:', {
-        leaveCount: leaveApplications.length,
-        holidayCount: holidays.length,
-        employeeCount: allEmployees.length
-    });
 
     const goToPreviousMonth = () => {
         setCurrentMonth(prev => subMonths(prev, 1));
