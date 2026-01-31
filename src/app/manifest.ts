@@ -78,7 +78,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
             { src: icon192, sizes: '128x128', type: 'image/png' },
             { src: icon512, sizes: '384x384', type: 'image/png' },
         ],
-        categories: ['business', 'productivity'],
+        categories: ['business', 'productivity', 'Finaintial',],
         screenshots: [
             {
                 src: screenshot,

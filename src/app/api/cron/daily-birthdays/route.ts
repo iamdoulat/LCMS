@@ -156,11 +156,11 @@ Best Wishes,
             }
 
             if (dobDate && !isNaN(dobDate.getTime())) {
-                const dobMonthDay = new Intl.DateTimeFormat('en-US', {
-                    month: 'numeric',
-                    day: 'numeric',
-                    timeZone: tz
-                }).format(dobDate);
+                // Extract month and day directly from the Date object (no timezone conversion)
+                // Birthday is a calendar date, not a time-instant, so we compare calendar dates
+                const dobMonth = dobDate.getMonth() + 1; // getMonth() is 0-indexed
+                const dobDay = dobDate.getDate();
+                const dobMonthDay = `${dobMonth}/${dobDay}`;
 
                 if (dobMonthDay === currentMonthDay) {
                     const employeeName = emp.fullName || emp.name || 'Employee';

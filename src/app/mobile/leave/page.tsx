@@ -323,7 +323,7 @@ export default function MobileLeavePage() {
                                                     <div class="mt-2 space-y-2">
                                                         ${dayObj.leaves.map(l => `<div class="text-xs flex items-center gap-2">
                                                             <div class="w-2 h-2 rounded-full ${l.status === 'Approved' ? 'bg-emerald-500' : 'bg-amber-500'}"></div>
-                                                            <span class="font-medium">${l.employee?.fullName}</span>
+                                                            <span class="font-medium">${l.employee?.fullName || l.employeeName || 'Unknown'}</span>
                                                             <span class="text-[10px] text-slate-500">(${l.leaveType})</span>
                                                         </div>`).join('')}
                                                     </div>
@@ -364,9 +364,9 @@ export default function MobileLeavePage() {
                                                 {dayObj.leaves.slice(0, 2).map((leave, idx) => (
                                                     <div key={`leave-${idx}`} className="relative">
                                                         <Avatar className="h-4 w-4 border border-white shadow-sm">
-                                                            <AvatarImage src={leave.employee?.photoURL} />
+                                                            <AvatarImage src={leave.employee?.photoURL || ''} />
                                                             <AvatarFallback className="text-[6px] bg-emerald-100 text-emerald-700 uppercase">
-                                                                {getInitials(leave.employee?.fullName)}
+                                                                {getInitials(leave.employee?.fullName || leave.employeeName)}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div className={cn(
@@ -380,9 +380,9 @@ export default function MobileLeavePage() {
                                                 {dayObj.visits.slice(0, 2 - dayObj.leaves.length).map((visit, idx) => (
                                                     <div key={`visit-${idx}`} className="relative">
                                                         <Avatar className="h-4 w-4 border border-white shadow-sm">
-                                                            <AvatarImage src={visit.employee?.photoURL} />
+                                                            <AvatarImage src={visit.employee?.photoURL || ''} />
                                                             <AvatarFallback className="text-[6px] bg-blue-100 text-blue-700 uppercase">
-                                                                {getInitials(visit.employee?.fullName)}
+                                                                {getInitials(visit.employee?.fullName || visit.employeeName)}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div className={cn(
