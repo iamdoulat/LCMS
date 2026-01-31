@@ -363,9 +363,13 @@ export default function MobileLeavePage() {
                                                 {/* Leave avatars */}
                                                 {dayObj.leaves.slice(0, 2).map((leave, idx) => (
                                                     <div key={`leave-${idx}`} className="relative">
-                                                        <Avatar className="h-4 w-4 border border-white shadow-sm">
-                                                            <AvatarImage src={leave.employee?.photoURL || ''} />
-                                                            <AvatarFallback className="text-[6px] bg-emerald-100 text-emerald-700 uppercase">
+                                                        <Avatar className="h-5 w-5 border border-white shadow-sm">
+                                                            <AvatarImage
+                                                                src={leave.employee?.photoURL || ''}
+                                                                alt={leave.employee?.fullName || leave.employeeName}
+                                                                className="object-cover"
+                                                            />
+                                                            <AvatarFallback className="text-[7px] bg-emerald-100 text-emerald-700 font-semibold uppercase">
                                                                 {getInitials(leave.employee?.fullName || leave.employeeName)}
                                                             </AvatarFallback>
                                                         </Avatar>
@@ -379,9 +383,13 @@ export default function MobileLeavePage() {
                                                 {/* Visit avatars */}
                                                 {dayObj.visits.slice(0, 2 - dayObj.leaves.length).map((visit, idx) => (
                                                     <div key={`visit-${idx}`} className="relative">
-                                                        <Avatar className="h-4 w-4 border border-white shadow-sm">
-                                                            <AvatarImage src={visit.employee?.photoURL || ''} />
-                                                            <AvatarFallback className="text-[6px] bg-blue-100 text-blue-700 uppercase">
+                                                        <Avatar className="h-5 w-5 border border-white shadow-sm">
+                                                            <AvatarImage
+                                                                src={visit.employee?.photoURL || ''}
+                                                                alt={visit.employee?.fullName || visit.employeeName}
+                                                                className="object-cover"
+                                                            />
+                                                            <AvatarFallback className="text-[7px] bg-blue-100 text-blue-700 font-semibold uppercase">
                                                                 {getInitials(visit.employee?.fullName || visit.employeeName)}
                                                             </AvatarFallback>
                                                         </Avatar>
