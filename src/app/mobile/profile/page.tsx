@@ -295,7 +295,7 @@ export default function MobileProfilePage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-y-auto">
             {/* Standard Header */}
             {/* Standard Header */}
-            <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center gap-4 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] min-h-[calc(4rem+env(safe-area-inset-top))] text-white overflow-hidden shadow-sm transition-all">
+            <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center gap-4 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+10px)] min-h-[calc(4rem+env(safe-area-inset-top))] text-white overflow-hidden shadow-sm transition-all">
                 <button
                     onClick={handleBack}
                     className="p-1 hover:bg-white/10 rounded-full transition-colors mt-1"
