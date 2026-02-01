@@ -326,7 +326,7 @@ export default function MyAttendancePage() {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 px-6 pt-4 pb-[120px] space-y-4">
+                <div className="flex-1 px-[5px] pt-4 pb-[120px] space-y-4">
                     {(loading && attendanceRecords.length === 0 && breakRecords.length === 0) ? (
                         <div className="space-y-4">
                             {[1, 2, 3, 4, 5].map((i) => (
@@ -346,7 +346,7 @@ export default function MyAttendancePage() {
                                 attendanceRecords.map((record) => {
                                     const dateInfo = formatDate(record.date);
                                     return (
-                                        <div key={record.id} className="bg-white rounded-xl px-3 py-2.5 shadow-md border border-slate-100 flex items-center gap-3 active:scale-[0.98] transition-all">
+                                        <div key={record.id} className="bg-white rounded-xl px-3 py-2.5 shadow-sm border border-slate-100 flex items-center gap-3 active:scale-[0.98] transition-all">
                                             <div className={cn("w-1 h-10 rounded-full shrink-0",
                                                 record.flag === 'P' ? 'bg-emerald-400' :
                                                     record.flag === 'A' ? 'bg-red-400' :
@@ -400,7 +400,7 @@ export default function MyAttendancePage() {
                         ) : (
                             breakRecords.length > 0 ? (
                                 breakRecords.map((record) => (
-                                    <div key={record.id} className="bg-white rounded-xl px-3 py-2.5 shadow-md border border-slate-100 flex items-center gap-3 active:scale-[0.98] transition-all">
+                                    <div key={record.id} className="bg-white rounded-xl px-3 py-2.5 shadow-sm border border-slate-100 flex items-center gap-3 active:scale-[0.98] transition-all">
                                         <div className={cn("w-1 h-10 rounded-full shrink-0",
                                             record.status === 'approved' || record.status === 'auto-approved' ? 'bg-emerald-400' :
                                                 record.status === 'rejected' ? 'bg-red-400' : 'bg-orange-400'

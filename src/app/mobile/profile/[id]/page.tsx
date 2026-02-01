@@ -211,7 +211,7 @@ export default function MobileEmployeeProfilePage() {
 
             {/* Main Content Container */}
             <div
-                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-24 relative mt-9 touch-none flex flex-col"
+                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-24 relative mt-9 flex flex-col"
                 style={{ touchAction: 'pan-y' }}
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
@@ -269,7 +269,7 @@ export default function MobileEmployeeProfilePage() {
                 </div>
 
                 {/* Tabs - Horizontal Scrollable */}
-                <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 mb-6 flex-shrink-0">
+                <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 mb-6 flex-shrink-0" style={{ touchAction: 'pan-x' }}>
                     <div className="flex gap-3 min-w-max">
                         <button
                             onClick={() => setActiveTab('personal')}

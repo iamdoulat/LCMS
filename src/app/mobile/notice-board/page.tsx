@@ -52,7 +52,7 @@ export default function MobileNoticeBoardPage() {
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60]">
             {/* Header */}
-            <header className="bg-gradient-to-r from-[#0a1e60] to-[#1e3a8a] text-white px-5 py-6 flex items-center shadow-none z-20 shrink-0">
+            <header className="bg-gradient-to-r from-[#0a1e60] to-[#1e3a8a] text-white px-5 pt-[calc(env(safe-area-inset-top)+10px)] pb-6 flex items-center shadow-none z-20 shrink-0">
                 <button
                     onClick={() => router.back()}
                     className="p-2 mr-3 hover:bg-white/10 rounded-2xl transition-all active:scale-90"
