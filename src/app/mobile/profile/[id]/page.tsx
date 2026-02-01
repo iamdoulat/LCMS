@@ -211,7 +211,7 @@ export default function MobileEmployeeProfilePage() {
 
             {/* Main Content Container */}
             <div
-                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-[120px] relative mt-9 touch-none"
+                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-24 relative mt-9 touch-none flex flex-col"
                 style={{ touchAction: 'pan-y' }}
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
@@ -250,7 +250,7 @@ export default function MobileEmployeeProfilePage() {
                 </div>
 
                 {/* Name & Title */}
-                <div className="mt-16 mb-8">
+                <div className="mt-16 mb-8 flex-shrink-0">
                     <h2 className="text-xl font-bold text-[#0a1e60] uppercase leading-tight mb-1">
                         {profileData.name}
                     </h2>
@@ -269,7 +269,7 @@ export default function MobileEmployeeProfilePage() {
                 </div>
 
                 {/* Tabs - Horizontal Scrollable */}
-                <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 mb-6">
+                <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 mb-6 flex-shrink-0">
                     <div className="flex gap-3 min-w-max">
                         <button
                             onClick={() => setActiveTab('personal')}
@@ -304,16 +304,16 @@ export default function MobileEmployeeProfilePage() {
                     </div>
                 </div>
 
-                {/* Info Card */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm max-h-[calc(100vh-450px)] flex flex-col overflow-hidden">
-                    <h3 className="text-lg font-bold text-[#0a1e60] mb-6">
+                {/* Info Card - Flex grow to take remaining space */}
+                <div className="bg-white rounded-2xl p-6 shadow-sm flex-1 flex flex-col overflow-hidden min-h-0">
+                    <h3 className="text-lg font-bold text-[#0a1e60] mb-6 flex-shrink-0">
                         {activeTab === 'personal' && 'Personal Info'}
                         {activeTab === 'official' && 'Official Info'}
                         {activeTab === 'others' && 'Others Info'}
                     </h3>
 
                     <div
-                        className="space-y-6 overflow-y-auto pr-2 flex-1 min-h-0 scroll-smooth animate-in fade-in duration-300"
+                        className="space-y-6 overflow-y-auto pr-2 flex-1 scroll-smooth animate-in fade-in duration-300"
                         key={activeTab}
                         style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
                     >

@@ -262,7 +262,7 @@ export default function MobileTotalLCPage() {
         <TooltipProvider>
             <div className="flex flex-col h-screen bg-[#0a1e60]">
                 <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                    <div className="px-4 py-4 flex items-center justify-between">
+                    <div className="px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-4 flex items-center justify-between">
                         <button
                             onClick={() => router.back()}
                             className="p-2 bg-white/10 rounded-xl text-white hover:bg-white/20 transition-all active:scale-95"

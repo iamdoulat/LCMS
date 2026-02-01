@@ -168,7 +168,8 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
                     In reference, it seems to move with the dashboard (white card).
                     So we place it inside this wrapper.
                 */}
-                <div className="sticky bottom-0 z-50">
+                {/* Bottom Navbar - Fixed at bottom */}
+                <div className="fixed bottom-0 left-0 right-0 z-50">
                     <MobileNavbar />
                 </div>
             </div>
