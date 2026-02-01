@@ -40,7 +40,8 @@ export default function MobileLeavePage() {
     const year = getYear(currentDate);
     const month = getMonth(currentDate);
     const daysInMonth = getDaysInMonth(currentDate);
-    const firstDayOfMonth = getDay(startOfMonth(currentDate));
+    const startDayIndex = getDay(startOfMonth(currentDate));
+    const firstDayOfMonth = startDayIndex === 6 ? 0 : startDayIndex + 1;
 
     // Fetch data from Firestore using the hook
     const { data: employees } = useFirestoreQuery<EmployeeDocument[]>(

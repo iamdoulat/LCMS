@@ -97,10 +97,13 @@ export default function LeaveCalendarPage() {
         start: startOfMonth(currentMonth),
         end: endOfMonth(currentMonth)
     });
+    // Explicitly handle week starting on Saturday (6)
+    // 0(Sun) -> 1, 1(Mon) -> 2, ..., 5(Fri) -> 6, 6(Sat) -> 0
+    const startDayIndex = getDay(startOfMonth(currentMonth));
+    const firstDayOfMonth = startDayIndex === 6 ? 0 : startDayIndex + 1;
 
-    // Week starts on Saturday (6), so we need to shift Sunday (0) to index 1.
-    // Formula: (DayIndex + 1) % 7
-    const firstDayOfMonth = (getDay(startOfMonth(currentMonth)) + 1) % 7;
+    console.log('Calendar Month:', format(currentMonth, 'yyyy-MM'), 'Start Day Index:', startDayIndex, 'Offset:', firstDayOfMonth);
+
     const paddingDays = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
     const getLeaveStatus = (date: Date) => {
@@ -141,7 +144,7 @@ export default function LeaveCalendarPage() {
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2">Leave Calender</h1>
+                    <h1 className="text-xl font-bold text-white ml-2">Leave Calendar (Updated)</h1>
                 </div>
             </div>
 
