@@ -98,7 +98,9 @@ export default function LeaveCalendarPage() {
         end: endOfMonth(currentMonth)
     });
 
-    const firstDayOfMonth = getDay(startOfMonth(currentMonth));
+    // Week starts on Saturday (6), so we need to shift Sunday (0) to index 1.
+    // Formula: (DayIndex + 1) % 7
+    const firstDayOfMonth = (getDay(startOfMonth(currentMonth)) + 1) % 7;
     const paddingDays = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
     const getLeaveStatus = (date: Date) => {
