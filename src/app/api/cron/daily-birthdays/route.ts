@@ -21,7 +21,7 @@ export async function GET(request: Request) {
      * 
      * Example: For 9:00 AM Bangladesh Time (UTC+6):
      * - 9:00 AM local - 6 hours = 3:00 AM UTC
-     * - vercel.json: "schedule": "55 23 * * *"
+     * - vercel.json: "schedule": "10 18 * * *"
      * 
      * Current schedule in vercel.json sends notifications at the configured UTC time.
      */

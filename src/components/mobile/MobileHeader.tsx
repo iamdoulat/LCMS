@@ -21,9 +21,7 @@ export function MobileHeader({ rightAction }: MobileHeaderProps) {
     const { user, userRole, companyLogoUrl } = useAuth();
     const pathname = usePathname();
     const { toggleSidebar } = useMobileSidebar();
-    const is20pxPaddingPage = pathname === '/mobile/dashboard' ||
-        pathname?.startsWith('/mobile/attendance') ||
-        pathname?.startsWith('/mobile/leave');
+
     const [hasUnread, setHasUnread] = React.useState(false);
     const [profileImage, setProfileImage] = React.useState<string | undefined>(user?.photoURL || undefined);
     const [fullName, setFullName] = React.useState<string>(user?.displayName || 'Employee');
@@ -153,9 +151,7 @@ export function MobileHeader({ rightAction }: MobileHeaderProps) {
         <header
             className="sticky top-0 z-50 bg-[#0a1e60] text-white px-4 pt-[env(safe-area-inset-top)] pb-6 relative transition-all duration-300"
             style={{
-                paddingTop: is20pxPaddingPage
-                    ? 'calc(env(safe-area-inset-top) + 20px)'
-                    : undefined
+                paddingTop: 'calc(env(safe-area-inset-top) + 10px)'
             }}
         >
             {/* Status bar filler for Android/Hairlines - ensures no white gap during scroll/pull */}

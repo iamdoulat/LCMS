@@ -6,7 +6,7 @@
         },
         {
             "path": "/api/cron/daily-birthdays",
-            "schedule": "55 23 * * *"
+            "schedule": "10 18 * * *"
         }
     ]
 }
