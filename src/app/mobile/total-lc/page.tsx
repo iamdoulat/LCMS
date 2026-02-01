@@ -52,7 +52,7 @@ import {
     Settings2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, orderBy, query, limit, startAfter, QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, limit, startAfter, QueryDocumentSnapshot, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, parseISO, isValid } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
@@ -128,10 +128,15 @@ export default function MobileTotalLCPage() {
 
         try {
             const constraints: any[] = [
-                collection(firestore, "lc_entries"),
-                orderBy("createdAt", "desc"),
-                limit(10)
+                collection(firestore, "lc_entries")
             ];
+
+            if (filterStatus !== 'All') {
+                constraints.push(where("status", "array-contains", filterStatus));
+            }
+
+            constraints.push(orderBy("createdAt", "desc"));
+            constraints.push(limit(10));
 
             if (isLoadMore && lastDocRef.current) {
                 constraints.push(startAfter(lastDocRef.current));
@@ -162,7 +167,7 @@ export default function MobileTotalLCPage() {
             else if (isManual) setTimeout(() => setIsRefreshing(false), 600);
             else setIsLoading(false);
         }
-    }, []);
+    }, [filterStatus]);
     // Note: Dependencies are empty because lastDoc is now a Ref
 
     useEffect(() => {
