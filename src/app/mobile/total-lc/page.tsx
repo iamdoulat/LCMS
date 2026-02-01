@@ -424,7 +424,7 @@ export default function MobileTotalLCPage() {
                         </div>
 
                         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                            {['All', 'Shipment Pending', 'Payment Pending', 'Payment Done', 'Shipment Done'].map((status) => (
+                            {['All', 'Draft', 'Shipment Pending', 'Payment Pending', 'Payment Done', 'Shipment Done'].map((status) => (
                                 <button
                                     key={status}
                                     onClick={() => setFilterStatus(status)}
