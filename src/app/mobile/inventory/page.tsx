@@ -32,6 +32,7 @@ export default function MobileInventoryPage() {
     const [visibleCount, setVisibleCount] = useState(10);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
 
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState({
@@ -67,6 +68,19 @@ export default function MobileInventoryPage() {
                 } as ItemDocument));
 
                 setItems(fetchedItems);
+
+                // Calculate counts
+                const counts = {
+                    'All Items': fetchedItems.length,
+                    'Low Stock': fetchedItems.filter(item => {
+                        if (!item.manageStock) return false;
+                        const current = item.currentQuantity || 0;
+                        const warning = item.warningQuantity || 0;
+                        return current <= warning;
+                    }).length,
+                    'Managed': fetchedItems.filter(item => item.manageStock === true).length
+                };
+                setTabCounts(counts);
             } catch (error) {
                 console.error("Error fetching items:", error);
             } finally {
@@ -198,19 +212,29 @@ export default function MobileInventoryPage() {
             <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col">
                 {/* Tabs */}
                 <div className="px-4 pt-4 pb-3 bg-slate-50 sticky top-0 z-10">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 overflow-x-auto pt-2 pb-1 scrollbar-hide">
                         {(['All Items', 'Low Stock', 'Managed'] as const).map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={cn(
-                                    "px-4 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap",
+                                    "px-4 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap relative",
                                     activeTab === tab
                                         ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
                                         : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                                 )}
                             >
                                 {tab}
+                                {tabCounts[tab] !== undefined && (
+                                    <span className={cn(
+                                        "absolute -top-1.5 -right-1.5 flex h-4.5 min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold shadow-sm border",
+                                        activeTab === tab
+                                            ? "bg-white text-blue-600 border-blue-500"
+                                            : "bg-blue-600 text-white border-blue-700"
+                                    )}>
+                                        {tabCounts[tab]}
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </div>

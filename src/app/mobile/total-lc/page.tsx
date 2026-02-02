@@ -52,7 +52,7 @@ import {
     Settings2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, orderBy, query, limit, startAfter, QueryDocumentSnapshot, where } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, limit, startAfter, QueryDocumentSnapshot, where, getCountFromServer } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, parseISO, isValid } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
@@ -121,6 +121,38 @@ export default function MobileTotalLCPage() {
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
+
+    // Temporarily breaking the function
+    const calculatedStatusCounts = useMemo(() => {
+        const counts: Record<string, number> = {
+            'All': 0, 'Draft': 0, 'Transmitted': 0, 'Shipment Pending': 0, 'Payment Pending': 0, 'Payment Done': 0, 'Shipment Done': 0
+        };
+
+
+        // We filter the raw fetched LCs by the "global" context filters (Year, Applicant, Beneficiary, Terms)
+        // to get accurate counts for the current context. Search is excluded to keep tab totals useful.
+        const contextFilteredLcs = lcs.filter(lc => {
+            const matchesYear = filterYear === 'All' || lc.year === Number(filterYear);
+            const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
+            const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
+            const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
+            return matchesYear && matchesApplicant && matchesBeneficiary && matchesTerms;
+        });
+
+        counts['All'] = contextFilteredLcs.length;
+
+        contextFilteredLcs.forEach(lc => {
+            const statusArray = Array.isArray(lc.status) ? lc.status : [lc.status];
+            statusArray.forEach((s: any) => {
+                if (s && counts[s] !== undefined) {
+                    counts[s]++;
+                }
+            });
+        });
+
+        return counts;
+    }, [lcs, filterYear, filterApplicant, filterBeneficiary, filterTerms]);
+
     const fetchLCs = useCallback(async (isManual = false, isLoadMore = false) => {
         if (isLoadMore) setLoadingMore(true);
         else if (isManual) setIsRefreshing(true);
@@ -131,12 +163,10 @@ export default function MobileTotalLCPage() {
                 collection(firestore, "lc_entries")
             ];
 
-            if (filterStatus !== 'All') {
-                constraints.push(where("status", "array-contains", filterStatus));
-            }
-
+            // Only fetch by year if it doesn't break. Actually, for safety against index errors, 
+            // we fetch the most recent records and filter client-side.
             constraints.push(orderBy("createdAt", "desc"));
-            constraints.push(limit(10));
+            constraints.push(limit(200)); // Increased limit to ensure better client-side filtering and counting
 
             if (isLoadMore && lastDocRef.current) {
                 constraints.push(startAfter(lastDocRef.current));
@@ -158,7 +188,7 @@ export default function MobileTotalLCPage() {
 
             const lastVisible = snapshot.docs[snapshot.docs.length - 1];
             lastDocRef.current = (lastVisible as QueryDocumentSnapshot) || null;
-            setHasMore(snapshot.docs.length === 10);
+            setHasMore(snapshot.docs.length === 200);
 
         } catch (error) {
             console.error("Error fetching LCs:", error);
@@ -167,7 +197,9 @@ export default function MobileTotalLCPage() {
             else if (isManual) setTimeout(() => setIsRefreshing(false), 600);
             else setIsLoading(false);
         }
-    }, [filterStatus]);
+    }, [filterStatus, filterYear, filterApplicant, filterBeneficiary, filterTerms]);
+
+
     // Note: Dependencies are empty because lastDoc is now a Ref
 
     useEffect(() => {
@@ -198,21 +230,13 @@ export default function MobileTotalLCPage() {
                 (lc.applicantName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (lc.beneficiaryName?.toLowerCase().includes(searchTerm.toLowerCase()));
 
-            const statusArray = Array.isArray(lc.status) ? lc.status : [lc.status];
-            const matchesStatus = filterStatus === 'All' || statusArray.includes(filterStatus as LCStatus);
-
+            const matchesStatus = filterStatus === 'All' || (Array.isArray(lc.status) ? (lc.status as any[]).includes(filterStatus) : (lc.status as any) === filterStatus);
+            const matchesYear = filterYear === 'All' || lc.year === Number(filterYear);
             const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
             const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
-
-            let matchesYear = true;
-            if (filterYear !== 'All') {
-                const date = lc.createdAt && (lc.createdAt as any).toDate ? (lc.createdAt as any).toDate() : new Date(lc.createdAt || '');
-                matchesYear = isValid(date) && date.getFullYear().toString() === filterYear;
-            }
-
             const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
 
-            return matchesSearch && matchesStatus && matchesApplicant && matchesBeneficiary && matchesYear && matchesTerms;
+            return matchesSearch && matchesStatus && matchesYear && matchesApplicant && matchesBeneficiary && matchesTerms;
         }).sort((a, b) => {
             if (sortBy === 'Amount') {
                 return Number(b.amount || 0) - Number(a.amount || 0);
@@ -225,7 +249,7 @@ export default function MobileTotalLCPage() {
             const dateB = b.createdAt && (b.createdAt as any).toDate ? (b.createdAt as any).toDate() : new Date(b.createdAt || 0);
             return dateB.getTime() - dateA.getTime();
         });
-    }, [lcs, searchTerm, filterStatus, filterApplicant, filterBeneficiary, filterYear, filterTerms, sortBy]);
+    }, [lcs, searchTerm, sortBy, filterStatus, filterYear, filterApplicant, filterBeneficiary, filterTerms]);
 
     const applicants = useMemo(() => Array.from(new Set(lcs.map(lc => lc.applicantName).filter(Boolean))), [lcs]);
     const beneficiaries = useMemo(() => Array.from(new Set(lcs.map(lc => lc.beneficiaryName).filter(Boolean))), [lcs]);
@@ -270,7 +294,7 @@ export default function MobileTotalLCPage() {
                     <div className="px-4 pt-[calc(env(safe-area-inset-top)+10px)] pb-4 flex items-center justify-between">
                         <button
                             onClick={() => router.back()}
-                            className="p-2 bg-white/10 rounded-xl text-white hover:bg-white/20 transition-all active:scale-95"
+                            className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-all active:scale-95"
                         >
                             <ArrowLeft className="h-6 w-6" />
                         </button>
@@ -286,6 +310,41 @@ export default function MobileTotalLCPage() {
                             >
                                 <RefreshCw className="h-5 w-5 opacity-90" />
                             </button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        className="p-2.5 bg-white/10 rounded-full text-white hover:bg-white/20 transition-all active:scale-90"
+                                    >
+                                        <Calendar className="h-5 w-5 opacity-90" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-36 rounded-2xl p-1.5 bg-white/95 backdrop-blur-md border-slate-100 shadow-2xl max-h-[60vh] overflow-y-auto scrollbar-hide">
+                                    <div className="px-2 py-1.5 mb-1">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Year</span>
+                                    </div>
+                                    <DropdownMenuItem
+                                        onClick={() => setFilterYear('All')}
+                                        className={cn(
+                                            "rounded-xl focus:bg-blue-50 focus:text-blue-600 transition-colors py-2.5 px-3 text-sm font-medium",
+                                            filterYear === 'All' ? "bg-blue-50 text-blue-600 font-bold" : "text-slate-600"
+                                        )}
+                                    >
+                                        All Years
+                                    </DropdownMenuItem>
+                                    {years.map(year => (
+                                        <DropdownMenuItem
+                                            key={year}
+                                            onClick={() => setFilterYear(year)}
+                                            className={cn(
+                                                "rounded-xl focus:bg-blue-50 focus:text-blue-600 transition-colors py-2.5 px-3 text-sm font-medium",
+                                                filterYear === year ? "bg-blue-50 text-blue-600 font-bold" : "text-slate-600"
+                                            )}
+                                        >
+                                            {year}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                             <Sheet>
                                 <SheetTrigger asChild>
                                     <button
@@ -366,11 +425,12 @@ export default function MobileTotalLCPage() {
                                                         onChange={(e) => setFilterStatus(e.target.value)}
                                                     >
                                                         <option value="All">All Status</option>
+                                                        <option value="Draft">Draft</option>
+                                                        <option value="Transmitted">Transmitted</option>
                                                         <option value="Shipment Pending">Shipment Pending</option>
                                                         <option value="Payment Pending">Payment Pending</option>
                                                         <option value="Payment Done">Payment Done</option>
                                                         <option value="Shipment Done">Shipment Done</option>
-                                                        <option value="Draft">Draft</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -428,19 +488,29 @@ export default function MobileTotalLCPage() {
                             )}
                         </div>
 
-                        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                            {['All', 'Draft', 'Shipment Pending', 'Payment Pending', 'Payment Done', 'Shipment Done'].map((status) => (
+                        <div className="flex gap-2 overflow-x-auto pt-2 pb-1 scrollbar-hide">
+                            {['All', 'Draft', 'Transmitted', 'Shipment Pending', 'Payment Pending', 'Payment Done', 'Shipment Done'].map((status) => (
                                 <button
                                     key={status}
                                     onClick={() => setFilterStatus(status)}
                                     className={cn(
-                                        "px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all",
+                                        "px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all relative",
                                         filterStatus === status
                                             ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
                                             : "bg-white text-slate-600 border border-slate-100 hover:bg-slate-50"
                                     )}
                                 >
                                     {status}
+                                    {calculatedStatusCounts[status] !== undefined && (
+                                        <span className={cn(
+                                            "absolute -top-1.5 -right-1.5 flex h-4.5 min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold shadow-sm border",
+                                            filterStatus === status
+                                                ? "bg-white text-blue-600 border-blue-500"
+                                                : "bg-blue-600 text-white border-blue-700"
+                                        )}>
+                                            {calculatedStatusCounts[status]}
+                                        </span>
+                                    )}
                                 </button>
                             ))}
                         </div>
