@@ -434,6 +434,8 @@ export const NoticeBoardSettingsSchema = z.object({
   targetRoles: z.array(z.enum(userRoles)).min(1, "At least one target role must be selected."),
   displayStartDate: z.date().optional().nullable(),
   displayEndDate: z.date().optional().nullable(),
+  announcementDate: z.date().optional().nullable(),
+  emailSent: z.boolean().default(false).optional(),
 });
 
 export type NoticeBoardSettings = z.infer<typeof NoticeBoardSettingsSchema> & {
@@ -1897,6 +1899,7 @@ export const HolidaySchema = z.object({
   toDate: z.date().optional(),
   type: z.enum(holidayTypeOptions, { required_error: "Holiday type is required." }),
   message: z.string().optional(),
+  announcementDate: z.date().optional(),
 }).refine(data => {
   if (data.fromDate && data.toDate) {
     return data.toDate >= data.fromDate;
@@ -1916,6 +1919,7 @@ export interface HolidayDocument {
   toDate?: string; // ISO string
   type: HolidayType;
   message?: string;
+  announcementDate?: string; // ISO string
   emailSent?: boolean;
   createdAt: any;
 }

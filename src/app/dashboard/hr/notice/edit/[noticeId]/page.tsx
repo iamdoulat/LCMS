@@ -46,6 +46,7 @@ export default function EditNoticePage() {
       targetRoles: [],
       displayStartDate: undefined,
       displayEndDate: undefined,
+      announcementDate: undefined,
     },
   });
 
@@ -85,6 +86,7 @@ export default function EditNoticePage() {
             targetRoles: Array.isArray(data.targetRoles) ? data.targetRoles : [],
             displayStartDate: data.displayStartDate ? (data.displayStartDate as any).toDate() : undefined,
             displayEndDate: data.displayEndDate ? (data.displayEndDate as any).toDate() : undefined,
+            announcementDate: data.announcementDate ? (data.announcementDate as any).toDate() : undefined,
           });
         } else {
           Swal.fire("Error", "Notice not found.", "error");
@@ -106,7 +108,14 @@ export default function EditNoticePage() {
     setIsSubmitting(true);
     try {
       const noticeDocRef = doc(firestore, 'site_settings', noticeId);
-      await updateDoc(noticeDocRef, { ...data, updatedAt: serverTimestamp() });
+      const updateData = { ...data, updatedAt: serverTimestamp() };
+
+      // If announcementDate is changed to a future date, reset emailSent flag
+      if (form.formState.dirtyFields.announcementDate && data.announcementDate && data.announcementDate > new Date()) {
+        (updateData as any).emailSent = false;
+      }
+
+      await updateDoc(noticeDocRef, updateData);
       Swal.fire("Success", "Notice settings have been updated.", "success");
       router.push('/dashboard/hr/notice');
     } catch (error) {
@@ -191,6 +200,22 @@ export default function EditNoticePage() {
                 />
               </div>
 
+              <FormField
+                control={form.control}
+                name="announcementDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Announcement Date & Time (For Notifications)</FormLabel>
+                    <DatePickerField
+                      field={field}
+                      placeholder="Select date and time"
+                      showTimeSelect={true}
+                    />
+                    <FormDescription>When to send Email/WhatsApp notifications.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="content"

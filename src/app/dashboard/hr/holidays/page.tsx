@@ -132,6 +132,7 @@ export default function HolidaysPage() {
                     <TableHead className="w-[25%] whitespace-nowrap">Holiday Name</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Announcement Date</TableHead>
                     <TableHead>Email Sent</TableHead>
                     <TableHead className="w-[40%]">Message</TableHead>
                     {!isReadOnly && <TableHead className="text-right">Actions</TableHead>}
@@ -144,6 +145,9 @@ export default function HolidaysPage() {
                       <TableCell className="whitespace-nowrap">{holiday.name}</TableCell>
                       <TableCell className="min-w-[200px]">{formatHolidayDate(holiday)}</TableCell>
                       <TableCell>{holiday.type}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {holiday.announcementDate ? format(parseISO(holiday.announcementDate), 'PPP p') : 'N/A'}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={holiday.emailSent ? "default" : "secondary"}>
                           {holiday.emailSent ? "True" : "False"}

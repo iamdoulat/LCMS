@@ -199,6 +199,7 @@ export default function ManageNoticesPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Target Roles</TableHead>
                   <TableHead>Periods</TableHead>
+                  <TableHead>Announcement Date</TableHead>
                   <TableHead>Last Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -243,6 +244,9 @@ export default function ManageNoticesPage() {
                             <span className="text-muted-foreground">Always</span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {notice.announcementDate ? formatDisplayDate(notice.announcementDate) : 'N/A'}
                       </TableCell>
                       <TableCell>{formatDisplayDate(notice.updatedAt)}</TableCell>
                       <TableCell className="text-right">

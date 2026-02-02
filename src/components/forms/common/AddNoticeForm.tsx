@@ -39,6 +39,7 @@ export function AddNoticeForm() {
       targetRoles: [],
       displayStartDate: undefined,
       displayEndDate: undefined,
+      announcementDate: undefined,
     },
   });
 
@@ -51,22 +52,26 @@ export function AddNoticeForm() {
         updatedAt: serverTimestamp(),
       });
 
-      // Send Push Notification
-      try {
-        if (data.isEnabled) {
-          await fetch('/api/notifications/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: `New Notice: ${data.title}`,
-              body: 'A new important notice has been posted. Click to view.',
-              targetRoles: data.targetRoles,
-              badgeCount: 1 // Increment or set badge
-            })
-          });
+      // Send Push Notification asynchronously only if no announcement date or it's now/past
+      const shouldNotifyImmediately = !data.announcementDate || new Date(data.announcementDate) <= new Date();
+
+      if (shouldNotifyImmediately) {
+        try {
+          if (data.isEnabled) {
+            await fetch('/api/notifications/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: `New Notice: ${data.title}`,
+                body: 'A new important notice has been posted. Click to view.',
+                targetRoles: data.targetRoles,
+                badgeCount: 1 // Increment or set badge
+              })
+            });
+          }
+        } catch (notifyError) {
+          console.error("Failed to send notification:", notifyError);
         }
-      } catch (notifyError) {
-        console.error("Failed to send notification:", notifyError);
       }
 
       Swal.fire("Success", "New notice has been created successfully.", "success");
@@ -125,6 +130,23 @@ export function AddNoticeForm() {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="announcementDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Announcement Date & Time (For Notifications)</FormLabel>
+              <DatePickerField
+                field={field}
+                placeholder="Select date and time"
+                showTimeSelect={true}
+              />
+              <FormDescription>When to send Email/WhatsApp notifications.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -223,6 +245,6 @@ export function AddNoticeForm() {
           {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating Notice...</> : <><Save className="mr-2 h-4 w-4" />Create Notice</>}
         </Button>
       </form>
-    </Form >
+    </Form>
   );
 }

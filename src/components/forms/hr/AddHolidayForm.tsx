@@ -34,6 +34,7 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
       toDate: undefined,
       type: 'Public Holiday',
       message: '',
+      announcementDate: undefined,
     },
   });
 
@@ -44,6 +45,7 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
       fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       toDate: data.toDate ? format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       message: data.message || undefined,
+      announcementDate: data.announcementDate ? format(data.announcementDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       createdAt: serverTimestamp(),
     };
 
@@ -54,27 +56,35 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
     if (!dataToSave.message) {
       delete (dataToSave as any).message;
     }
+    if (!dataToSave.announcementDate) {
+      delete (dataToSave as any).announcementDate;
+    }
 
     try {
       const docRef = await addDoc(collection(firestore, "holidays"), dataToSave);
 
       // Trigger Email Notifications asynchronously
-      fetch('/api/notify/holiday', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          holidayId: docRef.id,
-          holidayData: {
-            title: data.name,
-            fromDate: format(data.fromDate, 'PPPP'),
-            toDate: data.toDate ? format(data.toDate, 'PPPP') : undefined,
-            type: data.type,
-            description: data.message || '',
-          }
-        }),
-      }).catch(err => console.error("Holiday Notification Error:", err));
+      // Trigger Email Notifications asynchronously only if no announcement date or it's now/past
+      const shouldNotifyImmediately = !data.announcementDate || new Date(data.announcementDate) <= new Date();
+
+      if (shouldNotifyImmediately) {
+        fetch('/api/notify/holiday', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            holidayId: docRef.id,
+            holidayData: {
+              title: data.name,
+              fromDate: format(data.fromDate, 'PPPP'),
+              toDate: data.toDate ? format(data.toDate, 'PPPP') : undefined,
+              type: data.type,
+              description: data.message || '',
+            }
+          }),
+        }).catch(err => console.error("Holiday Notification Error:", err));
+      }
 
       Swal.fire({
         title: "Holiday Added!",
@@ -154,6 +164,21 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="announcementDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Announcement Date & Time (For Notifications)</FormLabel>
+              <DatePickerField
+                field={field}
+                placeholder="Select date and time"
+                showTimeSelect={true}
+              />
               <FormMessage />
             </FormItem>
           )}

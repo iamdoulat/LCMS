@@ -30,11 +30,12 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
   const form = useForm<HolidayFormValues>({
     resolver: zodResolver(HolidaySchema),
     defaultValues: {
-        name: initialData.name,
-        fromDate: parseISO(initialData.fromDate),
-        toDate: initialData.toDate ? parseISO(initialData.toDate) : undefined,
-        type: initialData.type,
-        message: initialData.message || '',
+      name: initialData.name,
+      fromDate: parseISO(initialData.fromDate),
+      toDate: initialData.toDate ? parseISO(initialData.toDate) : undefined,
+      type: initialData.type,
+      message: initialData.message || '',
+      announcementDate: initialData.announcementDate ? parseISO(initialData.announcementDate) : undefined,
     },
   });
 
@@ -45,15 +46,24 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
       fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       toDate: data.toDate ? format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       message: data.message || undefined,
+      announcementDate: data.announcementDate ? format(data.announcementDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       updatedAt: serverTimestamp(),
     };
-    
+
+    // If announcementDate is changed to a future date, reset emailSent flag
+    if (form.formState.dirtyFields.announcementDate && data.announcementDate && data.announcementDate > new Date()) {
+      (dataToUpdate as any).emailSent = false;
+    }
+
     // Ensure undefined fields are handled correctly for Firestore
     if (!dataToUpdate.toDate) {
       delete (dataToUpdate as any).toDate;
     }
     if (!dataToUpdate.message) {
       delete (dataToUpdate as any).message;
+    }
+    if (!dataToUpdate.announcementDate) {
+      delete (dataToUpdate as any).announcementDate;
     }
 
     try {
@@ -139,7 +149,22 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
             </FormItem>
           )}
         />
-         <FormField
+        <FormField
+          control={form.control}
+          name="announcementDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Announcement Date & Time (For Notifications)</FormLabel>
+              <DatePickerField
+                field={field}
+                placeholder="Select date and time"
+                showTimeSelect={true}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
           control={form.control}
           name="message"
           render={({ field }) => (
@@ -153,19 +178,19 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
           )}
         />
         <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
-                <>
+              <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
-                </>
+              </>
             ) : (
-                <>
+              <>
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
-                </>
+              </>
             )}
-            </Button>
+          </Button>
         </div>
       </form>
     </Form>
