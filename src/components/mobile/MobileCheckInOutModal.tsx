@@ -15,6 +15,7 @@ import dynamic from 'next/dynamic';
 import { getValidOption } from '@/types';
 import { getCurrentLocation, reverseGeocode, uploadCheckInOutImage, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
 import type { MultipleCheckInOutRecord, MultipleCheckInOutLocation } from '@/types/checkInOut';
+import { compressImage } from '@/lib/image-utils';
 
 // Dynamic import for map
 const LocationMap = dynamic(() => import('@/components/ui/LocationMap'), {
@@ -134,7 +135,42 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
             // Upload Image if present using shared helper
             let photoUrl = '';
             if (selectedFile) {
-                photoUrl = await uploadCheckInOutImage(selectedFile, canonicalId, checkInOutType);
+                try {
+                    // Show compression feedback
+                    Swal.fire({
+                        title: 'Optimizing Image...',
+                        text: 'Compressing photo for faster upload',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Compress image before upload to reduce size and upload time
+                    const compressedFile = await compressImage(selectedFile, 1024, 0.7);
+
+                    // Show upload feedback
+                    Swal.fire({
+                        title: 'Uploading Image...',
+                        text: 'Please wait',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    photoUrl = await uploadCheckInOutImage(compressedFile, canonicalId, checkInOutType);
+                    Swal.close();
+                } catch (imgError) {
+                    console.error("Image processing error:", imgError);
+                    Swal.fire({
+                        title: "Image Upload Failed",
+                        text: "Proceeding without image. Location and details will still be recorded.",
+                        icon: "warning",
+                        timer: 2000
+                    });
+                    photoUrl = ''; // Proceed without image
+                }
             }
 
             // Create Record using shared helper
