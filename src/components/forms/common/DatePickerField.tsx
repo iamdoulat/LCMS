@@ -95,6 +95,7 @@ export function DatePickerField({
           {!showTimeSelect && (
             <div className="p-2 border-t border-border w-full">
               <Button
+                type="button"
                 variant="ghost"
                 className="w-full h-8 text-xs"
                 onClick={() => {
@@ -183,6 +184,7 @@ function TimePickerContent({ value, onChange, onDone }: { value: Date, onChange:
         {/* AM/PM Toggle Group - More reliable than Select for 2 items */}
         <div className="flex border border-slate-200 rounded-md overflow-hidden bg-white">
           <Button
+            type="button"
             variant={currentAMPM === "AM" ? "default" : "ghost"}
             size="sm"
             className={cn(
@@ -194,6 +196,7 @@ function TimePickerContent({ value, onChange, onDone }: { value: Date, onChange:
             AM
           </Button>
           <Button
+            type="button"
             variant={currentAMPM === "PM" ? "default" : "ghost"}
             size="sm"
             className={cn(
@@ -208,6 +211,7 @@ function TimePickerContent({ value, onChange, onDone }: { value: Date, onChange:
       </div>
       <div className="flex gap-2 w-full mt-2">
         <Button
+          type="button"
           variant="outline"
           size="sm"
           className="flex-1 text-xs"
@@ -219,6 +223,7 @@ function TimePickerContent({ value, onChange, onDone }: { value: Date, onChange:
           Reset
         </Button>
         <Button
+          type="button"
           variant="default"
           size="sm"
           className="flex-1 font-bold bg-blue-600 hover:bg-blue-700 text-white"
