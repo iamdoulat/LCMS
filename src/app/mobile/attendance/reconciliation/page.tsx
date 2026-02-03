@@ -25,8 +25,9 @@ function ReconciliationForm() {
     const attendanceDateParam = searchParams.get('date');
     const employeeIdParam = searchParams.get('employeeId');
 
-    const [activeTab, setActiveTab] = useState<'in' | 'out' | 'both'>('out');
+    const [activeTab, setActiveTab] = useState<'in' | 'out' | 'both'>('in');
     const [loading, setLoading] = useState(false);
+    const [isFetching, setIsFetching] = useState(true);
     const [employeeData, setEmployeeData] = useState<any>(null);
 
     // Helper for safe date parsing
@@ -83,6 +84,7 @@ function ReconciliationForm() {
         const fetchData = async () => {
             if (currentEmployeeId) {
                 try {
+                    setIsFetching(true);
                     const { firestore } = await import('@/lib/firebase/config');
                     const { doc, getDoc } = await import('firebase/firestore');
 
@@ -116,7 +118,11 @@ function ReconciliationForm() {
                     }
                 } catch (e) {
                     console.error("Error fetching data:", e);
+                } finally {
+                    setIsFetching(false);
                 }
+            } else {
+                setIsFetching(false);
             }
         };
         fetchData();
@@ -210,122 +216,131 @@ function ReconciliationForm() {
             </div>
 
             <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col">
-                <div className="p-6 space-y-6 overflow-y-auto pb-24">
-                    <div className="flex bg-white p-1 rounded-xl shadow-sm">
-                        <button
-                            onClick={() => setActiveTab('in')}
-                            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'in' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
-                                }`}
-                        >
-                            In Time
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('out')}
-                            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'out' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
-                                }`}
-                        >
-                            Out Time
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('both')}
-                            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'both' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
-                                }`}
-                        >
-                            Both
-                        </button>
-                    </div>
-
-                    <div className="bg-white rounded-2xl p-6 shadow-sm space-y-6">
-                        {(activeTab === 'in' || activeTab === 'both') && (
-                            <>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700 flex">In Time Date<span className="text-red-500">*</span></label>
-                                    <div className="relative">
-                                        <Input
-                                            type="date"
-                                            value={inTimeDate}
-                                            onChange={(e) => setInTimeDate(e.target.value)}
-                                            className="pl-4 h-12 bg-slate-50 border-slate-200"
-                                        />
-                                        <Calendar className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700 flex">In Time<span className="text-red-500">*</span></label>
-                                    <div className="relative">
-                                        <Input
-                                            type="time"
-                                            value={inTime}
-                                            onChange={(e) => setInTime(e.target.value)}
-                                            className="pl-4 h-12 bg-slate-50 border-slate-200 appearance-none"
-                                        />
-                                        <Clock className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        {(activeTab === 'out' || activeTab === 'both') && (
-                            <>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700 flex">Out Time Date<span className="text-red-500">*</span></label>
-                                    <div className="relative">
-                                        <Input
-                                            type="date"
-                                            value={outTimeDate}
-                                            onChange={(e) => setOutTimeDate(e.target.value)}
-                                            className="pl-4 h-12 bg-slate-50 border-slate-200"
-                                        />
-                                        <Calendar className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700 flex">Out Time<span className="text-red-500">*</span></label>
-                                    <div className="relative">
-                                        <Input
-                                            type="time"
-                                            value={outTime}
-                                            onChange={(e) => setOutTime(e.target.value)}
-                                            className="pl-4 h-12 bg-slate-50 border-slate-200"
-                                        />
-                                        <Clock className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        {(activeTab === 'in' || activeTab === 'both') && (
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700 flex">In Time Remarks<span className="text-red-500">*</span></label>
-                                <Textarea
-                                    value={inTimeRemarks}
-                                    onChange={(e) => setInTimeRemarks(e.target.value)}
-                                    className="bg-slate-50 border-slate-200 min-h-[80px] resize-none"
-                                />
+                <div className="p-6 space-y-6 overflow-y-auto pb-[200px]">
+                    {isFetching ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                            <Loader2 className="w-10 h-10 animate-spin text-blue-600 mb-4" />
+                            <p className="text-sm font-medium">Loading details...</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex bg-white p-1 rounded-xl shadow-sm">
+                                <button
+                                    onClick={() => setActiveTab('in')}
+                                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'in' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    In Time
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('out')}
+                                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'out' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    Out Time
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('both')}
+                                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === 'both' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
+                                        }`}
+                                >
+                                    Both
+                                </button>
                             </div>
-                        )}
 
-                        {(activeTab === 'out' || activeTab === 'both') && (
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700 flex">Out Time Remarks<span className="text-red-500">*</span></label>
-                                <Textarea
-                                    value={outTimeRemarks}
-                                    onChange={(e) => setOutTimeRemarks(e.target.value)}
-                                    className="bg-slate-50 border-slate-200 min-h-[80px] resize-none"
-                                />
+                            <div className="bg-white rounded-2xl p-6 shadow-sm space-y-6">
+                                {(activeTab === 'in' || activeTab === 'both') && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700 flex">In Time Date<span className="text-red-500">*</span></label>
+                                            <div className="relative">
+                                                <Input
+                                                    type="date"
+                                                    value={inTimeDate}
+                                                    onChange={(e) => setInTimeDate(e.target.value)}
+                                                    className="pl-4 h-12 bg-slate-50 border-slate-200"
+                                                />
+                                                <Calendar className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700 flex">In Time<span className="text-red-500">*</span></label>
+                                            <div className="relative">
+                                                <Input
+                                                    type="time"
+                                                    value={inTime}
+                                                    onChange={(e) => setInTime(e.target.value)}
+                                                    className="pl-4 h-12 bg-slate-50 border-slate-200 appearance-none"
+                                                />
+                                                <Clock className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {(activeTab === 'out' || activeTab === 'both') && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700 flex">Out Time Date<span className="text-red-500">*</span></label>
+                                            <div className="relative">
+                                                <Input
+                                                    type="date"
+                                                    value={outTimeDate}
+                                                    onChange={(e) => setOutTimeDate(e.target.value)}
+                                                    className="pl-4 h-12 bg-slate-50 border-slate-200"
+                                                />
+                                                <Calendar className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-bold text-slate-700 flex">Out Time<span className="text-red-500">*</span></label>
+                                            <div className="relative">
+                                                <Input
+                                                    type="time"
+                                                    value={outTime}
+                                                    onChange={(e) => setOutTime(e.target.value)}
+                                                    className="pl-4 h-12 bg-slate-50 border-slate-200"
+                                                />
+                                                <Clock className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {(activeTab === 'in' || activeTab === 'both') && (
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-slate-700 flex">In Time Remarks<span className="text-red-500">*</span></label>
+                                        <Textarea
+                                            value={inTimeRemarks}
+                                            onChange={(e) => setInTimeRemarks(e.target.value)}
+                                            className="bg-slate-50 border-slate-200 min-h-[80px] resize-none"
+                                        />
+                                    </div>
+                                )}
+
+                                {(activeTab === 'out' || activeTab === 'both') && (
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-slate-700 flex">Out Time Remarks<span className="text-red-500">*</span></label>
+                                        <Textarea
+                                            value={outTimeRemarks}
+                                            onChange={(e) => setOutTimeRemarks(e.target.value)}
+                                            className="bg-slate-50 border-slate-200 min-h-[80px] resize-none"
+                                        />
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
 
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={loading}
-                        className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-lg font-bold shadow-lg shadow-blue-200 mb-20"
-                    >
-                        {loading ? <Loader2 className="animate-spin" /> : 'Submit'}
-                    </Button>
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-lg font-bold shadow-lg shadow-blue-200 mb-6"
+                            >
+                                {loading ? <Loader2 className="animate-spin" /> : 'Submit'}
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
