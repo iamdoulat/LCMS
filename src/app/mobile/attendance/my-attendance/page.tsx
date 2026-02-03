@@ -366,21 +366,41 @@ export default function MyAttendancePage() {
     };
 
     const calculateWorkTime = (inTime?: string, outTime?: string) => {
-        if (!inTime || !outTime) return '-';
-        try {
-            // Parse ISO strings directly
-            const inDate = new Date(inTime);
-            const outDate = new Date(outTime);
+        if (!inTime || !outTime) {
+            return '-';
+        }
 
-            // Check if dates are valid
+        try {
+            let inDate: Date;
+            let outDate: Date;
+
+            // Try parsing as ISO string first
+            inDate = parseISO(inTime);
+            outDate = parseISO(outTime);
+
+            // If parseISO fails (returns Invalid Date), try parsing as formatted time (e.g., "09:00 AM")
             if (isNaN(inDate.getTime()) || isNaN(outDate.getTime())) {
-                return '-';
+                // These are formatted times like "09:00 AM", need to combine with today's date
+                // Use the attendance record's date if available, otherwise use today
+                const baseDate = new Date();
+
+                // Parse the time portion using date-fns parse
+                const { parse } = require('date-fns');
+                inDate = parse(inTime, 'hh:mm a', baseDate);
+                outDate = parse(outTime, 'hh:mm a', baseDate);
+
+                // Check if parsing succeeded
+                if (isNaN(inDate.getTime()) || isNaN(outDate.getTime())) {
+                    return '-';
+                }
             }
 
             const diffMs = outDate.getTime() - inDate.getTime();
 
             // Handle negative time (out before in)
-            if (diffMs < 0) return '-';
+            if (diffMs < 0) {
+                return '-';
+            }
 
             const hours = Math.floor(diffMs / (1000 * 60 * 60));
             const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
