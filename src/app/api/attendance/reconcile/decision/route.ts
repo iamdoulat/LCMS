@@ -104,15 +104,17 @@ export async function POST(req: NextRequest) {
 
                     // Process Times
                     if (reconData.requestedInTime) {
-                        const inTime = formatToBDTime(reconData.requestedInTime);
-                        updates.inTime = inTime;
-                        // Determine flag
-                        updates.flag = determineAttendanceFlag(inTime);
+                        // updates.inTime = formatToBDTime(reconData.requestedInTime); // OLD: Saved formatted time
+                        updates.inTime = reconData.requestedInTime; // NEW: Save ISO string
+
+                        // Calculate flag using BD time
+                        const bdTime = formatToBDTime(reconData.requestedInTime);
+                        updates.flag = determineAttendanceFlag(bdTime);
                     }
 
                     if (reconData.requestedOutTime) {
-                        const outTime = formatToBDTime(reconData.requestedOutTime);
-                        updates.outTime = outTime;
+                        // updates.outTime = formatToBDTime(reconData.requestedOutTime); // OLD
+                        updates.outTime = reconData.requestedOutTime; // NEW: Save ISO string
                     }
 
                     if (reconData.inTimeRemarks) updates.inTimeRemarks = reconData.inTimeRemarks;
