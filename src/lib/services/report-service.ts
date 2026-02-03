@@ -15,7 +15,7 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
     const end = endOfMonth(date);
 
     // Fetch Employees
-    let employeesQuery = admin.firestore().collection('employees').where('isActive', '==', true);
+    let employeesQuery = admin.firestore().collection('employees').where('status', 'in', ['Active', 'On Leave']);
     if (targetEmail) {
         employeesQuery = employeesQuery.where('email', '==', targetEmail);
     }
