@@ -37,15 +37,9 @@ export default function ReconApprovalPage() {
     const { isSupervisor, supervisedEmployees, explicitSubordinates, currentEmployeeId } = useSupervisorCheck(user?.email);
     const router = useRouter();
 
-    const isSuperAdminOrAdmin = React.useMemo(() => {
-        if (!userRole) return false;
-        return userRole.includes('Super Admin') || userRole.includes('Admin');
-    }, [userRole]);
-
-    const effectiveSupervisedEmployees = React.useMemo(() => {
-        if (isSuperAdminOrAdmin) return supervisedEmployees;
-        return explicitSubordinates;
-    }, [isSuperAdminOrAdmin, supervisedEmployees, explicitSubordinates]);
+    // Restrict to explicit subordinates (direct reports) only, even for Admins.
+    // This ensures Supervisors/Admins can only approve for their actual supervision team.
+    const effectiveSupervisedEmployees = explicitSubordinates;
 
     const [activeTab, setActiveTab] = useState<'attendance' | 'breaktime'>('attendance');
     const [requests, setRequests] = useState<ReconRequest[]>([]);
