@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
-import { collection, query, where, getDocs, orderBy, limit, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, updateDoc, doc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, subDays, parseISO } from 'date-fns';
 import { ChevronLeft, Calendar, Check, X, Loader2, ArrowLeft } from 'lucide-react';
@@ -19,6 +19,8 @@ interface ReconRequest {
     id: string;
     employeeId: string;
     employeeName: string;
+    employeeCode?: string; // Stored in doc
+    designation?: string; // Stored in doc
     attendanceDate: string; // YYYY-MM-DD
     status: 'pending' | 'approved' | 'rejected';
     requestedInTime?: string;
@@ -30,6 +32,8 @@ interface ReconRequest {
     breakEndTime?: string;
     reason?: string;
     type?: 'break'; // if we merge collections? but requirements say Tabs.
+    actualInTime?: string;
+    actualOutTime?: string;
 }
 
 export default function ReconApprovalPage() {
@@ -177,6 +181,25 @@ export default function ReconApprovalPage() {
                         fetchedRequests.push({ id: doc.id, ...doc.data() } as ReconRequest);
                     });
                 }
+            }
+
+            // Fetch actual attendance data for each request
+            if (activeTab === 'attendance') {
+                await Promise.all(fetchedRequests.map(async (req) => {
+                    try {
+                        if (req.attendanceDate && req.employeeId) {
+                            const docId = `${req.employeeId}_${req.attendanceDate}`;
+                            const attDoc = await getDoc(doc(firestore, 'attendance', docId));
+                            if (attDoc.exists()) {
+                                const attData = attDoc.data();
+                                req.actualInTime = attData.clockIn;
+                                req.actualOutTime = attData.clockOut;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error fetching attendance details for recon:", e);
+                    }
+                }));
             }
 
             // Sort client side
@@ -488,7 +511,7 @@ export default function ReconApprovalPage() {
                                         {activeTab === 'attendance' ? 'Attendance Reconciliation' : 'Breaktime Reconciliation'} for <span className="text-blue-600">{formatDate(req.attendanceDate)}</span>
                                     </h3>
 
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between mb-4">
                                         {/* Action Buttons if Pending */}
                                         {req.status === 'pending' ? (
                                             <div className="flex gap-2 w-full">
@@ -520,15 +543,71 @@ export default function ReconApprovalPage() {
                                         )}
                                     </div>
 
+                                    {/* Time Comparison & Remarks */}
+                                    <div className="space-y-3">
+                                        {/* Comparison Grid */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {/* Actual Time */}
+                                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
+                                                <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">Actual Time</div>
+                                                <div className="space-y-1.5">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-bold text-slate-400 w-8">IN</span>
+                                                        <span className={`text-xs font-bold ${req.actualInTime ? 'text-slate-700' : 'text-slate-400 italic'}`}>
+                                                            {formatTime(req.actualInTime) !== '-' ? formatTime(req.actualInTime) : 'Not marked'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-bold text-slate-400 w-8">OUT</span>
+                                                        <span className={`text-xs font-bold ${req.actualOutTime ? 'text-slate-700' : 'text-slate-400 italic'}`}>
+                                                            {formatTime(req.actualOutTime) !== '-' ? formatTime(req.actualOutTime) : 'Not marked'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Recon Time */}
+                                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+                                                <div className="text-[10px] font-bold text-blue-400 uppercase mb-2 tracking-wider">Recon. Time</div>
+                                                <div className="space-y-1.5">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-bold text-blue-400 w-8">IN</span>
+                                                        <span className="text-xs font-bold text-blue-700">
+                                                            {req.requestedInTime ? formatTime(req.requestedInTime) : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] font-bold text-blue-400 w-8">OUT</span>
+                                                        <span className="text-xs font-bold text-blue-700">
+                                                            {req.requestedOutTime ? formatTime(req.requestedOutTime) : '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Remarks Section */}
+                                        {(req.inTimeRemarks || req.outTimeRemarks || req.reason) && (
+                                            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
+                                                <div className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Remarks</div>
+                                                <div className="text-xs text-indigo-900 space-y-1">
+                                                    {req.reason && <p className="italic">"{req.reason}"</p>}
+                                                    {req.inTimeRemarks && <div className="flex gap-1"><span className="font-semibold text-indigo-500 text-[10px] uppercase mt-0.5">In:</span> <span>{req.inTimeRemarks}</span></div>}
+                                                    {req.outTimeRemarks && <div className="flex gap-1"><span className="font-semibold text-indigo-500 text-[10px] uppercase mt-0.5">Out:</span> <span>{req.outTimeRemarks}</span></div>}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {/* Timestamp if needed like image */}
                                     <div className="mt-3 pt-3 border-t border-slate-50 flex justify-between items-center text-[10px] bg-slate-50 -mx-5 -mb-5 p-3 text-slate-500 font-bold rounded-b-2xl">
                                         <div className="flex items-center gap-2">
                                             <div className="text-blue-600 px-2 py-1 bg-blue-50/50 rounded border border-blue-100/50">
-                                                Emp: {employeeMap[req.employeeId]?.employeeCode || 'N/A'}
+                                                Emp: {req.employeeCode || employeeMap[req.employeeId]?.employeeCode || 'N/A'}
                                             </div>
-                                            {employeeMap[req.employeeId]?.designation && (
+                                            {(req.designation || employeeMap[req.employeeId]?.designation) && (
                                                 <div className="text-slate-600 px-2 py-1 bg-slate-100/50 rounded border border-slate-200/50 truncate max-w-[120px]">
-                                                    {employeeMap[req.employeeId]?.designation}
+                                                    {req.designation || employeeMap[req.employeeId]?.designation}
                                                 </div>
                                             )}
                                         </div>

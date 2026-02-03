@@ -31,12 +31,16 @@ function ReconciliationForm() {
     const [employeeData, setEmployeeData] = useState<any>(null);
 
     // Helper for safe date parsing
+    // Helper for safe date parsing - treats YYYY-MM-DD as local date to avoid timezone shifts
     const safeParseDate = (dateStr: string | null) => {
         if (!dateStr) return new Date();
         try {
-            // If it's a full ISO string, we just want to ensure it's valid
-            // Decoded because sometimes URL params might be encoded
             const decodedDate = decodeURIComponent(dateStr);
+            // Manually parse YYYY-MM-DD to avoid timezone issues
+            if (/^\d{4}-\d{2}-\d{2}$/.test(decodedDate)) {
+                const [year, month, day] = decodedDate.split('-').map(Number);
+                return new Date(year, month - 1, day);
+            }
             const d = new Date(decodedDate);
             return isNaN(d.getTime()) ? new Date() : d;
         } catch (e) {
@@ -198,7 +202,7 @@ function ReconciliationForm() {
         }
     };
 
-    const formattedHeaderDate = attendanceDateParam ? format(safeParseDate(attendanceDateParam), 'dd-MM-yyyy') : '-';
+    const formattedHeaderDate = attendanceDateParam ? format(safeParseDate(attendanceDateParam), 'dd MMM yyyy') : '-';
 
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60]">
