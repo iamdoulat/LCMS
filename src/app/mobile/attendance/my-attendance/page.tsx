@@ -7,7 +7,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, parseISO, startOfDay, endOfDay, parse, eachDayOfInterval, isWithinInterval, subDays, getDay, isToday } from 'date-fns';
-import { Edit2, Clock, Coffee, AlertCircle, ArrowLeft, Filter as FilterIcon } from 'lucide-react';
+import { Edit2, Clock, Coffee, AlertCircle, ArrowLeft, Filter as FilterIcon, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -381,18 +381,31 @@ export default function MyAttendancePage() {
                         </button>
                         <h1 className="text-xl font-bold text-white ml-2">My Attendance</h1>
                     </div>
-                    <button
-                        onClick={() => setIsFilterOpen(true)}
-                        className={cn(
-                            "p-2 rounded-full transition-all relative shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10",
-                            hasActiveFilters(filters) ? "text-white" : "text-white/70 hover:text-white"
-                        )}
-                    >
-                        <FilterIcon className="h-5 w-5" />
-                        {hasActiveFilters(filters) && (
-                            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 border-2 border-[#0a1e60]"></span>
-                        )}
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={refreshData}
+                            className={cn(
+                                "p-2 rounded-full transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10 text-white/70 hover:text-white",
+                                loading && "animate-spin text-white"
+                            )}
+                        >
+                            <RefreshCw className="h-5 w-5" />
+                        </button>
+
+                        <button
+                            onClick={() => setIsFilterOpen(true)}
+                            className={cn(
+                                "p-2 rounded-full transition-all relative shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10",
+                                hasActiveFilters(filters) ? "text-white" : "text-white/70 hover:text-white"
+                            )}
+                        >
+                            <FilterIcon className="h-5 w-5" />
+                            {hasActiveFilters(filters) && (
+                                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 border-2 border-[#0a1e60]"></span>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
 
