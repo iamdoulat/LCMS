@@ -3,7 +3,7 @@
 "use client";
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, verifyBeforeUpdateEmail } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { Loader2, UserCircle, Save, ShieldAlert, Link2, Crop as CropIcon, Briefcase, Info, Clock, Check, MapPin, UserCheck, RefreshCw, XCircle, BarChart3, Plane, UserX, Wallet, FileDigit, Bell, PlusCircle, Calendar as CalendarIcon, Camera, Coffee, Timer, FileEdit, Layout, Eye, CheckCircle2, AlertCircle, ArrowUpRight, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
@@ -528,6 +528,9 @@ export default function AccountDetailsPage() {
 
   const [payslipYear, setPayslipYear] = useState<string>(new Date().getFullYear().toString());
   const [leaveStatusYear, setLeaveStatusYear] = useState<string>(new Date().getFullYear().toString());
+  const [isEmailResetDialogOpen, setIsEmailResetDialogOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [isResettingEmail, setIsResettingEmail] = useState(false);
 
   // Fetch Branch Data
   useEffect(() => {
@@ -1917,6 +1920,46 @@ export default function AccountDetailsPage() {
     }
   };
 
+  const handleEmailReset = async () => {
+    if (!auth.currentUser || !newEmail) return;
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      Swal.fire('Invalid Email', 'Please enter a valid email address.', 'warning');
+      return;
+    }
+
+    setIsResettingEmail(true);
+    try {
+      await verifyBeforeUpdateEmail(auth.currentUser, newEmail);
+      setIsEmailResetDialogOpen(false);
+      setNewEmail('');
+      Swal.fire({
+        title: 'Verification Sent',
+        text: `A verification link has been sent to ${newEmail}. Please confirm it to update your email address.`,
+        icon: 'success',
+      });
+    } catch (err: any) {
+      console.error('Error resetting email:', err);
+      if (err.code === 'auth/requires-recent-login') {
+        Swal.fire({
+          title: 'Recent Login Required',
+          text: 'For security reasons, you must re-login to change your email address.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Re-login',
+        }).then((result) => {
+          if (result.isConfirmed) {
+            auth.signOut().then(() => router.push('/login'));
+          }
+        });
+      } else {
+        Swal.fire('Update Failed', err.message, 'error');
+      }
+    } finally {
+      setIsResettingEmail(false);
+    }
+  };
+
   const renderReadOnlyField = (label: string, value: string | number | null | undefined) => (
     <FormItem>
       <FormLabel>{label}</FormLabel>
@@ -2102,11 +2145,55 @@ export default function AccountDetailsPage() {
                   />
                   <FormItem>
                     <FormLabel>Email Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="your.email@example.com" value={user.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" />
-                    </FormControl>
-                    <FormDescription>Your email address cannot be changed.</FormDescription>
+                    <div className="flex gap-2 items-center">
+                      <FormControl>
+                        <Input placeholder="your.email@example.com" value={user.email || ''} readOnly disabled className="cursor-not-allowed bg-muted/50" />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setIsEmailResetDialogOpen(true)}
+                        title="Reset Email"
+                        className="h-10 w-10 flex-shrink-0"
+                      >
+                        <RefreshCw className={cn("h-4 w-4", isResettingEmail && "animate-spin")} />
+                      </Button>
+                    </div>
+                    <FormDescription>Your email address cannot be changed directly. Use the reset button to verify a new one.</FormDescription>
                   </FormItem>
+
+                  <Dialog open={isEmailResetDialogOpen} onOpenChange={setIsEmailResetDialogOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Update Email Address</DialogTitle>
+                        <DialogDescription>
+                          A verification link will be sent to your new email. Your email will only update once confirmed.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="new-email" className="text-right">
+                            New Email
+                          </Label>
+                          <Input
+                            id="new-email"
+                            placeholder="new.email@example.com"
+                            className="col-span-3"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                            type="email"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsEmailResetDialogOpen(false)}>Cancel</Button>
+                        <Button type="button" onClick={handleEmailReset} disabled={isResettingEmail || !newEmail}>
+                          {isResettingEmail ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</> : 'Send Verification'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
 
                 </div>
 
