@@ -10,20 +10,15 @@ export async function GET(request: Request) {
     /**
      * CRON JOB TIMEZONE NOTES:
      * 
-     * This cron job runs based on the schedule defined in vercel.json, which uses UTC time.
-     * The company timezone setting (stored in financial_settings/main_settings) is for 
-     * display and reference purposes.
+     * This cron job is triggered via external scheduler (e.g., cron-job.org).
+     * The schedule should be configured in the external service's dashboard.
      * 
-     * To adjust when this job runs in your local timezone:
-     * 1. Determine your timezone offset from UTC
-     * 2. Calculate: UTC_hour = local_hour - timezone_offset
-     * 3. Update vercel.json cron schedule accordingly
+     * To ensure security, this route requires an 'Authorization' header:
+     * Bearer [CRON_SECRET]
      * 
-     * Example: For 9:00 AM Bangladesh Time (UTC+6):
-     * - 9:00 AM local - 6 hours = 3:00 AM UTC
-     * - vercel.json: "schedule": "10 18 * * *"
-     * 
-     * Current schedule in vercel.json sends notifications at the configured UTC time.
+     * Timezone Management:
+     * - Configure the external job to run at the desired UTC or local time.
+     * - The logic below uses the company timezone setting for birthday comparison.
      */
     try {
         // 1. Authenticate Cron Job
