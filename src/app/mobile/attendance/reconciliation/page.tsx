@@ -263,6 +263,7 @@ function ReconciliationForm() {
                                                     value={inTimeDate}
                                                     onChange={(e) => setInTimeDate(e.target.value)}
                                                     className="pl-4 h-12 bg-slate-50 border-slate-200"
+                                                    disabled={true}
                                                 />
                                                 <Calendar className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
                                             </div>
@@ -293,6 +294,7 @@ function ReconciliationForm() {
                                                     value={outTimeDate}
                                                     onChange={(e) => setOutTimeDate(e.target.value)}
                                                     className="pl-4 h-12 bg-slate-50 border-slate-200"
+                                                    disabled={true}
                                                 />
                                                 <Calendar className="absolute right-4 top-3.5 w-5 h-5 text-indigo-500 pointer-events-none" />
                                             </div>

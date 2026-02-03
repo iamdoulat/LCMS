@@ -110,11 +110,26 @@ export default function MyAttendancePage() {
             // Generate all dates in interval
             const daysInInterval = eachDayOfInterval({ start: startDate, end: endDate });
 
+            const getDhakaDateStr = (date: Date | string) => {
+                const d = typeof date === 'string' ? new Date(date) : date;
+                if (isNaN(d.getTime())) return '';
+                return new Intl.DateTimeFormat('en-CA', {
+                    timeZone: 'Asia/Dhaka',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).format(d);
+            };
+
             // Merge raw data with synthesized records for missing days
             const fullRecords: AttendanceRecord[] = daysInInterval.map(day => {
-                const dateStr = format(day, 'yyyy-MM-dd');
-                // Try to find existing record. Firestore date field might be ISO or YYYY-MM-DD
-                const existing = rawData.find(r => r.date && r.date.startsWith(dateStr));
+                const targetDateStr = format(day, 'yyyy-MM-dd');
+
+                const existing = rawData.find(r => {
+                    if (!r.date) return false;
+                    const recordDhakaDate = getDhakaDateStr(r.date);
+                    return recordDhakaDate === targetDateStr;
+                });
 
                 if (existing) return existing;
 
@@ -159,8 +174,8 @@ export default function MyAttendancePage() {
                 }
 
                 return {
-                    id: `synth-${dateStr}`,
-                    date: dateStr,
+                    id: `synth-${targetDateStr}`,
+                    date: targetDateStr,
                     flag: flag
                 } as AttendanceRecord;
             });

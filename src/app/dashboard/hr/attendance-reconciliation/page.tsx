@@ -48,6 +48,26 @@ const formatDisplayDate = (dateString?: string | null) => {
     }
 };
 
+const formatDisplayTime = (timeStr?: string | null) => {
+    if (!timeStr) return '';
+    try {
+        if (timeStr.includes('T') || timeStr.includes('-')) {
+            const date = new Date(timeStr);
+            if (!isNaN(date.getTime())) {
+                return new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'Asia/Dhaka',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    hour12: true
+                }).format(date);
+            }
+        }
+        return timeStr;
+    } catch (error) {
+        return timeStr;
+    }
+};
+
 export default function AttendanceReconciliationPage() {
     const { user, userRole } = useAuth();
     const { isSupervisor, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
@@ -295,8 +315,8 @@ export default function AttendanceReconciliationPage() {
     const handleEditClick = (rec: AttendanceReconciliation) => {
         setEditingRec(rec);
         setEditForm({
-            requestedInTime: rec.requestedInTime || '',
-            requestedOutTime: rec.requestedOutTime || '',
+            requestedInTime: formatDisplayTime(rec.requestedInTime) || '',
+            requestedOutTime: formatDisplayTime(rec.requestedOutTime) || '',
             inTimeRemarks: rec.inTimeRemarks || '',
             outTimeRemarks: rec.outTimeRemarks || ''
         });
@@ -618,14 +638,14 @@ export default function AttendanceReconciliationPage() {
                                                 <TableCell>{formatDisplayDate(rec.attendanceDate)}</TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col text-xs">
-                                                        <span className={rec.requestedInTime ? "font-medium text-green-600" : ""}>{rec.requestedInTime || '-'}</span>
-                                                        {rec.originalInTime && <span className="text-muted-foreground line-through">{rec.originalInTime}</span>}
+                                                        <span className={rec.requestedInTime ? "font-medium text-green-600" : ""}>{formatDisplayTime(rec.requestedInTime) || '-'}</span>
+                                                        {rec.originalInTime && <span className="text-muted-foreground line-through">{formatDisplayTime(rec.originalInTime)}</span>}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col text-xs">
-                                                        <span className={rec.requestedOutTime ? "font-medium text-green-600" : ""}>{rec.requestedOutTime || '-'}</span>
-                                                        {rec.originalOutTime && <span className="text-muted-foreground line-through">{rec.originalOutTime}</span>}
+                                                        <span className={rec.requestedOutTime ? "font-medium text-green-600" : ""}>{formatDisplayTime(rec.requestedOutTime) || '-'}</span>
+                                                        {rec.originalOutTime && <span className="text-muted-foreground line-through">{formatDisplayTime(rec.originalOutTime)}</span>}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
