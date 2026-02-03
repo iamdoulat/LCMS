@@ -2,6 +2,32 @@
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
+import { format } from 'date-fns';
+
+
+// Helper to format time to AM/PM
+const formatTimeToAMPM = (isoString?: string): string => {
+    if (!isoString) return 'N/A';
+    try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return isoString;
+        return format(date, 'hh:mm a');
+    } catch (e) {
+        return isoString;
+    }
+};
+
+// Helper to format date to readable format
+const formatDateReadable = (dateStr?: string): string => {
+    if (!dateStr) return 'N/A';
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr;
+        return format(date, 'EEEE, MMMM d, yyyy');
+    } catch (e) {
+        return dateStr;
+    }
+};
 
 export async function POST(request: Request) {
     try {
@@ -51,15 +77,15 @@ export async function POST(request: Request) {
         const templateData = {
             name: recData?.employeeName || 'Employee', // Common variable
             employee_name: recData?.employeeName || 'Employee',
-            date: recData?.attendanceDate || 'N/A',
+            date: formatDateReadable(recData?.attendanceDate),
             rejection_reason: rejectionReason || recData?.reviewComments || 'No reason provided', // For rejected template
 
             // Added variables per user request
             department: employeeDept || 'N/A',
-            attendance_date: recData?.attendanceDate || 'N/A',
-            reconciliation_in_time: recData?.requestedInTime || 'N/A',
+            attendance_date: formatDateReadable(recData?.attendanceDate),
+            reconciliation_in_time: formatTimeToAMPM(recData?.requestedInTime),
             in_time_remarks: recData?.inTimeRemarks || 'N/A',
-            reconciliation_out_time: recData?.requestedOutTime || 'N/A',
+            reconciliation_out_time: formatTimeToAMPM(recData?.requestedOutTime),
             out_time_remarks: recData?.outTimeRemarks || 'N/A',
 
             // Standard details if needed in approved template too

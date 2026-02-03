@@ -2,6 +2,32 @@
 import { NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
+import { format } from 'date-fns';
+
+
+// Helper to format time to AM/PM
+const formatTimeToAMPM = (isoString?: string): string => {
+    if (!isoString) return 'N/A';
+    try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return isoString;
+        return format(date, 'hh:mm a');
+    } catch (e) {
+        return isoString;
+    }
+};
+
+// Helper to format date to readable format
+const formatDateReadable = (dateStr?: string): string => {
+    if (!dateStr) return 'N/A';
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return dateStr;
+        return format(date, 'EEEE, MMMM d, yyyy');
+    } catch (e) {
+        return dateStr;
+    }
+};
 
 export async function POST(request: Request) {
     try {
@@ -71,19 +97,19 @@ export async function POST(request: Request) {
             employee_code: recData?.employeeCode || 'N/A',
             designation: recData?.designation || 'N/A',
             department: department,
-            attendance_date: recData?.attendanceDate || 'N/A', // Attendance Reconciliation Date
-            apply_date: recData?.applyDate || new Date().toLocaleDateString(), // Apply Date
+            attendance_date: formatDateReadable(recData?.attendanceDate),
+            apply_date: recData?.applyDate ? formatDateReadable(recData.applyDate) : formatDateReadable(new Date().toISOString()),
 
             // Original In Time
-            in_time: recData?.originalInTime || 'N/A',
+            in_time: formatTimeToAMPM(recData?.originalInTime),
             // Requested In Time
-            reconciliation_in_time: recData?.requestedInTime || 'N/A',
+            reconciliation_in_time: formatTimeToAMPM(recData?.requestedInTime),
             in_time_remarks: recData?.inTimeRemarks || 'N/A',
 
             // Original Out Time
-            out_time: recData?.originalOutTime || 'N/A',
+            out_time: formatTimeToAMPM(recData?.originalOutTime),
             // Requested Out Time
-            reconciliation_out_time: recData?.requestedOutTime || 'N/A',
+            reconciliation_out_time: formatTimeToAMPM(recData?.requestedOutTime),
             out_time_remarks: recData?.outTimeRemarks || 'N/A',
 
             link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/hr/attendance/reconciliation`,
