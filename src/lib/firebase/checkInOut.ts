@@ -32,7 +32,7 @@ export const getCurrentLocation = async (options?: PositionOptions & {
         onProgress('Searching for GPS signal...');
         const pos = await getPosition({
             enableHighAccuracy: true,
-            timeout: 8000, // Reduced from 10s for faster fallback
+            timeout: 4000, // Reduced from 8s for faster fallback
             maximumAge: options?.forceRefresh ? 0 : 30000,
             ...options
         });
@@ -50,7 +50,7 @@ export const getCurrentLocation = async (options?: PositionOptions & {
         onProgress('GPS weak. Trying network location...');
         const pos = await getPosition({
             enableHighAccuracy: false,
-            timeout: 5000, // Reduced from 7s for faster fallback
+            timeout: 3000, // Reduced from 5s for faster fallback
             maximumAge: 60000, // 1 min old OK
             ...options
         });
@@ -68,7 +68,7 @@ export const getCurrentLocation = async (options?: PositionOptions & {
         onProgress('Network weak. Fetching last known location...');
         const pos = await getPosition({
             enableHighAccuracy: false,
-            timeout: 5000,
+            timeout: 3000, // Reduced from 5s for faster fallback
             maximumAge: 300000, // 5 min old OK
             ...options
         });
@@ -95,7 +95,7 @@ export const getCurrentLocation = async (options?: PositionOptions & {
 export const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // Reduced from 5s
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // Reduced from 3s
 
         const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,

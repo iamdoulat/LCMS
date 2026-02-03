@@ -123,7 +123,10 @@ function ReconciliationForm() {
     }, [currentEmployeeId, attendanceDateParam]);
 
     const handleSubmit = async () => {
-        if (!user || !currentEmployeeId || !employeeData) return;
+        if (!user || !currentEmployeeId) {
+            Swal.fire("Error", "User or Employee ID missing. Please log in again.", "error");
+            return;
+        }
         if (!attendanceDateParam) {
             Swal.fire("Error", "Invalid attendance date.", "error");
             return;
@@ -155,9 +158,9 @@ function ReconciliationForm() {
 
             const reqData: any = {
                 employeeId: currentEmployeeId,
-                employeeCode: employeeData.employeeCode || '',
-                employeeName: employeeData.fullName || user.displayName || 'Unknown',
-                designation: employeeData.designation || '',
+                employeeCode: employeeData?.employeeCode || 'N/A',
+                employeeName: employeeData?.fullName || user.displayName || 'Unknown User',
+                designation: employeeData?.designation || 'Staff',
                 attendanceDate: initialDateStr, // Use the date part
                 inTimeRemarks: inTimeRemarks,
                 outTimeRemarks: outTimeRemarks,

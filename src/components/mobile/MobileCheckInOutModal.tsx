@@ -132,49 +132,9 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
             const canonicalId = employeeDoc.exists() ? employeeDoc.id : user.uid;
             const employeeData = employeeDoc.exists() ? employeeDoc.data() : null;
 
-            // Upload Image if present using shared helper
-            let photoUrl = '';
-            if (selectedFile) {
-                try {
-                    // Show compression feedback
-                    Swal.fire({
-                        title: 'Optimizing Image...',
-                        text: 'Compressing photo for faster upload',
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
-                    // Compress image before upload to reduce size and upload time
-                    const compressedFile = await compressImage(selectedFile, 1024, 0.7);
-
-                    // Show upload feedback
-                    Swal.fire({
-                        title: 'Uploading Image...',
-                        text: 'Please wait',
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-
-                    photoUrl = await uploadCheckInOutImage(compressedFile, canonicalId, checkInOutType);
-                    Swal.close();
-                } catch (imgError) {
-                    console.error("Image processing error:", imgError);
-                    Swal.fire({
-                        title: "Image Upload Failed",
-                        text: "Proceeding without image. Location and details will still be recorded.",
-                        icon: "warning",
-                        timer: 2000
-                    });
-                    photoUrl = ''; // Proceed without image
-                }
-            }
-
-            // Create Record using shared helper
-            await createCheckInOutRecord(
+            // 1. Create Record Immediately (Optimistic UI)
+            // We set imageURL to empty initially, update it later if image exists.
+            const recordId = await createCheckInOutRecord(
                 canonicalId,
                 employeeData?.fullName || firestoreUser?.displayName || 'Unknown Employee',
                 companyName,
@@ -184,7 +144,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                     longitude: currentLocation.longitude,
                     address: address || 'Address not found'
                 },
-                photoUrl,
+                '', // Empty initially, updated in background
                 remarks,
                 {
                     status: 'Approved',
@@ -192,18 +152,46 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                 }
             );
 
+            // 2. Start Background Upload Process
+            if (selectedFile) {
+                // Non-blocking async process
+                (async () => {
+                    try {
+                        console.log('Starting background image optimization and upload...');
+                        // Aggressive compression for speed (800px, 0.5 quality)
+                        const compressedFile = await compressImage(selectedFile, 800, 0.5);
+
+                        // Upload
+                        const photoUrl = await uploadCheckInOutImage(compressedFile, canonicalId, checkInOutType);
+
+                        // Update Record
+                        const { updateDoc } = await import('firebase/firestore');
+                        await updateDoc(doc(firestore, 'multiple_check_inout', recordId), {
+                            imageURL: photoUrl
+                        });
+                        console.log('Background upload completed for record:', recordId);
+                    } catch (err) {
+                        console.error("Background upload failed:", err);
+                        // Optional: Update record to indicate upload failed? 
+                        // For now we just log it as the critical part (the check-in) is saved.
+                    }
+                })();
+            }
+
+            // 3. Immediate Success Feedback
             Swal.fire({
                 title: "Success",
-                text: `${checkInOutType} recorded successfully`,
+                text: `${checkInOutType} recorded! Photo uploading in background...`,
                 icon: "success",
                 timer: 1500,
                 showConfirmButton: false
             });
 
-            // Trigger Notification
+            // Trigger Notification (Async, don't await)
             const notificationType = checkInOutType === 'Check In' ? 'check_in' : 'check_out';
-            try {
-                const idToken = await user.getIdToken();
+            const idTokenPromise = user.getIdToken();
+
+            idTokenPromise.then(idToken => {
                 fetch('/api/notify/attendance', {
                     method: 'POST',
                     headers: {
@@ -226,12 +214,10 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                         },
                         companyName: companyName,
                         remarks: remarks,
-                        photoUrl: photoUrl || undefined
+                        // photoUrl might not be ready, so we omit or send empty
                     })
                 }).catch(err => console.error('[ATTENDANCE NOTIFY] Notification error:', err));
-            } catch (authErr) {
-                console.error('[ATTENDANCE NOTIFY] Failed to get ID token:', authErr);
-            }
+            }).catch(authErr => console.error('[ATTENDANCE NOTIFY] Failed to get ID token:', authErr));
 
             onSuccess();
             onClose();
