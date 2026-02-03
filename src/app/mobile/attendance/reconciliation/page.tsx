@@ -171,7 +171,7 @@ function ReconciliationForm() {
                 employeeCode: employeeData?.employeeCode || 'N/A',
                 employeeName: employeeData?.fullName || user.displayName || 'Unknown User',
                 designation: employeeData?.designation || 'Staff',
-                attendanceDate: initialDateStr, // Use the date part
+                attendanceDate: inTimeDate, // Use the date state which handles updates
                 inTimeRemarks: inTimeRemarks,
                 outTimeRemarks: outTimeRemarks,
             };
@@ -202,7 +202,7 @@ function ReconciliationForm() {
         }
     };
 
-    const formattedHeaderDate = attendanceDateParam ? format(safeParseDate(attendanceDateParam), 'dd MMM yyyy') : '-';
+    const formattedHeaderDate = inTimeDate ? format(safeParseDate(inTimeDate), 'dd MMM yyyy') : '-';
 
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60]">

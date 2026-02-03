@@ -42,7 +42,12 @@ const formatDisplayDate = (dateString?: string | null) => {
     try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return 'Invalid Date';
-        return format(date, 'PPP');
+        return new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Dhaka',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        }).format(date);
     } catch (error) {
         return 'Invalid Date';
     }
@@ -526,7 +531,7 @@ export default function AttendanceReconciliationPage() {
         <div className="p-6 space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Attendance Reconciliation</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Attendance Reconciliation (Updated)</h1>
                     <p className="text-muted-foreground">Manage employee attendance correction requests.</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -611,7 +616,7 @@ export default function AttendanceReconciliationPage() {
                                                 />
                                             </TableHead>
                                             <TableHead>Employee</TableHead>
-                                            <TableHead>Reconciliation Date</TableHead>
+                                            <TableHead>Attendance Date</TableHead>
                                             <TableHead>Requested In</TableHead>
                                             <TableHead>Requested Out</TableHead>
                                             <TableHead>Remarks (In/Out)</TableHead>
@@ -638,14 +643,14 @@ export default function AttendanceReconciliationPage() {
                                                 <TableCell>{formatDisplayDate(rec.attendanceDate)}</TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col text-xs">
-                                                        <span className={rec.requestedInTime ? "font-medium text-green-600" : ""}>{formatDisplayTime(rec.requestedInTime) || '-'}</span>
-                                                        {rec.originalInTime && <span className="text-muted-foreground line-through">{formatDisplayTime(rec.originalInTime)}</span>}
+                                                        {rec.originalInTime && <span className="text-red-500 line-through font-semibold mb-0.5">{formatDisplayTime(rec.originalInTime)}</span>}
+                                                        <span className={rec.requestedInTime ? "font-bold text-green-600" : ""}>{formatDisplayTime(rec.requestedInTime) || '-'}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col text-xs">
-                                                        <span className={rec.requestedOutTime ? "font-medium text-green-600" : ""}>{formatDisplayTime(rec.requestedOutTime) || '-'}</span>
-                                                        {rec.originalOutTime && <span className="text-muted-foreground line-through">{formatDisplayTime(rec.originalOutTime)}</span>}
+                                                        {rec.originalOutTime && <span className="text-red-500 line-through font-semibold mb-0.5">{formatDisplayTime(rec.originalOutTime)}</span>}
+                                                        <span className={rec.requestedOutTime ? "font-bold text-green-600" : ""}>{formatDisplayTime(rec.requestedOutTime) || '-'}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
