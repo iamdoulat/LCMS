@@ -54,14 +54,19 @@ import type {
 export default function ApproveApplicationsPage() {
     const router = useRouter();
     const { user, userRole } = useAuth();
-    const { isSupervisor, supervisedEmployeeIds, currentEmployeeId } = useSupervisorCheck(user?.email);
+    // Check for Admin role
+    const isSuperAdminOrAdmin = React.useMemo(() => {
+        if (!userRole) return false;
+        return userRole.some(role => ['Super Admin', 'Admin'].includes(role));
+    }, [userRole]);
+
+    const { isSupervisor, supervisedEmployeeIds, explicitSubordinateIds, currentEmployeeId } = useSupervisorCheck(user?.email);
     const { toast } = useToast();
 
-    // Check for Admin or HR role
-    const isAdminOrHR = React.useMemo(() => {
-        if (!userRole) return false;
-        return userRole.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
-    }, [userRole]);
+    const effectiveSupervisedEmployeeIds = React.useMemo(() => {
+        if (isSuperAdminOrAdmin) return supervisedEmployeeIds;
+        return explicitSubordinateIds;
+    }, [isSuperAdminOrAdmin, supervisedEmployeeIds, explicitSubordinateIds]);
 
     const [activeTab, setActiveTab] = useState<'leave' | 'visit'>('leave');
     const [loading, setLoading] = useState(true);
@@ -105,9 +110,11 @@ export default function ApproveApplicationsPage() {
 
     // Fetch team applications
     useEffect(() => {
-        // If not supervisor AND not Admin/HR, stop.
-        if (!supervisedEmployeeIds.length && !isAdminOrHR) {
+        // If not supervisor AND not Admin, stop.
+        if (!effectiveSupervisedEmployeeIds.length && !isSuperAdminOrAdmin) {
             if (!loading) setLoading(false);
+            setLeaveApps([]);
+            setVisitApps([]);
             return;
         }
 
@@ -125,7 +132,7 @@ export default function ApproveApplicationsPage() {
             const apps = snapshot.docs
                 .map((doc: any) => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument))
                 .filter((app: LeaveApplicationDocument) =>
-                    isAdminOrHR ? true : supervisedEmployeeIds.includes(app.employeeId)
+                    isSuperAdminOrAdmin ? true : effectiveSupervisedEmployeeIds.includes(app.employeeId)
                 );
 
             // Client-side sort
@@ -153,7 +160,7 @@ export default function ApproveApplicationsPage() {
             const apps = snapshot.docs
                 .map((doc: any) => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument))
                 .filter((app: VisitApplicationDocument) =>
-                    isAdminOrHR ? true : supervisedEmployeeIds.includes(app.employeeId)
+                    isSuperAdminOrAdmin ? true : effectiveSupervisedEmployeeIds.includes(app.employeeId)
                 );
 
             // Client-side sort
@@ -191,10 +198,10 @@ export default function ApproveApplicationsPage() {
             // That would require a separate effect depending on leaveApps/visitApps.
             // For now, let's just run the existing logic if supervisedEmployeeIds has content.
 
-            if (supervisedEmployeeIds.length > 0) {
+            if (effectiveSupervisedEmployeeIds.length > 0) {
                 const chunkSize = 10;
-                for (let i = 0; i < supervisedEmployeeIds.length; i += chunkSize) {
-                    const chunk = supervisedEmployeeIds.slice(i, i + chunkSize);
+                for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += chunkSize) {
+                    const chunk = effectiveSupervisedEmployeeIds.slice(i, i + chunkSize);
                     const qEmp = query(collection(firestore, 'employees'), where('__name__', 'in', chunk));
                     const snap = await getDocs(qEmp);
                     snap.docs.forEach(doc => {
@@ -214,11 +221,11 @@ export default function ApproveApplicationsPage() {
             unsubLeave();
             unsubVisit();
         };
-    }, [supervisedEmployeeIds, filters.status, isAdminOrHR]);
+    }, [effectiveSupervisedEmployeeIds, filters.status, isSuperAdminOrAdmin]);
 
     // Separate effect to fetch missing employee details for loaded apps (Crucial for Admin view)
     useEffect(() => {
-        if (!isAdminOrHR) return;
+        if (!isSuperAdminOrAdmin) return;
 
         const fetchMissingEmployees = async () => {
             const allApps = [...leaveApps, ...visitApps];
@@ -250,7 +257,7 @@ export default function ApproveApplicationsPage() {
         if (leaveApps.length > 0 || visitApps.length > 0) {
             fetchMissingEmployees();
         }
-    }, [leaveApps, visitApps, isAdminOrHR]);
+    }, [leaveApps, visitApps, isSuperAdminOrAdmin]);
 
     const handleApproveLeave = async (appId: string) => {
         try {

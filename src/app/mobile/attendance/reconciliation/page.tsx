@@ -32,12 +32,22 @@ function ReconciliationForm() {
     // Helper for safe date parsing
     const safeParseDate = (dateStr: string | null) => {
         if (!dateStr) return new Date();
-        // If it's a full ISO string, we just want to ensure it's valid
-        const d = new Date(dateStr);
-        return isNaN(d.getTime()) ? new Date() : d;
+        try {
+            // If it's a full ISO string, we just want to ensure it's valid
+            // Decoded because sometimes URL params might be encoded
+            const decodedDate = decodeURIComponent(dateStr);
+            const d = new Date(decodedDate);
+            return isNaN(d.getTime()) ? new Date() : d;
+        } catch (e) {
+            return new Date();
+        }
     };
 
-    const initialDateStr = attendanceDateParam ? format(safeParseDate(attendanceDateParam), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+    const getInitialDateStr = () => {
+        return attendanceDateParam ? format(safeParseDate(attendanceDateParam), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+    };
+
+    const initialDateStr = getInitialDateStr();
 
     // Form State
     const [inTimeDate, setInTimeDate] = useState(initialDateStr);
@@ -45,26 +55,72 @@ function ReconciliationForm() {
     const [outTimeDate, setOutTimeDate] = useState(initialDateStr);
     const [outTime, setOutTime] = useState('');
 
+    // Sync state if URL param changes after initial render
+    useEffect(() => {
+        if (attendanceDateParam) {
+            const parsed = format(safeParseDate(attendanceDateParam), 'yyyy-MM-dd');
+            setInTimeDate(parsed);
+            setOutTimeDate(parsed);
+        }
+    }, [attendanceDateParam]);
+
     const [inTimeRemarks, setInTimeRemarks] = useState('');
     const [outTimeRemarks, setOutTimeRemarks] = useState('');
 
+    const parseTimeTo24h = (timeStr: string | undefined | null) => {
+        if (!timeStr) return '';
+        // Input: "09:30 AM" or "01:30 PM"
+        const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        if (!match) return '';
+        let [_, hours, minutes, period] = match;
+        let h = parseInt(hours, 10);
+        if (period.toUpperCase() === 'PM' && h < 12) h += 12;
+        if (period.toUpperCase() === 'AM' && h === 12) h = 0;
+        return `${h.toString().padStart(2, '0')}:${minutes}`;
+    };
+
     useEffect(() => {
-        const fetchEmployee = async () => {
+        const fetchData = async () => {
             if (currentEmployeeId) {
                 try {
                     const { firestore } = await import('@/lib/firebase/config');
                     const { doc, getDoc } = await import('firebase/firestore');
+
+                    // 1. Fetch Employee
                     const empDoc = await getDoc(doc(firestore, 'employees', currentEmployeeId));
                     if (empDoc.exists()) {
                         setEmployeeData(empDoc.data());
                     }
+
+                    // 2. Fetch Attendance
+                    if (attendanceDateParam) {
+                        const datePart = attendanceDateParam.split('T')[0];
+                        const attendanceDocId = `${currentEmployeeId}_${datePart}`;
+                        const attDoc = await getDoc(doc(firestore, 'attendance', attendanceDocId));
+
+                        if (attDoc.exists()) {
+                            const data = attDoc.data();
+                            if (data.inTime) setInTime(parseTimeTo24h(data.inTime));
+                            if (data.outTime) setOutTime(parseTimeTo24h(data.outTime));
+                            if (data.inTimeRemarks) setInTimeRemarks(data.inTimeRemarks);
+                            if (data.outTimeRemarks) setOutTimeRemarks(data.outTimeRemarks);
+
+                            // Also fetch and set dates
+                            if (data.date) {
+                                // data.date is ISO string, we need YYYY-MM-DD
+                                const recordDate = data.date.split('T')[0];
+                                setInTimeDate(recordDate);
+                                setOutTimeDate(recordDate);
+                            }
+                        }
+                    }
                 } catch (e) {
-                    console.error("Error fetching employee:", e);
+                    console.error("Error fetching data:", e);
                 }
             }
         };
-        fetchEmployee();
-    }, [currentEmployeeId]);
+        fetchData();
+    }, [currentEmployeeId, attendanceDateParam]);
 
     const handleSubmit = async () => {
         if (!user || !currentEmployeeId || !employeeData) return;
@@ -146,7 +202,7 @@ function ReconciliationForm() {
                 </button>
                 <div className="flex-1 text-center pr-10">
                     <h1 className="text-lg font-bold">Attendance Reconciliation</h1>
-                    <p className="text-xs text-blue-200">Attendance date: {formattedHeaderDate}</p>
+                    <p className="text-xs text-blue-200">Reconciliation Date: {formattedHeaderDate}</p>
                 </div>
             </div>
 

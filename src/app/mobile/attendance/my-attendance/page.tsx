@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { format, parseISO, startOfDay, endOfDay, parse } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, parse, eachDayOfInterval, isWithinInterval, subDays, getDay, isToday } from 'date-fns';
 import { Edit2, Clock, Coffee, AlertCircle, ArrowLeft, Filter as FilterIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -42,6 +42,9 @@ export default function MyAttendancePage() {
     const [activeTab, setActiveTab] = useState<'attendance' | 'break'>('attendance');
     const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
     const [breakRecords, setBreakRecords] = useState<BreakRecord[]>([]);
+    const [holidays, setHolidays] = useState<any[]>([]);
+    const [leaves, setLeaves] = useState<any[]>([]);
+    const [visits, setVisits] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
@@ -89,19 +92,88 @@ export default function MyAttendancePage() {
             }
 
             const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
+            const rawData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
 
-            // Sort by date desc
-            data.sort((a, b) => {
-                const timeA = a.date ? new Date(a.date).getTime() : 0;
-                const timeB = b.date ? new Date(b.date).getTime() : 0;
-                return timeB - timeA;
+            // Determine date range for filling gaps
+            let startDate: Date;
+            let endDate: Date;
+
+            if (filters.dateRange?.from) {
+                startDate = startOfDay(filters.dateRange.from);
+                endDate = startOfDay(filters.dateRange.to || filters.dateRange.from);
+            } else {
+                // Default to last 30 days if no filter
+                endDate = startOfDay(new Date());
+                startDate = startOfDay(subDays(endDate, 29));
+            }
+
+            // Generate all dates in interval
+            const daysInInterval = eachDayOfInterval({ start: startDate, end: endDate });
+
+            // Merge raw data with synthesized records for missing days
+            const fullRecords: AttendanceRecord[] = daysInInterval.map(day => {
+                const dateStr = format(day, 'yyyy-MM-dd');
+                // Try to find existing record. Firestore date field might be ISO or YYYY-MM-DD
+                const existing = rawData.find(r => r.date && r.date.startsWith(dateStr));
+
+                if (existing) return existing;
+
+                // Synthesize record for gap
+                const dayOfWeek = getDay(day);
+                let flag = 'A'; // Default to Absent
+
+                // Check Weekend (Friday = 5)
+                if (dayOfWeek === 5) {
+                    flag = 'W';
+                } else {
+                    // Check Holiday
+                    const holiday = holidays.find(h => isWithinInterval(day, {
+                        start: parseISO(h.fromDate),
+                        end: parseISO(h.toDate || h.fromDate)
+                    }));
+                    if (holiday) {
+                        flag = 'H';
+                    } else {
+                        // Check Leave
+                        const leave = leaves.find(l => isWithinInterval(day, {
+                            start: parseISO(l.fromDate),
+                            end: parseISO(l.toDate)
+                        }));
+                        if (leave) {
+                            flag = 'L';
+                        } else {
+                            // Check Visit
+                            const visit = visits.find(v => isWithinInterval(day, {
+                                start: parseISO(v.fromDate),
+                                end: parseISO(v.toDate)
+                            }));
+                            if (visit) flag = 'V';
+                        }
+                    }
+                }
+
+                // If it's a future date, don't mark as Absent
+                const isFuture = day > endOfDay(new Date());
+                if (isFuture && flag === 'A') {
+                    flag = '';
+                }
+
+                return {
+                    id: `synth-${dateStr}`,
+                    date: dateStr,
+                    flag: flag
+                } as AttendanceRecord;
             });
 
-            setAttendanceRecords(data.slice(0, 30));
-            // Update cache
+            // Sort by date desc
+            fullRecords.sort((a, b) => {
+                return b.date.localeCompare(a.date);
+            });
+
+            setAttendanceRecords(fullRecords);
+            // Only update cache if no range filter to avoid polluting recent view
             if (!filters.dateRange?.from) {
-                localStorage.setItem('myAttendanceRecords', JSON.stringify(data.slice(0, 30)));
+                localStorage.setItem('myAttendanceRecords', JSON.stringify(fullRecords));
             }
         } catch (error) {
             console.error("Error fetching attendance:", error);
@@ -109,6 +181,41 @@ export default function MyAttendancePage() {
             setLoading(false);
         }
     };
+
+    const fetchSupportiveData = async () => {
+        if (!currentEmployeeId) return;
+        try {
+            // Fetch holidays
+            const holidaysSnapshot = await getDocs(collection(firestore, 'holidays'));
+            setHolidays(holidaysSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+            // Fetch approved leaves
+            const leavesQ = query(
+                collection(firestore, 'leave_applications'),
+                where('employeeId', '==', currentEmployeeId),
+                where('status', '==', 'Approved')
+            );
+            const leavesSnapshot = await getDocs(leavesQ);
+            setLeaves(leavesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+            // Fetch approved visits
+            const visitsQ = query(
+                collection(firestore, 'visit_applications'),
+                where('employeeId', '==', currentEmployeeId),
+                where('status', '==', 'Approved')
+            );
+            const visitsSnapshot = await getDocs(visitsQ);
+            setVisits(visitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } catch (error) {
+            console.error("Error fetching supportive data:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (currentEmployeeId) {
+            fetchSupportiveData();
+        }
+    }, [currentEmployeeId]);
 
     const fetchBreaks = async () => {
         const queryIds = [currentEmployeeId, user?.uid].filter((id): id is string => !!id);
@@ -172,11 +279,11 @@ export default function MyAttendancePage() {
             if (activeTab === 'attendance') fetchAttendance();
             else fetchBreaks();
         }
-    }, [user?.uid, currentEmployeeId, activeTab, filters]);
+    }, [user?.uid, currentEmployeeId, activeTab, filters, holidays.length, leaves.length, visits.length]);
 
     const refreshData = async () => {
         if (currentEmployeeId) {
-            await Promise.all([fetchAttendance(), fetchBreaks()]);
+            await Promise.all([fetchAttendance(), fetchBreaks(), fetchSupportiveData()]);
         }
     };
 
@@ -237,6 +344,7 @@ export default function MyAttendancePage() {
             case 'L': return 'text-cyan-500 bg-cyan-50';
             case 'W': return 'text-violet-500 bg-violet-50';
             case 'H': return 'text-pink-500 bg-pink-50';
+            case 'V': return 'text-orange-500 bg-orange-50';
             case 'A': return 'text-red-500 bg-red-50';
             default: return 'text-slate-500 bg-slate-50';
         }
@@ -349,8 +457,13 @@ export default function MyAttendancePage() {
                                         <div key={record.id} className="bg-white rounded-xl px-3 py-2.5 shadow-sm border border-slate-100 flex items-center gap-3 active:scale-[0.98] transition-all">
                                             <div className={cn("w-1 h-10 rounded-full shrink-0",
                                                 record.flag === 'P' ? 'bg-emerald-400' :
-                                                    record.flag === 'A' ? 'bg-red-400' :
-                                                        'bg-amber-400'
+                                                    record.flag === 'D' ? 'bg-yellow-400' :
+                                                        record.flag === 'W' ? 'bg-violet-400' :
+                                                            record.flag === 'H' ? 'bg-pink-400' :
+                                                                record.flag === 'L' ? 'bg-cyan-400' :
+                                                                    record.flag === 'V' ? 'bg-orange-400' :
+                                                                        record.flag === 'A' ? 'bg-red-400' :
+                                                                            'bg-slate-300'
                                             )}></div>
 
                                             <div className="flex-1 min-w-0">

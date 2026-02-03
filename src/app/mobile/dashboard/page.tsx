@@ -216,7 +216,7 @@ export default function MobileDashboardPage() {
     }, [todayAttendanceData]);
 
     const isInventoryAllowed = useMemo(() => {
-        return globalUserRole?.some(role => ['Super Admin', 'Admin', 'Accountant', 'Viewer'].includes(role));
+        return globalUserRole?.some(role => ['Super Admin', 'Admin', 'Accounts', 'Accountant', 'Viewer'].includes(role));
     }, [globalUserRole]);
 
     const visibleItems = useMemo(() => {
