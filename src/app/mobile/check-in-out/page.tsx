@@ -49,7 +49,24 @@ export default function MobileCheckInOutPage() {
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState<string | null>(null);
 
     // Supervision & Filtering
-    const { isSupervisor, supervisedEmployees, supervisedEmployeeIds } = useSupervisorCheck(user?.email);
+    const { isSupervisor, supervisedEmployees, supervisedEmployeeIds, explicitSubordinates } = useSupervisorCheck(user?.email);
+
+    const isSuperAdminOrAdmin = React.useMemo(() => {
+        if (!userRole) return false;
+        return userRole.includes('Super Admin') || userRole.includes('Admin');
+    }, [userRole]);
+
+    const effectiveSupervisedEmployees = React.useMemo(() => {
+        if (isSuperAdminOrAdmin) return supervisedEmployees;
+        return explicitSubordinates;
+    }, [isSuperAdminOrAdmin, supervisedEmployees, explicitSubordinates]);
+
+    const effectiveSupervisedEmployeeIds = React.useMemo(() => {
+        return effectiveSupervisedEmployees.map(e => e.id);
+    }, [effectiveSupervisedEmployees]);
+
+    const showSupervisionTab = isSuperAdminOrAdmin || explicitSubordinates.length > 0;
+
     const [supervisionRecords, setSupervisionRecords] = useState<MultipleCheckInOutRecord[]>([]);
     const [filteredSupervisionRecords, setFilteredSupervisionRecords] = useState<MultipleCheckInOutRecord[]>([]);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -146,12 +163,12 @@ export default function MobileCheckInOutPage() {
     // Fetch Supervision Records
     useEffect(() => {
         const fetchSupervisionData = async () => {
-            if (!isSupervisor || supervisedEmployeeIds.length === 0 || activeTab !== 'Supervision') return;
+            if (!isSupervisor || effectiveSupervisedEmployeeIds.length === 0 || activeTab !== 'Supervision') return;
 
             try {
                 const chunks = [];
-                for (let i = 0; i < supervisedEmployeeIds.length; i += 10) {
-                    chunks.push(supervisedEmployeeIds.slice(i, i + 10));
+                for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 10) {
+                    chunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 10));
                 }
 
                 let allSupRecords: MultipleCheckInOutRecord[] = [];
@@ -175,7 +192,7 @@ export default function MobileCheckInOutPage() {
         };
 
         fetchSupervisionData();
-    }, [isSupervisor, supervisedEmployeeIds, activeTab, refreshTrigger]);
+    }, [isSupervisor, effectiveSupervisedEmployeeIds, activeTab, refreshTrigger]);
 
     // Fetch Privileged Role Check-Ins
     useEffect(() => {
@@ -438,13 +455,14 @@ export default function MobileCheckInOutPage() {
 
         if (isLeftSwipe || isRightSwipe) {
             const tabs: ('Check Ins' | 'Completed' | 'Supervision')[] = ['Check Ins', 'Completed', 'Supervision'];
-            const currentIndex = tabs.indexOf(activeTab);
+            const availableTabs = tabs.filter(tab => tab !== 'Supervision' || showSupervisionTab);
+            const currentIndex = availableTabs.indexOf(activeTab);
 
-            if (isLeftSwipe && currentIndex < tabs.length - 1) {
-                setActiveTab(tabs[currentIndex + 1]);
+            if (isLeftSwipe && currentIndex < availableTabs.length - 1) {
+                setActiveTab(availableTabs[currentIndex + 1]);
             }
             if (isRightSwipe && currentIndex > 0) {
-                setActiveTab(tabs[currentIndex - 1]);
+                setActiveTab(availableTabs[currentIndex - 1]);
             }
         }
     };
@@ -503,7 +521,7 @@ export default function MobileCheckInOutPage() {
             });
 
             const missingIds = Array.from(allVisitEmployeeIds).filter(id =>
-                !supervisedEmployees.find(emp => emp.id === id) &&
+                !effectiveSupervisedEmployees.find(emp => emp.id === id) &&
                 !extraProfiles[id]
             );
 
@@ -535,7 +553,7 @@ export default function MobileCheckInOutPage() {
         if (filteredGroupedRecords.length > 0) {
             fetchMissingProfiles();
         }
-    }, [filteredGroupedRecords, supervisedEmployees]);
+    }, [filteredGroupedRecords, effectiveSupervisedEmployees]);
 
     const renderContent = () => {
         if (isLoading) {
@@ -584,7 +602,7 @@ export default function MobileCheckInOutPage() {
                                 }
 
                                 // Find employee profile for Supervision/Team view
-                                const employeeProfile = supervisedEmployees.find(emp => emp.id === visit.employeeId) || extraProfiles[visit.employeeId];
+                                const employeeProfile = effectiveSupervisedEmployees.find(emp => emp.id === visit.employeeId) || extraProfiles[visit.employeeId];
                                 const photoURL = employeeProfile?.photoURL;
 
                                 return (
@@ -818,9 +836,10 @@ export default function MobileCheckInOutPage() {
                 {/* Tabs Section */}
                 <div className="bg-white px-6 pt-6 pb-2 rounded-t-[2rem] shadow-sm z-10 shrink-0">
                     <div className="flex items-center justify-between p-1 bg-slate-50 rounded-full mb-4">
-                        {['Check Ins', 'Completed', 'Supervision'].map((tab) => (
+                        {['Check Ins', 'Completed', 'Supervision'].filter(tab => tab !== 'Supervision' || showSupervisionTab).map((tab) => (
                             <button
                                 key={tab}
+                                onClick={() => setActiveTab(tab as any)}
                                 className={`flex-1 py-3 text-[10px] sm:text-xs font-bold rounded-full transition-all duration-200 ${activeTab === tab
                                     ? 'bg-white text-blue-600 shadow-sm'
                                     : 'text-slate-400 hover:text-slate-600'

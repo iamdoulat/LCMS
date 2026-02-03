@@ -42,8 +42,18 @@ interface UnifiedApprovalRecord extends MultipleCheckInOutRecord {
 
 export default function RemoteAttendanceApprovalPage() {
     const { user, userRole } = useAuth();
-    const { isSupervisor, supervisedEmployees, currentEmployeeId, isLoading: isSupervisorLoading } = useSupervisorCheck(user?.email);
+    const { isSupervisor, supervisedEmployees, explicitSubordinates, currentEmployeeId, isLoading: isSupervisorLoading } = useSupervisorCheck(user?.email);
     const router = useRouter();
+
+    const isSuperAdminOrAdmin = React.useMemo(() => {
+        if (!userRole) return false;
+        return userRole.includes('Super Admin') || userRole.includes('Admin');
+    }, [userRole]);
+
+    const effectiveSupervisedEmployees = React.useMemo(() => {
+        if (isSuperAdminOrAdmin) return supervisedEmployees;
+        return explicitSubordinates;
+    }, [isSuperAdminOrAdmin, supervisedEmployees, explicitSubordinates]);
 
     const [records, setRecords] = useState<UnifiedApprovalRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -90,7 +100,7 @@ export default function RemoteAttendanceApprovalPage() {
     const fetchRemoteAttendance = async () => {
         if (!user || isSupervisorLoading) return;
 
-        if (!isSupervisor || supervisedEmployees.length === 0) {
+        if (!isSupervisor || effectiveSupervisedEmployees.length === 0) {
             setLoading(false);
             return;
         }
@@ -105,7 +115,7 @@ export default function RemoteAttendanceApprovalPage() {
             const processDaily = (snap: any) => {
                 snap.forEach((doc: any) => {
                     const data = doc.data();
-                    const emp = supervisedEmployees.find(e => e.id === data.employeeId || e.uid === data.employeeId);
+                    const emp = effectiveSupervisedEmployees.find(e => e.id === data.employeeId || e.uid === data.employeeId);
 
                     // Skip if employee is not in supervised list
                     if (!emp) return;
@@ -165,8 +175,8 @@ export default function RemoteAttendanceApprovalPage() {
             };
 
             // Get supervised employee IDs
-            const employeeIds = supervisedEmployees.map(e => e.id);
-            const employeeUids = supervisedEmployees.map(e => e.uid).filter(Boolean) as string[];
+            const employeeIds = effectiveSupervisedEmployees.map(e => e.id);
+            const employeeUids = effectiveSupervisedEmployees.map(e => e.uid).filter(Boolean) as string[];
             const allTeamIds = Array.from(new Set([...employeeIds, ...employeeUids]));
 
             if (allTeamIds.length === 0) {
@@ -261,7 +271,7 @@ export default function RemoteAttendanceApprovalPage() {
         if (!isSupervisorLoading) {
             fetchRemoteAttendance();
         }
-    }, [user, isSupervisor, supervisedEmployees, dateRange, statusFilter, typeFilter, isSupervisorLoading]);
+    }, [user, isSupervisor, effectiveSupervisedEmployees, dateRange, statusFilter, typeFilter, isSupervisorLoading]);
 
     const containerRef = usePullToRefresh(fetchRemoteAttendance);
 
@@ -352,7 +362,7 @@ export default function RemoteAttendanceApprovalPage() {
 
             // Send Push Notification to Employee
             if (selectedRecord.employeeId) {
-                const emp = supervisedEmployees.find(e => e.id === selectedRecord.employeeId || e.uid === selectedRecord.employeeId);
+                const emp = effectiveSupervisedEmployees.find(e => e.id === selectedRecord.employeeId || e.uid === selectedRecord.employeeId);
                 const uid = emp?.uid || selectedRecord.employeeId;
                 const recordDate = selectedRecord.timestamp ? format(new Date(selectedRecord.timestamp), 'dd MMM yyyy') : 'today';
 
@@ -391,7 +401,7 @@ export default function RemoteAttendanceApprovalPage() {
     };
 
     const getEmployeePhoto = (id: string) => {
-        const emp = supervisedEmployees.find(e => e.id === id);
+        const emp = effectiveSupervisedEmployees.find(e => e.id === id);
         return emp?.photoURL;
     }
 

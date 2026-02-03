@@ -33,9 +33,19 @@ interface ReconRequest {
 }
 
 export default function ReconApprovalPage() {
-    const { user } = useAuth();
-    const { isSupervisor, supervisedEmployees, currentEmployeeId } = useSupervisorCheck(user?.email);
+    const { user, userRole } = useAuth();
+    const { isSupervisor, supervisedEmployees, explicitSubordinates, currentEmployeeId } = useSupervisorCheck(user?.email);
     const router = useRouter();
+
+    const isSuperAdminOrAdmin = React.useMemo(() => {
+        if (!userRole) return false;
+        return userRole.includes('Super Admin') || userRole.includes('Admin');
+    }, [userRole]);
+
+    const effectiveSupervisedEmployees = React.useMemo(() => {
+        if (isSuperAdminOrAdmin) return supervisedEmployees;
+        return explicitSubordinates;
+    }, [isSuperAdminOrAdmin, supervisedEmployees, explicitSubordinates]);
 
     const [activeTab, setActiveTab] = useState<'attendance' | 'breaktime'>('attendance');
     const [requests, setRequests] = useState<ReconRequest[]>([]);
@@ -46,7 +56,7 @@ export default function ReconApprovalPage() {
     const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
 
     const fetchRequests = async () => {
-        if (!user || !isSupervisor || supervisedEmployees.length === 0) {
+        if (!user || (loading && !isSupervisor) || effectiveSupervisedEmployees.length === 0) {
             setLoading(false);
             return;
         }
@@ -55,7 +65,7 @@ export default function ReconApprovalPage() {
         try {
             const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
             const employeeIds = selectedEmployee === 'all'
-                ? supervisedEmployees.map(e => e.id)
+                ? effectiveSupervisedEmployees.map(e => e.id)
                 : [selectedEmployee];
             const fetchedRequests: ReconRequest[] = [];
 
@@ -133,15 +143,15 @@ export default function ReconApprovalPage() {
 
     useEffect(() => {
         fetchRequests();
-    }, [user, isSupervisor, supervisedEmployees, activeTab, filterDays, statusFilter, selectedEmployee]);
+    }, [user, isSupervisor, effectiveSupervisedEmployees, activeTab, filterDays, statusFilter, selectedEmployee]);
 
     const employeeMap = React.useMemo(() => {
         const map: Record<string, { fullName: string; employeeCode: string; designation?: string }> = {};
-        supervisedEmployees.forEach(emp => {
+        effectiveSupervisedEmployees.forEach(emp => {
             map[emp.id] = { fullName: emp.fullName, employeeCode: emp.employeeCode, designation: emp.designation };
         });
         return map;
-    }, [supervisedEmployees]);
+    }, [effectiveSupervisedEmployees]);
 
     const containerRef = usePullToRefresh(fetchRequests);
 
@@ -388,7 +398,7 @@ export default function ReconApprovalPage() {
                                     className="w-full py-2 px-3 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="all">All Employees</option>
-                                    {supervisedEmployees.map((emp) => (
+                                    {effectiveSupervisedEmployees.map((emp) => (
                                         <option key={emp.id} value={emp.id}>
                                             {emp.fullName}
                                         </option>
