@@ -289,7 +289,7 @@ export default function ReconApprovalPage() {
     const formatDate = (dateStr?: string) => {
         if (!dateStr) return '-';
         try {
-            return format(new Date(dateStr), 'EEE, d MMM yyyy');
+            return format(parseISO(dateStr), 'EEE, d MMM yyyy');
         } catch {
             return dateStr;
         }
