@@ -7,10 +7,6 @@
         {
             "path": "/api/cron/daily-birthdays",
             "schedule": "11 18 * * *"
-        },
-        {
-            "path": "/api/cron/announcements",
-            "schedule": "*/10 * * * *"
         }
     ]
 }
