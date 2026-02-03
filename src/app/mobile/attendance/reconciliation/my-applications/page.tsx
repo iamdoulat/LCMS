@@ -7,10 +7,12 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, parseISO, subDays } from 'date-fns';
-import { ChevronLeft, Calendar, Clock, X, Plus, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, Calendar, Clock, X, Plus, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
+import Swal from 'sweetalert2';
+import { deleteDoc, doc } from 'firebase/firestore';
 
 interface ReconRequest {
     id: string;
@@ -161,6 +163,52 @@ export default function MyReconApplicationsPage() {
         }
     };
 
+    const handleDelete = async (requestId: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent modal from opening
+
+        const result = await Swal.fire({
+            title: 'Delete Reconciliation?',
+            text: 'This action cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
+                await deleteDoc(doc(firestore, collectionName, requestId));
+
+                // Refresh the list
+                await fetchRequests();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Deleted!',
+                    text: 'Reconciliation request has been deleted.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } catch (error) {
+                console.error('Error deleting request:', error);
+                Swal.fire('Error', 'Failed to delete the request.', 'error');
+            }
+        }
+    };
+
+    const handleEdit = (request: ReconRequest, e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent modal from opening
+
+        if (activeTab === 'attendance') {
+            router.push(`/mobile/attendance/reconciliation?date=${request.attendanceDate}&employeeId=${currentEmployeeId}&editId=${request.id}`);
+        } else {
+            router.push(`/mobile/attendance/breaktime-reconciliation?date=${request.attendanceDate}&editId=${request.id}`);
+        }
+    };
+
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Sticky Header */}
@@ -299,29 +347,82 @@ export default function MyReconApplicationsPage() {
                         requests.map((req) => (
                             <div
                                 key={req.id}
-                                onClick={() => setSelectedRequest(req)}
-                                className="bg-white p-5 rounded-2xl shadow-md border-l-4 border-emerald-500 cursor-pointer active:scale-[0.98] transition-transform"
+                                className="bg-white p-5 rounded-2xl shadow-md border-l-4 border-emerald-500 active:scale-[0.98] transition-transform relative"
                             >
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusColor(req.status)}`}>
-                                        {req.status || 'Pending'}
-                                    </span>
-                                    {activeTab === 'attendance' && (
-                                        <>
-                                            {req.requestedInTime && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-600">In Time</span>}
-                                            {req.requestedOutTime && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-600">Out Time</span>}
-                                        </>
-                                    )}
+                                {/* Action Buttons - Top Right */}
+                                <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                                    <button
+                                        onClick={(e) => handleEdit(req, e)}
+                                        disabled={req.status?.toLowerCase() !== 'pending'}
+                                        className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${req.status?.toLowerCase() === 'pending'
+                                            ? 'bg-blue-500 text-white hover:bg-blue-600 active:scale-90'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            }`}
+                                        title={req.status?.toLowerCase() === 'pending' ? 'Edit' : 'Cannot edit - not pending'}
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => handleDelete(req.id, e)}
+                                        disabled={req.status?.toLowerCase() !== 'pending'}
+                                        className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${req.status?.toLowerCase() === 'pending'
+                                            ? 'bg-red-500 text-white hover:bg-red-600 active:scale-90'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            }`}
+                                        title={req.status?.toLowerCase() === 'pending' ? 'Delete' : 'Cannot delete - not pending'}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
-                                <h3 className="text-slate-800 font-bold mb-3">
-                                    {activeTab === 'attendance' ? 'Attendance Reconciliation' : 'Breaktime Reconciliation'} for <span className="text-blue-600">{formatDate(req.attendanceDate)}</span>
-                                </h3>
-                                <div className="flex items-center justify-end text-xs font-semibold text-slate-500 bg-slate-50 py-1.5 px-3 rounded-lg inline-flex ml-auto w-fit">
-                                    <Calendar className="w-3 h-3 mr-1.5" />
-                                    {/* Showing Created Date or Attendance Date again? Image shows "09-02-2025 06:12 PM", looks like submitted time */}
-                                    {/* If createdAt is timestamp, convert. If not available, use current? */}
-                                    {/* Mocking generic formatted date for now if createdAt missing */}
-                                    {formatDate(req.attendanceDate)}
+
+                                <div onClick={() => setSelectedRequest(req)} className="cursor-pointer">
+                                    <div className="flex items-center gap-2 mb-2 pr-20">
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusColor(req.status)}`}>
+                                            {req.status || 'Pending'}
+                                        </span>
+                                        {activeTab === 'attendance' && (
+                                            <>
+                                                {req.requestedInTime && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-600">In Time</span>}
+                                                {req.requestedOutTime && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-600">Out Time</span>}
+                                            </>
+                                        )}
+                                    </div>
+                                    <h3 className="text-slate-800 font-bold mb-3">
+                                        {activeTab === 'attendance' ? 'Attendance Reconciliation' : 'Breaktime Reconciliation'} for <span className="text-blue-600">{formatDate(req.attendanceDate)}</span>
+                                    </h3>
+
+                                    {/* Show actual requested times instead of redundant dates */}
+                                    {activeTab === 'attendance' ? (
+                                        <div className="flex items-center gap-4 text-xs font-semibold">
+                                            {req.requestedInTime && (
+                                                <div className="flex items-center gap-1.5 bg-indigo-50 py-1.5 px-3 rounded-lg">
+                                                    <Clock className="w-3 h-3 text-indigo-600" />
+                                                    <span className="text-indigo-600">In: {formatTime(req.requestedInTime)}</span>
+                                                </div>
+                                            )}
+                                            {req.requestedOutTime && (
+                                                <div className="flex items-center gap-1.5 bg-purple-50 py-1.5 px-3 rounded-lg">
+                                                    <Clock className="w-3 h-3 text-purple-600" />
+                                                    <span className="text-purple-600">Out: {formatTime(req.requestedOutTime)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-4 text-xs font-semibold">
+                                            {req.breakStartTime && (
+                                                <div className="flex items-center gap-1.5 bg-yellow-50 py-1.5 px-3 rounded-lg">
+                                                    <Clock className="w-3 h-3 text-yellow-600" />
+                                                    <span className="text-yellow-600">Start: {formatTime(req.breakStartTime)}</span>
+                                                </div>
+                                            )}
+                                            {req.breakEndTime && (
+                                                <div className="flex items-center gap-1.5 bg-orange-50 py-1.5 px-3 rounded-lg">
+                                                    <Clock className="w-3 h-3 text-orange-600" />
+                                                    <span className="text-orange-600">End: {formatTime(req.breakEndTime)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))

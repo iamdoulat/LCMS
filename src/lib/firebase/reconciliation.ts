@@ -43,6 +43,37 @@ export const createReconciliationRequest = async (data: CreateReconciliationData
     }
 };
 
+// Create a new breaktime reconciliation request
+export const createBreaktimeReconciliationRequest = async (
+    data: {
+        employeeId: string;
+        employeeCode: string;
+        employeeName: string;
+        designation: string;
+        attendanceDate: string;
+        requestedBreakStartTime: string;
+        requestedBreakEndTime: string;
+        reason: string;
+    },
+    userId: string
+) => {
+    try {
+        const docRef = await addDoc(collection(firestore, 'break_reconciliation'), {
+            ...data,
+            status: 'pending',
+            appliedBy: userId,
+            appliedAt: serverTimestamp(),
+            applyDate: new Date().toISOString(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+        return docRef.id;
+    } catch (error) {
+        console.error('Error creating breaktime reconciliation request:', error);
+        throw error;
+    }
+};
+
 // Get reconciliations for a specific employee
 export const getEmployeeReconciliations = async (employeeId: string) => {
     try {

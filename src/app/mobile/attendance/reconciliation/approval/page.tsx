@@ -50,37 +50,37 @@ export default function ReconApprovalPage() {
     const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
 
     const fetchRequests = async () => {
-        if (!user || (loading && !isSupervisor) || effectiveSupervisedEmployees.length === 0) {
+        if (!user) {
             setLoading(false);
+            return;
+        }
+
+        // Check if user is Admin or has supervised employees
+        const isAdmin = userRole?.includes('Admin') || userRole?.includes('Super Admin');
+        const hasSupervision = effectiveSupervisedEmployees.length > 0;
+
+        if (!isAdmin && !hasSupervision) {
+            setLoading(false);
+            setRequests([]);
             return;
         }
 
         setLoading(true);
         try {
             const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
-            const employeeIds = selectedEmployee === 'all'
-                ? effectiveSupervisedEmployees.map(e => e.id)
-                : [selectedEmployee];
             const fetchedRequests: ReconRequest[] = [];
 
-            // Chunk queries by employeeId
-            const chunks = [];
-            for (let i = 0; i < employeeIds.length; i += 10) {
-                chunks.push(employeeIds.slice(i, i + 10));
-            }
-
-            for (const chunk of chunks) {
+            // Admin sees ALL requests, Supervisor sees only their team's requests
+            if (isAdmin && selectedEmployee === 'all') {
+                // Admin viewing all employees - fetch everything
                 let q;
 
-                // For approved view, fetch all approved/rejected records
                 if (statusFilter === 'approved') {
                     q = query(
                         collection(firestore, collectionName),
-                        where('employeeId', 'in', chunk),
                         where('status', 'in', ['approved', 'rejected'])
                     );
                 } else if (filterDays !== 'all') {
-                    // Apply date filter
                     const endDate = new Date();
                     const startDate = subDays(endDate, Number(filterDays));
                     const startDateStr = format(startDate, 'yyyy-MM-dd');
@@ -88,32 +88,23 @@ export default function ReconApprovalPage() {
                     if (statusFilter === 'pending') {
                         q = query(
                             collection(firestore, collectionName),
-                            where('employeeId', 'in', chunk),
                             where('status', '==', 'pending'),
                             where('attendanceDate', '>=', startDateStr)
                         );
                     } else {
-                        // 'all' status - show everything within date range
                         q = query(
                             collection(firestore, collectionName),
-                            where('employeeId', 'in', chunk),
                             where('attendanceDate', '>=', startDateStr)
                         );
                     }
                 } else {
-                    // No date filter - fetch all records
                     if (statusFilter === 'pending') {
                         q = query(
                             collection(firestore, collectionName),
-                            where('employeeId', 'in', chunk),
                             where('status', '==', 'pending')
                         );
                     } else {
-                        // All statuses, all time
-                        q = query(
-                            collection(firestore, collectionName),
-                            where('employeeId', 'in', chunk)
-                        );
+                        q = query(collection(firestore, collectionName));
                     }
                 }
 
@@ -121,6 +112,71 @@ export default function ReconApprovalPage() {
                 snapshot.forEach(doc => {
                     fetchedRequests.push({ id: doc.id, ...doc.data() } as ReconRequest);
                 });
+            } else {
+                // Supervisor OR Admin filtering by specific employee
+                const employeeIds = selectedEmployee === 'all'
+                    ? effectiveSupervisedEmployees.map(e => e.id)
+                    : [selectedEmployee];
+
+                // Chunk queries by employeeId
+                const chunks = [];
+                for (let i = 0; i < employeeIds.length; i += 10) {
+                    chunks.push(employeeIds.slice(i, i + 10));
+                }
+
+                for (const chunk of chunks) {
+                    let q;
+
+                    // For approved view, fetch all approved/rejected records
+                    if (statusFilter === 'approved') {
+                        q = query(
+                            collection(firestore, collectionName),
+                            where('employeeId', 'in', chunk),
+                            where('status', 'in', ['approved', 'rejected'])
+                        );
+                    } else if (filterDays !== 'all') {
+                        // Apply date filter
+                        const endDate = new Date();
+                        const startDate = subDays(endDate, Number(filterDays));
+                        const startDateStr = format(startDate, 'yyyy-MM-dd');
+
+                        if (statusFilter === 'pending') {
+                            q = query(
+                                collection(firestore, collectionName),
+                                where('employeeId', 'in', chunk),
+                                where('status', '==', 'pending'),
+                                where('attendanceDate', '>=', startDateStr)
+                            );
+                        } else {
+                            // 'all' status - show everything within date range
+                            q = query(
+                                collection(firestore, collectionName),
+                                where('employeeId', 'in', chunk),
+                                where('attendanceDate', '>=', startDateStr)
+                            );
+                        }
+                    } else {
+                        // No date filter - fetch all records
+                        if (statusFilter === 'pending') {
+                            q = query(
+                                collection(firestore, collectionName),
+                                where('employeeId', 'in', chunk),
+                                where('status', '==', 'pending')
+                            );
+                        } else {
+                            // All statuses, all time
+                            q = query(
+                                collection(firestore, collectionName),
+                                where('employeeId', 'in', chunk)
+                            );
+                        }
+                    }
+
+                    const snapshot = await getDocs(q);
+                    snapshot.forEach(doc => {
+                        fetchedRequests.push({ id: doc.id, ...doc.data() } as ReconRequest);
+                    });
+                }
             }
 
             // Sort client side

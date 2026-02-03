@@ -562,6 +562,13 @@ export default function MyAttendancePage() {
                                                 <span className="text-[7px] font-bold text-slate-400 uppercase leading-none">Min</span>
                                             </div>
                                         )}
+
+                                        <Link
+                                            href={`/mobile/attendance/breaktime-reconciliation?date=${record.date}&breakId=${record.id}`}
+                                            className="h-8 w-8 rounded-full bg-yellow-500 flex items-center justify-center text-white shadow-[0_3px_8px_rgba(234,179,8,0.4)] shrink-0 active:scale-90 transition-transform"
+                                        >
+                                            <Edit2 className="w-3.5 h-3.5" />
+                                        </Link>
                                     </div>
                                 ))
                             ) : (
