@@ -154,36 +154,27 @@ export default function ReconApprovalPage() {
         if (!currentEmployeeId) return;
 
         try {
-            if (activeTab === 'attendance') {
-                if (action === 'approve') {
-                    // We need type checking here as 'ReconRequest' is local. 
-                    // cast to any or import real type.
-                    await approveReconciliation(request.id, request as any, currentEmployeeId);
-                } else {
-                    await rejectReconciliation(request.id, currentEmployeeId);
-                }
-            } else {
-                // Breaktime logic - assuming similar functions exist or generic update
-                // If breaktime functions not in lib, we might need to create them or user generic update.
-                // For now, let's assume specific logic needed.
-                // Or just update status for 'break_reconciliation' if it mirrors structure.
-                if (action === 'approve') {
-                    // Need 'approveBreakReconciliation'? 
-                    // Or just update status?
-                    // Let's just update pending status to approved/rejected for now if function missing.
-                    await updateDoc(doc(firestore, 'break_reconciliation', request.id), {
-                        status: 'approved',
-                        reviewedBy: currentEmployeeId,
-                        reviewedAt: serverTimestamp()
-                    });
-                    // NOTE: Should also update actual 'breaks' collection if approved!
-                } else {
-                    await updateDoc(doc(firestore, 'break_reconciliation', request.id), {
-                        status: 'rejected',
-                        reviewedBy: currentEmployeeId,
-                        reviewedAt: serverTimestamp()
-                    });
-                }
+            // Call Server-Side API for Decision
+            // This bypasses client-side permission issues for Supervisors modifying other users' attendance
+            const idToken = await user?.getIdToken();
+            if (!idToken) throw new Error("Authentication failed");
+
+            const response = await fetch('/api/attendance/reconcile/decision', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
+                },
+                body: JSON.stringify({
+                    reconciliationId: request.id,
+                    action: action,
+                    type: activeTab === 'attendance' ? 'attendance' : 'breaktime'
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'API Request Failed');
             }
 
             // Push Notification
