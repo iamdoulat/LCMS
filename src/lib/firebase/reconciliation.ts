@@ -54,12 +54,16 @@ export const createBreaktimeReconciliationRequest = async (
         requestedBreakStartTime: string;
         requestedBreakEndTime: string;
         reason: string;
+        breakId?: string;
     },
     userId: string
 ) => {
     try {
         const docRef = await addDoc(collection(firestore, 'break_reconciliation'), {
             ...data,
+            employeeCode: data.employeeCode || 'N/A',
+            employeeName: data.employeeName || 'Unknown',
+            designation: data.designation || 'Staff',
             status: 'pending',
             appliedBy: userId,
             appliedAt: serverTimestamp(),

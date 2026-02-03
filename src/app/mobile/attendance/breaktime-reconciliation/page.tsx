@@ -122,13 +122,14 @@ export default function BreaktimeReconciliationPage() {
 
             const reconciliationData = {
                 employeeId: currentEmployeeId,
-                employeeCode: employeeData.employeeCode,
-                employeeName: employeeData.fullName,
-                designation: employeeData.designation,
+                employeeCode: employeeData?.employeeCode || 'N/A',
+                employeeName: employeeData?.fullName || user?.displayName || 'Unknown',
+                designation: employeeData?.designation || 'Staff',
                 attendanceDate: selectedDate,
                 requestedBreakStartTime: startDateTime.toISOString(),
                 requestedBreakEndTime: endDateTime.toISOString(),
                 reason: reason.trim(),
+                breakId: breakIdParam || ''
             };
 
             await createBreaktimeReconciliationRequest(reconciliationData, user!.uid);
