@@ -5,8 +5,9 @@ import { X, Coffee, Timer, Loader2, CheckCircle2, AlertCircle, MapPin, RefreshCw
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useAuth } from '@/context/AuthContext';
+import { useBreakTime } from '@/context/BreakTimeContext';
 import { firestore } from '@/lib/firebase/config';
-import { doc, getDoc, onSnapshot, query, collection, where } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, query, collection, where, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { startBreak, stopBreak } from '@/lib/firebase/breakTime';
 import { BreakTimeRecord } from '@/types/breakTime';
@@ -24,6 +25,7 @@ interface MobileBreakTimeModalProps {
 
 export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, externalIsOnBreak, externalBreakRecord }: MobileBreakTimeModalProps) {
     const { user } = useAuth();
+    const { employeeId: contextEmployeeId } = useBreakTime();
     const [employeeData, setEmployeeData] = useState<any>(null);
     const [internalIsOnBreak, setInternalIsOnBreak] = useState(false);
     const [internalActiveBreakRecord, setInternalActiveBreakRecord] = useState<BreakTimeRecord | null>(null);
@@ -38,6 +40,9 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
     const isOnBreak = externalIsOnBreak !== undefined ? externalIsOnBreak : internalIsOnBreak;
     const activeBreakRecord = externalBreakRecord !== undefined ? externalBreakRecord : internalActiveBreakRecord;
 
+    // Use context ID as the source of truth
+    const resolvedEmployeeId = contextEmployeeId || user?.uid;
+
     // Reset capture flag when modal closes
     useEffect(() => {
         if (!isOpen) {
@@ -48,22 +53,46 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
 
     // Fetch employee data and today's attendance
     useEffect(() => {
-        if (!user || !isOpen) return;
+        if (!resolvedEmployeeId || !isOpen) return;
 
         const fetchData = async () => {
             try {
-                const empDoc = await getDoc(doc(firestore, 'employees', user.uid));
+                // Fetch Employee Data
+                const empDoc = await getDoc(doc(firestore, 'employees', resolvedEmployeeId));
                 if (empDoc.exists()) {
                     setEmployeeData({ id: empDoc.id, ...empDoc.data() });
+                } else {
+                    // Fallback to searching if resolvedEmployeeId is not the doc ID
+                    if (user?.email) {
+                        const emailToLower = user.email.toLowerCase().trim();
+                        const q = query(collection(firestore, 'employees'), where('email', '==', emailToLower));
+                        const snapshot = await getDocs(q);
+                        if (!snapshot.empty) {
+                            setEmployeeData({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() });
+                        }
+                    }
                 }
 
+                // Fetch Today's Attendance
                 const today = format(new Date(), 'yyyy-MM-dd');
-                const attDocId = `${user.uid}_${today}`;
-                const attDoc = await getDoc(doc(firestore, 'attendance', attDocId));
-                if (attDoc.exists()) {
-                    setTodayAttendance(attDoc.data());
+                const attendanceQuery = query(
+                    collection(firestore, 'attendance'),
+                    where('employeeId', '==', resolvedEmployeeId),
+                    where('date', '==', today)
+                );
+
+                const attSnapshot = await getDocs(attendanceQuery);
+                if (!attSnapshot.empty) {
+                    setTodayAttendance(attSnapshot.docs[0].data());
                 } else {
-                    setTodayAttendance(null);
+                    // Second try with user.uid prefix (legacy support)
+                    const attDocId = `${user?.uid}_${today}`;
+                    const attDoc = await getDoc(doc(firestore, 'attendance', attDocId));
+                    if (attDoc.exists()) {
+                        setTodayAttendance(attDoc.data());
+                    } else {
+                        setTodayAttendance(null);
+                    }
                 }
             } catch (err) {
                 console.error("Error fetching data for break modal:", err);
@@ -71,7 +100,7 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
         };
 
         fetchData();
-    }, [user, isOpen]);
+    }, [resolvedEmployeeId, isOpen, user?.email, user?.uid]);
 
     // Auto-capture location on open
     useEffect(() => {
@@ -83,11 +112,11 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
 
     // Real-time listener for active break (Only if external state not provided)
     useEffect(() => {
-        if (!user?.uid || !isOpen || externalIsOnBreak !== undefined) return;
+        if (!resolvedEmployeeId || !isOpen || externalIsOnBreak !== undefined) return;
 
         const q = query(
             collection(firestore, 'break_time'),
-            where('employeeId', '==', user.uid),
+            where('employeeId', '==', resolvedEmployeeId),
             where('onBreak', '==', true)
         );
 
@@ -103,7 +132,7 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
         });
 
         return () => unsubscribe();
-    }, [user, isOpen, externalIsOnBreak]);
+    }, [resolvedEmployeeId, isOpen, externalIsOnBreak]);
 
     // Timer effect
     useEffect(() => {

@@ -3,13 +3,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { BreakTimeRecord } from '@/types/breakTime';
 import { MobileBreakTimeModal } from '@/components/mobile/MobileBreakTimeModal';
 
 interface BreakTimeContextType {
     isOnBreak: boolean;
     activeBreakRecord: BreakTimeRecord | null;
+    employeeId: string | null;
     openBreakModal: () => void;
     closeBreakModal: () => void;
 }
@@ -17,6 +18,7 @@ interface BreakTimeContextType {
 const BreakTimeContext = createContext<BreakTimeContextType>({
     isOnBreak: false,
     activeBreakRecord: null,
+    employeeId: null,
     openBreakModal: () => { },
     closeBreakModal: () => { },
 });
@@ -25,23 +27,47 @@ export const useBreakTime = () => useContext(BreakTimeContext);
 
 export function BreakTimeProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
+    const [employeeId, setEmployeeId] = useState<string | null>(null);
     const [isOnBreak, setIsOnBreak] = useState(false);
     const [activeBreakRecord, setActiveBreakRecord] = useState<BreakTimeRecord | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    // Resolve Correct Employee ID
+    useEffect(() => {
+        if (!user?.email) {
+            setEmployeeId(user?.uid || null);
+            return;
+        }
+
+        const resolveId = async () => {
+            try {
+                // Try email-based resolution (standard in this app)
+                const emailToLower = user.email!.toLowerCase().trim();
+                const q = query(collection(firestore, 'employees'), where('email', '==', emailToLower));
+                const snapshot = await getDocs(q);
+
+                if (!snapshot.empty) {
+                    setEmployeeId(snapshot.docs[0].id);
+                } else {
+                    // Fallback to UID if email doesn't match
+                    setEmployeeId(user.uid);
+                }
+            } catch (err) {
+                console.error("Error resolving employeeId in BreakTimeContext:", err);
+                setEmployeeId(user.uid);
+            }
+        };
+
+        resolveId();
+    }, [user?.email, user?.uid]);
+
     // Real-time listener for active break
     useEffect(() => {
-        if (!user?.email) return;
-
-        // We need to resolve employee ID first if it differs from UID, 
-        // but for now let's assume UID matches or we simply query by employeeId which usually is UID in this app.
-        // Dashboard uses detailed resolution, but auth.uid is robust enough for now if we assume standard flow.
-        // Actually, let's use the same logic as Dashboard if possible, or just rely on user.uid 
-        // effectively linking to the employee record.
+        if (!employeeId) return;
 
         const q = query(
             collection(firestore, 'break_time'),
-            where('employeeId', '==', user.uid),
+            where('employeeId', '==', employeeId),
             where('onBreak', '==', true)
         );
 
@@ -55,14 +81,11 @@ export function BreakTimeProvider({ children }: { children: React.ReactNode }) {
             } else {
                 setActiveBreakRecord(null);
                 setIsOnBreak(false);
-                // Do not auto-close here, user might want to see summary. 
-                // But typically if they stop break, they close it manually.
-                // However, if we want to "freeze" app, we should ensure modal is open if isOnBreak is true.
             }
         });
 
         return () => unsubscribe();
-    }, [user]);
+    }, [employeeId]);
 
     const openBreakModal = () => setIsModalOpen(true);
     const closeBreakModal = () => {
@@ -73,7 +96,7 @@ export function BreakTimeProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <BreakTimeContext.Provider value={{ isOnBreak, activeBreakRecord, openBreakModal, closeBreakModal }}>
+        <BreakTimeContext.Provider value={{ isOnBreak, activeBreakRecord, employeeId, openBreakModal, closeBreakModal }}>
             {children}
 
             {/* 

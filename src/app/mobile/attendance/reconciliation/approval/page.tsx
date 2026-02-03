@@ -19,21 +19,21 @@ interface ReconRequest {
     id: string;
     employeeId: string;
     employeeName: string;
-    employeeCode?: string; // Stored in doc
-    designation?: string; // Stored in doc
+    employeeCode?: string;
+    designation?: string;
     attendanceDate: string; // YYYY-MM-DD
-    status: 'pending' | 'approved' | 'rejected';
+    status: 'pending' | 'approved' | 'rejected' | 'Pending' | 'Approved' | 'Rejected';
     requestedInTime?: string;
     requestedOutTime?: string;
+    requestedBreakStartTime?: string;
+    requestedBreakEndTime?: string;
     inTimeRemarks?: string;
     outTimeRemarks?: string;
-    // Breaktime fields (guess based on pattern)
-    breakStartTime?: string;
-    breakEndTime?: string;
     reason?: string;
-    type?: 'break'; // if we merge collections? but requirements say Tabs.
     actualInTime?: string;
     actualOutTime?: string;
+    actualBreakStartTime?: string;
+    actualBreakEndTime?: string;
 }
 
 export default function ReconApprovalPage() {
@@ -60,7 +60,10 @@ export default function ReconApprovalPage() {
         }
 
         // Check if user is Admin or has supervised employees
-        const isAdmin = userRole?.includes('Admin') || userRole?.includes('Super Admin');
+        // Check if user has administrative rights
+        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
+        const isAdmin = userRole?.some(role => privilegedRoles.includes(role));
+
         const hasSupervision = effectiveSupervisedEmployees.length > 0;
 
         if (!isAdmin && !hasSupervision) {
@@ -70,6 +73,7 @@ export default function ReconApprovalPage() {
         }
 
         setLoading(true);
+        setRequests([]); // Clear previous data to avoid showing stale records during/after failed fetch
         try {
             const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
             const fetchedRequests: ReconRequest[] = [];
@@ -183,7 +187,7 @@ export default function ReconApprovalPage() {
                 }
             }
 
-            // Fetch actual attendance data for each request
+            // Fetch actual data for each request
             if (activeTab === 'attendance') {
                 await Promise.all(fetchedRequests.map(async (req) => {
                     try {
@@ -200,12 +204,60 @@ export default function ReconApprovalPage() {
                         console.error("Error fetching attendance details for recon:", e);
                     }
                 }));
+            } else if (activeTab === 'breaktime') {
+                // For breaktime, we might want to fetch actual breaks for that day
+                // but since there's no direct ID link, we show what we can
+                await Promise.all(fetchedRequests.map(async (req) => {
+                    try {
+                        if (req.attendanceDate && req.employeeId) {
+                            const q = query(
+                                collection(firestore, 'break_time'),
+                                where('employeeId', '==', req.employeeId)
+                            );
+                            const snapshot = await getDocs(q);
+
+                            // Match by date
+                            const breakRecord = snapshot.docs.find(d => {
+                                const data = d.data();
+                                const startTime = data.startTime;
+                                if (!startTime) return false;
+                                try {
+                                    const dDate = new Date(startTime).toISOString().split('T')[0];
+                                    return dDate === req.attendanceDate;
+                                } catch {
+                                    return false;
+                                }
+                            });
+
+                            if (breakRecord) {
+                                const data = breakRecord.data();
+                                req.actualBreakStartTime = data.startTime;
+                                req.actualBreakEndTime = data.endTime;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error fetching break details for recon:", e);
+                    }
+                }));
             }
 
             // Sort client side
             fetchedRequests.sort((a, b) => b.attendanceDate.localeCompare(a.attendanceDate));
 
-            setRequests(fetchedRequests);
+            // Standardize status for consistent filtering
+            const standardizedRequests = fetchedRequests.map(req => ({
+                ...req,
+                status: (req.status?.toLowerCase() || 'pending') as any
+            }));
+
+            // Filter by status filter (which is already lowercase in this component)
+            const filteredRequests = statusFilter === 'all'
+                ? standardizedRequests
+                : statusFilter === 'approved'
+                    ? standardizedRequests.filter(r => r.status === 'approved' || r.status === 'rejected')
+                    : standardizedRequests.filter(r => r.status === statusFilter);
+
+            setRequests(filteredRequests);
 
         } catch (error) {
             console.error("Error fetching recon requests:", error);
@@ -305,7 +357,8 @@ export default function ReconApprovalPage() {
     };
 
     const getStatusColor = (status: string) => {
-        switch (status) {
+        const s = status?.toLowerCase();
+        switch (s) {
             case 'approved': return 'bg-emerald-100 text-emerald-600';
             case 'rejected': return 'bg-red-100 text-red-600';
             default: return 'bg-blue-100 text-blue-600';
@@ -495,11 +548,16 @@ export default function ReconApprovalPage() {
                                                 {req.status}
                                             </span>
                                             {/* Req Time Badge if Pending? */}
-                                            {activeTab === 'attendance' && req.requestedInTime && (
-                                                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">In Time</span>
-                                            )}
-                                            {activeTab === 'attendance' && req.requestedOutTime && (
-                                                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Out Time</span>
+                                            {activeTab === 'attendance' ? (
+                                                <>
+                                                    {req.requestedInTime && <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">In Time</span>}
+                                                    {req.requestedOutTime && <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Out Time</span>}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {req.requestedBreakStartTime && <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Start Time</span>}
+                                                    {req.requestedBreakEndTime && <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">End Time</span>}
+                                                </>
                                             )}
                                         </div>
                                         <div className="text-xs font-bold text-slate-500">
@@ -552,15 +610,21 @@ export default function ReconApprovalPage() {
                                                 <div className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">Actual Time</div>
                                                 <div className="space-y-1.5">
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-bold text-slate-400 w-8">IN</span>
-                                                        <span className={`text-xs font-bold ${req.actualInTime ? 'text-slate-700' : 'text-slate-400 italic'}`}>
-                                                            {formatTime(req.actualInTime) !== '-' ? formatTime(req.actualInTime) : 'Not marked'}
+                                                        <span className="text-[10px] font-bold text-slate-400 w-8">{activeTab === 'attendance' ? 'IN' : 'START'}</span>
+                                                        <span className={`text-xs font-bold ${(activeTab === 'attendance' ? req.actualInTime : req.actualBreakStartTime) ? 'text-slate-700' : 'text-slate-400 italic'}`}>
+                                                            {activeTab === 'attendance'
+                                                                ? (formatTime(req.actualInTime) !== '-' ? formatTime(req.actualInTime) : 'Not marked')
+                                                                : (formatTime(req.actualBreakStartTime) !== '-' ? formatTime(req.actualBreakStartTime) : 'Not marked')
+                                                            }
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-bold text-slate-400 w-8">OUT</span>
-                                                        <span className={`text-xs font-bold ${req.actualOutTime ? 'text-slate-700' : 'text-slate-400 italic'}`}>
-                                                            {formatTime(req.actualOutTime) !== '-' ? formatTime(req.actualOutTime) : 'Not marked'}
+                                                        <span className="text-[10px] font-bold text-slate-400 w-8">{activeTab === 'attendance' ? 'OUT' : 'END'}</span>
+                                                        <span className={`text-xs font-bold ${(activeTab === 'attendance' ? req.actualOutTime : req.actualBreakEndTime) ? 'text-slate-700' : 'text-slate-400 italic'}`}>
+                                                            {activeTab === 'attendance'
+                                                                ? (formatTime(req.actualOutTime) !== '-' ? formatTime(req.actualOutTime) : 'Not marked')
+                                                                : (formatTime(req.actualBreakEndTime) !== '-' ? formatTime(req.actualBreakEndTime) : 'Not marked')
+                                                            }
                                                         </span>
                                                     </div>
                                                 </div>
@@ -571,15 +635,21 @@ export default function ReconApprovalPage() {
                                                 <div className="text-[10px] font-bold text-blue-400 uppercase mb-2 tracking-wider">Recon. Time</div>
                                                 <div className="space-y-1.5">
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-bold text-blue-400 w-8">IN</span>
+                                                        <span className="text-[10px] font-bold text-blue-400 w-8">{activeTab === 'attendance' ? 'IN' : 'START'}</span>
                                                         <span className="text-xs font-bold text-blue-700">
-                                                            {req.requestedInTime ? formatTime(req.requestedInTime) : '-'}
+                                                            {activeTab === 'attendance'
+                                                                ? (req.requestedInTime ? formatTime(req.requestedInTime) : '-')
+                                                                : (req.requestedBreakStartTime ? formatTime(req.requestedBreakStartTime) : '-')
+                                                            }
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-bold text-blue-400 w-8">OUT</span>
+                                                        <span className="text-[10px] font-bold text-blue-400 w-8">{activeTab === 'attendance' ? 'OUT' : 'END'}</span>
                                                         <span className="text-xs font-bold text-blue-700">
-                                                            {req.requestedOutTime ? formatTime(req.requestedOutTime) : '-'}
+                                                            {activeTab === 'attendance'
+                                                                ? (req.requestedOutTime ? formatTime(req.requestedOutTime) : '-')
+                                                                : (req.requestedBreakEndTime ? formatTime(req.requestedBreakEndTime) : '-')
+                                                            }
                                                         </span>
                                                     </div>
                                                 </div>

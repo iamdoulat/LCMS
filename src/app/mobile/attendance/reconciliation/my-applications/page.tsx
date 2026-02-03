@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { format, parseISO, subDays } from 'date-fns';
+import { format, parseISO, subDays, parse } from 'date-fns';
 import { ChevronLeft, Calendar, Clock, X, Plus, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,10 +23,14 @@ interface ReconRequest {
     inTimeRemarks?: string;
     outTimeRemarks?: string;
     createdAt?: any;
-    // Breaktime specific fields (guess)
-    breakStartTime?: string;
-    breakEndTime?: string;
+    // Breaktime specific fields
+    requestedBreakStartTime?: string; // ISO
+    requestedBreakEndTime?: string; // ISO
     reason?: string;
+    // Actual attendance times
+    actualInTime?: string;
+    actualOutTime?: string;
+    employeeId?: string;
 }
 
 export default function MyReconApplicationsPage() {
@@ -49,6 +53,7 @@ export default function MyReconApplicationsPage() {
         }
 
         setLoading(true);
+        setRequests([]); // Clear previous data to avoid showing stale records during/after failed fetch
         try {
             const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
 
@@ -72,6 +77,66 @@ export default function MyReconApplicationsPage() {
 
             const snapshot = await getDocs(q);
             let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReconRequest));
+
+            // Fetch actual attendance times for attendance reconciliations
+            if (activeTab === 'attendance') {
+                const queryIds = [currentEmployeeId, user?.uid].filter((id): id is string => !!id);
+                console.log('fetchRequests: Fetching actual times for', data.length, 'requests using IDs:', queryIds);
+
+                try {
+                    // Fetch all relevant attendance records in one query
+                    let attQuery = query(
+                        collection(firestore, 'attendance'),
+                        where('employeeId', 'in', queryIds.slice(0, 30))
+                    );
+
+                    if (filterDays !== 'all') {
+                        const endDate = new Date();
+                        const startDate = subDays(endDate, Number(filterDays));
+                        // We go back one extra day to be safe with timezones
+                        const startDateStr = format(subDays(startDate, 1), 'yyyy-MM-dd');
+                        attQuery = query(attQuery, where('date', '>=', startDateStr));
+                    }
+
+                    const attSnap = await getDocs(attQuery);
+                    const allAttRecords = attSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+                    console.log(`fetchRequests: Found ${allAttRecords.length} attendance records total for matching`);
+
+                    const getDhakaDateStr = (date: any) => {
+                        if (!date) return '';
+                        try {
+                            // Handle Date object, Firestore Timestamp, or ISO string
+                            const d = (date && typeof date.toDate === 'function') ? date.toDate() : new Date(date);
+                            if (isNaN(d.getTime())) return '';
+
+                            return new Intl.DateTimeFormat('en-CA', {
+                                timeZone: 'Asia/Dhaka',
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit'
+                            }).format(d);
+                        } catch (e) {
+                            return '';
+                        }
+                    };
+
+                    // Match records in memory
+                    data.forEach(req => {
+                        const record = allAttRecords.find(r => {
+                            const recordDhakaDate = getDhakaDateStr(r.date);
+                            return recordDhakaDate === req.attendanceDate;
+                        });
+
+                        if (record) {
+                            req.actualInTime = record.inTime;
+                            req.actualOutTime = record.outTime;
+                            console.log(`fetchRequests: Matched record for ${req.attendanceDate}:`, record.inTime, record.outTime);
+                        }
+                    });
+                } catch (e) {
+                    console.error("Error fetching bulk attendance records:", e);
+                }
+            }
 
             // Apply status filter client-side
             if (statusFilter !== 'all') {
@@ -111,9 +176,19 @@ export default function MyReconApplicationsPage() {
     const formatTime = (isoString?: string) => {
         if (!isoString) return '-';
         try {
-            return format(new Date(isoString), 'hh:mm a');
-        } catch {
-            return 'Invalid Time';
+            // Try parsing as ISO string first
+            let date = parseISO(isoString);
+
+            // If parseISO fails, try parsing as formatted time (e.g., "09:00 AM")
+            if (isNaN(date.getTime())) {
+                const baseDate = new Date();
+                date = parse(isoString, 'hh:mm a', baseDate);
+            }
+
+            if (isNaN(date.getTime())) return isoString;
+            return format(date, 'hh:mm a');
+        } catch (e) {
+            return isoString;
         }
     };
 
@@ -409,16 +484,16 @@ export default function MyReconApplicationsPage() {
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-4 text-xs font-semibold">
-                                            {req.breakStartTime && (
+                                            {req.requestedBreakStartTime && (
                                                 <div className="flex items-center gap-1.5 bg-yellow-50 py-1.5 px-3 rounded-lg">
                                                     <Clock className="w-3 h-3 text-yellow-600" />
-                                                    <span className="text-yellow-600">Start: {formatTime(req.breakStartTime)}</span>
+                                                    <span className="text-yellow-600">Start: {formatTime(req.requestedBreakStartTime)}</span>
                                                 </div>
                                             )}
-                                            {req.breakEndTime && (
+                                            {req.requestedBreakEndTime && (
                                                 <div className="flex items-center gap-1.5 bg-orange-50 py-1.5 px-3 rounded-lg">
                                                     <Clock className="w-3 h-3 text-orange-600" />
-                                                    <span className="text-orange-600">End: {formatTime(req.breakEndTime)}</span>
+                                                    <span className="text-orange-600">End: {formatTime(req.requestedBreakEndTime)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -442,6 +517,9 @@ export default function MyReconApplicationsPage() {
             {/* Quick View Modal */}
             <Dialog open={!!selectedRequest} onOpenChange={(o) => !o && setSelectedRequest(null)}>
                 <DialogContent className="max-w-[90%] rounded-3xl p-0 overflow-hidden bg-white">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Reconciliation Details</DialogTitle>
+                    </DialogHeader>
                     <div className="p-6">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex gap-2">
@@ -469,7 +547,7 @@ export default function MyReconApplicationsPage() {
                                         <div className="grid grid-cols-3 gap-2 mb-2">
                                             <div className="bg-indigo-50 p-2 rounded-xl">
                                                 <div className="text-[10px] text-indigo-400 font-semibold mb-1">Existing Time</div>
-                                                <div className="text-xs font-bold text-slate-700">--:-- --</div>
+                                                <div className="text-xs font-bold text-slate-700">{formatTime(selectedRequest.actualInTime)}</div>
                                             </div>
                                             <div className="bg-indigo-50 p-2 rounded-xl">
                                                 <div className="text-[10px] text-indigo-400 font-semibold mb-1">Recon. Time</div>
@@ -494,7 +572,7 @@ export default function MyReconApplicationsPage() {
                                         <div className="grid grid-cols-3 gap-2 mb-2">
                                             <div className="bg-purple-50 p-2 rounded-xl">
                                                 <div className="text-[10px] text-purple-400 font-semibold mb-1">Existing Time</div>
-                                                <div className="text-xs font-bold text-slate-700">--:-- --</div>
+                                                <div className="text-xs font-bold text-slate-700">{formatTime(selectedRequest.actualOutTime)}</div>
                                             </div>
                                             <div className="bg-purple-50 p-2 rounded-xl">
                                                 <div className="text-[10px] text-purple-400 font-semibold mb-1">Recon. Time</div>
@@ -511,6 +589,35 @@ export default function MyReconApplicationsPage() {
                                         </div>
                                     </div>
                                 )}
+                            </div>
+                        )}
+
+                        {activeTab === 'breaktime' && selectedRequest && (
+                            <div className="space-y-6">
+                                <div>
+                                    <h4 className="text-sm font-bold text-yellow-600 mb-3">Break Details</h4>
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div className="bg-yellow-50 p-3 rounded-xl">
+                                            <div className="text-[10px] text-yellow-600/60 font-semibold mb-1">Requested Start</div>
+                                            <div className="text-sm font-bold text-slate-700">{formatTime(selectedRequest.requestedBreakStartTime)}</div>
+                                        </div>
+                                        <div className="bg-orange-50 p-3 rounded-xl">
+                                            <div className="text-[10px] text-orange-600/60 font-semibold mb-1">Requested End</div>
+                                            <div className="text-sm font-bold text-slate-700">{formatTime(selectedRequest.requestedBreakEndTime)}</div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 p-4 rounded-xl">
+                                        <div className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Reason</div>
+                                        <div className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
+                                            {selectedRequest.reason || 'No reason provided'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-blue-50/50 p-3 rounded-xl flex items-center justify-between">
+                                    <div className="text-xs font-bold text-blue-600">Reconciliation Date</div>
+                                    <div className="text-xs font-bold text-blue-600">{formatModalDate(selectedRequest.attendanceDate)}</div>
+                                </div>
                             </div>
                         )}
                     </div>

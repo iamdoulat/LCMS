@@ -233,19 +233,21 @@ export default function MyAttendancePage() {
     }, [currentEmployeeId]);
 
     const fetchBreaks = async () => {
-        const queryIds = [currentEmployeeId, user?.uid].filter((id): id is string => !!id);
-        if (queryIds.length === 0) return;
+        const queryIds = Array.from(new Set([currentEmployeeId, user?.uid].filter((id): id is string => !!id)));
+        if (queryIds.length === 0) {
+            setLoading(false);
+            return;
+        }
 
         setLoading(true);
         try {
-            // Fetch records for employee using 'in' operator for resilience
             // Fetch records for employee using 'in' operator for resilience
             let q = query(
                 collection(firestore, 'break_time'),
                 where('employeeId', 'in', queryIds)
             );
 
-            // Date Range Filter (Assuming break records also have 'date' field YYYY-MM-DD or similar logic)
+            // Date Range Filter
             if (filters.dateRange?.from) {
                 const fromStr = format(filters.dateRange.from, 'yyyy-MM-dd');
                 q = query(q, where('date', '>=', fromStr));
@@ -266,20 +268,36 @@ export default function MyAttendancePage() {
             }
 
             const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BreakRecord));
+            const data = snapshot.docs.map(doc => {
+                const docData = doc.data();
+                // Ensure date and startTime are available even if partially missing
+                const date = docData.date || (docData.createdAt?.toDate ? format(docData.createdAt.toDate(), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+                const startTime = docData.startTime || (docData.createdAt?.toDate ? docData.createdAt.toDate().toISOString() : new Date().toISOString());
 
-            // Sort by startTime desc
-            data.sort((a, b) => {
-                const timeA = a.startTime ? new Date(a.startTime).getTime() : 0;
-                const timeB = b.startTime ? new Date(b.startTime).getTime() : 0;
-                return timeB - timeA;
+                return {
+                    id: doc.id,
+                    ...docData,
+                    date,
+                    startTime
+                } as BreakRecord;
             });
 
-            // data.sort((a, b)...
-            setBreakRecords(data.slice(0, 30));
+            // Sort by startTime desc or createdAt desc
+            data.sort((a: any, b: any) => {
+                const timeA = a.startTime ? new Date(a.startTime).getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
+                const timeB = b.startTime ? new Date(b.startTime).getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
+
+                // Final fallback to 0 if still NaN
+                const valA = isNaN(timeA) ? 0 : timeA;
+                const valB = isNaN(timeB) ? 0 : timeB;
+
+                return valB - valA;
+            });
+
+            setBreakRecords(data);
             // Update cache
             if (!filters.dateRange?.from && (!filters.status || filters.status === 'All')) {
-                localStorage.setItem('myBreakRecords', JSON.stringify(data.slice(0, 30)));
+                localStorage.setItem('myBreakRecords', JSON.stringify(data.slice(0, 50)));
             }
         } catch (error) {
             console.error("Error fetching breaks:", error);
