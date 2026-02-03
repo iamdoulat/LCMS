@@ -8,7 +8,8 @@ import {
     bulkApproveReconciliations,
     bulkRejectReconciliations,
     updateReconciliation,
-    deleteReconciliation
+    deleteReconciliation,
+    bulkDeleteReconciliations
 } from '@/lib/firebase/reconciliation';
 import { sendPushNotification } from '@/lib/notifications';
 import type { AttendanceReconciliation } from '@/types/reconciliation';
@@ -475,6 +476,53 @@ export default function AttendanceReconciliationPage() {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (!user) return;
+
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: `You are about to delete ${selectedIds.size} requests. This cannot be undone!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete all!'
+        });
+
+        if (!result.isConfirmed) return;
+
+        setProcessing(true);
+        try {
+            const ids = Array.from(selectedIds);
+            await bulkDeleteReconciliations(ids);
+
+            await safeSwalFire({
+                title: "Deleted!",
+                text: `${selectedIds.size} requests deleted.`,
+                icon: "success",
+                allowOutsideClick: true,
+                allowEscapeKey: true,
+                timer: 1000,
+                timerProgressBar: true,
+                showConfirmButton: true,
+            });
+            setSelectedIds(new Set());
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            await safeSwalFire({
+                title: "Error",
+                text: "Bulk delete failed.",
+                icon: "error",
+                allowOutsideClick: true,
+                allowEscapeKey: true,
+                showConfirmButton: true,
+            });
+        } finally {
+            setProcessing(false);
+        }
+    };
+
     // Filter by search term and supervisor status
     const filteredReconciliations = reconciliations.filter(r => {
         const matchesSearch = r.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -574,6 +622,18 @@ export default function AttendanceReconciliationPage() {
                             />
                         </div>
                         <div className="flex items-center gap-2">
+                            {selectedIds.size > 0 && (
+                                <Button
+                                    variant="destructive"
+                                    size="icon" // or just default with text if space permits, user asked for button
+                                    className="h-10 w-10"
+                                    onClick={handleBulkDelete}
+                                    disabled={processing}
+                                    title="Delete Selected"
+                                >
+                                    {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                </Button>
+                            )}
                             <Select value={filterStatus} onValueChange={(val: any) => setFilterStatus(val)}>
                                 <SelectTrigger className="w-[180px]">
                                     <SelectValue placeholder="Status" />

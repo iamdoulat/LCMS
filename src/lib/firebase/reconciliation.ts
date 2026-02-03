@@ -324,3 +324,16 @@ export const deleteReconciliation = async (id: string) => {
         throw error;
     }
 };
+
+
+// Bulk delete reconciliation requests
+export const bulkDeleteReconciliations = async (ids: string[]) => {
+    const batch = writeBatch(firestore);
+
+    ids.forEach(id => {
+        const docRef = doc(firestore, RECONCILIATION_COLLECTION, id);
+        batch.delete(docRef);
+    });
+
+    await batch.commit();
+};

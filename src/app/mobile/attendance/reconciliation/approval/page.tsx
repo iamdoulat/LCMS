@@ -192,8 +192,8 @@ export default function ReconApprovalPage() {
                             const attDoc = await getDoc(doc(firestore, 'attendance', docId));
                             if (attDoc.exists()) {
                                 const attData = attDoc.data();
-                                req.actualInTime = attData.clockIn;
-                                req.actualOutTime = attData.clockOut;
+                                req.actualInTime = attData.inTime;
+                                req.actualOutTime = attData.outTime;
                             }
                         }
                     } catch (e) {

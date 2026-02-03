@@ -368,11 +368,20 @@ export default function MyAttendancePage() {
     const calculateWorkTime = (inTime?: string, outTime?: string) => {
         if (!inTime || !outTime) return '-';
         try {
-            // Parse times like "09:04 AM" and "12:10 PM"
-            const inDate = parse(inTime, 'hh:mm a', new Date());
-            const outDate = parse(outTime, 'hh:mm a', new Date());
+            // Parse ISO strings directly
+            const inDate = new Date(inTime);
+            const outDate = new Date(outTime);
+
+            // Check if dates are valid
+            if (isNaN(inDate.getTime()) || isNaN(outDate.getTime())) {
+                return '-';
+            }
 
             const diffMs = outDate.getTime() - inDate.getTime();
+
+            // Handle negative time (out before in)
+            if (diffMs < 0) return '-';
+
             const hours = Math.floor(diffMs / (1000 * 60 * 60));
             const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
