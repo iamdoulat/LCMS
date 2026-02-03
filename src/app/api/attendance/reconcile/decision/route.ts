@@ -82,41 +82,36 @@ export async function POST(req: NextRequest) {
                         approvalStatus: 'Approved'
                     };
 
+                    // Helper for strict GMT+6 formatting
+                    const formatToBDTime = (isoString: string): string => {
+                        try {
+                            const date = new Date(isoString);
+                            if (isNaN(date.getTime())) return isoString; // Fallback
+
+                            // Check if it's already "hh:mm AM/PM" format (rudimentary check)
+                            if (isoString.match(/\d{1,2}:\d{2}\s*(AM|PM)/i)) return isoString;
+
+                            return new Intl.DateTimeFormat('en-US', {
+                                timeZone: 'Asia/Dhaka',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                            }).format(date);
+                        } catch (e) {
+                            return isoString;
+                        }
+                    };
+
                     // Process Times
                     if (reconData.requestedInTime) {
-                        // Simplify time processing assuming client sends valid ISO or string.
-                        // Admin SDK doesn't have the same helper, so we reimplement strict logic or trust input
-                        // We will trust input but try to ensure format if it looks like ISO
-                        let inTime = reconData.requestedInTime;
-                        try {
-                            const d = new Date(inTime);
-                            if (!isNaN(d.getTime()) && inTime.includes('T')) {
-                                // Format to 12h
-                                let hours = d.getHours();
-                                const minutes = d.getMinutes().toString().padStart(2, '0');
-                                const ampm = hours >= 12 ? 'PM' : 'AM';
-                                hours = hours % 12 || 12;
-                                inTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-                            }
-                        } catch (e) { }
-
+                        const inTime = formatToBDTime(reconData.requestedInTime);
                         updates.inTime = inTime;
                         // Determine flag
                         updates.flag = determineAttendanceFlag(inTime);
                     }
 
                     if (reconData.requestedOutTime) {
-                        let outTime = reconData.requestedOutTime;
-                        try {
-                            const d = new Date(outTime);
-                            if (!isNaN(d.getTime()) && outTime.includes('T')) {
-                                let hours = d.getHours();
-                                const minutes = d.getMinutes().toString().padStart(2, '0');
-                                const ampm = hours >= 12 ? 'PM' : 'AM';
-                                hours = hours % 12 || 12;
-                                outTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-                            }
-                        } catch (e) { }
+                        const outTime = formatToBDTime(reconData.requestedOutTime);
                         updates.outTime = outTime;
                     }
 
