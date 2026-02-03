@@ -243,7 +243,7 @@ export default function MobileAttendancePage() {
     const attendanceActions = [
         { label: 'My Attendance', icon: CalendarCheck, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/attendance/my-attendance' },
         { label: 'View Attendance', icon: FileText, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/attendance/team-attendance' },
-        { label: 'Recon. Application', icon: FileText, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/attendance/reconciliation/my-applications' },
+        { label: 'My Recon. Application', icon: FileText, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/attendance/reconciliation/my-applications' },
         { label: 'Recon. Approval', icon: Users, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/attendance/reconciliation/approval' },
         { label: 'Remote Att. Approval', icon: MapPin, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/attendance/remote-approval' },
         { label: 'QR Scan / Face Att.', icon: QrCode, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/qrcode' },

@@ -172,15 +172,9 @@ export default function MyReconApplicationsPage() {
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-xl font-bold text-white ml-2 flex-1">Recon. Application</h1>
+                    <h1 className="text-xl font-bold text-white ml-2 flex-1">My Recon. Application</h1>
 
-                    {/* Add New Button */}
-                    <button
-                        onClick={() => router.push('/mobile/attendance/reconciliation')}
-                        className="p-2 bg-white/20 hover:bg-white/30 rounded-full text-white"
-                    >
-                        <Plus className="w-5 h-5" />
-                    </button>
+
                 </div>
             </div>
 
