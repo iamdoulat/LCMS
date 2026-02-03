@@ -385,7 +385,6 @@ export default function MyAttendancePage() {
                 const baseDate = new Date();
 
                 // Parse the time portion using date-fns parse
-                const { parse } = require('date-fns');
                 inDate = parse(inTime, 'hh:mm a', baseDate);
                 outDate = parse(outTime, 'hh:mm a', baseDate);
 
