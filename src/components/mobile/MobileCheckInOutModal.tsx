@@ -283,9 +283,21 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
                         <div className="mt-3 flex items-start gap-2">
                             <MapPin className="h-4 w-4 text-slate-400 mt-1 shrink-0" />
-                            <div className="text-xs text-slate-600 sm:text-sm flex items-center gap-1.5 min-h-[1.25rem]">
-                                {isLoadingLocation && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
-                                <span>{address || "Fetching correct address..."}</span>
+                            <div className="text-xs text-slate-600 sm:text-sm flex flex-col items-start gap-1.5 min-h-[1.25rem]">
+                                <div className="flex items-center gap-1.5">
+                                    {isLoadingLocation && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+                                    <span>{address || (isLoadingLocation ? "Fetching correct address..." : "Address not found")}</span>
+                                </div>
+                                {!address && !isLoadingLocation && currentLocation && (
+                                    <Button
+                                        variant="link"
+                                        size="sm"
+                                        onClick={() => updateLocation(true)}
+                                        className="text-blue-600 h-auto p-0 text-[10px] mt-0.5"
+                                    >
+                                        <RefreshCw className="h-2.5 w-2.5 mr-1" /> Retry Fetch Address
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -82,6 +82,7 @@ export default function ApproveApplicationsPage() {
     // Filter State - Default to Pending
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState<FilterState>({ status: 'Pending' });
+    const [visibleCount, setVisibleCount] = useState(10);
 
     // Computed filtered lists (Date Range Logic)
     const filteredLeaveApps = React.useMemo(() => {
@@ -107,6 +108,11 @@ export default function ApproveApplicationsPage() {
             return true;
         });
     }, [visitApps, filters.dateRange]);
+
+    // Reset visibleCount on filter changes
+    useEffect(() => {
+        setVisibleCount(10);
+    }, [filters]);
 
     // Fetch team applications
     useEffect(() => {
@@ -223,13 +229,12 @@ export default function ApproveApplicationsPage() {
         };
     }, [effectiveSupervisedEmployeeIds, filters.status, isSuperAdminOrAdmin]);
 
-    // Separate effect to fetch missing employee details for loaded apps (Crucial for Admin view)
+    // Optimized effect to fetch missing employee details for only visible portion (Crucial for Admin view)
     useEffect(() => {
-        if (!isSuperAdminOrAdmin) return;
-
         const fetchMissingEmployees = async () => {
-            const allApps = [...leaveApps, ...visitApps];
-            const activeIds = new Set(allApps.map(app => app.employeeId));
+            const currentTabApps = activeTab === 'leave' ? filteredLeaveApps : filteredVisitApps;
+            const visibleApps = currentTabApps.slice(0, visibleCount);
+            const activeIds = new Set(visibleApps.map(app => app.employeeId));
             const missingIds = Array.from(activeIds).filter(id => !employeeMap[id]);
 
             if (missingIds.length === 0) return;
@@ -254,10 +259,10 @@ export default function ApproveApplicationsPage() {
             }
         };
 
-        if (leaveApps.length > 0 || visitApps.length > 0) {
+        if (filteredLeaveApps.length > 0 || filteredVisitApps.length > 0) {
             fetchMissingEmployees();
         }
-    }, [leaveApps, visitApps, isSuperAdminOrAdmin]);
+    }, [filteredLeaveApps, filteredVisitApps, activeTab, visibleCount]);
 
     const handleApproveLeave = async (appId: string) => {
         try {
@@ -508,6 +513,7 @@ export default function ApproveApplicationsPage() {
         if (isRightSwipe && activeTab === 'visit') {
             setActiveTab('leave');
         }
+        setVisibleCount(10); // Reset count on tab swipe
     };
 
     return (
@@ -548,7 +554,7 @@ export default function ApproveApplicationsPage() {
             >
                 <Card className="p-1 px-3 rounded-full border-none shadow-lg mb-6 flex justify-between bg-white/95 backdrop-blur">
                     <button
-                        onClick={() => setActiveTab('leave')}
+                        onClick={() => { setActiveTab('leave'); setVisibleCount(10); }}
                         className={cn(
                             "flex-1 py-3 text-sm font-bold transition-all relative rounded-full",
                             activeTab === 'leave' ? "text-blue-700" : "text-slate-400"
@@ -560,7 +566,7 @@ export default function ApproveApplicationsPage() {
                         Leave App.
                     </button>
                     <button
-                        onClick={() => setActiveTab('visit')}
+                        onClick={() => { setActiveTab('visit'); setVisibleCount(10); }}
                         className={cn(
                             "flex-1 py-3 text-sm font-bold transition-all relative rounded-full",
                             activeTab === 'visit' ? "text-blue-700" : "text-slate-400"
@@ -593,7 +599,7 @@ export default function ApproveApplicationsPage() {
                             </Card>
                         ))
                     ) : (activeTab === 'leave' ? filteredLeaveApps : filteredVisitApps).length > 0 ? (
-                        (activeTab === 'leave' ? filteredLeaveApps : filteredVisitApps).map(app => (
+                        (activeTab === 'leave' ? filteredLeaveApps : filteredVisitApps).slice(0, visibleCount).map(app => (
                             <ApplicationCard key={app.id} app={app} type={activeTab} />
                         ))
                     ) : (
@@ -605,6 +611,21 @@ export default function ApproveApplicationsPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Load More Button */}
+                {!loading && (activeTab === 'leave' ? filteredLeaveApps : filteredVisitApps).length > visibleCount && (
+                    <div className="mt-8 mb-4">
+                        <Button
+                            onClick={() => setVisibleCount(prev => prev + 10)}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-2xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 h-14"
+                        >
+                            Load More Applications
+                        </Button>
+                    </div>
+                )}
+
+                {/* Bottom Spacing */}
+                <div className="h-20" />
             </div>
 
             {/* Leave Detail Modal */}

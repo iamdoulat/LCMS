@@ -549,16 +549,28 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                             <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
                                 <div className="flex items-start gap-2">
                                     <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                                    <p className="text-sm text-slate-600 break-words leading-snug font-medium">
-                                        {isGeocoding ? (
-                                            <span className="flex items-center gap-1.5 text-slate-400 italic">
-                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                                Locating address...
-                                            </span>
-                                        ) : (
-                                            address || (isCapturing ? 'Capturing...' : 'Address unavailable')
+                                    <div className="text-sm text-slate-600 flex flex-col items-start gap-1.5 min-h-[1.25rem]">
+                                        <div className="flex items-center gap-1.5 font-medium">
+                                            {isGeocoding ? (
+                                                <span className="flex items-center gap-1.5 text-slate-400 italic">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    Locating address...
+                                                </span>
+                                            ) : (
+                                                address || (isCapturing ? 'Capturing location...' : 'Address not found')
+                                            )}
+                                        </div>
+                                        {!address && !isGeocoding && location && (
+                                            <Button
+                                                variant="link"
+                                                size="sm"
+                                                onClick={captureLocation}
+                                                className="text-blue-600 h-auto p-0 text-[11px] mt-0.5"
+                                            >
+                                                <RefreshCw className="h-3 w-3 mr-1" /> Retry Fetch Address
+                                            </Button>
                                         )}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
                         )}

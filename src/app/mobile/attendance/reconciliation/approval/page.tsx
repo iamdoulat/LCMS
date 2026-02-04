@@ -52,6 +52,8 @@ export default function ReconApprovalPage() {
     const [showFilters, setShowFilters] = useState(false);
     const [filterDays, setFilterDays] = useState<30 | 90 | 180 | 365 | 'all'>('all');
     const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
+    const [visibleCount, setVisibleCount] = useState(10);
+    const [enrichedData, setEnrichedData] = useState<Record<string, Partial<ReconRequest>>>({});
 
     const fetchRequests = async () => {
         if (!user) {
@@ -187,59 +189,8 @@ export default function ReconApprovalPage() {
                 }
             }
 
-            // Fetch actual data for each request
-            if (activeTab === 'attendance') {
-                await Promise.all(fetchedRequests.map(async (req) => {
-                    try {
-                        if (req.attendanceDate && req.employeeId) {
-                            const docId = `${req.employeeId}_${req.attendanceDate}`;
-                            const attDoc = await getDoc(doc(firestore, 'attendance', docId));
-                            if (attDoc.exists()) {
-                                const attData = attDoc.data();
-                                req.actualInTime = attData.inTime;
-                                req.actualOutTime = attData.outTime;
-                            }
-                        }
-                    } catch (e) {
-                        console.error("Error fetching attendance details for recon:", e);
-                    }
-                }));
-            } else if (activeTab === 'breaktime') {
-                // For breaktime, we might want to fetch actual breaks for that day
-                // but since there's no direct ID link, we show what we can
-                await Promise.all(fetchedRequests.map(async (req) => {
-                    try {
-                        if (req.attendanceDate && req.employeeId) {
-                            const q = query(
-                                collection(firestore, 'break_time'),
-                                where('employeeId', '==', req.employeeId)
-                            );
-                            const snapshot = await getDocs(q);
-
-                            // Match by date
-                            const breakRecord = snapshot.docs.find(d => {
-                                const data = d.data();
-                                const startTime = data.startTime;
-                                if (!startTime) return false;
-                                try {
-                                    const dDate = new Date(startTime).toISOString().split('T')[0];
-                                    return dDate === req.attendanceDate;
-                                } catch {
-                                    return false;
-                                }
-                            });
-
-                            if (breakRecord) {
-                                const data = breakRecord.data();
-                                req.actualBreakStartTime = data.startTime;
-                                req.actualBreakEndTime = data.endTime;
-                            }
-                        }
-                    } catch (e) {
-                        console.error("Error fetching break details for recon:", e);
-                    }
-                }));
-            }
+            // FETCHING DETAILS REMOVED FROM INITIAL LOAD TO PREVENT FREEZING
+            // We will fetch details as needed or just show the reconciliation data
 
             // Sort client side
             fetchedRequests.sort((a, b) => b.attendanceDate.localeCompare(a.attendanceDate));
@@ -266,7 +217,76 @@ export default function ReconApprovalPage() {
         }
     };
 
+    // Fetch details for visible items only to prevent freezing
     useEffect(() => {
+        const fetchVisibleDetails = async () => {
+            if (requests.length === 0) return;
+
+            const visibleSlice = requests.slice(0, visibleCount);
+            const newEnriched: Record<string, Partial<ReconRequest>> = { ...enrichedData };
+            let hasNew = false;
+
+            await Promise.all(visibleSlice.map(async (req) => {
+                if (newEnriched[req.id]) return; // Already fetched
+
+                try {
+                    if (activeTab === 'attendance' && req.attendanceDate && req.employeeId) {
+                        const docId = `${req.employeeId}_${req.attendanceDate}`;
+                        const attDoc = await getDoc(doc(firestore, 'attendance', docId));
+                        if (attDoc.exists()) {
+                            const attData = attDoc.data();
+                            newEnriched[req.id] = {
+                                actualInTime: attData.inTime,
+                                actualOutTime: attData.outTime
+                            };
+                            hasNew = true;
+                        } else {
+                            newEnriched[req.id] = { actualInTime: undefined, actualOutTime: undefined };
+                            hasNew = true;
+                        }
+                    } else if (activeTab === 'breaktime' && req.attendanceDate && req.employeeId) {
+                        const q = query(
+                            collection(firestore, 'break_time'),
+                            where('employeeId', '==', req.employeeId)
+                        );
+                        const snapshot = await getDocs(q);
+                        const breakRecord = snapshot.docs.find(d => {
+                            const data = d.data();
+                            const startTime = data.startTime;
+                            if (!startTime) return false;
+                            try {
+                                return new Date(startTime).toISOString().split('T')[0] === req.attendanceDate;
+                            } catch { return false; }
+                        });
+
+                        if (breakRecord) {
+                            const data = breakRecord.data();
+                            newEnriched[req.id] = {
+                                actualBreakStartTime: data.startTime,
+                                actualBreakEndTime: data.endTime
+                            };
+                            hasNew = true;
+                        } else {
+                            newEnriched[req.id] = { actualBreakStartTime: undefined, actualBreakEndTime: undefined };
+                            hasNew = true;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error fetching details for", req.id, e);
+                }
+            }));
+
+            if (hasNew) {
+                setEnrichedData(newEnriched);
+            }
+        };
+
+        fetchVisibleDetails();
+    }, [visibleCount, requests, activeTab]);
+
+    useEffect(() => {
+        setVisibleCount(10); // Reset count on filter change
+        setEnrichedData({}); // Clear enriched data on filter change
         fetchRequests();
     }, [user, isSupervisor, effectiveSupervisedEmployees, activeTab, filterDays, statusFilter, selectedEmployee]);
 
@@ -533,7 +553,7 @@ export default function ReconApprovalPage() {
                             <Loader2 className="animate-spin text-blue-600 w-8 h-8" />
                         </div>
                     ) : requests.length > 0 ? (
-                        requests.map((req) => {
+                        requests.slice(0, visibleCount).map((req) => {
                             const borderColor = req.status === 'approved'
                                 ? 'border-emerald-500'
                                 : req.status === 'rejected'
@@ -611,19 +631,19 @@ export default function ReconApprovalPage() {
                                                 <div className="space-y-1.5">
                                                     <div className="flex justify-between items-center">
                                                         <span className="text-[10px] font-bold text-slate-400 w-8">{activeTab === 'attendance' ? 'IN' : 'START'}</span>
-                                                        <span className={`text-xs font-bold ${(activeTab === 'attendance' ? req.actualInTime : req.actualBreakStartTime) ? 'text-slate-700' : 'text-slate-400 italic'}`}>
+                                                        <span className={`text-xs font-bold ${(activeTab === 'attendance' ? (enrichedData[req.id]?.actualInTime || req.actualInTime) : (enrichedData[req.id]?.actualBreakStartTime || req.actualBreakStartTime)) ? 'text-slate-700' : 'text-slate-400 italic'}`}>
                                                             {activeTab === 'attendance'
-                                                                ? (formatTime(req.actualInTime) !== '-' ? formatTime(req.actualInTime) : 'Not marked')
-                                                                : (formatTime(req.actualBreakStartTime) !== '-' ? formatTime(req.actualBreakStartTime) : 'Not marked')
+                                                                ? (formatTime(enrichedData[req.id]?.actualInTime || req.actualInTime) !== '-' ? formatTime(enrichedData[req.id]?.actualInTime || req.actualInTime) : 'Not marked')
+                                                                : (formatTime(enrichedData[req.id]?.actualBreakStartTime || req.actualBreakStartTime) !== '-' ? formatTime(enrichedData[req.id]?.actualBreakStartTime || req.actualBreakStartTime) : 'Not marked')
                                                             }
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between items-center">
                                                         <span className="text-[10px] font-bold text-slate-400 w-8">{activeTab === 'attendance' ? 'OUT' : 'END'}</span>
-                                                        <span className={`text-xs font-bold ${(activeTab === 'attendance' ? req.actualOutTime : req.actualBreakEndTime) ? 'text-slate-700' : 'text-slate-400 italic'}`}>
+                                                        <span className={`text-xs font-bold ${(activeTab === 'attendance' ? (enrichedData[req.id]?.actualOutTime || req.actualOutTime) : (enrichedData[req.id]?.actualBreakEndTime || req.actualBreakEndTime)) ? 'text-slate-700' : 'text-slate-400 italic'}`}>
                                                             {activeTab === 'attendance'
-                                                                ? (formatTime(req.actualOutTime) !== '-' ? formatTime(req.actualOutTime) : 'Not marked')
-                                                                : (formatTime(req.actualBreakEndTime) !== '-' ? formatTime(req.actualBreakEndTime) : 'Not marked')
+                                                                ? (formatTime(enrichedData[req.id]?.actualOutTime || req.actualOutTime) !== '-' ? formatTime(enrichedData[req.id]?.actualOutTime || req.actualOutTime) : 'Not marked')
+                                                                : (formatTime(enrichedData[req.id]?.actualBreakEndTime || req.actualBreakEndTime) !== '-' ? formatTime(enrichedData[req.id]?.actualBreakEndTime || req.actualBreakEndTime) : 'Not marked')
                                                             }
                                                         </span>
                                                     </div>
@@ -692,6 +712,21 @@ export default function ReconApprovalPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Load More Button */}
+                {!loading && requests.length > visibleCount && (
+                    <div className="px-6 pb-12">
+                        <Button
+                            onClick={() => setVisibleCount(prev => prev + 10)}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+                        >
+                            Load More Records
+                        </Button>
+                    </div>
+                )}
+
+                {/* Bottom Spacing as requested */}
+                <div className="h-20" />
             </div>
         </div>
     );
