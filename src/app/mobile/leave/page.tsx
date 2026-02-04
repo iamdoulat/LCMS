@@ -87,7 +87,7 @@ export default function MobileLeavePage() {
 
         // Next month days
         const totalDaysDisplayed = days.length;
-        const remainingDays = 42 - totalDaysDisplayed; // Ensure 6 rows * 7 days = 42 cells
+        const remainingDays = 35 - totalDaysDisplayed; // Ensure 5 rows * 7 days = 35 cells
         for (let i = 1; i <= remainingDays; i++) {
             days.push({ day: i, isCurrentMonth: false, date: new Date(year, month + 1, i) });
         }
@@ -98,7 +98,7 @@ export default function MobileLeavePage() {
 
             // Find leaves for this day
             const dayLeaves = leaves?.filter(leave => {
-                if (leave.status !== 'Approved') return false;
+                if (!['Approved', 'Pending'].includes(leave.status)) return false;
                 const fromDate = parseISO(leave.fromDate);
                 const toDate = parseISO(leave.toDate);
                 return isWithinInterval(date, { start: fromDate, end: toDate });
@@ -152,6 +152,7 @@ export default function MobileLeavePage() {
                 date,
                 isToday: isTodayFn(date),
                 holiday: holiday,
+                isWeekend: getDay(date) === 5, // Friday
                 leaves: dayLeaves,
                 visits: dayVisits,
                 birthdays: dayBirthdays
@@ -297,8 +298,10 @@ export default function MobileLeavePage() {
                                                 ? dayObj.isToday
                                                     ? 'bg-blue-50/50 border-2 border-blue-500 shadow-sm z-10'
                                                     : dayObj.holiday
-                                                        ? 'bg-rose-50/70 text-gray-700 border border-rose-100'
-                                                        : 'bg-white text-slate-700 border border-slate-100'
+                                                        ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                                        : dayObj.isWeekend
+                                                            ? 'bg-rose-100 text-rose-500 border border-rose-200'
+                                                            : 'bg-white text-slate-700 border border-slate-100'
                                                 : 'bg-gray-50/50 text-slate-300'
                                             }
                             ${dayObj.isCurrentMonth && (dayObj.holiday || dayObj.leaves.length > 0 || dayObj.birthdays.length > 0) ? 'cursor-pointer active:scale-95' : ''}
@@ -357,10 +360,12 @@ export default function MobileLeavePage() {
                                         }}
                                     >
                                         <div className="flex justify-between items-start">
-                                            <div className={cn("font-semibold text-xs", dayObj.isToday ? "text-blue-600" : "text-slate-500")}>{dayObj.day}</div>
-                                            {dayObj.holiday && (
+                                            <div className={cn("font-semibold text-xs", dayObj.isToday ? "text-blue-600" : (dayObj.holiday || dayObj.isWeekend) ? "text-rose-600" : "text-slate-500")}>{dayObj.day}</div>
+                                            {dayObj.holiday ? (
                                                 <span className="bg-rose-500 text-white text-[8px] px-1 rounded font-bold">H</span>
-                                            )}
+                                            ) : dayObj.isWeekend ? (
+                                                <span className="bg-rose-400 text-white text-[8px] px-1 rounded font-bold">W</span>
+                                            ) : null}
                                         </div>
 
                                         {dayObj.isCurrentMonth && (
@@ -447,11 +452,15 @@ export default function MobileLeavePage() {
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <span className="bg-rose-500 text-white text-[8px] px-1 rounded font-bold">H</span>
-                                <span>Holiday</span>
+                                <span className="text-rose-600">Holiday</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="bg-rose-400 text-white text-[8px] px-1 rounded font-bold">W</span>
+                                <span className="text-rose-500">Weekend</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <Cake className="h-3 w-3 text-pink-500" />
-                                <span>Birthday</span>
+                                <span className="text-pink-500">Birthday</span>
                             </div>
                         </div>
                     </div>
