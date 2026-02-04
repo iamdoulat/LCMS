@@ -261,14 +261,14 @@ export default function MobileLeavePage() {
                         <div className="flex items-center justify-between mb-6">
                             <button
                                 onClick={() => navigateMonth('prev')}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100"
                             >
                                 <ChevronLeft className="h-5 w-5" />
                             </button>
                             <h2 className="text-xl font-bold text-blue-600">{monthName}</h2>
                             <button
                                 onClick={() => navigateMonth('next')}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors shadow-[0_4px_12px_rgba(37,99,235,0.2)] border border-blue-100"
                             >
                                 <ChevronRight className="h-5 w-5" />
                             </button>
