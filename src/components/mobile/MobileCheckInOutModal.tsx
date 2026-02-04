@@ -57,13 +57,15 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
             setSelectedFile(null);
             setImagePreview('');
             setAddress('');
-            updateLocation();
+            setCurrentLocation(null); // Clear location to trigger loading state
+            updateLocation(true); // Force fresh location on every open
         }
     }, [isOpen, initialCompanyName]);
 
-    const updateLocation = async (force: boolean = false) => {
+    const updateLocation = async (force: boolean = true) => {
         setIsLoadingLocation(true);
         setLocationError(null);
+        setAddress(''); // Clear previous address to show "Fetching..." 
         setLocationProgress('Initializing geolocation...');
         try {
             const loc = await getCurrentLocation({
@@ -281,9 +283,10 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
                         <div className="mt-3 flex items-start gap-2">
                             <MapPin className="h-4 w-4 text-slate-400 mt-1 shrink-0" />
-                            <p className="text-xs text-slate-600 sm:text-sm">
-                                {address || "Fetching address..."}
-                            </p>
+                            <div className="text-xs text-slate-600 sm:text-sm flex items-center gap-1.5 min-h-[1.25rem]">
+                                {isLoadingLocation && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
+                                <span>{address || "Fetching correct address..."}</span>
+                            </div>
                         </div>
                     </div>
 
