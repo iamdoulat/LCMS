@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { createReconciliationRequest } from '@/lib/firebase/reconciliation';
 import { format, isValid, parseISO } from 'date-fns';
-import { Calendar, Clock, ChevronLeft, Loader2 } from 'lucide-react';
+import { Calendar, Clock, ArrowLeft, Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { Button } from '@/components/ui/button';
@@ -224,9 +224,9 @@ function ReconciliationForm() {
             <div className="px-6 pt-[10px] pb-[5px] flex items-center gap-4 text-white">
                 <button
                     onClick={() => router.back()}
-                    className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
+                    className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                 >
-                    <ChevronLeft className="w-6 h-6" />
+                    <ArrowLeft className="w-6 h-6" />
                 </button>
                 <div className="flex-1 text-center pr-10">
                     <h1 className="text-lg font-bold">Attendance Reconciliation</h1>

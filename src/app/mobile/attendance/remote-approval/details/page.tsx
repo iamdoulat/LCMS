@@ -6,7 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { MultipleCheckInOutRecord } from '@/types/checkInOut';
 import { format } from 'date-fns';
-import { ChevronLeft, Loader2, MapPin } from 'lucide-react';
+import { ChevronLeft, Loader2, MapPin, ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import dynamic from 'next/dynamic';
 
@@ -146,8 +146,11 @@ export default function RemoteAttendanceDetailsPage() {
         return (
             <div className="flex flex-col h-screen bg-[#0a1e60]">
                 <div className="px-6 pt-12 pb-6 flex items-center gap-4 text-white">
-                    <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-white/10">
-                        <ChevronLeft className="w-6 h-6" />
+                    <button
+                        onClick={() => router.back()}
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
+                    >
+                        <ArrowLeft className="h-6 w-6" />
                     </button>
                     <h1 className="text-lg font-bold">Details Not Found</h1>
                 </div>
@@ -162,9 +165,9 @@ export default function RemoteAttendanceDetailsPage() {
                 <div className="flex items-center gap-4 bg-[#0a1e60] text-white p-4 rounded-2xl shadow-lg pointer-events-auto">
                     <button
                         onClick={() => router.back()}
-                        className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                        className="p-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d] z-50 pointer-events-auto"
                     >
-                        <ChevronLeft className="w-6 h-6" />
+                        <ArrowLeft className="h-6 w-6" />
                     </button>
                     <h1 className="text-lg font-bold">Remote Att. Details</h1>
                 </div>

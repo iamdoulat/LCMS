@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, ChevronLeft, Bell, Calendar as CalendarIcon, ArrowRight, Megaphone, Sparkles } from 'lucide-react';
+import { Loader2, ArrowLeft, Bell, Calendar as CalendarIcon, ArrowRight, Megaphone, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { NoticeBoardSettings } from '@/types';
 import { cn } from '@/lib/utils';
@@ -55,9 +55,9 @@ export default function MobileNoticeBoardPage() {
             <header className="bg-gradient-to-r from-[#0a1e60] to-[#1e3a8a] text-white px-5 pt-[calc(env(safe-area-inset-top)+10px)] pb-6 flex items-center shadow-none z-20 shrink-0">
                 <button
                     onClick={() => router.back()}
-                    className="p-2 mr-3 hover:bg-white/10 rounded-2xl transition-all active:scale-90"
+                    className="p-2 mr-3 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                 >
-                    <ChevronLeft className="h-6 w-6" />
+                    <ArrowLeft className="h-6 w-6" />
                 </button>
                 <div className="flex-1">
                     <h1 className="text-xl font-black tracking-tight">Notice Board</h1>

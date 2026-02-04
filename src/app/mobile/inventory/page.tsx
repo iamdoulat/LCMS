@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, ChevronLeft, Package, MapPin, Loader2, ImageIcon, ScanLine, Filter, X, Clock, Building2, MoreVertical, Eye, EyeOff, Warehouse, RefreshCw, Edit, Plus } from 'lucide-react';
+import { Search, ChevronLeft, ArrowLeft, Package, MapPin, Loader2, ImageIcon, ScanLine, Filter, X, Clock, Building2, MoreVertical, Eye, EyeOff, Warehouse, RefreshCw, Edit, Plus } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -178,7 +178,7 @@ export default function MobileInventoryPage() {
                         onClick={() => router.back()}
                         className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                     >
-                        <ChevronLeft className="h-6 w-6" />
+                        <ArrowLeft className="h-6 w-6" />
                     </button>
                     <h1 className="text-xl font-bold text-white">Inventory</h1>
 

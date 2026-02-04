@@ -117,7 +117,7 @@ export default function ApplyForLeavePage() {
                 <div className="flex items-center px-4 pt-[14px] pb-6">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-lg bg-white/5 backdrop-blur-sm border border-white/10"
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>

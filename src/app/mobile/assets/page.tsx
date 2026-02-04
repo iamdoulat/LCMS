@@ -220,18 +220,18 @@ export default function AssetsPage() {
     return (
         <div className="flex flex-col h-[100dvh] bg-[#0a1e60]">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 pt-4 pb-6 sticky top-0 z-50 bg-[#0a1e60]">
+            <div className="flex items-center justify-between px-4 pt-[5px] pb-6 sticky top-0 z-50 bg-[#0a1e60]">
                 <button
                     onClick={() => router.back()}
                     className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors z-10 shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                 >
                     <ArrowLeft className="h-6 w-6" />
                 </button>
-                <h1 className="text-lg font-bold text-white absolute inset-0 flex items-center justify-center pointer-events-none pt-4 pb-5">Assets</h1>
+                <h1 className="text-lg font-bold text-white absolute inset-0 flex items-center justify-center pointer-events-none pt-[5px] pb-5">Assets</h1>
                 <button
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className={cn(
-                        "p-2 -mr-2 text-white hover:bg-white/10 rounded-full transition-colors z-10",
+                        "p-2 -mr-2 text-white hover:bg-white/10 rounded-full transition-colors z-10 shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]",
                         isFilterOpen && "bg-white/20"
                     )}
                 >

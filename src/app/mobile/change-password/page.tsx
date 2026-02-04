@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { auth } from '@/lib/firebase/config';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { ChevronLeft, Lock, Mail, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ArrowLeft, Lock, Mail, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function MobileChangePasswordPage() {
@@ -65,9 +65,12 @@ export default function MobileChangePasswordPage() {
         <div className="flex flex-col min-h-screen bg-[#0a1e60]">
             {/* Header */}
             <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center justify-between px-4 py-4 text-white">
-                <Button variant="ghost" size="icon" onClick={handleBack} className="text-white hover:bg-white/10">
-                    <ChevronLeft className="h-6 w-6" />
-                </Button>
+                <button
+                    onClick={handleBack}
+                    className="p-2 -ml-1 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
+                >
+                    <ArrowLeft className="h-6 w-6" />
+                </button>
                 <h1 className="text-xl font-semibold">Change Password</h1>
                 <div className="w-10" /> {/* Spacer */}
             </header>

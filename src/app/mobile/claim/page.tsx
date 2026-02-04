@@ -136,18 +136,18 @@ export default function ClaimListPage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center justify-between px-4 pt-4 pb-6 relative">
+                <div className="flex items-center justify-between px-4 pt-[5px] pb-6 relative">
                     <button
                         onClick={() => router.back()}
                         className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors z-10 shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-lg font-bold text-white absolute inset-0 flex items-center justify-center pointer-events-none pt-4 pb-6">Claim</h1>
+                    <h1 className="text-lg font-bold text-white absolute inset-0 flex items-center justify-center pointer-events-none pt-[5px] pb-6">Claim</h1>
                     <div className="flex items-center">
                         <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
                             <SheetTrigger asChild>
-                                <button className="p-2 text-white hover:bg-white/10 rounded-full transition-colors relative">
+                                <button className="p-2 text-white hover:bg-white/10 rounded-full transition-colors relative shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]">
                                     <Filter className="h-6 w-6" />
                                     {statusFilter !== 'All' && (
                                         <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-amber-400 border-2 border-[#0a1e60] rounded-full"></span>
@@ -213,7 +213,7 @@ export default function ClaimListPage() {
                                     }
                                 });
                             }}
-                            className="p-2 text-white hover:bg-white/10 rounded-full transition-colors relative shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10"
+                            className="p-2 text-white hover:bg-white/10 rounded-full transition-colors relative shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                         >
                             <CalendarIcon className="h-6 w-6" />
                             {dateRange.from && (

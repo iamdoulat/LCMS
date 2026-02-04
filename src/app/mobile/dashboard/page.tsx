@@ -520,6 +520,20 @@ export default function MobileDashboardPage() {
         checkRestrictions();
         // Re-check every hour to handle day transitions
         const interval = setInterval(checkRestrictions, 60 * 60 * 1000);
+
+        // Proactive location access on mount
+        if (typeof window !== 'undefined' && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                () => {
+                    console.log("[LOCATION] Proactive access granted");
+                },
+                (err) => {
+                    console.warn("[LOCATION] Proactive access failed/denied", err);
+                },
+                { enableHighAccuracy: false, timeout: 5000, maximumAge: 600000 }
+            );
+        }
+
         return () => clearInterval(interval);
     }, [checkRestrictions]);
 

@@ -195,14 +195,14 @@ function CreateClaimContent() {
         <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
             {/* Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center justify-between px-4 pt-4 pb-6 relative">
+                <div className="flex items-center justify-between px-4 pt-[5px] pb-6 relative">
                     <button
                         onClick={() => router.back()}
-                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors z-10"
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors z-10 shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                     >
                         <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-lg font-bold text-white absolute inset-0 flex items-center justify-center pointer-events-none pt-4 pb-6">
+                    <h1 className="text-lg font-bold text-white absolute inset-0 flex items-center justify-center pointer-events-none pt-[5px] pb-6">
                         {editingId ? 'Edit Claim' : 'Create Claim'}
                     </h1>
                     <div className="w-10" />
@@ -239,17 +239,17 @@ function CreateClaimContent() {
 
                     {/* Form */}
                     <div className="space-y-5">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                        <div className="grid grid-cols-12 gap-4">
+                            <div className="space-y-2 col-span-5">
                                 <Label className="text-xs font-semibold text-slate-500">Advance Date</Label>
                                 <Input
                                     type="date"
                                     value={advanceDate}
                                     onChange={(e) => setAdvanceDate(e.target.value)}
-                                    className="h-12 bg-white rounded-xl border-slate-200 text-sm font-semibold text-slate-700"
+                                    className="h-12 bg-white rounded-xl border-slate-200 text-xs font-semibold text-slate-700"
                                 />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-2 col-span-5 col-start-8">
                                 <Label className="text-xs font-semibold text-slate-500">Advance Amount</Label>
                                 <Input
                                     type="number"

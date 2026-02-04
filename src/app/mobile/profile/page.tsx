@@ -10,7 +10,7 @@ import { collection, query, where, getDocs, limit, doc, updateDoc, serverTimesta
 import { uploadFile } from '@/lib/storage/storage';
 import Swal from 'sweetalert2';
 import {
-    ChevronLeft,
+    ArrowLeft,
     Phone,
     Mail,
     MessageCircle,
@@ -298,9 +298,9 @@ export default function MobileProfilePage() {
             <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center gap-4 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+10px)] min-h-[calc(4rem+env(safe-area-inset-top))] text-white overflow-hidden shadow-sm transition-all">
                 <button
                     onClick={handleBack}
-                    className="p-1 hover:bg-white/10 rounded-full transition-colors mt-1"
+                    className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                 >
-                    <ChevronLeft className="w-7 h-7" />
+                    <ArrowLeft className="h-6 w-6" />
                 </button>
                 <h1 className="text-xl font-bold mt-1">Profile</h1>
             </header>

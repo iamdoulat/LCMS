@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
-import { Loader2, ChevronLeft, Bell, Calendar as CalendarIcon, Megaphone } from 'lucide-react';
+import { Loader2, ArrowLeft, Bell, Calendar as CalendarIcon, Megaphone } from 'lucide-react';
 import { format } from 'date-fns';
 import { NoticeBoardSettings } from '@/types';
 import DOMPurify from 'isomorphic-dompurify';
@@ -42,10 +42,13 @@ export default function MobileNoticeDetailPage({ params }: { params: { id: strin
         return (
             <div className="min-h-screen bg-slate-50 flex flex-col">
                 <header className="bg-gradient-to-r from-[#0a1e60] to-[#1e3a8a] text-white px-4 py-4 sticky top-0 z-10 flex items-center shadow-lg">
-                    <button onClick={() => router.back()} className="p-1 mr-4 hover:bg-white/10 rounded-full transition-colors">
-                        <ChevronLeft className="h-6 w-6" />
+                    <button
+                        onClick={() => router.back()}
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
+                    >
+                        <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-lg font-bold">Office Notice</h1>
+                    <h1 className="text-lg font-bold ml-2">Office Notice</h1>
                 </header>
                 <div className="flex-1 flex justify-center items-center">
                     <div className="flex flex-col items-center gap-3">
@@ -61,10 +64,13 @@ export default function MobileNoticeDetailPage({ params }: { params: { id: strin
         return (
             <div className="min-h-screen bg-slate-50 flex flex-col">
                 <header className="bg-[#0a1e60] text-white px-4 py-4 sticky top-0 z-10 flex items-center shadow-md">
-                    <button onClick={() => router.back()} className="p-1 mr-4 hover:bg-white/10 rounded-full transition-colors">
-                        <ChevronLeft className="h-6 w-6" />
+                    <button
+                        onClick={() => router.back()}
+                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
+                    >
+                        <ArrowLeft className="h-6 w-6" />
                     </button>
-                    <h1 className="text-lg font-bold">Office Notice</h1>
+                    <h1 className="text-lg font-bold ml-2">Office Notice</h1>
                 </header>
                 <div className="flex-1 flex justify-center items-center text-slate-500 px-6 text-center">
                     <div>
@@ -93,9 +99,9 @@ export default function MobileNoticeDetailPage({ params }: { params: { id: strin
             <header className="bg-gradient-to-r from-[#0a1e60] to-[#1e3a8a] text-white px-4 py-4 flex items-center shadow-none z-20 shrink-0">
                 <button
                     onClick={() => router.back()}
-                    className="p-1 mr-4 hover:bg-white/10 rounded-full transition-colors"
+                    className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                 >
-                    <ChevronLeft className="h-6 w-6" />
+                    <ArrowLeft className="h-6 w-6" />
                 </button>
                 <div className="flex-1">
                     <h1 className="text-lg font-bold">Notice Details</h1>

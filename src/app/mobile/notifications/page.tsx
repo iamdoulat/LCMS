@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, orderBy, getDocs, limit, doc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, ChevronLeft, Bell } from 'lucide-react';
+import { Loader2, ArrowLeft, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -128,7 +128,7 @@ export default function MobileNotificationsPage() {
                     onClick={() => router.back()}
                     className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
                 >
-                    <ChevronLeft className="h-6 w-6" />
+                    <ArrowLeft className="h-6 w-6" />
                 </motion.button>
                 <h1 className="text-xl font-bold ml-2">Notifications</h1>
             </header>
