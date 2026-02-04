@@ -159,7 +159,7 @@ export default function LeaveCalendarPage() {
 
             {/* Calendar Container */}
             <div className="flex-1 bg-slate-50 rounded-t-[2.5rem] overflow-y-auto overscroll-contain px-5 pt-8 pb-[120px]">
-                <div className="bg-white rounded-2xl p-6 shadow-md">
+                <div className="bg-white rounded-2xl p-3 shadow-md">
                     {/* Month Navigation */}
                     <div className="flex items-center justify-between mb-6">
                         <button
@@ -180,7 +180,7 @@ export default function LeaveCalendarPage() {
                     </div>
 
                     {/* Week Day Headers */}
-                    <div className="grid grid-cols-7 gap-2 mb-3">
+                    <div className="grid grid-cols-7 gap-1 mb-2">
                         {weekDays.map((day) => (
                             <div key={day} className="text-center text-xs font-bold text-slate-500">
                                 {day}
@@ -189,7 +189,7 @@ export default function LeaveCalendarPage() {
                     </div>
 
                     {/* Calendar Grid */}
-                    <div className="grid grid-cols-7 gap-2">
+                    <div className="grid grid-cols-7 gap-1">
                         {/* Padding days */}
                         {paddingDays.map((i) => (
                             <div key={`padding-${i}`} className="aspect-square" />
@@ -208,7 +208,7 @@ export default function LeaveCalendarPage() {
                                 <div
                                     key={day.toISOString()}
                                     className={cn(
-                                        "aspect-square flex flex-col items-center justify-start py-1 rounded-lg text-sm font-medium transition-all relative overflow-hidden min-h-[60px]",
+                                        "aspect-square flex flex-col items-center justify-start py-1 rounded-lg text-sm font-medium transition-all relative overflow-hidden min-h-[50px]",
                                         isCurrentMonth
                                             ? isCurrentDay
                                                 ? 'bg-blue-50/50 border-2 border-blue-500 shadow-sm z-10'

@@ -159,6 +159,21 @@ function ReconciliationForm() {
             return;
         }
 
+        // Add validation for negative work time
+        if (inTime && outTime) {
+            const inDateTime = new Date(`${inTimeDate}T${inTime}:00`);
+            const outDateTime = new Date(`${outTimeDate}T${outTime}:00`);
+
+            if (outDateTime <= inDateTime) {
+                Swal.fire({
+                    title: "Validation Error",
+                    text: "Negative work time not allowed. Out Time should be after In Time. Check! AM / PM",
+                    icon: "warning"
+                });
+                return;
+            }
+        }
+
         setLoading(true);
         try {
             const constructIso = (dateStr: string, timeStr: string) => {
