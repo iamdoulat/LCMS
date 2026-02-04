@@ -256,7 +256,7 @@ export default function MobileLeavePage() {
 
                 <div className="px-6 pt-6 pb-[120px] space-y-6">
                     {/* Calendar */}
-                    <div className="bg-white rounded-2xl p-6 shadow-xl">
+                    <div className="bg-white rounded-2xl p-3 shadow-xl">
                         {/* Month Header */}
                         <div className="flex items-center justify-between mb-6">
                             <button
@@ -293,7 +293,7 @@ export default function MobileLeavePage() {
                                     <div
                                         key={index}
                                         className={`
-                                            relative min-h-[60px] p-1 flex flex-col rounded-lg text-sm transition-all duration-200
+                                            relative min-h-[50px] p-1 flex flex-col rounded-lg text-sm transition-all duration-200
                             ${dayObj.isCurrentMonth
                                                 ? dayObj.isToday
                                                     ? 'bg-blue-50/50 border-2 border-blue-500 shadow-sm z-10'
