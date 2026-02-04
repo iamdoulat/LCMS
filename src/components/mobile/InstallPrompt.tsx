@@ -12,81 +12,96 @@ export function InstallPrompt() {
     const [isStandalone, setIsStandalone] = useState(false);
 
     const checkInstallation = useCallback(() => {
+        if (typeof window === 'undefined') return false;
+
         const isStandaloneMatch = window.matchMedia('(display-mode: standalone)').matches
             || (window.navigator as any).standalone
             || document.referrer.includes('android-app://');
 
+        console.log("[PWA] Standalone Check:", isStandaloneMatch);
         setIsStandalone(isStandaloneMatch);
         return isStandaloneMatch;
     }, []);
 
     const shouldShowPrompt = useCallback(() => {
-        if (checkInstallation()) return false;
+        if (checkInstallation()) {
+            console.log("[PWA] Suppression: Already installed/standalone.");
+            return false;
+        }
+
+        // "Immediate" logic: If haven't shown this session, show immediately
+        const sessionShown = sessionStorage.getItem('pwa_install_session_shown');
+        if (!sessionShown) {
+            console.log("[PWA] Session priority: Allowing immediate show");
+            return true;
+        }
 
         const lastShown = localStorage.getItem('pwa_install_last_shown');
+        if (!lastShown) return true;
+
         const now = Date.now();
         const tenMinutes = 10 * 60 * 1000;
+        const timeSinceLast = now - parseInt(lastShown);
 
-        if (!lastShown) return true;
-        return (now - parseInt(lastShown)) > tenMinutes;
+        if (timeSinceLast < tenMinutes) {
+            console.log(`[PWA] Suppression: Recurring limit. Next show in ${Math.ceil((tenMinutes - timeSinceLast) / 1000)}s.`);
+            return false;
+        }
+
+        return true;
     }, [checkInstallation]);
 
     const triggerPrompt = useCallback(() => {
         if (shouldShowPrompt()) {
+            console.log("[PWA] Prompt UI triggered");
             setShowPrompt(true);
+            sessionStorage.setItem('pwa_install_session_shown', 'true');
             localStorage.setItem('pwa_install_last_shown', Date.now().toString());
         }
     }, [shouldShowPrompt]);
 
+    // Handle initial setup and event listeners
     useEffect(() => {
-        // Platform Detection
         const ua = window.navigator.userAgent;
-        const isIOS = /iPhone|iPad|iPod/.test(ua) ||
-            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS detection
-        const isAndroid = /Android/.test(ua);
+        const isIOSMatch = /iPhone|iPad|iPod/.test(ua) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isAndroidMatch = /Android/i.test(ua);
 
-        if (isIOS) {
-            setPlatform('ios');
-        } else if (isAndroid) {
-            setPlatform('android');
-        } else {
-            setPlatform('other');
-        }
+        setPlatform(isIOSMatch ? 'ios' : (isAndroidMatch ? 'android' : 'other'));
+        console.log("[PWA] Browser Platform:", isAndroidMatch ? 'Android' : (isIOSMatch ? 'iOS' : 'Other'));
 
-        console.log("[PWA] Metadata detected - isIOS:", isIOS, "isAndroid:", isAndroid, "standalone:", checkInstallation());
-
-        // Handle Android/Chrome Install Prompt
         const handler = (e: any) => {
-            console.log("[PWA] beforeinstallprompt event fired");
+            console.log("[PWA] beforeinstallprompt event fired!");
             e.preventDefault();
             setDeferredPrompt(e);
+            // standardized trigger to handle session/localStorage flags
             triggerPrompt();
         };
 
         window.addEventListener('beforeinstallprompt', handler);
 
-        // Immediate check on mount
-        const initTimeout = setTimeout(() => {
-            console.log("[PWA] Running initial mount check...");
+        // Initial check for all platforms
+        const timer = setTimeout(() => {
             triggerPrompt();
-        }, 1500);
-
-        // Interval check every 30 seconds to see if it's time to show again (10 min check)
-        const interval = setInterval(() => {
-            if (!showPrompt) {
-                triggerPrompt();
-            }
-        }, 30000);
-
-        // Clear any old dismissal flag from previous versions to ensure aggressive behavior
-        localStorage.removeItem('pwa_install_dismissed');
+        }, 1200);
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handler);
-            clearTimeout(initTimeout);
-            clearInterval(interval);
+            clearTimeout(timer);
         };
-    }, [showPrompt, triggerPrompt, checkInstallation]);
+    }, [triggerPrompt]);
+
+    // Background interval for 10-minute recurrence
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (!showPrompt && !isStandalone) {
+                console.log("[PWA] Interval check for recurrence...");
+                triggerPrompt();
+            }
+        }, 30000); // 30s interval for better responsiveness
+
+        return () => clearInterval(interval);
+    }, [showPrompt, isStandalone, triggerPrompt]);
 
     const handleInstall = async () => {
         console.log("[PWA] handleInstall clicked, platform:", platform, "hasDeferredPrompt:", !!deferredPrompt);
@@ -196,14 +211,14 @@ export function InstallPrompt() {
                 ) : (
                     <div className="space-y-4">
                         <p className="text-sm text-blue-50/90 leading-relaxed font-medium">
-                            Experience faster access, offline support, and native notifications.
+                            Experience faster access, and native notifications.
                         </p>
                         <button
                             onClick={handleInstall}
                             className="w-full bg-white text-blue-900 font-bold py-3.5 px-6 rounded-xl shadow-xl hover:bg-blue-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                         >
                             <PlusSquare className="w-5 h-5 text-blue-600" />
-                            Install App Now
+                            Install Now
                         </button>
                     </div>
                 )}
