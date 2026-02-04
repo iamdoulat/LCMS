@@ -88,6 +88,18 @@ export function InstallPrompt() {
                 setDeferredPrompt(null);
                 setShowPrompt(false);
             }
+        } else if (platform === 'ios') {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: companyName || 'LCMS',
+                        text: `Install ${companyName || 'LCMS'} App to your home screen`,
+                        url: window.location.origin,
+                    });
+                } catch (err) {
+                    console.log('Share failed or cancelled', err);
+                }
+            }
         }
         // iOS doesn't have a programmatic install, they just follow instructions
     };
@@ -143,10 +155,21 @@ export function InstallPrompt() {
                                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                                     <PlusSquare className="w-4 h-4 text-blue-400" />
                                 </div>
-                                <span>Select <strong className="text-blue-400">Add to Home Screen</strong></span>
+                                <span>Select <strong className="text-blue-400 cursor-pointer underline" onClick={handleInstall}>Add to Home Screen</strong></span>
                             </div>
                         </div>
-                        <div className="flex justify-center pt-2">
+
+                        <div className="grid grid-cols-1 gap-3">
+                            <button
+                                onClick={handleInstall}
+                                className="w-full bg-white text-blue-900 font-bold py-3.5 px-6 rounded-xl shadow-xl hover:bg-blue-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                            >
+                                <Share className="w-5 h-5 text-blue-600" />
+                                Add to Home Screen
+                            </button>
+                        </div>
+
+                        <div className="flex justify-center pt-1">
                             <div className="animate-bounce">
                                 <ArrowUp className="w-6 h-6 text-blue-400" />
                             </div>
