@@ -40,53 +40,72 @@ export function InstallPrompt() {
 
     useEffect(() => {
         // Platform Detection
-        const ua = window.navigator.userAgent.toLowerCase();
-        if (/iphone|ipad|ipod/.test(ua)) {
+        const ua = window.navigator.userAgent;
+        const isIOS = /iPhone|iPad|iPod/.test(ua) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS detection
+        const isAndroid = /Android/.test(ua);
+
+        if (isIOS) {
             setPlatform('ios');
-        } else if (/android/.test(ua)) {
+        } else if (isAndroid) {
             setPlatform('android');
         } else {
             setPlatform('other');
         }
 
+        console.log("[PWA] Metadata detected - isIOS:", isIOS, "isAndroid:", isAndroid, "standalone:", checkInstallation());
+
         // Handle Android/Chrome Install Prompt
-        const handler = (e: Event) => {
+        const handler = (e: any) => {
+            console.log("[PWA] beforeinstallprompt event fired");
             e.preventDefault();
             setDeferredPrompt(e);
-            // On Android, we can show our custom prompt as soon as we get the event
             triggerPrompt();
         };
 
         window.addEventListener('beforeinstallprompt', handler);
 
-        // Immediate check on mount for iOS or already stashed Android prompts
+        // Immediate check on mount
         const initTimeout = setTimeout(() => {
-            if (!isStandalone) {
-                triggerPrompt();
-            }
-        }, 2000);
+            console.log("[PWA] Running initial mount check...");
+            triggerPrompt();
+        }, 1500);
 
         // Interval check every 30 seconds to see if it's time to show again (10 min check)
         const interval = setInterval(() => {
-            if (!showPrompt && !isStandalone) {
+            if (!showPrompt) {
                 triggerPrompt();
             }
         }, 30000);
+
+        // Clear any old dismissal flag from previous versions to ensure aggressive behavior
+        localStorage.removeItem('pwa_install_dismissed');
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handler);
             clearTimeout(initTimeout);
             clearInterval(interval);
         };
-    }, [isStandalone, showPrompt, triggerPrompt]);
+    }, [showPrompt, triggerPrompt, checkInstallation]);
 
     const handleInstall = async () => {
-        if (platform === 'android' && deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                setDeferredPrompt(null);
-                setShowPrompt(false);
+        console.log("[PWA] handleInstall clicked, platform:", platform, "hasDeferredPrompt:", !!deferredPrompt);
+
+        if (platform === 'android' || platform === 'other') {
+            if (deferredPrompt) {
+                // Show the install prompt
+                deferredPrompt.prompt();
+                // Wait for the user to respond to the prompt
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`[PWA] User response to the install prompt: ${outcome}`);
+                if (outcome === 'accepted') {
+                    setDeferredPrompt(null);
+                    setShowPrompt(false);
+                }
+            } else {
+                console.warn("[PWA] No deferredPrompt available for Android install");
+                // Optional: Show a message to user that the browser/device doesn't support direct install
+                // or tell them to look for "Install app" in browser menu
             }
         } else if (platform === 'ios') {
             if (navigator.share) {
@@ -97,11 +116,10 @@ export function InstallPrompt() {
                         url: window.location.origin,
                     });
                 } catch (err) {
-                    console.log('Share failed or cancelled', err);
+                    console.log('[PWA] Share failed or cancelled', err);
                 }
             }
         }
-        // iOS doesn't have a programmatic install, they just follow instructions
     };
 
     const handleDismiss = () => {
