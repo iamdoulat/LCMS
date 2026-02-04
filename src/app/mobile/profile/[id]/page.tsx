@@ -199,7 +199,7 @@ export default function MobileEmployeeProfilePage() {
     };
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#0a1e60]">
+        <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
             {/* Header */}
             <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center gap-4 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+10px)] min-h-[calc(4rem+env(safe-area-inset-top))] text-white overflow-hidden shadow-sm transition-all">
                 <button
@@ -214,7 +214,7 @@ export default function MobileEmployeeProfilePage() {
 
             {/* Main Content Container */}
             <div
-                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-24 relative mt-9 flex flex-col"
+                className="flex-1 bg-slate-50 rounded-t-[2rem] px-6 pt-12 pb-24 relative mt-9 flex flex-col min-h-0"
                 style={{ touchAction: 'pan-y' }}
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
@@ -236,18 +236,18 @@ export default function MobileEmployeeProfilePage() {
                 {/* Contact Actions */}
                 <div className="absolute top-6 right-6 flex gap-2">
                     <a href={`tel:${employee.phone}`}>
-                        <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-11 w-11 shadow-sm">
-                            <Phone className="h-5 w-5" />
+                        <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-9 w-9 shadow-sm">
+                            <Phone className="h-4 w-4" />
                         </Button>
                     </a>
                     <a href={`https://wa.me/${employee.phone?.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer">
-                        <Button size="icon" className="bg-green-100 hover:bg-green-200 text-green-600 rounded-2xl h-11 w-11 shadow-sm">
-                            <WhatsAppIcon className="h-6 w-6" />
+                        <Button size="icon" className="bg-green-100 hover:bg-green-200 text-green-600 rounded-2xl h-9 w-9 shadow-sm">
+                            <WhatsAppIcon className="h-5 w-5" />
                         </Button>
                     </a>
                     <a href={`mailto:${employee.email}`}>
-                        <Button size="icon" className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-2xl h-11 w-11 shadow-sm">
-                            <Mail className="h-5 w-5" />
+                        <Button size="icon" className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-2xl h-9 w-9 shadow-sm">
+                            <Mail className="h-4 w-4" />
                         </Button>
                     </a>
                 </div>
@@ -276,7 +276,7 @@ export default function MobileEmployeeProfilePage() {
                     <div className="flex gap-3 min-w-max">
                         <button
                             onClick={() => setActiveTab('personal')}
-                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 whitespace-nowrap ${activeTab === 'personal'
+                            className={`px-6 py-2.5 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 whitespace-nowrap ${activeTab === 'personal'
                                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
                                 : 'bg-white text-slate-600 shadow-sm hover:bg-slate-50'
                                 }`}
@@ -286,7 +286,7 @@ export default function MobileEmployeeProfilePage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('official')}
-                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 whitespace-nowrap ${activeTab === 'official'
+                            className={`px-6 py-2.5 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 whitespace-nowrap ${activeTab === 'official'
                                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
                                 : 'bg-white text-slate-600 shadow-sm hover:bg-slate-50'
                                 }`}
@@ -296,7 +296,7 @@ export default function MobileEmployeeProfilePage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('others')}
-                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 whitespace-nowrap ${activeTab === 'others'
+                            className={`px-6 py-2.5 rounded-xl flex items-center gap-2 font-semibold transition-all active:scale-95 whitespace-nowrap ${activeTab === 'others'
                                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
                                 : 'bg-white text-slate-600 shadow-sm hover:bg-slate-50'
                                 }`}
@@ -308,8 +308,8 @@ export default function MobileEmployeeProfilePage() {
                 </div>
 
                 {/* Info Card - Flex grow to take remaining space */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm flex-1 flex flex-col overflow-hidden min-h-0">
-                    <h3 className="text-lg font-bold text-[#0a1e60] mb-6 flex-shrink-0">
+                <div className="bg-white rounded-2xl p-5 shadow-sm flex-1 flex flex-col overflow-hidden min-h-0">
+                    <h3 className="text-base font-bold text-[#0a1e60] mb-5 flex-shrink-0 uppercase tracking-wide">
                         {activeTab === 'personal' && 'Personal Info'}
                         {activeTab === 'official' && 'Official Info'}
                         {activeTab === 'others' && 'Others Info'}
@@ -323,13 +323,13 @@ export default function MobileEmployeeProfilePage() {
                         {profileData[activeTab].map((item, index) => {
                             const Icon = item.icon;
                             return (
-                                <div key={index} className="flex items-start gap-4 pb-6 border-b border-slate-50 last:border-0 last:pb-0">
-                                    <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center text-[#0a1e60]">
-                                        <Icon className="h-6 w-6" />
+                                <div key={index} className="flex items-start gap-3 pb-4 border-b border-slate-50 last:border-0 last:pb-0">
+                                    <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-[#0a1e60] border border-slate-100 flex-shrink-0">
+                                        <Icon className="h-5 w-5" />
                                     </div>
-                                    <div>
-                                        <div className="text-sm text-blue-500 font-medium mb-1">{item.label}</div>
-                                        <div className="text-lg font-bold text-[#0a1e60] truncate">{item.value}</div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-[11px] text-blue-500 font-bold mb-0.5 uppercase tracking-tight">{item.label}</div>
+                                        <div className="text-base font-bold text-[#0a1e60] truncate">{item.value}</div>
                                     </div>
                                 </div>
                             )

@@ -292,7 +292,7 @@ export default function MobileProfilePage() {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-[#0a1e60] overflow-y-auto">
+        <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
             {/* Standard Header */}
             {/* Standard Header */}
             <header className="sticky top-0 z-50 bg-[#0a1e60] flex items-center gap-4 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+10px)] min-h-[calc(4rem+env(safe-area-inset-top))] text-white overflow-hidden shadow-sm transition-all">
@@ -307,7 +307,7 @@ export default function MobileProfilePage() {
 
             {/* Main Content Container */}
             <div
-                className="flex-1 bg-slate-50 rounded-t-[2.5rem] px-6 pt-12 pb-24 relative mt-10"
+                className="flex-1 bg-slate-50 rounded-t-[2.5rem] px-6 pt-12 pb-24 relative mt-10 flex flex-col min-h-0"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
@@ -344,8 +344,8 @@ export default function MobileProfilePage() {
                 {/* Contact Actions */}
                 <div className="absolute top-6 right-6 flex gap-2">
                     <a href={`tel:${employee.phone}`}>
-                        <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-11 w-11 shadow-sm">
-                            <Phone className="h-5 w-5" />
+                        <Button size="icon" className="bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl h-9 w-9 shadow-sm">
+                            <Phone className="h-4 w-4" />
                         </Button>
                     </a>
                     <a
@@ -353,13 +353,13 @@ export default function MobileProfilePage() {
                         target="_blank"
                         rel="noopener noreferrer"
                     >
-                        <Button size="icon" className="bg-green-100 hover:bg-green-200 text-green-600 rounded-2xl h-11 w-11 shadow-sm">
-                            <WhatsAppIcon className="h-6 w-6" />
+                        <Button size="icon" className="bg-green-100 hover:bg-green-200 text-green-600 rounded-2xl h-9 w-9 shadow-sm">
+                            <WhatsAppIcon className="h-5 w-5" />
                         </Button>
                     </a>
                     <a href={`mailto:${employee.email}`}>
-                        <Button size="icon" className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-2xl h-11 w-11 shadow-sm">
-                            <Mail className="h-5 w-5" />
+                        <Button size="icon" className="bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-2xl h-9 w-9 shadow-sm">
+                            <Mail className="h-4 w-4" />
                         </Button>
                     </a>
                 </div>
@@ -384,11 +384,11 @@ export default function MobileProfilePage() {
                 </div>
 
                 {/* Tabs - Horizontal Scrollable */}
-                <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 mb-6">
+                <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 mb-6 flex-shrink-0" style={{ touchAction: 'pan-x' }}>
                     <div className="flex gap-3 min-w-max">
                         <button
                             onClick={() => setActiveTab('personal')}
-                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'personal'
+                            className={`px-6 py-2.5 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'personal'
                                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
                                 : 'bg-white text-slate-600 shadow-sm'
                                 }`}
@@ -398,7 +398,7 @@ export default function MobileProfilePage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('official')}
-                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'official'
+                            className={`px-6 py-2.5 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'official'
                                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
                                 : 'bg-white text-slate-600 shadow-sm'
                                 }`}
@@ -408,7 +408,7 @@ export default function MobileProfilePage() {
                         </button>
                         <button
                             onClick={() => setActiveTab('others')}
-                            className={`px-6 py-3 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'others'
+                            className={`px-6 py-2.5 rounded-xl flex items-center gap-2 font-semibold transition-all whitespace-nowrap ${activeTab === 'others'
                                 ? 'bg-[#3b82f6] text-white shadow-lg shadow-blue-200'
                                 : 'bg-white text-slate-600 shadow-sm'
                                 }`}
@@ -419,28 +419,32 @@ export default function MobileProfilePage() {
                     </div>
                 </div>
 
-                {/* Info Card */}
-                <div className="bg-white rounded-3xl p-6 shadow-md mb-8 max-h-[calc(100vh-420px)] flex flex-col">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-black text-[#0a1e60] tracking-tight">
+                {/* Info Card - Flex grow to take remaining space */}
+                <div className="bg-white rounded-3xl p-5 shadow-md flex-1 flex flex-col overflow-hidden min-h-0">
+                    <div className="flex items-center justify-between mb-5 flex-shrink-0">
+                        <h3 className="text-base font-black text-[#0a1e60] tracking-tight uppercase">
                             {activeTab === 'personal' && 'Personal Information'}
                             {activeTab === 'official' && 'Official Records'}
                             {activeTab === 'others' && 'Contact & Identity'}
                         </h3>
-                        <div className="h-1 w-12 bg-blue-600 rounded-full" />
+                        <div className="h-1 w-10 bg-blue-600 rounded-full" />
                     </div>
 
-                    <div className="space-y-6 overflow-y-auto pr-2">
+                    <div
+                        className="space-y-6 overflow-y-auto pr-2 flex-1 scroll-smooth animate-in fade-in duration-300"
+                        key={activeTab}
+                        style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+                    >
                         {profileData[activeTab].map((item, index) => {
                             const Icon = item.icon;
                             return (
-                                <div key={index} className="flex items-center gap-4 group transition-all">
-                                    <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center text-[#0a1e60] group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors border border-slate-100">
-                                        <Icon className="h-6 w-6" />
+                                <div key={index} className="flex items-center gap-3 group transition-all pb-4 border-b border-slate-50 last:border-0 last:pb-0">
+                                    <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-[#0a1e60] group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors border border-slate-100 flex-shrink-0">
+                                        <Icon className="h-5 w-5" />
                                     </div>
-                                    <div className="flex-1">
-                                        <div className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-0.5">{item.label}</div>
-                                        <div className="text-base font-bold text-[#0a1e60]">{item.value}</div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-[11px] text-blue-500 font-black uppercase tracking-widest mb-0.5">{item.label}</div>
+                                        <div className="text-base font-bold text-[#0a1e60] truncate">{item.value}</div>
                                     </div>
                                 </div>
                             )
