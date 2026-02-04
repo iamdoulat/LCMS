@@ -202,6 +202,8 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
     const captureLocation = async () => {
         setIsCapturing(true);
         setError(null);
+        setAddress(null); // Clear previous address for feedback
+        setLocation(null); // Clear location to show scanning state
         let newLocation: LocationData | null = null;
 
         try {

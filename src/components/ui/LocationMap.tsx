@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Fix for default marker icon in Leaflet with Next.js
@@ -54,24 +54,42 @@ const RecenterMap = ({ lat, lng }: { lat: number, lng: number }) => {
     return null;
 }
 
-const RefreshControl = ({ onRefresh }: { onRefresh?: () => void }) => {
-    const map = useMap();
-    if (!onRefresh) return null;
-
+const MapControls = ({ onRefresh, onRecenter }: { onRefresh?: () => void, onRecenter?: () => void }) => {
     return (
         <div className="leaflet-top leaflet-right" style={{ marginTop: '10px', marginRight: '10px', pointerEvents: 'auto' }}>
-            <div className="leaflet-bar leaflet-control">
-                <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-10 w-10 bg-white hover:bg-slate-100 shadow-md border-none rounded-md"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onRefresh();
-                    }}
-                >
-                    <RefreshCw className="h-5 w-5 text-blue-600" />
-                </Button>
+            <div className="flex flex-col gap-2">
+                {onRefresh && (
+                    <div className="leaflet-bar border-none shadow-none">
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-9 w-9 bg-white hover:bg-slate-100 shadow-md border-none rounded-md"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onRefresh();
+                            }}
+                            title="Refresh Location"
+                        >
+                            <RefreshCw className="h-5 w-5 text-blue-600" />
+                        </Button>
+                    </div>
+                )}
+                {onRecenter && (
+                    <div className="leaflet-bar border-none shadow-none">
+                        <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-9 w-9 bg-white hover:bg-slate-100 shadow-md border-none rounded-md"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onRecenter();
+                            }}
+                            title="Recenter Map"
+                        >
+                            <MapPin className="h-5 w-5 text-emerald-600" />
+                        </Button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -138,7 +156,13 @@ export default function LocationMap({ latitude, longitude, radius, readOnly, onL
                 )}
 
                 <LocationMarker position={position} setPosition={handlePositionChange} readOnly={readOnly} />
-                <RefreshControl onRefresh={onRefresh} />
+                <MapControls
+                    onRefresh={onRefresh}
+                    onRecenter={() => {
+                        // Position update triggers flyTo in LocationMarker
+                        if (position) setPosition(new L.LatLng(position.lat, position.lng));
+                    }}
+                />
                 {/* Recenter mechanism if needed */}
             </MapContainer>
         </div>

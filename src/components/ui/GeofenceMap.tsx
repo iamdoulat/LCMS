@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Circle, useMap, Popup } from 'react-leaflet';
+import { RefreshCw, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -157,7 +159,7 @@ export default function GeofenceMap({ userLocation, branchLocation, hotspots = [
                 </MapContainer>
             </div>
 
-            {/* Floating Control Buttons - Simple approach */}
+            {/* Floating Control Buttons */}
             <div
                 className="absolute top-2 right-2 flex flex-col gap-2"
                 style={{
@@ -165,9 +167,11 @@ export default function GeofenceMap({ userLocation, branchLocation, hotspots = [
                     pointerEvents: 'auto'
                 }}
             >
-                {/* Refresh Button */}
+                {/* Refresh Button - Always visible if onRefresh is provided */}
                 {onRefresh && (
-                    <button
+                    <Button
+                        variant="secondary"
+                        size="icon"
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -175,46 +179,30 @@ export default function GeofenceMap({ userLocation, branchLocation, hotspots = [
                         }}
                         disabled={isLoading}
                         title="Refresh Location"
-                        type="button"
-                        className="w-10 h-10 bg-white rounded-lg shadow-lg border-2 border-slate-300 hover:bg-blue-50 hover:border-blue-400 flex items-center justify-center transition-all"
-                        style={{
-                            zIndex: 10000
-                        }}
+                        className="h-9 w-9 bg-white hover:bg-slate-100 shadow-md border-none rounded-md"
                     >
                         {isLoading ? (
-                            <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                            <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
                         ) : (
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
-                                <path d="M21 2v6h-6" />
-                                <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-                                <path d="M3 22v-6h6" />
-                                <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-                            </svg>
+                            <RefreshCw className="h-5 w-5 text-blue-600" />
                         )}
-                    </button>
+                    </Button>
                 )}
 
-                {/* Recenter Button */}
-                <button
+                {/* Recenter Button - Always visible */}
+                <Button
+                    variant="secondary"
+                    size="icon"
                     onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         handleRecenter();
                     }}
                     title="Recenter Map"
-                    type="button"
-                    className="w-10 h-10 bg-white rounded-lg shadow-lg border-2 border-slate-300 hover:bg-blue-50 hover:border-blue-400 flex items-center justify-center transition-all"
-                    style={{
-                        zIndex: 10000
-                    }}
+                    className="h-9 w-9 bg-white hover:bg-slate-100 shadow-md border-none rounded-md"
                 >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-blue-600">
-                        <circle cx="12" cy="12" r="10" />
-                        <circle cx="12" cy="12" r="3" />
-                        <line x1="12" y1="2" x2="12" y2="22" />
-                        <line x1="2" y1="12" x2="22" y2="12" />
-                    </svg>
-                </button>
+                    <MapPin className="h-5 w-5 text-emerald-600" />
+                </Button>
             </div>
 
             {/* Legend */}
