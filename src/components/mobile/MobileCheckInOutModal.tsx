@@ -118,6 +118,17 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
         setIsSubmitting(true);
 
+        // Show blocking loader
+        Swal.fire({
+            title: 'Processing...',
+            text: 'Creating record...',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         try {
             // First try to fetch by UID
             let employeeDoc = await getDoc(doc(firestore, 'employees', user.uid));
@@ -157,6 +168,12 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
             // 2. Upload Image (Blocking)
             if (selectedFile) {
+                // Update loader text
+                Swal.update({
+                    title: 'Uploading Photo...',
+                    text: 'Please wait while we upload your evidence photo.'
+                });
+
                 try {
                     console.log('Starting image optimization and upload...');
                     // Aggressive compression for speed (800px, 0.5 quality)
@@ -178,6 +195,11 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
             }
 
             // 3. Trigger Notification (Blocking, ensures photoUrl is ready)
+            Swal.update({
+                title: 'Sending Notification...',
+                text: 'Finalizing your check-in...'
+            });
+
             try {
                 const notificationType = checkInOutType === 'Check In' ? 'check_in' : 'check_out';
                 const idToken = await user.getIdToken();
