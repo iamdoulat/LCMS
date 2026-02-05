@@ -119,7 +119,8 @@ export function InstallPrompt() {
                 }
             } else {
                 console.warn("[PWA] No deferredPrompt available for Android install");
-                // The UI will now switch to manual instructions if deferredPrompt is missing
+                // Optional: Show a message to user that the browser/device doesn't support direct install
+                // or tell them to look for "Install app" in browser menu
             }
         } else if (platform === 'ios') {
             if (navigator.share) {
@@ -209,46 +210,16 @@ export function InstallPrompt() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {(!deferredPrompt && platform === 'android') ? (
-                            <div className="space-y-4">
-                                <p className="text-sm text-blue-50/90 leading-relaxed font-medium">
-                                    Manual Installation for Android:
-                                </p>
-                                <div className="bg-white/5 rounded-xl p-4 space-y-3 border border-white/5">
-                                    <div className="flex items-center gap-3 text-sm text-white">
-                                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0 font-bold text-blue-400">
-                                            ⋮
-                                        </div>
-                                        <span>Tap the <strong className="text-blue-400">three dots</strong> (menu) icon</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-white">
-                                        <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                                            <PlusSquare className="w-4 h-4 text-blue-400" />
-                                        </div>
-                                        <span>Select <strong className="text-blue-400">Install app</strong> or <strong className="text-blue-400">Add to Home screen</strong></span>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={handleDismiss}
-                                    className="w-full bg-white/10 text-white font-bold py-3 px-6 rounded-xl hover:bg-white/20 transition-all active:scale-[0.98]"
-                                >
-                                    Got it
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <p className="text-sm text-blue-50/90 leading-relaxed font-medium">
-                                    Experience faster access, and native notifications.
-                                </p>
-                                <button
-                                    onClick={handleInstall}
-                                    className="w-full bg-white text-blue-900 font-bold py-3.5 px-6 rounded-xl shadow-xl hover:bg-blue-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                >
-                                    <PlusSquare className="w-5 h-5 text-blue-600" />
-                                    Install Now
-                                </button>
-                            </>
-                        )}
+                        <p className="text-sm text-blue-50/90 leading-relaxed font-medium">
+                            Experience faster access, and native notifications.
+                        </p>
+                        <button
+                            onClick={handleInstall}
+                            className="w-full bg-white text-blue-900 font-bold py-3.5 px-6 rounded-xl shadow-xl hover:bg-blue-50 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                        >
+                            <PlusSquare className="w-5 h-5 text-blue-600" />
+                            Install Now
+                        </button>
                     </div>
                 )}
             </div>
