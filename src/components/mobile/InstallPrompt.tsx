@@ -78,7 +78,14 @@ export function InstallPrompt() {
             triggerPrompt();
         };
 
+        const appInstalledHandler = () => {
+            console.log("[PWA] App was installed!");
+            setShowPrompt(false);
+            setDeferredPrompt(null);
+        };
+
         window.addEventListener('beforeinstallprompt', handler);
+        window.addEventListener('appinstalled', appInstalledHandler);
 
         // Initial check for all platforms
         const timer = setTimeout(() => {
@@ -87,18 +94,19 @@ export function InstallPrompt() {
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handler);
+            window.removeEventListener('appinstalled', appInstalledHandler);
             clearTimeout(timer);
         };
     }, [triggerPrompt]);
 
-    // Background interval for 10-minute recurrence
+    // Background interval for recurrence
     useEffect(() => {
         const interval = setInterval(() => {
             if (!showPrompt && !isStandalone) {
                 console.log("[PWA] Interval check for recurrence...");
                 triggerPrompt();
             }
-        }, 30000); // 30s interval for better responsiveness
+        }, 30000);
 
         return () => clearInterval(interval);
     }, [showPrompt, isStandalone, triggerPrompt]);
@@ -108,19 +116,23 @@ export function InstallPrompt() {
 
         if (platform === 'android' || platform === 'other') {
             if (deferredPrompt) {
-                // Show the install prompt
-                deferredPrompt.prompt();
-                // Wait for the user to respond to the prompt
-                const { outcome } = await deferredPrompt.userChoice;
-                console.log(`[PWA] User response to the install prompt: ${outcome}`);
-                if (outcome === 'accepted') {
-                    setDeferredPrompt(null);
-                    setShowPrompt(false);
+                try {
+                    // Show the install prompt
+                    await deferredPrompt.prompt();
+                    // Wait for the user to respond to the prompt
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`[PWA] User response to the install prompt: ${outcome}`);
+                    if (outcome === 'accepted') {
+                        setDeferredPrompt(null);
+                        setShowPrompt(false);
+                    }
+                } catch (err) {
+                    console.error("[PWA] Install prompt failed:", err);
                 }
             } else {
-                console.warn("[PWA] No deferredPrompt available for Android install");
-                // Optional: Show a message to user that the browser/device doesn't support direct install
-                // or tell them to look for "Install app" in browser menu
+                console.warn("[PWA] No deferredPrompt available for direct install");
+                // Provide fallback feedback
+                alert("To install this app:\n1. Open browser menu (vertical dots)\n2. Select 'Install app' or 'Add to Home screen'");
             }
         } else if (platform === 'ios') {
             if (navigator.share) {
@@ -133,6 +145,8 @@ export function InstallPrompt() {
                 } catch (err) {
                     console.log('[PWA] Share failed or cancelled', err);
                 }
+            } else {
+                alert("To install on iOS:\n1. Tap the Share button\n2. Scroll down and tap 'Add to Home Screen'");
             }
         }
     };
