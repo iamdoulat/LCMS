@@ -134,7 +134,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
             const canonicalId = employeeDoc.exists() ? employeeDoc.id : user.uid;
             const employeeData = employeeDoc.exists() ? employeeDoc.data() : null;
 
-            // 1. Create Record Immediately (Optimistic UI)
+            // 1. Create Record Immediately
             const recordId = await createCheckInOutRecord(
                 canonicalId,
                 employeeData?.fullName || firestoreUser?.displayName || 'Unknown Employee',
@@ -145,7 +145,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                     longitude: currentLocation.longitude,
                     address: address || 'Address not found'
                 },
-                '', // Empty initially, updated in background
+                '', // Empty initially, updated after upload
                 remarks,
                 {
                     status: 'Approved',
@@ -153,74 +153,70 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                 }
             );
 
-            // 2. Start Background Process (Upload + Notification)
-            // We do this non-blocking so the UI closes immediately
-            (async () => {
-                let finalPhotoUrl = '';
+            let finalPhotoUrl = '';
 
-                // A. Handle Image Upload
-                if (selectedFile) {
-                    try {
-                        console.log('Starting background image optimization and upload...');
-                        // Aggressive compression for speed (800px, 0.5 quality)
-                        const compressedFile = await compressImage(selectedFile, 800, 0.5);
-
-                        // Upload
-                        finalPhotoUrl = await uploadCheckInOutImage(compressedFile, canonicalId, checkInOutType);
-
-                        // Update Record
-                        const { updateDoc } = await import('firebase/firestore');
-                        await updateDoc(doc(firestore, 'multiple_check_inout', recordId), {
-                            imageURL: finalPhotoUrl
-                        });
-                        console.log('Background upload completed for record:', recordId);
-                    } catch (err) {
-                        console.error("Background upload failed:", err);
-                        // We continue to notification even if upload fails
-                    }
-                }
-
-                // B. Trigger Notification (After upload to access photoUrl)
+            // 2. Upload Image (Blocking)
+            if (selectedFile) {
                 try {
-                    const notificationType = checkInOutType === 'Check In' ? 'check_in' : 'check_out';
-                    const idToken = await user.getIdToken();
+                    console.log('Starting image optimization and upload...');
+                    // Aggressive compression for speed (800px, 0.5 quality)
+                    const compressedFile = await compressImage(selectedFile, 800, 0.5);
 
-                    await fetch('/api/notify/attendance', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${idToken}`
-                        },
-                        body: JSON.stringify({
-                            type: notificationType,
-                            employeeId: canonicalId,
-                            employeeName: employeeData?.fullName || firestoreUser?.displayName || 'Unknown Employee',
-                            employeeCode: employeeData?.employeeCode || 'N/A',
-                            employeeEmail: employeeData?.email || user.email,
-                            employeePhone: employeeData?.phone || employeeData?.contactNumber,
-                            time: new Date().toLocaleTimeString(),
-                            date: new Date().toLocaleDateString(),
-                            location: {
-                                latitude: currentLocation.latitude,
-                                longitude: currentLocation.longitude,
-                                address: address || ''
-                            },
-                            companyName: companyName,
-                            remarks: remarks,
-                            photoUrl: finalPhotoUrl || undefined // Send photo URL if available
-                        })
+                    // Upload
+                    finalPhotoUrl = await uploadCheckInOutImage(compressedFile, canonicalId, checkInOutType);
+
+                    // Update Record
+                    const { updateDoc } = await import('firebase/firestore');
+                    await updateDoc(doc(firestore, 'multiple_check_inout', recordId), {
+                        imageURL: finalPhotoUrl
                     });
-                    console.log('[ATTENDANCE NOTIFY] Notification sent successfully');
-
-                } catch (notifyErr) {
-                    console.error('[ATTENDANCE NOTIFY] Notification error:', notifyErr);
+                    console.log('Upload completed for record:', recordId);
+                } catch (err) {
+                    console.error("Upload failed:", err);
+                    // We continue to notification even if upload fails, but photoUrl will be empty
                 }
-            })();
+            }
 
-            // 3. Immediate Success Feedback
+            // 3. Trigger Notification (Blocking, ensures photoUrl is ready)
+            try {
+                const notificationType = checkInOutType === 'Check In' ? 'check_in' : 'check_out';
+                const idToken = await user.getIdToken();
+
+                await fetch('/api/notify/attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        type: notificationType,
+                        employeeId: canonicalId,
+                        employeeName: employeeData?.fullName || firestoreUser?.displayName || 'Unknown Employee',
+                        employeeCode: employeeData?.employeeCode || 'N/A',
+                        employeeEmail: employeeData?.email || user.email,
+                        employeePhone: employeeData?.phone || employeeData?.contactNumber,
+                        time: new Date().toLocaleTimeString(),
+                        date: new Date().toLocaleDateString(),
+                        location: {
+                            latitude: currentLocation.latitude,
+                            longitude: currentLocation.longitude,
+                            address: address || ''
+                        },
+                        companyName: companyName,
+                        remarks: remarks,
+                        photoUrl: finalPhotoUrl || undefined
+                    })
+                });
+                console.log('[ATTENDANCE NOTIFY] Notification sent successfully');
+
+            } catch (notifyErr) {
+                console.error('[ATTENDANCE NOTIFY] Notification error:', notifyErr);
+            }
+
+            // 4. Success Feedback & Close
             Swal.fire({
                 title: "Success",
-                text: `${checkInOutType} recorded! Photo uploading in background...`,
+                text: `${checkInOutType} recorded successfully`,
                 icon: "success",
                 timer: 1500,
                 showConfirmButton: false
