@@ -207,7 +207,8 @@ export function EditLeaveForm({ initialData, onFormSubmit }: EditLeaveFormProps)
 
     const dataToUpdate = {
       ...data,
-      employeeName: selectedEmployee?.label || initialData.employeeName,
+      employeeName: selectedEmployee?.label.split(' (')[0] || initialData.employeeName,
+      employeeCode: selectedEmployee?.label.match(/\((.*?)\)/)?.[1] || (initialData as any).employeeCode || 'N/A', // Explicitly save code
       fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       toDate: format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       approverComment: data.approverComment || '',

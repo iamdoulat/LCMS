@@ -237,13 +237,41 @@ export default function LeaveManagementPage() {
         return () => unsubscribe();
     }, [isHROrAdmin, isSupervisor, supervisedEmployeeIds]);
 
-    const getEmployeeDetails = (employeeName: string) => {
-        if (!employeeName) return { name: 'N/A', code: 'N/A' };
+    // For fallback employee code display
+    const [employeeMap, setEmployeeMap] = React.useState<Record<string, string>>({});
+
+    // Fetch all employees for mapping (fallback)
+    React.useEffect(() => {
+        const fetchAllEmployees = async () => {
+            try {
+                const q = query(collection(firestore, 'employees'));
+                const snapshot = await getDocs(q);
+                const mapping: Record<string, string> = {};
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data() as EmployeeDocument;
+                    if (data.employeeCode) {
+                        mapping[doc.id] = data.employeeCode;
+                    }
+                });
+                setEmployeeMap(mapping);
+            } catch (error) {
+                console.error("Error fetching employees for mapping:", error);
+            }
+        };
+        fetchAllEmployees();
+    }, []);
+
+    const getEmployeeDetails = (leave: LeaveApplicationDocument) => {
+        const { employeeName, employeeId } = leave;
+        if (!employeeName) return { name: 'N/A', code: employeeMap[employeeId] || 'N/A' };
+
         const match = employeeName.match(/(.*) \((.*)\)/);
         if (match) {
             return { name: match[1], code: match[2] };
         }
-        return { name: employeeName, code: 'N/A' };
+
+        // Fallback to employeeMap if code is not in the name
+        return { name: employeeName, code: employeeMap[employeeId] || 'N/A' };
     };
 
     React.useEffect(() => {
@@ -251,12 +279,12 @@ export default function LeaveManagementPage() {
 
         if (filterEmployeeName) {
             filtered = filtered.filter(leave =>
-                getEmployeeDetails(leave.employeeName).name.toLowerCase().includes(filterEmployeeName.toLowerCase())
+                getEmployeeDetails(leave).name.toLowerCase().includes(filterEmployeeName.toLowerCase())
             );
         }
         if (filterEmployeeCode) {
             filtered = filtered.filter(leave =>
-                getEmployeeDetails(leave.employeeName).code.toLowerCase().includes(filterEmployeeCode.toLowerCase())
+                getEmployeeDetails(leave).code.toLowerCase().includes(filterEmployeeCode.toLowerCase())
             );
         }
         if (filterLeaveType) {
@@ -267,7 +295,7 @@ export default function LeaveManagementPage() {
         }
 
         setDisplayedLeaves(filtered);
-    }, [allLeaves, filterEmployeeName, filterEmployeeCode, filterLeaveType, filterStatus]);
+    }, [allLeaves, filterEmployeeName, filterEmployeeCode, filterLeaveType, filterStatus, employeeMap]);
 
     // Reset page when filters change
     React.useEffect(() => {
@@ -501,7 +529,7 @@ export default function LeaveManagementPage() {
                                 ) : currentLeaves.length > 0 ? (
                                     currentLeaves.map(leave => {
 
-                                        const { name, code } = getEmployeeDetails(leave.employeeName);
+                                        const { name, code } = getEmployeeDetails(leave);
                                         return (
                                             <TableRow key={leave.id}>
                                                 <TableCell className="font-medium">{name}</TableCell>

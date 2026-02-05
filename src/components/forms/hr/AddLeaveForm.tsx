@@ -256,6 +256,7 @@ export function AddLeaveForm({ onFormSubmit }: AddLeaveFormProps) {
     const dataToSave = {
       ...data,
       employeeName: selectedEmployee?.label.split(' (')[0] || 'N/A', // Denormalize for easier display
+      employeeCode: selectedEmployee?.label.match(/\((.*?)\)/)?.[1] || 'N/A', // Explicitly save code
       fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       toDate: format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       status: 'Pending',
