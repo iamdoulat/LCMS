@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import Swal from 'sweetalert2';
+import { showAlert } from '@/lib/sweetalert';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { serverTimestamp, doc, getDoc, query, collection, where, getDocs, onSnapshot } from 'firebase/firestore';
@@ -119,43 +120,23 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
         // Validation
         if (multiCheckConfig?.isCompanyNameMandatory && !companyName.trim()) {
-            Swal.fire({
-                title: "Error",
-                text: "Company Name is required",
-                icon: "error",
-                customClass: { container: 'z-[9999]' }
-            });
+            showAlert("Error", "Company Name is required", "error");
             return;
         }
 
         if (!currentLocation) {
-            Swal.fire({
-                title: "Error",
-                text: "Location is required. Please enable GPS.",
-                icon: "error",
-                customClass: { container: 'z-[9999]' }
-            });
+            showAlert("Error", "Location is required. Please enable GPS.", "error");
             return;
         }
 
         // Check if image is mandatory
         if (checkInOutType === 'Check In' && multiCheckConfig?.isCheckInImageMandatory && !selectedFile) {
-            Swal.fire({
-                title: "Error",
-                text: "Please capture a photo to continue.",
-                icon: "error",
-                customClass: { container: 'z-[9999]' }
-            });
+            showAlert("Error", "Please capture a photo to continue.", "error");
             return;
         }
 
         if (checkInOutType === 'Check Out' && multiCheckConfig?.isCheckOutImageMandatory && !selectedFile) {
-            Swal.fire({
-                title: "Error",
-                text: "Please capture a photo to continue.",
-                icon: "error",
-                customClass: { container: 'z-[9999]' }
-            });
+            showAlert("Error", "Please capture a photo to continue.", "error");
             return;
         }
 
@@ -280,13 +261,10 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
             }
 
             // 4. Success Feedback & Close
-            Swal.fire({
+            showAlert({
                 title: "Success",
                 text: `${checkInOutType} recorded successfully`,
-                icon: "success",
-                timer: 1500,
-                showConfirmButton: false,
-                customClass: { container: 'z-[9999]' }
+                icon: "success"
             });
 
             onSuccess();
@@ -294,12 +272,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
         } catch (error: any) {
             console.error("Error submitting check in/out:", error);
-            Swal.fire({
-                title: "Error",
-                text: "Failed to submit. Please try again.",
-                icon: "error",
-                customClass: { container: 'z-[9999]' }
-            });
+            showAlert("Error", "Failed to submit. Please try again.", "error");
         } finally {
             setIsSubmitting(false);
         }
