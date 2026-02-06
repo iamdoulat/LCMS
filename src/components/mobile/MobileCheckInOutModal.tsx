@@ -9,12 +9,13 @@ import { Textarea } from '@/components/ui/textarea';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
-import { serverTimestamp, doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { serverTimestamp, doc, getDoc, query, collection, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { Loader2, Camera, Upload, MapPin, RefreshCw, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { getValidOption } from '@/types';
 import { getCurrentLocation, reverseGeocode, uploadCheckInOutImage, createCheckInOutRecord } from '@/lib/firebase/checkInOut';
 import type { MultipleCheckInOutRecord, MultipleCheckInOutLocation } from '@/types/checkInOut';
+import type { MultipleCheckInOutConfiguration } from '@/types';
 import { compressImage } from '@/lib/image-utils';
 
 // Dynamic import for map
@@ -48,6 +49,17 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const [locationProgress, setLocationProgress] = useState<string>('');
     const [locationError, setLocationError] = useState<string | null>(null);
+    const [multiCheckConfig, setMultiCheckConfig] = useState<MultipleCheckInOutConfiguration | null>(null);
+
+    // Fetch multi-check config
+    useEffect(() => {
+        const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'multi_check_in_out'), (docSnap) => {
+            if (docSnap.exists()) {
+                setMultiCheckConfig(docSnap.data() as MultipleCheckInOutConfiguration);
+            }
+        });
+        return () => unsub();
+    }, []);
 
     // Reset state on open
     useEffect(() => {
@@ -113,6 +125,17 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
         if (!currentLocation) {
             Swal.fire("Error", "Location is required. Please enable GPS.", "error");
+            return;
+        }
+
+        // Check if image is mandatory
+        if (checkInOutType === 'Check In' && multiCheckConfig?.isCheckInImageMandatory && !selectedFile) {
+            Swal.fire("Error", "Photo evidence is required for check-in.", "error");
+            return;
+        }
+
+        if (checkInOutType === 'Check Out' && multiCheckConfig?.isCheckOutImageMandatory && !selectedFile) {
+            Swal.fire("Error", "Photo evidence is required for check-out.", "error");
             return;
         }
 
@@ -352,7 +375,11 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
                         {/* Image Upload */}
                         <div className="space-y-2">
-                            <Label>Photo Evidence (Optional)</Label>
+                            <Label>
+                                Photo Evidence {checkInOutType === 'Check In'
+                                    ? (multiCheckConfig?.isCheckInImageMandatory ? '*' : '(Optional)')
+                                    : (multiCheckConfig?.isCheckOutImageMandatory ? '*' : '(Optional)')}
+                            </Label>
                             <div className="flex items-center gap-4">
                                 <div
                                     className="h-20 w-20 bg-slate-100 rounded-lg flex items-center justify-center border border-dashed border-slate-300 cursor-pointer overflow-hidden relative hover:bg-slate-200 transition-colors"
