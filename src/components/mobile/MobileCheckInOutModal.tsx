@@ -130,12 +130,12 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
         // Check if image is mandatory
         if (checkInOutType === 'Check In' && multiCheckConfig?.isCheckInImageMandatory && !selectedFile) {
-            Swal.fire("Error", "Photo evidence is required for check-in.", "error");
+            Swal.fire("Error", "Please capture a photo to continue.", "error");
             return;
         }
 
         if (checkInOutType === 'Check Out' && multiCheckConfig?.isCheckOutImageMandatory && !selectedFile) {
-            Swal.fire("Error", "Photo evidence is required for check-out.", "error");
+            Swal.fire("Error", "Please capture a photo to continue.", "error");
             return;
         }
 
