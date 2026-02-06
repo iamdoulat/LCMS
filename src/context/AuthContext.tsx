@@ -167,6 +167,45 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
             return;
           }
 
+          // Check if email has changed and sync to Firestore
+          const authEmail = currentUser.email?.toLowerCase();
+          const firestoreEmail = userProfileData.email?.toLowerCase();
+
+          if (authEmail && firestoreEmail && authEmail !== firestoreEmail) {
+            console.log(`Email change detected: ${firestoreEmail} -> ${authEmail}`);
+
+            try {
+              // Update users collection
+              await updateDoc(userDocRef, {
+                email: currentUser.email,
+                updatedAt: serverTimestamp()
+              });
+
+              // Update userProfileData with new email for state
+              userProfileData.email = currentUser.email || userProfileData.email;
+
+              // Also update employees collection if user has an employee record
+              const employeeQuery = query(
+                collection(firestore, 'employees'),
+                where('email', '==', firestoreEmail),
+                limit(1)
+              );
+              const employeeSnapshot = await getDocs(employeeQuery);
+
+              if (!employeeSnapshot.empty) {
+                const employeeDocRef = doc(firestore, 'employees', employeeSnapshot.docs[0].id);
+                await updateDoc(employeeDocRef, {
+                  email: currentUser.email,
+                  updatedAt: serverTimestamp()
+                });
+                console.log(`Updated employee email from ${firestoreEmail} to ${authEmail}`);
+              }
+            } catch (emailSyncError) {
+              console.error('Error syncing email to Firestore:', emailSyncError);
+              // Don't throw - allow login to proceed even if sync fails
+            }
+          }
+
           setUser(currentUser);
           setFirestoreUser(userProfileData);
           setUserRole(Array.isArray(userProfileData.role) ? userProfileData.role : (userProfileData.role ? [userProfileData.role] : ["User"]));
