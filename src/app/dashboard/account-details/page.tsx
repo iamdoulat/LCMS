@@ -172,10 +172,10 @@ export default function AccountDetailsPage() {
   );
 
   const { data: myDistributions = [], isLoading: isLoadingDistributions, refetch: refetchDistributions } = useFirestoreQuery<any[]>(
-    query(collection(firestore, "asset_distributions"), where("employeeId", "==", user?.uid || 'dummy')),
+    query(collection(firestore, "asset_distributions"), where("employeeId", "==", employeeData?.id || 'dummy')),
     undefined,
     ['my_asset_distributions_dashboard'],
-    !!user?.uid
+    !!employeeData?.id
   );
 
   // Claim State
