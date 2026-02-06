@@ -118,24 +118,44 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
         if (!user) return;
 
         // Validation
-        if (!companyName.trim()) {
-            Swal.fire("Error", "Company Name is required", "error");
+        if (multiCheckConfig?.isCompanyNameMandatory && !companyName.trim()) {
+            Swal.fire({
+                title: "Error",
+                text: "Company Name is required",
+                icon: "error",
+                customClass: { container: 'z-[9999]' }
+            });
             return;
         }
 
         if (!currentLocation) {
-            Swal.fire("Error", "Location is required. Please enable GPS.", "error");
+            Swal.fire({
+                title: "Error",
+                text: "Location is required. Please enable GPS.",
+                icon: "error",
+                customClass: { container: 'z-[9999]' }
+            });
             return;
         }
 
         // Check if image is mandatory
         if (checkInOutType === 'Check In' && multiCheckConfig?.isCheckInImageMandatory && !selectedFile) {
-            Swal.fire("Error", "Please capture a photo to continue.", "error");
+            Swal.fire({
+                title: "Error",
+                text: "Please capture a photo to continue.",
+                icon: "error",
+                customClass: { container: 'z-[9999]' }
+            });
             return;
         }
 
         if (checkInOutType === 'Check Out' && multiCheckConfig?.isCheckOutImageMandatory && !selectedFile) {
-            Swal.fire("Error", "Please capture a photo to continue.", "error");
+            Swal.fire({
+                title: "Error",
+                text: "Please capture a photo to continue.",
+                icon: "error",
+                customClass: { container: 'z-[9999]' }
+            });
             return;
         }
 
@@ -147,6 +167,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
             text: 'Creating record...',
             allowOutsideClick: false,
             showConfirmButton: false,
+            customClass: { container: 'z-[9999]' },
             didOpen: () => {
                 Swal.showLoading();
             }
@@ -264,7 +285,8 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                 text: `${checkInOutType} recorded successfully`,
                 icon: "success",
                 timer: 1500,
-                showConfirmButton: false
+                showConfirmButton: false,
+                customClass: { container: 'z-[9999]' }
             });
 
             onSuccess();
@@ -272,7 +294,12 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
 
         } catch (error: any) {
             console.error("Error submitting check in/out:", error);
-            Swal.fire("Error", "Failed to submit. Please try again.", "error");
+            Swal.fire({
+                title: "Error",
+                text: "Failed to submit. Please try again.",
+                icon: "error",
+                customClass: { container: 'z-[9999]' }
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -351,7 +378,9 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                     {/* Form Fields */}
                     <div className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="companyName">Company Name *</Label>
+                            <Label htmlFor="companyName">
+                                Company Name {multiCheckConfig?.isCompanyNameMandatory ? '*' : '(Optional)'}
+                            </Label>
                             <Input
                                 id="companyName"
                                 value={companyName}
