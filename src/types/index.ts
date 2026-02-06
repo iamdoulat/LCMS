@@ -2207,6 +2207,7 @@ export const MultipleCheckInOutSchema = z.object({
   isCheckOutImageMandatory: z.boolean().default(true),
   isMultipleCheckInAllowedWithoutCheckOut: z.boolean().default(false),
   isMultipleCheckOutAllowedAgainstSingleCheckIn: z.boolean().default(false),
+  isMaxHourLimitEnabled: z.boolean().default(true),
   maxHourLimitOfCheckOut: z.number().int().min(1).default(24),
 });
 

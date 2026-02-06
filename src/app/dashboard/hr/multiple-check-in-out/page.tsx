@@ -205,6 +205,11 @@ export default function MultipleCheckInOutPage() {
     // Function to handle automatic checkout for visits exceeding 8 hours
     const handleAutoCheckout = async (allRecords: MultipleCheckInOutRecord[]) => {
         try {
+            // Only process auto check-out if the feature is enabled
+            if (!multiCheckConfig?.isMaxHourLimitEnabled) {
+                return;
+            }
+
             const checkIns = allRecords.filter(r => r.type === 'Check In');
             const checkOuts = allRecords.filter(r => r.type === 'Check Out');
             const now = new Date().getTime();

@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Loader2, Users, Smartphone, DollarSign } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -131,6 +132,7 @@ export default function HrmSettingsPage() {
         isCheckOutImageMandatory: true,
         isMultipleCheckInAllowedWithoutCheckOut: false,
         isMultipleCheckOutAllowedAgainstSingleCheckIn: false,
+        isMaxHourLimitEnabled: true,
         maxHourLimitOfCheckOut: 24,
     });
     const [isSavingMultiCheck, setIsSavingMultiCheck] = React.useState(false);
@@ -466,14 +468,25 @@ export default function HrmSettingsPage() {
                                 </div>
                             </div>
 
-                            <div className="pt-4 space-y-2 group">
-                                <Label className="text-sm font-semibold group-hover:text-primary transition-colors">Max Hour Limit of Check Out from Check In</Label>
+                            <div className="flex items-center justify-between space-x-3 pt-4">
+                                <Label htmlFor="isMaxHourLimitEnabled" className="text-sm font-semibold cursor-pointer">
+                                    Max Hour Limit of Check Out from Check In
+                                </Label>
+                                <Switch
+                                    id="isMaxHourLimitEnabled"
+                                    checked={multiCheckConfig.isMaxHourLimitEnabled ?? true}
+                                    onCheckedChange={(checked) => setMultiCheckConfig(prev => ({ ...prev, isMaxHourLimitEnabled: !!checked }))}
+                                    disabled={isReadOnly}
+                                />
+                            </div>
+
+                            <div className="pt-2 space-y-2 group">
                                 <Input
                                     type="number"
                                     value={multiCheckConfig.maxHourLimitOfCheckOut}
                                     onChange={(e) => setMultiCheckConfig(prev => ({ ...prev, maxHourLimitOfCheckOut: parseInt(e.target.value) || 0 }))}
                                     placeholder="e.g. 24"
-                                    disabled={isReadOnly}
+                                    disabled={isReadOnly || !multiCheckConfig.isMaxHourLimitEnabled}
                                     className="focus:ring-2 focus:ring-primary/20 max-w-[200px]"
                                 />
                             </div>

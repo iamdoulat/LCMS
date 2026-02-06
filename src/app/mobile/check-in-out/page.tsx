@@ -9,6 +9,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { MobileCheckInOutModal } from '@/components/mobile/MobileCheckInOutModal';
+import type { MultipleCheckInOutConfiguration } from '@/types';
 import { type MultipleCheckInOutRecord } from '@/types/checkInOut';
 import { useRouter } from 'next/navigation';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
@@ -85,6 +86,9 @@ export default function MobileCheckInOutPage() {
     // Extra profiles for avatars not in supervisedEmployees
     const [extraProfiles, setExtraProfiles] = useState<{ [id: string]: any }>({});
 
+    // Multiple check in/out configuration
+    const [multiCheckConfig, setMultiCheckConfig] = useState<MultipleCheckInOutConfiguration | null>(null);
+
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
@@ -96,6 +100,15 @@ export default function MobileCheckInOutPage() {
         setRefreshTrigger(prev => prev + 1);
     };
 
+    // Fetch multiple check in/out configuration
+    useEffect(() => {
+        const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'multi_check_in_out'), (docSnap) => {
+            if (docSnap.exists()) {
+                setMultiCheckConfig(docSnap.data() as MultipleCheckInOutConfiguration);
+            }
+        });
+        return () => unsub();
+    }, []);
 
     // Fetch Records
     useEffect(() => {
@@ -487,11 +500,12 @@ export default function MobileCheckInOutPage() {
                 const isUserRecord = visit.employeeId === currentUserEmployeeId;
                 const isDone = !!visit.checkOut;
 
-                // Auto check-out logic: if more than 8 hours passed since check-in
+                // Auto check-out logic: if more than configured max hours passed since check-in
                 const checkInTime = new Date(visit.checkIn.timestamp).getTime();
                 const now = new Date().getTime();
                 const diffHours = (now - checkInTime) / (1000 * 60 * 60);
-                const isAutoDone = !isDone && diffHours > 8;
+                const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 8;
+                const isAutoDone = !isDone && diffHours > maxHours && (multiCheckConfig?.isMaxHourLimitEnabled ?? true);
 
                 if (activeTab === 'Check Ins') {
                     // Show only User's pending visits that are NOT older than 8 hours
@@ -598,6 +612,14 @@ export default function MobileCheckInOutPage() {
                                     const diff = new Date(visit.checkOut.timestamp).getTime() - new Date(visit.checkIn.timestamp).getTime();
                                     const hours = Math.floor(diff / 3600000);
                                     const minutes = Math.floor((diff % 3600000) / 60000);
+                                    duration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                                } else if (isAutoDone && multiCheckConfig && multiCheckConfig.isMaxHourLimitEnabled) {
+                                    // For auto-done cases, calculate duration as the configured max hours limit
+                                    // Only if the feature is enabled
+                                    const maxHours = multiCheckConfig.maxHourLimitOfCheckOut || 8;
+                                    const maxDurationMs = maxHours * 60 * 60 * 1000;
+                                    const hours = Math.floor(maxDurationMs / 3600000);
+                                    const minutes = Math.floor((maxDurationMs % 3600000) / 60000);
                                     duration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
                                 }
 
