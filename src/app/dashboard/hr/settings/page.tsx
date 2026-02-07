@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -102,6 +101,47 @@ export default function HrmSettingsPage() {
     const [editingLeaveType, setEditingLeaveType] = React.useState<LeaveTypeDefinition | null>(null);
     const [isEditLeaveTypeDialogOpen, setIsEditLeaveTypeDialogOpen] = React.useState(false);
 
+    // Dynamic Cancellation Window State
+    const [cancellationWindowHours, setCancellationWindowHours] = React.useState<number>(8); // Default 8
+    const [isCancellationDialogOpen, setIsCancellationDialogOpen] = React.useState(false);
+    const [isSavingCancellation, setIsSavingCancellation] = React.useState(false);
+
+    useEffect(() => {
+        const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'leave_cancellation'), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.cancellationWindowHours !== undefined) {
+                    setCancellationWindowHours(data.cancellationWindowHours);
+                }
+            }
+        });
+        return () => unsub();
+    }, []);
+
+    const handleSaveCancellationWindow = async () => {
+        if (isReadOnly) return;
+        setIsSavingCancellation(true);
+        try {
+            await setDoc(doc(firestore, 'hrm_settings', 'leave_cancellation'), {
+                cancellationWindowHours: cancellationWindowHours,
+                updatedAt: serverTimestamp(),
+            }, { merge: true });
+
+            Swal.fire({
+                title: 'Saved',
+                text: 'Cancellation window configuration updated.',
+                icon: 'success',
+                timer: 1000,
+                showConfirmButton: false
+            });
+            setIsCancellationDialogOpen(false);
+        } catch (error: any) {
+            Swal.fire('Error', `Failed to save: ${error.message}`, 'error');
+        } finally {
+            setIsSavingCancellation(false);
+        }
+    };
+
     // Leave Groups State
     const { data: leaveGroups, isLoading: isLoadingLeaveGroups } = useFirestoreQuery<LeaveGroupDocument[]>(query(collection(firestore, 'hrm_settings', 'leave_groups', 'items'), orderBy("groupName", "asc")), undefined, ['leave_groups']);
     const [isAddLeaveGroupDialogOpen, setIsAddLeaveGroupDialogOpen] = React.useState(false);
@@ -191,7 +231,6 @@ export default function HrmSettingsPage() {
             setIsSavingRecon(false);
         }
     };
-
 
     const handleEdit = (item: any, setEditingItem: React.Dispatch<any>, setIsEditDialogOpen: React.Dispatch<any>) => {
         setEditingItem(item);
@@ -657,7 +696,17 @@ export default function HrmSettingsPage() {
                                 <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Leave Types</CardTitle>
                                 <CardDescription>Manage types of leaves available</CardDescription>
                             </div>
-                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddLeaveTypeDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setIsCancellationDialogOpen(true)}
+                                    title="Configure Cancellation Window"
+                                >
+                                    <Settings className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddLeaveTypeDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             {isLoadingLeaveTypes ? <DataTableSkeleton /> :
@@ -698,6 +747,42 @@ export default function HrmSettingsPage() {
                                     )}
                         </CardContent>
                     </Card>
+
+                    {/* Cancellation Window Dialog */}
+                    <Dialog open={isCancellationDialogOpen} onOpenChange={setIsCancellationDialogOpen}>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Configure Cancellation Window</DialogTitle>
+                                <DialogDescription>
+                                    Set the time window (in hours) during which employees can cancel their own applications. Set to 0 for no restriction.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="hours" className="text-right">
+                                        Hours
+                                    </Label>
+                                    <Input
+                                        id="hours"
+                                        type="number"
+                                        min="0"
+                                        value={cancellationWindowHours}
+                                        onChange={(e) => setCancellationWindowHours(parseInt(e.target.value) || 0)}
+                                        className="col-span-3"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end">
+                                <Button onClick={handleSaveCancellationWindow} disabled={isSavingCancellation}>
+                                    {isSavingCancellation ? (
+                                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+                                    ) : (
+                                        'Save Changes'
+                                    )}
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
 
                     {/* Leave Groups Section */}
                     <Card className="md:col-span-2">
@@ -786,8 +871,6 @@ export default function HrmSettingsPage() {
                     </DialogContent>
                 </Dialog>
             )}
-
-
 
             {editingDepartment && (
                 <Dialog open={isEditDepartmentDialogOpen} onOpenChange={setIsEditDepartmentDialogOpen}>

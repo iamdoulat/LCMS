@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, deleteDoc, doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, Plus, Calendar as CalendarIcon, Info, Filter as FilterIcon, X } from 'lucide-react';
+import { ArrowLeft, Plus, Calendar as CalendarIcon, Info, Filter as FilterIcon, X, Timer } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,9 +13,74 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, parseISO, differenceInCalendarDays, startOfDay, endOfDay } from 'date-fns';
 import Swal from 'sweetalert2';
 import type { LeaveApplicationDocument, EmployeeDocument } from '@/types';
+import { Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
 import { DateRange } from 'react-day-picker';
+
+// Helper function to check if application is within 8-hour cancellation window
+const isWithinCancellationWindow = (createdAt: Timestamp | undefined, windowHours: number): boolean => {
+    if (!createdAt) return false;
+    if (windowHours === 0) return true; // No restriction
+    const now = new Date();
+    const applicationTime = createdAt.toDate();
+    const elapsedMs = now.getTime() - applicationTime.getTime();
+    const windowInMs = windowHours * 60 * 60 * 1000;
+    return elapsedMs < windowInMs;
+};
+
+// Countdown Timer Component
+const CountdownTimer: React.FC<{ createdAt: Timestamp | undefined, windowHours: number }> = ({ createdAt, windowHours }) => {
+    const [timeRemaining, setTimeRemaining] = useState<string>('00:00:00');
+    const [colorClass, setColorClass] = useState<string>('text-green-600');
+
+    useEffect(() => {
+        if (!createdAt || windowHours === 0) return;
+
+        const updateTimer = () => {
+            const now = new Date();
+            const applicationTime = createdAt.toDate();
+            const elapsedMs = now.getTime() - applicationTime.getTime();
+            const windowInMs = windowHours * 60 * 60 * 1000;
+            const remainingMs = Math.max(0, windowInMs - elapsedMs);
+
+            const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+            const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+            const seconds = Math.floor((remainingMs % (60 * 1000)) / 1000);
+
+            const formatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            setTimeRemaining(formatted);
+
+            // Update color based on remaining time
+            if (remainingMs === 0) {
+                setColorClass('text-slate-400');
+            } else if (hours < 1) {
+                setColorClass('text-red-600');
+            } else if (hours < (windowHours / 2)) {
+                setColorClass('text-amber-600');
+            } else {
+                setColorClass('text-green-600');
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+
+        return () => clearInterval(interval);
+    }, [createdAt, windowHours]);
+
+    if (windowHours === 0) return null;
+
+    return (
+        <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+            <Timer className={cn("h-3.5 w-3.5", colorClass)} />
+            <span className={cn("text-[10px] font-bold font-mono", colorClass)}>
+                {timeRemaining}
+            </span>
+        </div>
+    );
+};
+
 
 export default function MyLeaveApplicationsPage() {
     const router = useRouter();
@@ -25,6 +90,19 @@ export default function MyLeaveApplicationsPage() {
     const [employeeData, setEmployeeData] = useState<EmployeeDocument | null>(null);
     const [selectedApp, setSelectedApp] = useState<LeaveApplicationDocument | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [cancellationWindowHours, setCancellationWindowHours] = useState<number>(8); // Default 8
+
+    useEffect(() => {
+        const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'leave_cancellation'), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.cancellationWindowHours !== undefined) {
+                    setCancellationWindowHours(data.cancellationWindowHours);
+                }
+            }
+        });
+        return () => unsub();
+    }, []);
 
     // Filter State
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -262,7 +340,7 @@ export default function MyLeaveApplicationsPage() {
                             }}
                         >
                             <div className="p-4 relative">
-                                {app.status === 'Pending' && (
+                                {app.status === 'Pending' && isWithinCancellationWindow(app.createdAt, cancellationWindowHours) && (
                                     <button
                                         onClick={(e) => handleDeleteApplication(app.id, e)}
                                         className="absolute top-4 right-4 h-6 w-6 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center hover:bg-rose-100 active:bg-rose-200 transition-colors z-10"
@@ -270,6 +348,7 @@ export default function MyLeaveApplicationsPage() {
                                         <X className="h-4 w-4" />
                                     </button>
                                 )}
+
 
                                 <Badge className={cn("text-xs font-bold uppercase mb-2", getStatusColor(app.status))}>
                                     {app.status}
@@ -283,13 +362,17 @@ export default function MyLeaveApplicationsPage() {
                                     {formatDateRange(app.fromDate, app.toDate)} • {calculateDays(app.fromDate, app.toDate)} (Days)
                                 </p>
 
-                                <div className="flex gap-2">
+
+                                <div className="flex gap-2 flex-wrap">
                                     <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
                                         <CalendarIcon className="h-3.5 w-3.5 text-blue-600" />
                                         <span className="text-[10px] font-bold text-slate-600">
                                             {app.createdAt ? format(app.createdAt.toDate(), 'dd-MM-yyyy') : '--'}
                                         </span>
                                     </div>
+                                    {app.status === 'Pending' && (
+                                        <CountdownTimer createdAt={app.createdAt} windowHours={cancellationWindowHours} />
+                                    )}
                                     <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 text-[10px] font-bold">
                                         {app.leaveType}
                                     </div>

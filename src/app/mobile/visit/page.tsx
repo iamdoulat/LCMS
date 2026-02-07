@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, onSnapshot, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, getDocs, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { format, parseISO } from 'date-fns';
 import { MobileFilterSheet, hasActiveFilters, type FilterState } from '@/components/mobile/MobileFilterSheet';
@@ -22,11 +22,78 @@ import {
     Timer,
     Users,
     MessageSquare,
-    Filter as FilterIcon
+    Filter as FilterIcon,
+    X
 } from 'lucide-react';
 import { MobileVisitForm } from '@/components/mobile/MobileVisitForm';
 import { cn } from '@/lib/utils';
 import type { VisitApplicationDocument } from '@/types';
+import Swal from 'sweetalert2';
+
+// Helper function to check if application is within 8-hour cancellation window
+// Note: Visit applications might use 'createdAt' or 'applyDate' depending on implementation
+// Based on file content, it seems applyDate is a string (ISO) and there might be a createdAt timestamp
+const isWithinCancellationWindow = (createdAt: Timestamp | undefined, windowHours: number): boolean => {
+    if (!createdAt) return false;
+    if (windowHours === 0) return true; // No restriction
+    const now = new Date();
+    const applicationTime = createdAt.toDate();
+    const elapsedMs = now.getTime() - applicationTime.getTime();
+    const windowInMs = windowHours * 60 * 60 * 1000;
+    return elapsedMs < windowInMs;
+};
+
+// Countdown Timer Component
+const CountdownTimer: React.FC<{ createdAt: Timestamp | undefined, windowHours: number }> = ({ createdAt, windowHours }) => {
+    const [timeRemaining, setTimeRemaining] = useState<string>('00:00:00');
+    const [colorClass, setColorClass] = useState<string>('text-green-600');
+
+    useEffect(() => {
+        if (!createdAt || windowHours === 0) return;
+
+        const updateTimer = () => {
+            const now = new Date();
+            const applicationTime = createdAt.toDate();
+            const elapsedMs = now.getTime() - applicationTime.getTime();
+            const windowInMs = windowHours * 60 * 60 * 1000;
+            const remainingMs = Math.max(0, windowInMs - elapsedMs);
+
+            const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+            const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+            const seconds = Math.floor((remainingMs % (60 * 1000)) / 1000);
+
+            const formatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            setTimeRemaining(formatted);
+
+            // Update color based on remaining time
+            if (remainingMs === 0) {
+                setColorClass('text-slate-400');
+            } else if (hours < 1) {
+                setColorClass('text-red-600');
+            } else if (hours < (windowHours / 2)) {
+                setColorClass('text-amber-600');
+            } else {
+                setColorClass('text-green-600');
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+
+        return () => clearInterval(interval);
+    }, [createdAt, windowHours]);
+
+    if (windowHours === 0) return null;
+
+    return (
+        <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+            <Timer className={cn("h-3.5 w-3.5", colorClass)} />
+            <span className={cn("text-[10px] font-bold font-mono", colorClass)}>
+                {timeRemaining}
+            </span>
+        </div>
+    );
+};
 
 export default function MobileVisitApplicationsPage() {
     const { user } = useAuth();
@@ -38,6 +105,69 @@ export default function MobileVisitApplicationsPage() {
     // Filter State
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState<FilterState>({});
+    const [cancellationWindowHours, setCancellationWindowHours] = useState<number>(8); // Default 8
+
+    useEffect(() => {
+        const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'leave_cancellation'), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.cancellationWindowHours !== undefined) {
+                    setCancellationWindowHours(data.cancellationWindowHours);
+                }
+            }
+        });
+        return () => unsub();
+    }, []);
+
+    const handleDeleteApplication = async (appId: string) => {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "Do you want to cancel this visit application?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, cancel it!',
+            cancelButtonText: 'No, keep it',
+            reverseButtons: true,
+            customClass: {
+                popup: 'rounded-3xl',
+                confirmButton: 'rounded-xl',
+                cancelButton: 'rounded-xl'
+            }
+        });
+
+        if (result.isConfirmed) {
+            try {
+                setLoading(true);
+                await deleteDoc(doc(firestore, 'visit_applications', appId));
+
+                // Update local state
+                setVisits(prev => prev.filter(app => app.id !== appId));
+
+                Swal.fire({
+                    title: 'Cancelled!',
+                    text: 'Your visit application has been removed.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    customClass: { popup: 'rounded-3xl' }
+                });
+            } catch (error) {
+                console.error("Error cancelling visit:", error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Failed to cancel the application. Please try again.',
+                    icon: 'error',
+                    confirmButtonColor: '#3b82f6',
+                    customClass: { popup: 'rounded-3xl' }
+                });
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
 
     // Filter Logic
     const filteredVisits = React.useMemo(() => {
@@ -203,12 +333,25 @@ export default function MobileVisitApplicationsPage() {
                             const isRejected = visit.status === 'Rejected';
 
                             return (
-                                <div key={visit.id} className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 flex gap-4 animate-in fade-in slide-in-from-bottom-2">
+                                <div key={visit.id} className="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 flex gap-4 animate-in fade-in slide-in-from-bottom-2 relative">
                                     {/* Left Border Accent */}
                                     <div className={cn(
                                         "w-1.5 rounded-full my-1",
                                         isApproved ? "bg-emerald-400" : isPending ? "bg-amber-400" : "bg-red-400"
                                     )} />
+
+                                    {/* Cancellation Button */}
+                                    {isPending && isWithinCancellationWindow(visit.createdAt, cancellationWindowHours) && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteApplication(visit.id);
+                                            }}
+                                            className="absolute top-2 right-2 h-8 w-8 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center hover:bg-rose-100 active:bg-rose-200 transition-colors z-10"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    )}
 
                                     <div className="flex-1 space-y-4">
                                         {/* Status Badge */}
@@ -222,7 +365,7 @@ export default function MobileVisitApplicationsPage() {
                                         </div>
 
                                         {/* Purpose */}
-                                        <h3 className="text-sm font-bold text-slate-800 leading-tight">
+                                        <h3 className="text-sm font-bold text-slate-800 leading-tight pr-6">
                                             {visit.remarks}
                                         </h3>
 
@@ -266,17 +409,21 @@ export default function MobileVisitApplicationsPage() {
                                         )}
 
                                         {/* Applied Date Footer */}
-                                        <div className="flex items-center gap-2 pt-2">
+                                        <div className="flex items-center gap-2 pt-2 flex-wrap">
                                             <div className="bg-slate-50 px-3 py-1.5 rounded-xl flex items-center gap-2 border border-slate-100">
                                                 <Calendar className="h-3.5 w-3.5 text-slate-400" />
                                                 <span className="text-[10px] text-slate-500 font-bold">
                                                     {format(parseISO(visit.applyDate), 'dd-MM-yyyy hh:mm a')}
                                                 </span>
                                             </div>
+                                            {isPending && (
+                                                <CountdownTimer createdAt={visit.createdAt} windowHours={cancellationWindowHours} />
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             );
+
                         })
                     ) : (
                         <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-slate-100">
