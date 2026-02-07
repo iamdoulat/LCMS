@@ -287,7 +287,7 @@ export default function PayslipListPage() {
                 )}
               </TableBody>
               <TableCaption>
-                {filteredPayslips && `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} - ${Math.min(currentPage * ITEMS_PER_PAGE, filteredPayslips.length)} of ${filteredPayslips.length} payslips form Database.`}
+                {filteredPayslips && `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} - ${Math.min(currentPage * ITEMS_PER_PAGE, filteredPayslips.length)} of ${filteredPayslips.length} payslips from Database.`}
               </TableCaption>
             </Table>
           </div>
