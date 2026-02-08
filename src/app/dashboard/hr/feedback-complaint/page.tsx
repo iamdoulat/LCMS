@@ -227,9 +227,9 @@ export default function FeedbackComplaintManagementPage() {
                             <AlertCircle className="h-6 w-6 text-rose-600" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-slate-500">Pending Complaints</p>
+                            <p className="text-sm font-medium text-slate-500">Pending Submissions</p>
                             <p className="text-2xl font-bold text-slate-900">
-                                {submissions.filter(s => s.type === 'Complaint' && s.status === 'Pending').length}
+                                {submissions.filter(s => s.status === 'Pending').length}
                             </p>
                         </div>
                     </CardContent>
