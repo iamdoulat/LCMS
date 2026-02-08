@@ -523,7 +523,7 @@ export default function RemoteAttendanceApprovalPage() {
             </div>
             <div ref={containerRef} className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col pt-6 relative z-10">
 
-                <div className="flex-1 px-6 pb-[120px] space-y-4">
+                <div className="flex-1 px-6 pb-4 space-y-4">
                     {(loading && records.length === 0) ? (
                         Array.from({ length: 5 }).map((_, i) => (
                             <div key={i} className="bg-white p-4 rounded-2xl shadow-md animate-pulse">
@@ -626,7 +626,7 @@ export default function RemoteAttendanceApprovalPage() {
 
                 {/* Load More Button */}
                 {!loading && records.length > visibleCount && (
-                    <div className="px-6 pb-6 mt-2">
+                    <div className="px-6 pb-2">
                         <Button
                             onClick={() => setVisibleCount(prev => prev + 50)}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
@@ -637,7 +637,7 @@ export default function RemoteAttendanceApprovalPage() {
                 )}
 
                 {/* Bottom Spacing to avoid overlapping with fixed BottomNavBar */}
-                <div className="h-32" />
+                <div className="h-44" />
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

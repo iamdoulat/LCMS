@@ -547,7 +547,7 @@ export default function ReconApprovalPage() {
                 </div>
 
                 {/* List */}
-                <div className="flex-1 px-6 pt-6 pb-[120px] space-y-4">
+                <div className="flex-1 px-6 pt-6 pb-4 space-y-4">
                     {loading ? (
                         <div className="flex justify-center py-10">
                             <Loader2 className="animate-spin text-blue-600 w-8 h-8" />
@@ -715,7 +715,7 @@ export default function ReconApprovalPage() {
 
                 {/* Load More Button */}
                 {!loading && requests.length > visibleCount && (
-                    <div className="px-6 pb-6">
+                    <div className="px-6 pb-2">
                         <Button
                             onClick={() => setVisibleCount(prev => prev + 10)}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
@@ -726,7 +726,7 @@ export default function ReconApprovalPage() {
                 )}
 
                 {/* Bottom Spacing to avoid overlapping with fixed BottomNavBar */}
-                <div className="h-32" />
+                <div className="h-44" />
             </div>
         </div>
     );
