@@ -23,6 +23,10 @@ export function MobileDrawerSidebar() {
     const { user, logout, setViewMode, appVersion, userRole } = useAuth();
     const { setIsOpen } = useMobileSidebar();
     const [employee, setEmployee] = useState<Employee | null>(null);
+    const hasPrivilegedRole = userRole?.some(role =>
+        ['Super Admin', 'Admin', 'HR', 'Commercial', 'Service', 'Accounts', 'DemoManager', 'Viewer'].includes(role)
+    );
+    const isRestrictedRole = userRole?.includes('Employee') && !hasPrivilegedRole;
 
     useEffect(() => {
         async function fetchEmployee() {
@@ -96,14 +100,14 @@ export function MobileDrawerSidebar() {
             <div className="bg-white/10 rounded-lg p-1 flex items-center justify-between mt-6 mb-4 w-[160px]">
                 <span className={cn(
                     "text-xs px-2 font-medium transition-colors",
-                    !userRole?.includes('Employee') && "cursor-pointer",
+                    !isRestrictedRole && "cursor-pointer",
                     pathname.includes('/mobile') ? "text-white" : "text-white/50"
                 )}>
                     Mobile
                 </span>
                 <Switch
                     checked={!pathname.includes('/mobile')}
-                    disabled={userRole?.includes('Employee')}
+                    disabled={isRestrictedRole}
                     onCheckedChange={(checked) => {
                         if (checked) {
                             setViewMode('web');
@@ -117,7 +121,7 @@ export function MobileDrawerSidebar() {
                 />
                 <span className={cn(
                     "text-xs px-2 font-medium transition-colors",
-                    !userRole?.includes('Employee') && "cursor-pointer",
+                    !isRestrictedRole && "cursor-pointer",
                     !pathname.includes('/mobile') ? "text-white" : "text-white/50"
                 )}>
                     Web

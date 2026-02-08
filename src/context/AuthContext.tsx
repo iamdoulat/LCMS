@@ -276,7 +276,13 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   }, []);
 
   useEffect(() => {
-    if (userRole?.includes('Employee')) {
+    // Only restrict if they have 'Employee' role AND DO NOT have any administrative/back-office roles
+    const hasPrivilegedRole = userRole?.some(role =>
+      ['Super Admin', 'Admin', 'HR', 'Commercial', 'Service', 'Accounts', 'DemoManager', 'Viewer'].includes(role)
+    );
+    const isRestrictedRole = userRole?.includes('Employee') && !hasPrivilegedRole;
+
+    if (isRestrictedRole) {
       setViewMode('mobile');
     }
   }, [userRole, setViewMode]);
