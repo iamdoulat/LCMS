@@ -73,18 +73,22 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                     const allEmployeesQuery = query(collection(firestore, 'employees'));
                     const allEmployeesSnapshot = await getDocs(allEmployeesQuery);
 
-                    // Fetch privileged users to filter them out of "My Team"
-                    // This creates a cleaner view focused on operational staff
-                    const privilegedUids = new Set<string>();
+                    // Define which roles are filtered out from "My Team" view
+                    // For Super Admins/Admins, we only filter out other Admins
+                    // For other privileged roles, we filter out all privileged roles
+                    const isRealAdmin = userRole?.some(r => ["Super Admin", "Admin"].includes(r));
                     const privilegedRolesList = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
+                    const rolesToFilter = isRealAdmin ? ["Super Admin", "Admin"] : privilegedRolesList;
+
+                    const privilegedUids = new Set<string>();
                     try {
                         const usersSnapshot = await getDocs(collection(firestore, 'users'));
                         usersSnapshot.docs.forEach(uDoc => {
                             const uData = uDoc.data();
                             const roles = uData.role;
                             const hasPrivilegedRole = Array.isArray(roles)
-                                ? roles.some(r => privilegedRolesList.includes(r))
-                                : privilegedRolesList.includes(roles);
+                                ? roles.some(r => rolesToFilter.includes(r))
+                                : rolesToFilter.includes(roles);
 
                             if (hasPrivilegedRole) {
                                 privilegedUids.add(uDoc.id); // Doc ID is the UID
@@ -108,7 +112,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         if (privilegedUids.has(doc.id)) return;
 
                         // 3. Skip by Designation (fallback proxy)
-                        if (data.designation && privilegedRolesList.includes(data.designation)) return;
+                        if (data.designation && rolesToFilter.includes(data.designation)) return;
 
                         subordinateIds.push(doc.id);
                         supervisedEmployees.push({
