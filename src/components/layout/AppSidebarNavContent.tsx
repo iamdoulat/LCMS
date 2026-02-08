@@ -228,6 +228,7 @@ const hrNavItems: NavItem[] = [
   { href: "/dashboard/hr/device-change-requests", label: "Device Change Requests", icon: Smartphone, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/claim", label: "Claim Management", icon: FileSpreadsheet, iconColorClass: 'bg-icon-list' },
   { href: "/dashboard/hr/assets", label: "Assets Management", icon: Package, iconColorClass: 'bg-icon-list' },
+  { href: "/dashboard/hr/feedback-complaint", label: "Feedback & Complain", icon: MessageSquareText, iconColorClass: 'bg-icon-list' },
   { href: '/dashboard/hr/settings', label: 'HRM Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
 ];
 

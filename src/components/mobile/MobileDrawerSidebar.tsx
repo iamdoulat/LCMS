@@ -11,7 +11,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import {
     Home, Coffee, Bell, Contact, QrCode, User,
-    LogOut, Trash2, UserCheck, Lock
+    LogOut, Trash2, UserCheck, Lock, MessageSquareText
 } from 'lucide-react';
 import { Switch } from "@/components/ui/switch"
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,7 @@ export function MobileDrawerSidebar() {
         { href: '/mobile/qrcode', label: 'My QR Code', icon: QrCode },
         { href: '/mobile/profile', label: 'My Profile', icon: User },
         { href: '/mobile/notice-board', label: 'My Notice Board', icon: Bell },
+        { href: '/mobile/hrm/feedback-complaint', label: 'Feedback & Complain', icon: MessageSquareText },
         { href: '/mobile/change-password', label: 'Change Password', icon: Lock },
     ];
 
