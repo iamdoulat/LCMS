@@ -258,6 +258,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [user, refreshEmployeeData]);
 
+
+
   useEffect(() => {
     fetchInitialCompanyProfile();
     // Load preferred view mode from localStorage
@@ -272,6 +274,12 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setViewModeState(mode);
     localStorage.setItem('preferred_view_mode', mode);
   }, []);
+
+  useEffect(() => {
+    if (userRole?.includes('Employee')) {
+      setViewMode('mobile');
+    }
+  }, [userRole, setViewMode]);
 
   const login = useCallback(async (email: string, pass: string) => {
     try {

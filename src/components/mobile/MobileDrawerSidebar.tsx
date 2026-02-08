@@ -20,7 +20,7 @@ import type { Employee } from '@/types';
 export function MobileDrawerSidebar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { user, logout, setViewMode, appVersion } = useAuth();
+    const { user, logout, setViewMode, appVersion, userRole } = useAuth();
     const { setIsOpen } = useMobileSidebar();
     const [employee, setEmployee] = useState<Employee | null>(null);
 
@@ -93,11 +93,17 @@ export function MobileDrawerSidebar() {
                 })}
             </nav>
 
-            {/* Mobile/Web Mode Switch */}
             <div className="bg-white/10 rounded-lg p-1 flex items-center justify-between mt-6 mb-4 w-[160px]">
-                <span className={cn("text-xs px-2 font-medium cursor-pointer transition-colors", pathname.includes('/mobile') ? "text-white" : "text-white/50")}>Mobile</span>
+                <span className={cn(
+                    "text-xs px-2 font-medium transition-colors",
+                    !userRole?.includes('Employee') && "cursor-pointer",
+                    pathname.includes('/mobile') ? "text-white" : "text-white/50"
+                )}>
+                    Mobile
+                </span>
                 <Switch
                     checked={!pathname.includes('/mobile')}
+                    disabled={userRole?.includes('Employee')}
                     onCheckedChange={(checked) => {
                         if (checked) {
                             setViewMode('web');
@@ -107,9 +113,15 @@ export function MobileDrawerSidebar() {
                             router.push('/mobile/dashboard');
                         }
                     }}
-                    className="data-[state=checked]:bg-white data-[state=unchecked]:bg-slate-400 h-5 w-9"
+                    className="data-[state=checked]:bg-white data-[state=unchecked]:bg-slate-400 h-5 w-9 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <span className={cn("text-xs px-2 font-medium cursor-pointer transition-colors", !pathname.includes('/mobile') ? "text-white" : "text-white/50")}>Web</span>
+                <span className={cn(
+                    "text-xs px-2 font-medium transition-colors",
+                    !userRole?.includes('Employee') && "cursor-pointer",
+                    !pathname.includes('/mobile') ? "text-white" : "text-white/50"
+                )}>
+                    Web
+                </span>
             </div>
 
             {/* Clear Cache Button */}
