@@ -133,7 +133,7 @@ export default function MobileFeedbackComplaintPage() {
             animate={{ opacity: 1, y: 0 }}
             key={item.id}
         >
-            <Card className="p-4 rounded-2xl border-none shadow-sm bg-white mb-3 relative overflow-hidden group active:scale-[0.98] transition-transform">
+            <Card className="p-4 rounded-2xl border-none shadow-lg bg-white mb-3 relative overflow-hidden group active:scale-[0.98] transition-transform">
                 <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
                         <div className={cn(
