@@ -121,18 +121,22 @@ export default function RemoteAttendanceApprovalPage() {
             };
 
             const processDaily = (snap: any) => {
+                console.log(`[processDaily] Processing ${snap.length} docs`);
                 snap.forEach((doc: any) => {
                     const data = doc.data();
                     const emp = effectiveSupervisedEmployees.find(e => e.id === data.employeeId || e.uid === data.employeeId);
 
                     // Skip if employee is not in supervised list
-                    if (!emp) return;
+                    if (!emp) {
+                        // console.log(`[processDaily] Skipping doc ${doc.id} - Employee ${data.employeeId} not supervised`);
+                        return;
+                    }
 
                     // Map daily attendance records - Show if it was a remote attendance
                     // Remote if: Pending OR (Approved/Rejected AND was outside geofence)
-                    const isInTimeRemote = (data.inTimeApprovalStatus && data.inTimeApprovalStatus.toLowerCase() === 'pending') ||
-                        (data.approvalStatus && data.approvalStatus.toLowerCase() === 'pending') ||
-                        (!data.inTimeApprovalStatus && data.approvalStatus && data.isInsideGeofence === false);
+                    const statusIn = normalizeStatus(data.inTimeApprovalStatus || data.approvalStatus);
+
+                    const isInTimeRemote = (statusIn === 'Pending') || (data.isInsideGeofence === false);
 
                     if (isInTimeRemote) {
                         fetchedRecords.push({
@@ -148,7 +152,7 @@ export default function RemoteAttendanceApprovalPage() {
                                 address: data.inTimeAddress || 'Unknown'
                             },
                             remarks: data.inTimeRemarks || '',
-                            status: normalizeStatus(data.inTimeApprovalStatus || data.approvalStatus),
+                            status: statusIn,
                             imageURL: '',
                             source: 'daily',
                             createdAt: data.createdAt,
@@ -157,8 +161,8 @@ export default function RemoteAttendanceApprovalPage() {
                         } as UnifiedApprovalRecord);
                     }
 
-                    const isOutTimeRemote = (data.outTimeApprovalStatus && data.outTimeApprovalStatus.toLowerCase() === 'pending') ||
-                        (data.outTime && data.outTimeIsInsideGeofence === false);
+                    const statusOut = normalizeStatus(data.outTimeApprovalStatus || 'Approved');
+                    const isOutTimeRemote = (statusOut === 'Pending') || (data.outTime && data.outTimeIsInsideGeofence === false);
 
                     if (isOutTimeRemote) {
                         fetchedRecords.push({
@@ -175,7 +179,7 @@ export default function RemoteAttendanceApprovalPage() {
                                 address: data.outTimeAddress || 'Unknown'
                             },
                             remarks: data.outTimeRemarks || '',
-                            status: normalizeStatus(data.outTimeApprovalStatus || 'Approved'), // Default to approved for legacy if missing
+                            status: statusOut,
                             imageURL: '',
                             source: 'daily',
                             createdAt: data.createdAt,
@@ -217,6 +221,9 @@ export default function RemoteAttendanceApprovalPage() {
             const employeeIds = effectiveSupervisedEmployees.map(e => e.id);
             const employeeUids = effectiveSupervisedEmployees.map(e => e.uid).filter(Boolean) as string[];
             const allTeamIds = Array.from(new Set([...employeeIds, ...employeeUids]));
+
+            console.log(`[Diagnostic] allTeamIds count:`, allTeamIds.length);
+            console.log(`[Diagnostic] DateRange:`, dateRange);
 
             if (allTeamIds.length === 0) {
                 setRecords([]);
@@ -333,8 +340,19 @@ export default function RemoteAttendanceApprovalPage() {
                 }
             }
 
+            console.log(`[Diagnostic] Total fetchedRecords (pre-filter):`, fetchedRecords.length);
+            if (fetchedRecords.length > 0) {
+                console.log(`[Diagnostic] Sample Record (0):`, {
+                    id: fetchedRecords[0].id,
+                    status: fetchedRecords[0].status,
+                    type: fetchedRecords[0].type,
+                    timestamp: fetchedRecords[0].timestamp,
+                    parsedDate: new Date(fetchedRecords[0].timestamp).toISOString()
+                });
+            }
+
             // Filter by date range and sort
-            const filteredRecords = fetchedRecords.filter(r => {
+            const filteredRecords = fetchedRecords.filter((r, idx) => {
                 const recordDate = new Date(r.timestamp);
                 const isWithinDate = dateRange?.from && dateRange?.to
                     ? recordDate >= startOfDay(dateRange.from) && recordDate <= endOfDay(dateRange.to)
@@ -348,8 +366,26 @@ export default function RemoteAttendanceApprovalPage() {
                     ? true
                     : r.type === typeFilter;
 
+                if (idx < 5) {
+                    console.log(`[Diagnostic] Filter Record ${idx}:`, {
+                        id: r.id,
+                        isWithinDate,
+                        matchesStatus,
+                        matchesType,
+                        rStatus: r.status,
+                        statusFilter,
+                        rTimestamp: r.timestamp,
+                        recordDate: recordDate.toISOString()
+                    });
+                }
+
                 return isWithinDate && matchesStatus && matchesType;
             });
+
+            console.log(`[Diagnostic] Filtered records count:`, filteredRecords.length);
+            if (filteredRecords.length === 0 && fetchedRecords.length > 0) {
+                console.log(`[Diagnostic] Note: Records were fetched but all were filtered out. Check date/status/type filters.`);
+            }
 
             filteredRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setRecords(filteredRecords);
