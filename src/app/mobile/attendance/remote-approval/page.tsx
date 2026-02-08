@@ -113,15 +113,15 @@ export default function RemoteAttendanceApprovalPage() {
 
             const normalizeStatus = (s: string) => {
                 if (!s) return 'Pending';
-                const lower = s.toLowerCase();
+                const trimmed = s.toString().trim();
+                const lower = trimmed.toLowerCase();
                 if (lower === 'pending') return 'Pending';
                 if (lower === 'approved') return 'Approved';
                 if (lower === 'rejected') return 'Rejected';
-                return s;
+                return trimmed; // Return trimmed version if it's something else
             };
 
             const processDaily = (snap: any) => {
-                console.log(`[processDaily] Processing ${snap.length} docs`);
                 snap.forEach((doc: any) => {
                     const data = doc.data();
                     const emp = effectiveSupervisedEmployees.find(e => e.id === data.employeeId || e.uid === data.employeeId);
@@ -221,9 +221,6 @@ export default function RemoteAttendanceApprovalPage() {
             const employeeIds = effectiveSupervisedEmployees.map(e => e.id);
             const employeeUids = effectiveSupervisedEmployees.map(e => e.uid).filter(Boolean) as string[];
             const allTeamIds = Array.from(new Set([...employeeIds, ...employeeUids]));
-
-            console.log(`[Diagnostic] allTeamIds count:`, allTeamIds.length);
-            console.log(`[Diagnostic] DateRange:`, dateRange);
 
             if (allTeamIds.length === 0) {
                 setRecords([]);
@@ -332,7 +329,6 @@ export default function RemoteAttendanceApprovalPage() {
                         snap.forEach(doc => uniqueDocs.set(doc.id, doc));
                     });
 
-                    console.log(`[RemoteApproval] Fetched ${uniqueDocs.size} unique docs for chunk ${chunk[0]}...`);
                     processDaily(Array.from(uniqueDocs.values()));
                     processMultiple(snapMultiple);
                 } catch (err) {
@@ -340,19 +336,8 @@ export default function RemoteAttendanceApprovalPage() {
                 }
             }
 
-            console.log(`[Diagnostic] Total fetchedRecords (pre-filter):`, fetchedRecords.length);
-            if (fetchedRecords.length > 0) {
-                console.log(`[Diagnostic] Sample Record (0):`, {
-                    id: fetchedRecords[0].id,
-                    status: fetchedRecords[0].status,
-                    type: fetchedRecords[0].type,
-                    timestamp: fetchedRecords[0].timestamp,
-                    parsedDate: new Date(fetchedRecords[0].timestamp).toISOString()
-                });
-            }
-
             // Filter by date range and sort
-            const filteredRecords = fetchedRecords.filter((r, idx) => {
+            const filteredRecords = fetchedRecords.filter((r) => {
                 const recordDate = new Date(r.timestamp);
                 const isWithinDate = dateRange?.from && dateRange?.to
                     ? recordDate >= startOfDay(dateRange.from) && recordDate <= endOfDay(dateRange.to)
@@ -366,26 +351,8 @@ export default function RemoteAttendanceApprovalPage() {
                     ? true
                     : r.type === typeFilter;
 
-                if (idx < 5) {
-                    console.log(`[Diagnostic] Filter Record ${idx}:`, {
-                        id: r.id,
-                        isWithinDate,
-                        matchesStatus,
-                        matchesType,
-                        rStatus: r.status,
-                        statusFilter,
-                        rTimestamp: r.timestamp,
-                        recordDate: recordDate.toISOString()
-                    });
-                }
-
                 return isWithinDate && matchesStatus && matchesType;
             });
-
-            console.log(`[Diagnostic] Filtered records count:`, filteredRecords.length);
-            if (filteredRecords.length === 0 && fetchedRecords.length > 0) {
-                console.log(`[Diagnostic] Note: Records were fetched but all were filtered out. Check date/status/type filters.`);
-            }
 
             filteredRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             setRecords(filteredRecords);
