@@ -715,7 +715,7 @@ export default function ReconApprovalPage() {
 
                 {/* Load More Button */}
                 {!loading && requests.length > visibleCount && (
-                    <div className="px-6 pb-12">
+                    <div className="px-6 pb-6">
                         <Button
                             onClick={() => setVisibleCount(prev => prev + 10)}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
@@ -725,8 +725,8 @@ export default function ReconApprovalPage() {
                     </div>
                 )}
 
-                {/* Bottom Spacing as requested */}
-                <div className="h-20" />
+                {/* Bottom Spacing to avoid overlapping with fixed BottomNavBar */}
+                <div className="h-32" />
             </div>
         </div>
     );

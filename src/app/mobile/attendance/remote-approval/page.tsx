@@ -67,6 +67,7 @@ export default function RemoteAttendanceApprovalPage() {
     const [selectedRecord, setSelectedRecord] = useState<UnifiedApprovalRecord | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [processingId, setProcessingId] = useState<string | null>(null);
+    const [visibleCount, setVisibleCount] = useState(50);
 
     // Month selection logic
     const currentMonthIndex = new Date().getMonth(); // 0-11
@@ -268,6 +269,7 @@ export default function RemoteAttendanceApprovalPage() {
     };
 
     useEffect(() => {
+        setVisibleCount(50); // Reset count on filter change
         if (!isSupervisorLoading) {
             fetchRemoteAttendance();
         }
@@ -548,7 +550,7 @@ export default function RemoteAttendanceApprovalPage() {
                             </div>
                         ))
                     ) : records.length > 0 ? (
-                        records.map((record) => (
+                        records.slice(0, visibleCount).map((record) => (
                             <div
                                 key={record.id}
                                 onClick={() => handleCardClick(record)}
@@ -621,6 +623,21 @@ export default function RemoteAttendanceApprovalPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Load More Button */}
+                {!loading && records.length > visibleCount && (
+                    <div className="px-6 pb-6 mt-2">
+                        <Button
+                            onClick={() => setVisibleCount(prev => prev + 50)}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+                        >
+                            Load More Records
+                        </Button>
+                    </div>
+                )}
+
+                {/* Bottom Spacing to avoid overlapping with fixed BottomNavBar */}
+                <div className="h-32" />
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
