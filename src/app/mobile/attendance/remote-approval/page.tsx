@@ -231,7 +231,7 @@ export default function RemoteAttendanceApprovalPage() {
 
             for (const chunk of chunks) {
                 try {
-                    // Fetch separate queries to avoid composite index requirements
+                    // Fetch separate queries to avoid composite index requirements and 'in' filter limitations
                     const qRemoteIn = query(
                         collection(firestore, 'attendance'),
                         where('employeeId', 'in', chunk),
@@ -244,6 +244,7 @@ export default function RemoteAttendanceApprovalPage() {
                         where('outTimeIsInsideGeofence', '==', false)
                     );
 
+                    // Fetch Pending/pending for overall approvalStatus
                     const qPendingIn = query(
                         collection(firestore, 'attendance'),
                         where('employeeId', 'in', chunk),
@@ -256,10 +257,31 @@ export default function RemoteAttendanceApprovalPage() {
                         where('approvalStatus', '==', 'pending')
                     );
 
-                    const qPendingOut = query(
+                    // Fetch Pending/pending for inTimeApprovalStatus (specifically)
+                    const qPendingInTimeUpper = query(
                         collection(firestore, 'attendance'),
                         where('employeeId', 'in', chunk),
-                        where('outTimeApprovalStatus', 'in', ['Pending', 'pending'])
+                        where('inTimeApprovalStatus', '==', 'Pending')
+                    );
+
+                    const qPendingInTimeLower = query(
+                        collection(firestore, 'attendance'),
+                        where('employeeId', 'in', chunk),
+                        where('inTimeApprovalStatus', '==', 'pending')
+                    );
+
+                    // Fetch Pending/pending for outTimeApprovalStatus
+                    // We split this because Firestore doesn't allow 'in' filter with multiple values if we already used 'in' for employeeId
+                    const qPendingOutUpper = query(
+                        collection(firestore, 'attendance'),
+                        where('employeeId', 'in', chunk),
+                        where('outTimeApprovalStatus', '==', 'Pending')
+                    );
+
+                    const qPendingOutLower = query(
+                        collection(firestore, 'attendance'),
+                        where('employeeId', 'in', chunk),
+                        where('outTimeApprovalStatus', '==', 'pending')
                     );
 
                     const qMultiple = query(
@@ -267,22 +289,43 @@ export default function RemoteAttendanceApprovalPage() {
                         where('employeeId', 'in', chunk)
                     );
 
-                    const [snapRemoteIn, snapRemoteOut, snapPendingIn, snapPendingInLower, snapPendingOut, snapMultiple] = await Promise.all([
+                    const [
+                        snapRemoteIn,
+                        snapRemoteOut,
+                        snapPendingIn,
+                        snapPendingInLower,
+                        snapPendingInTimeUpper,
+                        snapPendingInTimeLower,
+                        snapPendingOutUpper,
+                        snapPendingOutLower,
+                        snapMultiple
+                    ] = await Promise.all([
                         getDocs(qRemoteIn),
                         getDocs(qRemoteOut),
                         getDocs(qPendingIn),
                         getDocs(qPendingInLower),
-                        getDocs(qPendingOut),
+                        getDocs(qPendingInTimeUpper),
+                        getDocs(qPendingInTimeLower),
+                        getDocs(qPendingOutUpper),
+                        getDocs(qPendingOutLower),
                         getDocs(qMultiple)
                     ]);
 
                     const uniqueDocs = new Map();
-                    snapRemoteIn.forEach(doc => uniqueDocs.set(doc.id, doc));
-                    snapRemoteOut.forEach(doc => uniqueDocs.set(doc.id, doc));
-                    snapPendingIn.forEach(doc => uniqueDocs.set(doc.id, doc));
-                    snapPendingInLower.forEach(doc => uniqueDocs.set(doc.id, doc));
-                    snapPendingOut.forEach(doc => uniqueDocs.set(doc.id, doc));
+                    [
+                        snapRemoteIn,
+                        snapRemoteOut,
+                        snapPendingIn,
+                        snapPendingInLower,
+                        snapPendingInTimeUpper,
+                        snapPendingInTimeLower,
+                        snapPendingOutUpper,
+                        snapPendingOutLower
+                    ].forEach(snap => {
+                        snap.forEach(doc => uniqueDocs.set(doc.id, doc));
+                    });
 
+                    console.log(`[RemoteApproval] Fetched ${uniqueDocs.size} unique docs for chunk ${chunk[0]}...`);
                     processDaily(Array.from(uniqueDocs.values()));
                     processMultiple(snapMultiple);
                 } catch (err) {
