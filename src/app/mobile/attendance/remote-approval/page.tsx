@@ -111,7 +111,14 @@ export default function RemoteAttendanceApprovalPage() {
             const startDate = dateRange?.from || subDays(new Date(), 30);
             const fetchedRecords: UnifiedApprovalRecord[] = [];
 
-
+            const normalizeStatus = (s: string) => {
+                if (!s) return 'Pending';
+                const lower = s.toLowerCase();
+                if (lower === 'pending') return 'Pending';
+                if (lower === 'approved') return 'Approved';
+                if (lower === 'rejected') return 'Rejected';
+                return s;
+            };
 
             const processDaily = (snap: any) => {
                 snap.forEach((doc: any) => {
@@ -123,7 +130,10 @@ export default function RemoteAttendanceApprovalPage() {
 
                     // Map daily attendance records - Show if it was a remote attendance
                     // Remote if: Pending OR (Approved/Rejected AND was outside geofence)
-                    const isInTimeRemote = data.inTimeApprovalStatus || (!data.inTimeApprovalStatus && data.approvalStatus && data.isInsideGeofence === false);
+                    const isInTimeRemote = (data.inTimeApprovalStatus && data.inTimeApprovalStatus.toLowerCase() === 'pending') ||
+                        (data.approvalStatus && data.approvalStatus.toLowerCase() === 'pending') ||
+                        (!data.inTimeApprovalStatus && data.approvalStatus && data.isInsideGeofence === false);
+
                     if (isInTimeRemote) {
                         fetchedRecords.push({
                             id: doc.id,
@@ -138,7 +148,7 @@ export default function RemoteAttendanceApprovalPage() {
                                 address: data.inTimeAddress || 'Unknown'
                             },
                             remarks: data.inTimeRemarks || '',
-                            status: data.inTimeApprovalStatus || data.approvalStatus,
+                            status: normalizeStatus(data.inTimeApprovalStatus || data.approvalStatus),
                             imageURL: '',
                             source: 'daily',
                             createdAt: data.createdAt,
@@ -147,7 +157,9 @@ export default function RemoteAttendanceApprovalPage() {
                         } as UnifiedApprovalRecord);
                     }
 
-                    const isOutTimeRemote = data.outTimeApprovalStatus || (data.outTime && data.outTimeIsInsideGeofence === false);
+                    const isOutTimeRemote = (data.outTimeApprovalStatus && data.outTimeApprovalStatus.toLowerCase() === 'pending') ||
+                        (data.outTime && data.outTimeIsInsideGeofence === false);
+
                     if (isOutTimeRemote) {
                         fetchedRecords.push({
                             id: doc.id + '_out',
@@ -163,7 +175,7 @@ export default function RemoteAttendanceApprovalPage() {
                                 address: data.outTimeAddress || 'Unknown'
                             },
                             remarks: data.outTimeRemarks || '',
-                            status: data.outTimeApprovalStatus || 'Approved', // Fallback for legacy
+                            status: normalizeStatus(data.outTimeApprovalStatus || 'Approved'), // Default to approved for legacy if missing
                             imageURL: '',
                             source: 'daily',
                             createdAt: data.createdAt,
@@ -172,6 +184,32 @@ export default function RemoteAttendanceApprovalPage() {
                             originalId: doc.id
                         } as UnifiedApprovalRecord & { originalId: string });
                     }
+                });
+            };
+
+            const processMultiple = (snap: any) => {
+                snap.forEach((doc: any) => {
+                    const data = doc.data();
+                    const emp = effectiveSupervisedEmployees.find(e => e.id === data.employeeId);
+
+                    if (!emp) return;
+
+                    fetchedRecords.push({
+                        id: doc.id,
+                        employeeId: data.employeeId,
+                        employeeName: data.employeeName || emp.fullName,
+                        employeeCode: emp.employeeCode || 'N/A',
+                        type: data.type || 'Visit',
+                        timestamp: data.timestamp || data.createdAt?.toDate?.()?.toISOString(),
+                        location: data.location || { address: 'Unknown' },
+                        remarks: data.remarks || '',
+                        status: normalizeStatus(data.status || data.approvalStatus),
+                        imageURL: data.imageURL || '',
+                        source: 'multiple',
+                        createdAt: data.createdAt,
+                        updatedAt: data.updatedAt,
+                        companyName: data.companyName || 'Unknown'
+                    } as UnifiedApprovalRecord);
                 });
             };
 
@@ -212,26 +250,41 @@ export default function RemoteAttendanceApprovalPage() {
                         where('approvalStatus', '==', 'Pending')
                     );
 
+                    const qPendingInLower = query(
+                        collection(firestore, 'attendance'),
+                        where('employeeId', 'in', chunk),
+                        where('approvalStatus', '==', 'pending')
+                    );
+
                     const qPendingOut = query(
                         collection(firestore, 'attendance'),
                         where('employeeId', 'in', chunk),
-                        where('outTimeApprovalStatus', '==', 'Pending')
+                        where('outTimeApprovalStatus', 'in', ['Pending', 'pending'])
                     );
 
-                    const [snapRemoteIn, snapRemoteOut, snapPendingIn, snapPendingOut] = await Promise.all([
+                    const qMultiple = query(
+                        collection(firestore, 'multiple_check_inout'),
+                        where('employeeId', 'in', chunk)
+                    );
+
+                    const [snapRemoteIn, snapRemoteOut, snapPendingIn, snapPendingInLower, snapPendingOut, snapMultiple] = await Promise.all([
                         getDocs(qRemoteIn),
                         getDocs(qRemoteOut),
                         getDocs(qPendingIn),
-                        getDocs(qPendingOut)
+                        getDocs(qPendingInLower),
+                        getDocs(qPendingOut),
+                        getDocs(qMultiple)
                     ]);
 
                     const uniqueDocs = new Map();
                     snapRemoteIn.forEach(doc => uniqueDocs.set(doc.id, doc));
                     snapRemoteOut.forEach(doc => uniqueDocs.set(doc.id, doc));
                     snapPendingIn.forEach(doc => uniqueDocs.set(doc.id, doc));
+                    snapPendingInLower.forEach(doc => uniqueDocs.set(doc.id, doc));
                     snapPendingOut.forEach(doc => uniqueDocs.set(doc.id, doc));
 
                     processDaily(Array.from(uniqueDocs.values()));
+                    processMultiple(snapMultiple);
                 } catch (err) {
                     console.error("Error fetching attendance for chunk:", err);
                 }
@@ -307,59 +360,71 @@ export default function RemoteAttendanceApprovalPage() {
 
         setProcessingId(selectedRecord.id);
         try {
-            // Update Daily Attendance
             const { doc, updateDoc, serverTimestamp, getDoc } = await import('firebase/firestore');
             const realDocId = (selectedRecord as any).originalId || selectedRecord.id;
-            const docRef = doc(firestore, 'attendance', realDocId);
 
-            if (selectedRecord.type === 'In Time') {
-                if (action === 'Approved') {
-                    const snap = await getDoc(docRef);
-                    const inTime = snap.data()?.inTime;
-                    const { determineAttendanceFlag } = await import('@/lib/firebase/utils');
-                    const calculatedFlag = determineAttendanceFlag(inTime);
-                    const flag = calculatedFlag || 'P'; // Safety fallback
-
-                    await updateDoc(docRef, {
-                        approvalStatus: 'Approved',
-                        inTimeApprovalStatus: 'Approved',
-                        flag: flag,
-                        reviewedBy: currentEmployeeId,
-                        reviewedAt: serverTimestamp(),
-                        updatedAt: serverTimestamp()
-                    });
-                } else {
-                    await updateDoc(docRef, {
-                        approvalStatus: 'Rejected',
-                        inTimeApprovalStatus: 'Rejected',
-                        flag: 'A',
-                        reviewedBy: currentEmployeeId,
-                        reviewedAt: serverTimestamp(),
-                        updatedAt: serverTimestamp()
-                    });
-                }
-            } else if (selectedRecord.type === 'Out Time') {
-                const snap = await getDoc(docRef);
-                const currentData = snap.data();
-
-                const updates: any = {
-                    outTimeApprovalStatus: action,
+            if (selectedRecord.source === 'multiple') {
+                const docRef = doc(firestore, 'multiple_check_inout', realDocId);
+                await updateDoc(docRef, {
+                    status: action,
+                    approvalStatus: action,
                     reviewedBy: currentEmployeeId,
                     reviewedAt: serverTimestamp(),
                     updatedAt: serverTimestamp()
-                };
+                });
+            } else {
+                // Update Daily Attendance
+                const docRef = doc(firestore, 'attendance', realDocId);
 
-                // If outTime is approved, and inTime is also approved (or wasn't pending), 
-                // we can set the overall approvalStatus to Approved.
-                if (action === 'Approved') {
-                    if (currentData?.inTimeApprovalStatus !== 'Pending' && currentData?.approvalStatus !== 'Rejected') {
-                        updates.approvalStatus = 'Approved';
+                if (selectedRecord.type === 'In Time') {
+                    if (action === 'Approved') {
+                        const snap = await getDoc(docRef);
+                        const inTime = snap.data()?.inTime;
+                        const { determineAttendanceFlag } = await import('@/lib/firebase/utils');
+                        const calculatedFlag = determineAttendanceFlag(inTime);
+                        const flag = calculatedFlag || 'P'; // Safety fallback
+
+                        await updateDoc(docRef, {
+                            approvalStatus: 'Approved',
+                            inTimeApprovalStatus: 'Approved',
+                            flag: flag,
+                            reviewedBy: currentEmployeeId,
+                            reviewedAt: serverTimestamp(),
+                            updatedAt: serverTimestamp()
+                        });
+                    } else {
+                        await updateDoc(docRef, {
+                            approvalStatus: 'Rejected',
+                            inTimeApprovalStatus: 'Rejected',
+                            flag: 'A',
+                            reviewedBy: currentEmployeeId,
+                            reviewedAt: serverTimestamp(),
+                            updatedAt: serverTimestamp()
+                        });
                     }
-                } else {
-                    // Rejection of OutTime does not affect overall flag or approval status per user request
-                }
+                } else if (selectedRecord.type === 'Out Time') {
+                    const snap = await getDoc(docRef);
+                    const currentData = snap.data();
 
-                await updateDoc(docRef, updates);
+                    const updates: any = {
+                        outTimeApprovalStatus: action,
+                        reviewedBy: currentEmployeeId,
+                        reviewedAt: serverTimestamp(),
+                        updatedAt: serverTimestamp()
+                    };
+
+                    // If outTime is approved, and inTime is also approved (or wasn't pending), 
+                    // we can set the overall approvalStatus to Approved.
+                    if (action === 'Approved') {
+                        if (currentData?.inTimeApprovalStatus !== 'Pending' && currentData?.approvalStatus !== 'Rejected') {
+                            updates.approvalStatus = 'Approved';
+                        }
+                    } else {
+                        // Rejection of OutTime does not affect overall flag or approval status per user request
+                    }
+
+                    await updateDoc(docRef, updates);
+                }
             }
 
             // Send Push Notification to Employee

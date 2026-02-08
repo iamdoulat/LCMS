@@ -430,7 +430,7 @@ export default function ReconApprovalPage() {
 
             <div
                 ref={containerRef}
-                className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col"
+                className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col pt-6 pb-[120px] relative z-10"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
@@ -726,7 +726,6 @@ export default function ReconApprovalPage() {
                 )}
 
                 {/* Bottom Spacing to avoid overlapping with fixed BottomNavBar */}
-                <div className="h-44" />
             </div>
         </div>
     );
