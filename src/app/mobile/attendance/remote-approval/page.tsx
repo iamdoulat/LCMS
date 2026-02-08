@@ -63,6 +63,7 @@ export default function RemoteAttendanceApprovalPage() {
         from: startOfDay(subDays(new Date(), 30)),
         to: endOfDay(new Date()),
     });
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | 'All'>('All');
 
     const [selectedRecord, setSelectedRecord] = useState<UnifiedApprovalRecord | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -351,7 +352,11 @@ export default function RemoteAttendanceApprovalPage() {
                     ? true
                     : r.type === typeFilter;
 
-                return isWithinDate && matchesStatus && matchesType;
+                const matchesEmployee = selectedEmployeeId === 'All'
+                    ? true
+                    : r.employeeId === selectedEmployeeId;
+
+                return isWithinDate && matchesStatus && matchesType && matchesEmployee;
             });
 
             filteredRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -372,7 +377,7 @@ export default function RemoteAttendanceApprovalPage() {
         if (!isSupervisorLoading) {
             fetchRemoteAttendance();
         }
-    }, [user, isSupervisor, effectiveSupervisedEmployees, dateRange, statusFilter, typeFilter, isSupervisorLoading]);
+    }, [user, isSupervisor, effectiveSupervisedEmployees, dateRange, statusFilter, typeFilter, selectedEmployeeId, isSupervisorLoading]);
 
     const containerRef = usePullToRefresh(fetchRemoteAttendance);
 
@@ -385,6 +390,7 @@ export default function RemoteAttendanceApprovalPage() {
         if (typeFilter !== 'All') count++;
         // Active if not current month
         if (selectedMonth !== currentMonthIndex) count++;
+        if (selectedEmployeeId !== 'All') count++;
         return count;
     };
 
@@ -561,6 +567,37 @@ export default function RemoteAttendanceApprovalPage() {
 
                                 <div className="p-6 space-y-6">
                                     <div className="space-y-3">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Subordinate</label>
+                                        <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto p-1 scrollbar-hide">
+                                            <button
+                                                onClick={() => setSelectedEmployeeId('All')}
+                                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${selectedEmployeeId === 'All'
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100'
+                                                    : 'bg-white text-slate-600 border-slate-200'
+                                                    }`}
+                                            >
+                                                All Employees
+                                            </button>
+                                            {effectiveSupervisedEmployees.map((emp) => (
+                                                <button
+                                                    key={emp.id}
+                                                    onClick={() => setSelectedEmployeeId(emp.id)}
+                                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-2 ${selectedEmployeeId === emp.id
+                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100'
+                                                        : 'bg-white text-slate-600 border-slate-200'
+                                                        }`}
+                                                >
+                                                    <Avatar className="w-5 h-5">
+                                                        <AvatarImage src={emp.photoURL} />
+                                                        <AvatarFallback className="text-[8px]">{emp.fullName.substring(0, 1)}</AvatarFallback>
+                                                    </Avatar>
+                                                    {emp.fullName}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-widest px-1">Select Month ({new Date().getFullYear()})</label>
                                         <div className="grid grid-cols-4 gap-2">
                                             {months.map((month, index) => (
@@ -620,6 +657,7 @@ export default function RemoteAttendanceApprovalPage() {
                                                 setStatusFilter('Pending');
                                                 setTypeFilter('All');
                                                 setSelectedMonth(currentMonthIndex);
+                                                setSelectedEmployeeId('All');
                                             }}
                                             className="w-full py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm"
                                         >

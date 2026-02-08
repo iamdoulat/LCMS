@@ -26,7 +26,8 @@ import {
     Loader2,
     AlertCircle,
     Network,
-    UserCheck
+    UserCheck,
+    Shield
 } from 'lucide-react';
 import type { Employee } from '@/types';
 import { format, parseISO, isValid } from 'date-fns';
@@ -189,6 +190,7 @@ export default function MobileEmployeeProfilePage() {
             { label: 'Branch', value: employee.branch || 'Not Defined', icon: Building2 },
             { label: 'Department', value: employee.department || 'Not Defined', icon: Network },
             { label: 'Direct Supervisor', value: supervisorName || 'Not Assigned', icon: UserCheck },
+            { label: 'System Role', value: Array.isArray(employee.role) ? employee.role.join(', ') : (employee.role || 'Employee'), icon: Shield },
         ],
         others: [
             { label: 'Blood Group', value: employee.bloodGroup || 'N/A', icon: Droplet },

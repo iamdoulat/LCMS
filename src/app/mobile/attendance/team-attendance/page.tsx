@@ -7,7 +7,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, startOfDay, endOfDay } from 'date-fns';
-import { ChevronLeft, Search, UserCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, Search, UserCircle, Loader2, ArrowLeft, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -178,7 +178,11 @@ export default function TeamAttendancePage() {
                         </div>
                     ) : (filteredData.length > 0 || searchTerm) ? (
                         filteredData.map((emp) => (
-                            <div key={emp.employeeId} className="bg-white p-4 rounded-2xl shadow-md flex items-center gap-4">
+                            <div
+                                key={emp.employeeId}
+                                onClick={() => router.push(`/mobile/attendance/team-attendance/${emp.employeeId}`)}
+                                className="bg-white p-4 rounded-2xl shadow-md flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer"
+                            >
                                 {/* Avatar with status indicator line/border */}
                                 <div className={`relative w-14 h-14 rounded-xl overflow-hidden border-l-4 ${getBorderColor(emp.flag)} pl-1 bg-white flex-shrink-0`}>
                                     {emp.photoURL ? (
@@ -206,6 +210,10 @@ export default function TeamAttendancePage() {
                                             {formatTime(emp.outTime)}
                                         </div>
                                     </div>
+                                </div>
+
+                                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 shadow-sm border border-blue-100/50">
+                                    <ChevronDown className="w-5 h-5" />
                                 </div>
                             </div>
                         ))
