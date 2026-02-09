@@ -11,7 +11,7 @@ export default function MobileNewTaskPage() {
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60]">
             {/* Header */}
-            <div className="px-6 pt-5 pb-4">
+            <div className="px-6 pt-[5px] pb-4">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => router.back()}

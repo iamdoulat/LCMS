@@ -31,7 +31,7 @@ export default function MobileAddItemPage() {
         return (
             <div className="flex flex-col h-screen bg-slate-50">
                 <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                    <div className="flex items-center justify-between px-4 pt-4 pb-6 relative">
+                    <div className="flex items-center justify-between px-4 pt-[5px] pb-6 relative">
                         <button
                             onClick={() => router.back()}
                             className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors z-10 shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
@@ -60,7 +60,7 @@ export default function MobileAddItemPage() {
         <div className="flex flex-col h-screen bg-[#0a1e60] overflow-hidden">
             {/* Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
-                <div className="flex items-center justify-between px-4 pt-4 pb-6 relative">
+                <div className="flex items-center justify-between px-4 pt-[5px] pb-6 relative">
                     <button
                         onClick={() => router.back()}
                         className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors z-10 shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
