@@ -229,7 +229,7 @@ export default function RemoteAttendanceApprovalPage() {
                 return;
             }
 
-            const chunks = [];
+            const chunks: string[][] = [];
             for (let i = 0; i < allTeamIds.length; i += 10) {
                 chunks.push(allTeamIds.slice(i, i + 10));
             }

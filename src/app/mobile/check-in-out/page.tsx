@@ -179,7 +179,7 @@ export default function MobileCheckInOutPage() {
             if (!isSupervisor || effectiveSupervisedEmployeeIds.length === 0 || activeTab !== 'Supervision') return;
 
             try {
-                const chunks = [];
+                const chunks: string[][] = [];
                 for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 10) {
                     chunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 10));
                 }
@@ -242,7 +242,7 @@ export default function MobileCheckInOutPage() {
                 }
 
                 // Fetch check-ins from privileged users in chunks
-                const chunks = [];
+                const chunks: string[][] = [];
                 for (let i = 0; i < privilegedUserIds.length; i += 10) {
                     chunks.push(privilegedUserIds.slice(i, i + 10));
                 }
@@ -542,7 +542,7 @@ export default function MobileCheckInOutPage() {
             if (missingIds.length === 0) return;
 
             try {
-                const chunks = [];
+                const chunks: string[][] = [];
                 for (let i = 0; i < missingIds.length; i += 10) {
                     chunks.push(missingIds.slice(i, i + 10));
                 }

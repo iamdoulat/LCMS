@@ -115,6 +115,7 @@ export default function ApproveApplicationsPage() {
     }, [filters]);
 
     // Fetch team applications
+    // Fetch team applications
     useEffect(() => {
         // If not supervisor AND not Admin, stop.
         if (!effectiveSupervisedEmployeeIds.length && !isSuperAdminOrAdmin) {
@@ -126,83 +127,130 @@ export default function ApproveApplicationsPage() {
 
         setLoading(true);
 
-        // Fetch Leave Applications
-        let qLeave = collection(firestore, 'leave_applications') as any; // Cast for flexibility
+        const unsubs: (() => void)[] = [];
 
-        const targetStatus = filters.status || 'All';
-        if (targetStatus !== 'All') {
-            qLeave = query(qLeave, where('status', '==', targetStatus));
-        }
+        // Helper to setup listeners
+        const setupListeners = () => {
+            // 1. Leave Applications
+            const leaveChunks: string[][] = isSuperAdminOrAdmin ? [[]] : [];
+            if (!isSuperAdminOrAdmin) {
+                // Chunk supervised IDs
+                for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 30) {
+                    leaveChunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 30));
+                }
+            }
 
-        const unsubLeave = onSnapshot(qLeave, (snapshot: any) => {
-            const apps = snapshot.docs
-                .map((doc: any) => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument))
-                .filter((app: LeaveApplicationDocument) =>
-                    isSuperAdminOrAdmin ? true : effectiveSupervisedEmployeeIds.includes(app.employeeId)
-                );
+            // We need to manage state merging if multiple chunks
+            // However, with React state updates, we can just maintain a functional update or use a Map ref?
+            // To keep it simple given the UI just shows a list:
+            // We will use a ref to hold the latest docs from each chunk to avoid race conditions/flickering
+            // But since this is inside useEffect, we can't easily share a ref across re-renders if dependencies change 
+            // well, we can, but let's try a simpler approach: 
+            // For non-admins, we likely have 1 chunk ( < 30 employees). 
+            // If > 30, we accept the complexity.
 
-            // Client-side sort
-            const sortedApps = [...apps].sort((a, b) => {
-                const dateA = a.createdAt?.toDate?.()?.getTime() || 0;
-                const dateB = b.createdAt?.toDate?.()?.getTime() || 0;
-                return dateB - dateA;
+            // Let's use a local variable in useEffect scope to aggregate? 
+            // No, snapshots are async.
+
+            // We will define a Map to store docs by chunk index
+            const leaveDocsMap = new Map<string, LeaveApplicationDocument[]>();
+            const visitDocsMap = new Map<string, VisitApplicationDocument[]>();
+
+            const updateLeaveState = () => {
+                const allDocs = Array.from(leaveDocsMap.values()).flat();
+                // Client-side sort
+                const sortedApps = allDocs.sort((a, b) => {
+                    const dateA = a.createdAt?.toDate?.()?.getTime() || 0;
+                    const dateB = b.createdAt?.toDate?.()?.getTime() || 0;
+                    return dateB - dateA;
+                });
+                setLeaveApps(sortedApps);
+                setLoading(false);
+            };
+
+            const updateVisitState = () => {
+                const allDocs = Array.from(visitDocsMap.values()).flat();
+                // Client-side sort
+                const sortedApps = allDocs.sort((a, b) => {
+                    const dateA = a.createdAt?.toDate?.()?.getTime() || 0;
+                    const dateB = b.createdAt?.toDate?.()?.getTime() || 0;
+                    return dateB - dateA;
+                });
+                setVisitApps(sortedApps);
+            };
+
+
+            leaveChunks.forEach((chunk, index) => {
+                let qLeave = collection(firestore, 'leave_applications') as any;
+                const targetStatus = filters.status || 'All';
+
+                if (targetStatus !== 'All') {
+                    qLeave = query(qLeave, where('status', '==', targetStatus));
+                }
+
+                if (!isSuperAdminOrAdmin && chunk.length > 0) {
+                    qLeave = query(qLeave, where('employeeId', 'in', chunk));
+                }
+
+                const unsub = onSnapshot(qLeave, (snapshot: any) => {
+                    const apps = snapshot.docs
+                        .map((doc: any) => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
+
+                    // For Admins, we still filter by supervised IDs if they are not Super Admin? 
+                    // No, implementation says: if isSuperAdminOrAdmin ? true : check IDs.
+                    const filtered = isSuperAdminOrAdmin
+                        ? apps // Admins see all (or filtered by query if we added one, but we didn't for admins)
+                        : apps; // We already filtered by query for non-admins
+
+                    leaveDocsMap.set(`chunk_${index}`, filtered);
+                    updateLeaveState();
+                }, (error: any) => {
+                    console.error("Error fetching leave apps:", error);
+                    setLoading(false);
+                });
+                unsubs.push(unsub);
             });
 
-            setLeaveApps(sortedApps);
-            setLoading(false);
-        }, (error: any) => {
-            console.error("ApprovePage: Error fetching leave apps:", error);
-            setLoading(false);
-        });
+            // 2. Visit Applications
+            const visitChunks: string[][] = isSuperAdminOrAdmin ? [[]] : [];
+            if (!isSuperAdminOrAdmin) {
+                for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 30) {
+                    visitChunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 30));
+                }
+            }
 
-        // Fetch Visit Applications
-        let qVisit = collection(firestore, 'visit_applications') as any;
+            visitChunks.forEach((chunk, index) => {
+                let qVisit = collection(firestore, 'visit_applications') as any;
+                const targetStatus = filters.status || 'All';
 
-        if (targetStatus !== 'All') {
-            qVisit = query(qVisit, where('status', '==', targetStatus));
-        }
+                if (targetStatus !== 'All') {
+                    qVisit = query(qVisit, where('status', '==', targetStatus));
+                }
 
-        const unsubVisit = onSnapshot(qVisit, (snapshot: any) => {
-            const apps = snapshot.docs
-                .map((doc: any) => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument))
-                .filter((app: VisitApplicationDocument) =>
-                    isSuperAdminOrAdmin ? true : effectiveSupervisedEmployeeIds.includes(app.employeeId)
-                );
+                if (!isSuperAdminOrAdmin && chunk.length > 0) {
+                    qVisit = query(qVisit, where('employeeId', 'in', chunk));
+                }
 
-            // Client-side sort
-            const sortedApps = [...apps].sort((a, b) => {
-                const dateA = a.createdAt?.toDate?.()?.getTime() || 0;
-                const dateB = b.createdAt?.toDate?.()?.getTime() || 0;
-                return dateB - dateA;
+                const unsub = onSnapshot(qVisit, (snapshot: any) => {
+                    const apps = snapshot.docs
+                        .map((doc: any) => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument));
+
+                    const filtered = isSuperAdminOrAdmin ? apps : apps;
+
+                    visitDocsMap.set(`chunk_${index}`, filtered);
+                    updateVisitState();
+                }, (error: any) => {
+                    console.error("Error fetching visit apps:", error);
+                });
+                unsubs.push(unsub);
             });
+        };
 
-            setVisitApps(sortedApps);
-        }, (error: any) => {
-            console.error("ApprovePage: Error fetching visit apps:", error);
-        });
+        setupListeners();
 
         // Fetch Employee details for the team (Optimized for lazy loading or large lists)
-        // For Admins, we might have too many employees to fetch via 'in' query if we try to fetch all at once.
-        // However, we only need map for the displayed apps.
-        // Let's rely on the displayed apps to drive the employee fetch if we are Admin.
-        // But for now, let's keep the existing logic but safeguard against large lists or empty lists if Admin.
-
         const fetchEmployees = async () => {
             const newMap: Record<string, EmployeeDocument> = {};
-
-            // If Admin/HR, we might not have supervisedEmployeeIds populated fully or we might want everyone.
-            // But we don't want to fetch ALL employees in the system if there are thousands.
-            // We should fetch employees corresponding to the fetched APPS.
-            // But we can't easily do that inside the onSnapshot effectively without causing loops or complex state.
-            // Existing logic uses supervisedEmployeeIds. 
-
-            // If we are Admin/HR, we might want to just fetch employees for the loaded apps?
-            // Since we are in an effect that depends on supervisedEmployeeIds, if we are Admin/HR and validation skipped,
-            // we might not trigger this if supervisedEmployeeIds is empty.
-
-            // Let's fetch employees based on the loaded APPS instead? 
-            // That would require a separate effect depending on leaveApps/visitApps.
-            // For now, let's just run the existing logic if supervisedEmployeeIds has content.
 
             if (effectiveSupervisedEmployeeIds.length > 0) {
                 const chunkSize = 10;
@@ -216,16 +264,12 @@ export default function ApproveApplicationsPage() {
                 }
                 setEmployeeMap(prev => ({ ...prev, ...newMap }));
             }
-
-            // If Admin/HR and we have apps but no supervisor IDs (e.g. view all mode), we probably miss employee data.
-            // We should probably add a logic to fetch missing employee info for apps.
         };
 
         fetchEmployees();
 
         return () => {
-            unsubLeave();
-            unsubVisit();
+            unsubs.forEach(u => u());
         };
     }, [effectiveSupervisedEmployeeIds, filters.status, isSuperAdminOrAdmin]);
 

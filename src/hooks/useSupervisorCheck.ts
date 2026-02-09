@@ -169,6 +169,16 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
 
                 if (employeeId) {
                     const supervisorIdCandidates = Array.from(new Set([employeeId, user?.uid].filter((id): id is string => !!id)));
+                    const subordinatesMap = new Map<string, EmployeeDocument>();
+
+                    // Helper to process snapshots
+                    const processSnapshot = (snap: any) => {
+                        snap.docs.forEach((doc: any) => {
+                            if (!subordinatesMap.has(doc.id)) {
+                                subordinatesMap.set(doc.id, { id: doc.id, ...doc.data() } as EmployeeDocument);
+                            }
+                        });
+                    };
 
                     // 1. Fetch by supervisorId
                     const subordinatesQuery = query(
@@ -176,7 +186,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         where('supervisorId', 'in', supervisorIdCandidates)
                     );
                     const subordinatesSnapshot = await getDocs(subordinatesQuery);
-                    subordinateIds = subordinatesSnapshot.docs.map(doc => doc.id);
+                    processSnapshot(subordinatesSnapshot);
 
                     // 2. Fetch by leaveApproverId
                     const leaveApproverQuery = query(
@@ -184,11 +194,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         where('leaveApproverId', 'in', supervisorIdCandidates)
                     );
                     const leaveApproverSnapshot = await getDocs(leaveApproverQuery);
-                    leaveApproverSnapshot.docs.forEach(doc => {
-                        if (!subordinateIds.includes(doc.id)) {
-                            subordinateIds.push(doc.id);
-                        }
-                    });
+                    processSnapshot(leaveApproverSnapshot);
 
                     // 3. Fetch by directSupervisorId
                     const directSupQuery = query(
@@ -196,11 +202,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         where('directSupervisorId', 'in', supervisorIdCandidates)
                     );
                     const directSupSnapshot = await getDocs(directSupQuery);
-                    directSupSnapshot.docs.forEach(doc => {
-                        if (!subordinateIds.includes(doc.id)) {
-                            subordinateIds.push(doc.id);
-                        }
-                    });
+                    processSnapshot(directSupSnapshot);
 
                     // 4. Fetch by 'supervisor'
                     const supervisorFieldQuery = query(
@@ -208,11 +210,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         where('supervisor', 'in', supervisorIdCandidates)
                     );
                     const supervisorFieldSnapshot = await getDocs(supervisorFieldQuery);
-                    supervisorFieldSnapshot.docs.forEach(doc => {
-                        if (!subordinateIds.includes(doc.id)) {
-                            subordinateIds.push(doc.id);
-                        }
-                    });
+                    processSnapshot(supervisorFieldSnapshot);
 
                     // 5. Fetch by 'supervision'
                     const supervisionFieldQuery = query(
@@ -220,11 +218,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         where('supervision', 'in', supervisorIdCandidates)
                     );
                     const supervisionFieldSnapshot = await getDocs(supervisionFieldQuery);
-                    supervisionFieldSnapshot.docs.forEach(doc => {
-                        if (!subordinateIds.includes(doc.id)) {
-                            subordinateIds.push(doc.id);
-                        }
-                    });
+                    processSnapshot(supervisionFieldSnapshot);
 
                     // 6. Fetch by 'Direct supervision'
                     const directSupervisionFieldQuery = query(
@@ -232,52 +226,53 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         where('Direct supervision', 'in', supervisorIdCandidates)
                     );
                     const directSupervisionFieldSnapshot = await getDocs(directSupervisionFieldQuery);
-                    directSupervisionFieldSnapshot.docs.forEach(doc => {
-                        if (!subordinateIds.includes(doc.id)) {
-                            subordinateIds.push(doc.id);
-                        }
-                    });
+                    processSnapshot(directSupervisionFieldSnapshot);
 
                     // 7. Check the supervisors array structure
-                    const allEmployeesQuery = query(collection(firestore, 'employees'));
-                    const allEmployeesSnapshot = await getDocs(allEmployeesQuery);
+                    // This still requires iterating potentially many docs, but we'll try it safely
+                    try {
+                        const allEmployeesQuery = query(collection(firestore, 'employees'));
+                        const allEmployeesSnapshot = await getDocs(allEmployeesQuery);
 
-                    allEmployeesSnapshot.docs.forEach(doc => {
-                        const employee = doc.data() as any;
-                        if (employee.supervisors && Array.isArray(employee.supervisors)) {
-                            const isSupervisedByMe = employee.supervisors.some(
-                                (sup: any) => supervisorIdCandidates.includes(sup.supervisorId) && (sup.isLeaveApprover || sup.isSupervisor || sup.isDirectSupervisor)
-                            );
-                            if (isSupervisedByMe && !subordinateIds.includes(doc.id)) {
-                                subordinateIds.push(doc.id);
+                        allEmployeesSnapshot.docs.forEach(doc => {
+                            const employee = doc.data() as any;
+                            if (employee.supervisors && Array.isArray(employee.supervisors)) {
+                                const isSupervisedByMe = employee.supervisors.some(
+                                    (sup: any) => supervisorIdCandidates.includes(sup.supervisorId) && (sup.isLeaveApprover || sup.isSupervisor || sup.isDirectSupervisor)
+                                );
+                                if (isSupervisedByMe && !subordinatesMap.has(doc.id)) {
+                                    subordinatesMap.set(doc.id, { id: doc.id, ...doc.data() } as EmployeeDocument);
+                                }
                             }
-                        }
-                    });
+                        });
+                    } catch (e) {
+                        // Ignore error if we can't fetch all employees; we rely on 1-6
+                        // console.debug("Skipping deep supervisor check due to permissions/error");
+                    }
+
+                    subordinateIds = Array.from(subordinatesMap.keys());
 
                     // Map subordinates to objects with name/photo
                     const privilegedRolesList = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
-                    allEmployeesSnapshot.docs.forEach(doc => {
-                        if (subordinateIds.includes(doc.id)) {
-                            const data = doc.data() as EmployeeDocument;
 
-                            // 1. Skip self (just in case)
-                            if (doc.id === employeeId || (user?.uid && (data.uid === user.uid || doc.id === user.uid))) {
-                                return;
-                            }
-
-                            // 2. Skip by Designation (proxy for privileged roles)
-                            if (data.designation && privilegedRolesList.includes(data.designation)) return;
-
-                            supervisedEmployees.push({
-                                id: doc.id,
-                                uid: data.uid,
-                                name: data.fullName || 'Unknown',
-                                fullName: data.fullName || 'Unknown',
-                                employeeCode: data.employeeCode || 'N/A',
-                                designation: data.designation || undefined,
-                                photoURL: data.photoURL || undefined
-                            });
+                    subordinatesMap.forEach((data, id) => {
+                        // 1. Skip self (just in case)
+                        if (id === employeeId || (user?.uid && (data.uid === user.uid || id === user.uid))) {
+                            return;
                         }
+
+                        // 2. Skip by Designation (proxy for privileged roles)
+                        if (data.designation && privilegedRolesList.includes(data.designation)) return;
+
+                        supervisedEmployees.push({
+                            id: id,
+                            uid: data.uid,
+                            name: data.fullName || 'Unknown',
+                            fullName: data.fullName || 'Unknown',
+                            employeeCode: data.employeeCode || 'N/A',
+                            designation: data.designation || undefined,
+                            photoURL: data.photoURL || undefined
+                        });
                     });
 
                     setInfo({
