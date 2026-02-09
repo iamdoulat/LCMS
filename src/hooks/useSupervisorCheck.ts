@@ -38,7 +38,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
 
     const isAdminRole = useMemo(() => {
         if (!userRole) return false;
-        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
+        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer", "Supervisor"];
         return userRole.some(role => privilegedRoles.includes(role));
     }, [userRole]);
 
@@ -82,7 +82,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                     // For Super Admins/Admins, we only filter out other Admins
                     // For other privileged roles, we filter out all privileged roles
                     const isRealAdmin = userRole?.some(r => ["Super Admin", "Admin"].includes(r));
-                    const privilegedRolesList = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
+                    const privilegedRolesList = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer", "Supervisor"];
                     const rolesToFilter = isRealAdmin ? ["Super Admin", "Admin"] : privilegedRolesList;
 
                     const privilegedUids = new Set<string>();
@@ -258,7 +258,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                     subordinateIds = Array.from(subordinatesMap.keys());
 
                     // Map subordinates to objects with name/photo
-                    const privilegedRolesList = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
+                    const privilegedRolesList = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer", "Supervisor"];
 
                     subordinatesMap.forEach((data, id) => {
                         // 1. Skip self (just in case)
