@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { format, parseISO, startOfDay, subDays, eachDayOfInterval, isWithinInterval, getDay, endOfDay, isValid, isSameDay } from 'date-fns';
+import { format, parseISO, startOfDay, subDays, eachDayOfInterval, isWithinInterval, getDay, endOfDay, isValid, isSameDay, parse } from 'date-fns';
 import { ArrowLeft, Clock, AlertCircle, Loader2, UserCircle, Calendar, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -170,9 +170,19 @@ export default function SubordinateAttendanceDetailsPage() {
     const calculateWorkTime = (inTime?: string, outTime?: string) => {
         if (!inTime || !outTime) return '-';
         try {
-            const inDate = parseISO(inTime);
-            const outDate = parseISO(outTime);
-            if (isNaN(inDate.getTime()) || isNaN(outDate.getTime())) return '-';
+            let inDate = parseISO(inTime);
+            let outDate = parseISO(outTime);
+
+            if (isNaN(inDate.getTime()) || isNaN(outDate.getTime())) {
+                const baseDate = new Date();
+                inDate = parse(inTime, 'hh:mm a', baseDate);
+                outDate = parse(outTime, 'hh:mm a', baseDate);
+
+                if (isNaN(inDate.getTime()) || isNaN(outDate.getTime())) {
+                    return '-';
+                }
+            }
+
             const diffMs = outDate.getTime() - inDate.getTime();
             if (diffMs < 0) return '-';
             const hours = Math.floor(diffMs / (1000 * 60 * 60));
