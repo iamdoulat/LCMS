@@ -41,9 +41,11 @@ export default function ReconApprovalPage() {
     const { isSupervisor, supervisedEmployees, explicitSubordinates, currentEmployeeId } = useSupervisorCheck(user?.email);
     const router = useRouter();
 
-    // Restrict to explicit subordinates (direct reports) only, even for Admins.
-    // This ensures Supervisors/Admins can only approve for their actual supervision team.
-    const effectiveSupervisedEmployees = explicitSubordinates;
+    // For Supervisors and Admins, use the full supervised list (all non-privileged employees)
+    // For others, use only explicit subordinates (direct reports)
+    const effectiveSupervisedEmployees = userRole?.some(role =>
+        ['Super Admin', 'Admin', 'HR', 'Supervisor'].includes(role)
+    ) ? supervisedEmployees : explicitSubordinates;
 
     const [activeTab, setActiveTab] = useState<'attendance' | 'breaktime'>('attendance');
     const [requests, setRequests] = useState<ReconRequest[]>([]);
@@ -61,9 +63,9 @@ export default function ReconApprovalPage() {
             return;
         }
 
-        // Check if user is Admin or has supervised employees
+        // Check if user is Admin, HR or Supervisor (has Supervision Power)
         // Check if user has administrative rights
-        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
+        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer", "Supervisor"];
         const isAdmin = userRole?.some(role => privilegedRoles.includes(role));
 
         const hasSupervision = effectiveSupervisedEmployees.length > 0;

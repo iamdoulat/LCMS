@@ -23,7 +23,7 @@ interface AttendanceSummary {
 
 export default function TeamAttendancePage() {
     const { user } = useAuth();
-    const { isSupervisor, explicitSubordinates: supervisedEmployees } = useSupervisorCheck(user?.email);
+    const { isSupervisor, supervisedEmployees } = useSupervisorCheck(user?.email);
     const [attendanceData, setAttendanceData] = useState<AttendanceSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');

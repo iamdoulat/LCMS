@@ -54,19 +54,19 @@ import type {
 export default function ApproveApplicationsPage() {
     const router = useRouter();
     const { user, userRole } = useAuth();
-    // Check for Admin role
-    const isSuperAdminOrAdmin = React.useMemo(() => {
+    // Check for privileged roles (Supervision Power)
+    const isPrivileged = React.useMemo(() => {
         if (!userRole) return false;
-        return userRole.some(role => ['Super Admin', 'Admin'].includes(role));
+        return userRole.some(role => ['Super Admin', 'Admin', 'HR', 'Supervisor'].includes(role));
     }, [userRole]);
 
     const { isSupervisor, supervisedEmployeeIds, explicitSubordinateIds, currentEmployeeId } = useSupervisorCheck(user?.email);
     const { toast } = useToast();
 
     const effectiveSupervisedEmployeeIds = React.useMemo(() => {
-        if (isSuperAdminOrAdmin) return supervisedEmployeeIds;
+        if (isPrivileged) return supervisedEmployeeIds;
         return explicitSubordinateIds;
-    }, [isSuperAdminOrAdmin, supervisedEmployeeIds, explicitSubordinateIds]);
+    }, [isPrivileged, supervisedEmployeeIds, explicitSubordinateIds]);
 
     const [activeTab, setActiveTab] = useState<'leave' | 'visit'>('leave');
     const [loading, setLoading] = useState(true);
@@ -118,7 +118,7 @@ export default function ApproveApplicationsPage() {
     // Fetch team applications
     useEffect(() => {
         // If not supervisor AND not Admin, stop.
-        if (!effectiveSupervisedEmployeeIds.length && !isSuperAdminOrAdmin) {
+        if (!effectiveSupervisedEmployeeIds.length && !isPrivileged) {
             if (!loading) setLoading(false);
             setLeaveApps([]);
             setVisitApps([]);
@@ -132,8 +132,8 @@ export default function ApproveApplicationsPage() {
         // Helper to setup listeners
         const setupListeners = () => {
             // 1. Leave Applications
-            const leaveChunks: string[][] = isSuperAdminOrAdmin ? [[]] : [];
-            if (!isSuperAdminOrAdmin) {
+            const leaveChunks: string[][] = isPrivileged ? [[]] : [];
+            if (!isPrivileged) {
                 // Chunk supervised IDs
                 for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 30) {
                     leaveChunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 30));
@@ -188,7 +188,7 @@ export default function ApproveApplicationsPage() {
                     qLeave = query(qLeave, where('status', '==', targetStatus));
                 }
 
-                if (!isSuperAdminOrAdmin && chunk.length > 0) {
+                if (!isPrivileged && chunk.length > 0) {
                     qLeave = query(qLeave, where('employeeId', 'in', chunk));
                 }
 
@@ -197,8 +197,8 @@ export default function ApproveApplicationsPage() {
                         .map((doc: any) => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
 
                     // For Admins, we still filter by supervised IDs if they are not Super Admin? 
-                    // No, implementation says: if isSuperAdminOrAdmin ? true : check IDs.
-                    const filtered = isSuperAdminOrAdmin
+                    // No, implementation says: if isPrivileged ? true : check IDs.
+                    const filtered = isPrivileged
                         ? apps // Admins see all (or filtered by query if we added one, but we didn't for admins)
                         : apps; // We already filtered by query for non-admins
 
@@ -212,8 +212,8 @@ export default function ApproveApplicationsPage() {
             });
 
             // 2. Visit Applications
-            const visitChunks: string[][] = isSuperAdminOrAdmin ? [[]] : [];
-            if (!isSuperAdminOrAdmin) {
+            const visitChunks: string[][] = isPrivileged ? [[]] : [];
+            if (!isPrivileged) {
                 for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 30) {
                     visitChunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 30));
                 }
@@ -227,7 +227,7 @@ export default function ApproveApplicationsPage() {
                     qVisit = query(qVisit, where('status', '==', targetStatus));
                 }
 
-                if (!isSuperAdminOrAdmin && chunk.length > 0) {
+                if (!isPrivileged && chunk.length > 0) {
                     qVisit = query(qVisit, where('employeeId', 'in', chunk));
                 }
 
@@ -235,7 +235,7 @@ export default function ApproveApplicationsPage() {
                     const apps = snapshot.docs
                         .map((doc: any) => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument));
 
-                    const filtered = isSuperAdminOrAdmin ? apps : apps;
+                    const filtered = isPrivileged ? apps : apps;
 
                     visitDocsMap.set(`chunk_${index}`, filtered);
                     updateVisitState();
@@ -271,7 +271,7 @@ export default function ApproveApplicationsPage() {
         return () => {
             unsubs.forEach(u => u());
         };
-    }, [effectiveSupervisedEmployeeIds, filters.status, isSuperAdminOrAdmin]);
+    }, [effectiveSupervisedEmployeeIds, filters.status, isPrivileged]);
 
     // Optimized effect to fetch missing employee details for only visible portion (Crucial for Admin view)
     useEffect(() => {

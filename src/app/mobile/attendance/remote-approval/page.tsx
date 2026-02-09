@@ -45,15 +45,16 @@ export default function RemoteAttendanceApprovalPage() {
     const { isSupervisor, supervisedEmployees, explicitSubordinates, currentEmployeeId, isLoading: isSupervisorLoading } = useSupervisorCheck(user?.email);
     const router = useRouter();
 
-    const isSuperAdminOrAdmin = React.useMemo(() => {
+    const isPrivileged = React.useMemo(() => {
         if (!userRole) return false;
-        return userRole.includes('Super Admin') || userRole.includes('Admin');
+        const privilegedRoles = ["Super Admin", "Admin", "HR", "Supervisor"];
+        return userRole.some(role => privilegedRoles.includes(role));
     }, [userRole]);
 
     const effectiveSupervisedEmployees = React.useMemo(() => {
-        if (isSuperAdminOrAdmin) return supervisedEmployees;
+        if (isPrivileged) return supervisedEmployees;
         return explicitSubordinates;
-    }, [isSuperAdminOrAdmin, supervisedEmployees, explicitSubordinates]);
+    }, [isPrivileged, supervisedEmployees, explicitSubordinates]);
 
     const [records, setRecords] = useState<UnifiedApprovalRecord[]>([]);
     const [loading, setLoading] = useState(true);
