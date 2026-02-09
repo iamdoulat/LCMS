@@ -173,16 +173,16 @@ export function MobileDrawerSidebar() {
 
                 <button
                     onClick={logout}
-                    className="w-full bg-white rounded-full py-3 flex items-center justify-center gap-4 mt-8 transition-all active:scale-95 shadow-lg"
+                    className="w-full bg-white/10 backdrop-blur-xl border border-white/20 rounded-full py-3 flex items-center justify-center gap-4 mt-8 transition-all active:scale-95 shadow-xl group hover:bg-white/20"
                 >
                     <div className="flex items-center justify-center">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M16 17L21 12L16 7" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M21 12H9" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="transition-transform group-hover:translate-x-1">
+                            <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M16 17L21 12L16 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M21 12H9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                     </div>
-                    <span className="text-[#3b82f6] text-xl font-bold">Log out</span>
+                    <span className="text-white text-xl font-bold">Log out</span>
                 </button>
 
                 <div className="text-white/40 text-[10px] mt-4 text-center">
