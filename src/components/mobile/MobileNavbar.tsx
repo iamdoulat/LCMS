@@ -4,17 +4,20 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import { Home, ClipboardList, Calendar, Wallet, Banknote, Wrench } from 'lucide-react';
 
 export function MobileNavbar() {
     const pathname = usePathname();
+
+    const { userRole } = useAuth();
 
     const navItems = [
         { href: '/mobile/dashboard', label: 'Home', icon: Home },
         { href: '/mobile/attendance', label: 'Attendance', icon: ClipboardList },
         { href: '/mobile/leave', label: 'Leave', icon: Calendar },
         { href: '/mobile/payroll', label: 'Payroll', icon: Banknote },
-        { href: '/mobile/service', label: 'Service', icon: Wrench },
+        ...(userRole?.includes('Supervisor') ? [] : [{ href: '/mobile/service', label: 'Service', icon: Wrench }]),
     ];
 
     return (

@@ -26,7 +26,7 @@ export function MobileDrawerSidebar() {
     const hasPrivilegedRole = userRole?.some(role =>
         ['Super Admin', 'Admin', 'HR', 'Commercial', 'Service', 'Accounts', 'DemoManager', 'Viewer'].includes(role)
     );
-    const isRestrictedRole = userRole?.includes('Employee') && !hasPrivilegedRole;
+    const isRestrictedRole = (userRole?.includes('Employee') || userRole?.includes('Supervisor')) && !hasPrivilegedRole;
 
     useEffect(() => {
         async function fetchEmployee() {
@@ -129,55 +129,63 @@ export function MobileDrawerSidebar() {
             </div>
 
             {/* Clear Cache Button */}
-            <Button
-                onClick={async () => {
-                    try {
-                        // Clear all caches
-                        if ('caches' in window) {
-                            const cacheNames = await caches.keys();
-                            await Promise.all(
-                                cacheNames.map(cacheName => caches.delete(cacheName))
-                            );
+            <div className="mt-auto">
+                <Button
+                    onClick={async () => {
+                        try {
+                            // Clear all caches
+                            if ('caches' in window) {
+                                const cacheNames = await caches.keys();
+                                await Promise.all(
+                                    cacheNames.map(cacheName => caches.delete(cacheName))
+                                );
+                            }
+
+                            // Clear localStorage
+                            localStorage.clear();
+
+                            // Clear sessionStorage
+                            sessionStorage.clear();
+
+                            // Unregister service workers
+                            if ('serviceWorker' in navigator) {
+                                const registrations = await navigator.serviceWorker.getRegistrations();
+                                await Promise.all(
+                                    registrations.map(registration => registration.unregister())
+                                );
+                            }
+
+                            // Show success message and reload
+                            alert('Cache cleared successfully! The app will reload.');
+                            window.location.reload();
+                        } catch (error) {
+                            console.error('Error clearing cache:', error);
                         }
+                    }}
+                    variant="ghost"
+                    className="w-full justify-start text-white hover:bg-white/10 hover:text-white gap-4 pl-0"
+                >
+                    <div className="w-8 flex justify-center">
+                        <Trash2 className="h-6 w-6 opacity-90" />
+                    </div>
+                    <span className="font-semibold text-base tracking-tight">Clear Cache</span>
+                </Button>
 
-                        // Clear localStorage
-                        localStorage.clear();
+                <Button
+                    onClick={logout}
+                    variant="ghost"
+                    className="w-full justify-start text-white hover:bg-white/10 hover:text-white mt-2 gap-4 pl-0"
+                >
+                    <div className="w-8 flex justify-center">
+                        <LogOut className="h-6 w-6 opacity-90" />
+                    </div>
+                    <span className="font-semibold text-base tracking-tight">Logout</span>
+                </Button>
 
-                        // Clear sessionStorage
-                        sessionStorage.clear();
-
-                        // Unregister service workers
-                        if ('serviceWorker' in navigator) {
-                            const registrations = await navigator.serviceWorker.getRegistrations();
-                            await Promise.all(
-                                registrations.map(registration => registration.unregister())
-                            );
-                        }
-
-                        // Show success message and reload
-                        alert('Cache cleared successfully! The app will reload.');
-                        window.location.reload();
-                    } catch (error) {
-                        console.error('Error clearing cache:', error);
-                        alert('Failed to clear cache. Please try again.');
-                    }
-                }}
-                className="bg-white/10 text-white hover:bg-white/20 w-full rounded-xl flex items-center justify-start gap-3 h-12 px-4 mb-3"
-            >
-                <Trash2 className="h-5 w-5" />
-                <span className="font-bold">Clear Cache</span>
-            </Button>
-
-            {/* Logout Button */}
-            <Button
-                onClick={() => logout()}
-                className="bg-white text-[#4c35de] hover:bg-white/90 w-full rounded-xl flex items-center justify-start gap-3 h-12 px-4 shadow-lg"
-            >
-                <LogOut className="h-5 w-5 rotate-180" />
-                <span className="font-bold">Log out</span>
-            </Button>
-
-            <p className="text-white/40 text-[10px] mt-4 text-center">Version {appVersion}</p>
+                <div className="text-white/40 text-[10px] mt-4 text-center">
+                    App Version: {appVersion || 'v1.1'}
+                </div>
+            </div>
         </div>
     );
 }

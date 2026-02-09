@@ -280,7 +280,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     const hasPrivilegedRole = userRole?.some(role =>
       ['Super Admin', 'Admin', 'HR', 'Commercial', 'Service', 'Accounts', 'DemoManager', 'Viewer'].includes(role)
     );
-    const isRestrictedRole = userRole?.includes('Employee') && !hasPrivilegedRole;
+    const isRestrictedRole = (userRole?.includes('Employee') || userRole?.includes('Supervisor')) && !hasPrivilegedRole;
 
     if (isRestrictedRole) {
       setViewMode('mobile');

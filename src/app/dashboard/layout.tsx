@@ -25,7 +25,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     if (!loading) {
       if (!user) {
         router.replace('/login');
-      } else if (userRole?.includes('Employee') && viewMode !== 'web') {
+      } else if ((userRole?.includes('Employee') || userRole?.includes('Supervisor')) && viewMode !== 'web') {
         router.replace('/mobile/dashboard');
       }
     }
