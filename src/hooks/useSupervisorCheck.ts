@@ -38,7 +38,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
 
     const isAdminRole = useMemo(() => {
         if (!userRole) return false;
-        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer", "Supervisor"];
+        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "Accounts", "Commercial", "Viewer"];
         return userRole.some(role => privilegedRoles.includes(role));
     }, [userRole]);
 
