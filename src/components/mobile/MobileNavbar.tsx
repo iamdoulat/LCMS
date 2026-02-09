@@ -17,7 +17,7 @@ export function MobileNavbar() {
         { href: '/mobile/attendance', label: 'Attendance', icon: ClipboardList },
         { href: '/mobile/leave', label: 'Leave', icon: Calendar },
         { href: '/mobile/payroll', label: 'Payroll', icon: Banknote },
-        ...(userRole?.includes('Supervisor') ? [] : [{ href: '/mobile/service', label: 'Service', icon: Wrench }]),
+        { href: '/mobile/service', label: 'Service', icon: Wrench },
     ];
 
     return (
