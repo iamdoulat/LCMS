@@ -128,63 +128,39 @@ export default function ReconApprovalPage() {
                     ? effectiveSupervisedEmployees.map(e => e.id)
                     : [selectedEmployee];
 
-                // Chunk queries by employeeId
-                const chunks = [];
+                const chunks: string[][] = [];
                 for (let i = 0; i < employeeIds.length; i += 10) {
                     chunks.push(employeeIds.slice(i, i + 10));
                 }
 
                 for (const chunk of chunks) {
-                    let q;
-
-                    // For approved view, fetch all approved/rejected records
-                    if (statusFilter === 'approved') {
-                        q = query(
-                            collection(firestore, collectionName),
-                            where('employeeId', 'in', chunk),
-                            where('status', 'in', ['approved', 'rejected'])
-                        );
-                    } else if (filterDays !== 'all') {
-                        // Apply date filter
-                        const endDate = new Date();
-                        const startDate = subDays(endDate, Number(filterDays));
-                        const startDateStr = format(startDate, 'yyyy-MM-dd');
-
-                        if (statusFilter === 'pending') {
-                            q = query(
-                                collection(firestore, collectionName),
-                                where('employeeId', 'in', chunk),
-                                where('status', '==', 'pending'),
-                                where('attendanceDate', '>=', startDateStr)
-                            );
-                        } else {
-                            // 'all' status - show everything within date range
-                            q = query(
-                                collection(firestore, collectionName),
-                                where('employeeId', 'in', chunk),
-                                where('attendanceDate', '>=', startDateStr)
-                            );
-                        }
-                    } else {
-                        // No date filter - fetch all records
-                        if (statusFilter === 'pending') {
-                            q = query(
-                                collection(firestore, collectionName),
-                                where('employeeId', 'in', chunk),
-                                where('status', '==', 'pending')
-                            );
-                        } else {
-                            // All statuses, all time
-                            q = query(
-                                collection(firestore, collectionName),
-                                where('employeeId', 'in', chunk)
-                            );
-                        }
-                    }
+                    // Fetch all records for these employees, filter in memory
+                    // This avoids complex composite index requirements (Employee + Status + Date)
+                    const q = query(
+                        collection(firestore, collectionName),
+                        where('employeeId', 'in', chunk)
+                    );
 
                     const snapshot = await getDocs(q);
                     snapshot.forEach(doc => {
-                        fetchedRequests.push({ id: doc.id, ...doc.data() } as ReconRequest);
+                        const data = doc.data() as ReconRequest;
+                        // In-Memory Filtering
+                        let matchesStatus = false;
+                        if (statusFilter === 'all') matchesStatus = true;
+                        else if (statusFilter === 'approved') matchesStatus = ['approved', 'rejected', 'Approved', 'Rejected'].includes(data.status);
+                        else matchesStatus = data.status?.toLowerCase() === statusFilter;
+
+                        let matchesDate = true;
+                        if (filterDays !== 'all') {
+                            const endDate = new Date();
+                            const startDate = subDays(endDate, Number(filterDays));
+                            const startDateStr = format(startDate, 'yyyy-MM-dd');
+                            matchesDate = data.attendanceDate >= startDateStr;
+                        }
+
+                        if (matchesStatus && matchesDate) {
+                            fetchedRequests.push({ ...data, id: doc.id });
+                        }
                     });
                 }
             }

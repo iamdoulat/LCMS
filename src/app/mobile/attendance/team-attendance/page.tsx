@@ -67,7 +67,7 @@ export default function TeamAttendancePage() {
                 supervisedEmployees.map(e => [e.id, e.uid]).flat().filter((id): id is string => !!id)
             ));
 
-            const chunks = [];
+            const chunks: string[][] = [];
             for (let i = 0; i < allPossibleIds.length; i += 10) {
                 chunks.push(allPossibleIds.slice(i, i + 10));
             }

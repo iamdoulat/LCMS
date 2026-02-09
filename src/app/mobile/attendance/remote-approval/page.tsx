@@ -236,101 +236,31 @@ export default function RemoteAttendanceApprovalPage() {
 
             for (const chunk of chunks) {
                 try {
-                    // Fetch separate queries to avoid composite index requirements and 'in' filter limitations
-                    const qRemoteIn = query(
-                        collection(firestore, 'attendance'),
-                        where('employeeId', 'in', chunk),
-                        where('isInsideGeofence', '==', false)
-                    );
+                    // Fetch attendance by date range (past 30 days default) to capture all relevant records
+                    // and filter for Remote/Pending in memory.
+                    // This creates a standard requirement for "EmployeeId + Date" index, which is common.
+                    const startDate = dateRange?.from || subDays(new Date(), 30);
+                    const startDateStr = format(startDate, "yyyy-MM-dd'T'00:00:00");
 
-                    const qRemoteOut = query(
+                    const qAttendance = query(
                         collection(firestore, 'attendance'),
                         where('employeeId', 'in', chunk),
-                        where('outTimeIsInsideGeofence', '==', false)
-                    );
-
-                    // Fetch Pending/pending for overall approvalStatus
-                    const qPendingIn = query(
-                        collection(firestore, 'attendance'),
-                        where('employeeId', 'in', chunk),
-                        where('approvalStatus', '==', 'Pending')
-                    );
-
-                    const qPendingInLower = query(
-                        collection(firestore, 'attendance'),
-                        where('employeeId', 'in', chunk),
-                        where('approvalStatus', '==', 'pending')
-                    );
-
-                    // Fetch Pending/pending for inTimeApprovalStatus (specifically)
-                    const qPendingInTimeUpper = query(
-                        collection(firestore, 'attendance'),
-                        where('employeeId', 'in', chunk),
-                        where('inTimeApprovalStatus', '==', 'Pending')
-                    );
-
-                    const qPendingInTimeLower = query(
-                        collection(firestore, 'attendance'),
-                        where('employeeId', 'in', chunk),
-                        where('inTimeApprovalStatus', '==', 'pending')
-                    );
-
-                    // Fetch Pending/pending for outTimeApprovalStatus
-                    // We split this because Firestore doesn't allow 'in' filter with multiple values if we already used 'in' for employeeId
-                    const qPendingOutUpper = query(
-                        collection(firestore, 'attendance'),
-                        where('employeeId', 'in', chunk),
-                        where('outTimeApprovalStatus', '==', 'Pending')
-                    );
-
-                    const qPendingOutLower = query(
-                        collection(firestore, 'attendance'),
-                        where('employeeId', 'in', chunk),
-                        where('outTimeApprovalStatus', '==', 'pending')
+                        where('date', '>=', startDateStr)
                     );
 
                     const qMultiple = query(
                         collection(firestore, 'multiple_check_inout'),
                         where('employeeId', 'in', chunk)
+                        // Note: multiple_check_inout might not have 'date' field in ISO string same as attendance
+                        // We filter these in memory or could add timestamp filter if indexed
                     );
 
-                    const [
-                        snapRemoteIn,
-                        snapRemoteOut,
-                        snapPendingIn,
-                        snapPendingInLower,
-                        snapPendingInTimeUpper,
-                        snapPendingInTimeLower,
-                        snapPendingOutUpper,
-                        snapPendingOutLower,
-                        snapMultiple
-                    ] = await Promise.all([
-                        getDocs(qRemoteIn),
-                        getDocs(qRemoteOut),
-                        getDocs(qPendingIn),
-                        getDocs(qPendingInLower),
-                        getDocs(qPendingInTimeUpper),
-                        getDocs(qPendingInTimeLower),
-                        getDocs(qPendingOutUpper),
-                        getDocs(qPendingOutLower),
+                    const [snapAttendance, snapMultiple] = await Promise.all([
+                        getDocs(qAttendance),
                         getDocs(qMultiple)
                     ]);
 
-                    const uniqueDocs = new Map();
-                    [
-                        snapRemoteIn,
-                        snapRemoteOut,
-                        snapPendingIn,
-                        snapPendingInLower,
-                        snapPendingInTimeUpper,
-                        snapPendingInTimeLower,
-                        snapPendingOutUpper,
-                        snapPendingOutLower
-                    ].forEach(snap => {
-                        snap.forEach(doc => uniqueDocs.set(doc.id, doc));
-                    });
-
-                    processDaily(Array.from(uniqueDocs.values()));
+                    processDaily(snapAttendance.docs);
                     processMultiple(snapMultiple);
                 } catch (err) {
                     console.error("Error fetching attendance for chunk:", err);
