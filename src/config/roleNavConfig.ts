@@ -96,6 +96,13 @@ export const roleNavConfig: Record<UserRole | 'Default', NavItem[]> = {
         { href: '/dashboard/hr/multiple-check-in-out?myRecords=true', label: 'Check In/Out', icon: LogIn, pathPrefix: '/dashboard/hr/multiple-check-in-out' },
         { href: '/dashboard/account-details', label: 'Notice', icon: Bell, pathPrefix: '' },
     ],
+    "Supervisor": [
+        { href: '/dashboard/hr/attendance-reconciliation?myRecords=true', label: 'Attendance', icon: Clock, pathPrefix: '/dashboard/hr/attendance-reconciliation' },
+        { href: '/dashboard/hr/leaves?myRecords=true', label: 'Leave', icon: Plane, pathPrefix: '/dashboard/hr/leaves' },
+        { href: '/dashboard/account-details', label: 'Profile', icon: User, pathPrefix: '/dashboard/account-details' },
+        { href: '/dashboard/hr/multiple-check-in-out?myRecords=true', label: 'Check In/Out', icon: LogIn, pathPrefix: '/dashboard/hr/multiple-check-in-out' },
+        { href: '/dashboard/account-details', label: 'Notice', icon: Bell, pathPrefix: '' },
+    ],
     "Viewer": [
         { href: '/dashboard/total-lc', label: 'LC', icon: FileText, pathPrefix: '/dashboard/total-lc' },
         { href: '/dashboard/quotations/list', label: 'Quote', icon: ListChecks, pathPrefix: '/dashboard/quotations' },
