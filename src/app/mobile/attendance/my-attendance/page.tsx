@@ -46,6 +46,7 @@ export default function MyAttendancePage() {
     const [leaves, setLeaves] = useState<any[]>([]);
     const [visits, setVisits] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [daysToLoad, setDaysToLoad] = useState(15);
     const router = useRouter();
 
     // Filter State
@@ -102,9 +103,9 @@ export default function MyAttendancePage() {
                 startDate = startOfDay(filters.dateRange.from);
                 endDate = startOfDay(filters.dateRange.to || filters.dateRange.from);
             } else {
-                // Default to last 30 days if no filter
+                // Default to daysToLoad if no filter
                 endDate = startOfDay(new Date());
-                startDate = startOfDay(subDays(endDate, 29));
+                startDate = startOfDay(subDays(endDate, daysToLoad - 1));
             }
 
             // Generate all dates in interval
@@ -312,7 +313,7 @@ export default function MyAttendancePage() {
             if (activeTab === 'attendance') fetchAttendance();
             else fetchBreaks();
         }
-    }, [user?.uid, currentEmployeeId, activeTab, filters, holidays.length, leaves.length, visits.length]);
+    }, [user?.uid, currentEmployeeId, activeTab, filters, holidays.length, leaves.length, visits.length, daysToLoad]);
 
     const refreshData = async () => {
         if (currentEmployeeId) {
@@ -472,7 +473,7 @@ export default function MyAttendancePage() {
 
             <div
                 ref={containerRef}
-                className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col"
+                className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto overscroll-contain flex flex-col pb-0"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
@@ -640,6 +641,17 @@ export default function MyAttendancePage() {
 
                             )
                         )
+                    )}
+                    {activeTab === 'attendance' && attendanceRecords.length > 0 && !filters.dateRange?.from && (
+                        <div className="px-5 pb-0">
+                            <button
+                                onClick={() => setDaysToLoad(prev => prev + 15)}
+                                className="w-full py-4 bg-white border border-slate-200 rounded-2xl text-blue-600 font-bold text-sm shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                            >
+                                <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                                Load More 15days
+                            </button>
+                        </div>
                     )}
                     {activeTab === 'break' && breakRecords.length === 0 && !loading && (
                         <div className="fixed bottom-0 left-0 right-0 p-4 bg-red-500 text-white text-center text-sm font-medium">

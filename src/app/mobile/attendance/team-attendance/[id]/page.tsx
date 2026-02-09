@@ -45,7 +45,7 @@ export default function SubordinateAttendanceDetailsPage() {
     // Filter State
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-        from: startOfDay(subDays(new Date(), 30)),
+        from: startOfDay(subDays(new Date(), 6)),
         to: endOfDay(new Date())
     });
 
@@ -352,7 +352,7 @@ export default function SubordinateAttendanceDetailsPage() {
                 }}
                 onReset={() => {
                     setDateRange({
-                        from: startOfDay(subDays(new Date(), 30)),
+                        from: startOfDay(subDays(new Date(), 6)),
                         to: endOfDay(new Date())
                     });
                 }}
