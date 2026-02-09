@@ -4,6 +4,8 @@ import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquareText, Filter, CheckCircle2, History, Star, User, Calendar, MessageSquare, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
 import { cn } from '@/lib/utils';
 import {
     Table,
@@ -69,6 +71,66 @@ const TableSkeleton = () => (
         ))}
     </>
 );
+
+const AnimatedStatCard = ({
+    title,
+    value,
+    subtitle,
+    icon: Icon,
+    gradientClasses,
+    shadowClasses
+}: {
+    title: string;
+    value: number | string;
+    subtitle?: string;
+    icon: any;
+    gradientClasses: string;
+    shadowClasses: string;
+}) => (
+    <motion.div
+        whileHover={{ scale: 1.02, translateY: -5 }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        className={cn(
+            "relative overflow-hidden rounded-2xl p-6 min-h-[140px] flex flex-col justify-between",
+            gradientClasses,
+            shadowClasses
+        )}
+    >
+        {/* Shimmer / Glow Effect */}
+        <motion.div
+            animate={{
+                opacity: [0.1, 0.3, 0.1],
+                scale: [1, 1.2, 1],
+            }}
+            transition={{
+                duration: 6,
+                repeat: Infinity,
+                ease: "linear"
+            }}
+            className="absolute -top-1/2 -right-1/4 w-full h-full bg-white/20 blur-[80px] rounded-full pointer-events-none"
+        />
+
+        <div className="relative z-10 flex justify-between items-start">
+            <div className="space-y-2">
+                <p className="text-[10px] font-black text-white/80 uppercase tracking-widest leading-none">{title}</p>
+                <motion.h3
+                    key={value}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="text-3xl font-black text-white tracking-tighter"
+                >
+                    {value}
+                </motion.h3>
+                <p className="text-[10px] font-medium text-white/70 leading-none">{subtitle}</p>
+            </div>
+
+            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-xl">
+                <Icon className="h-6 w-6 text-white" strokeWidth={2.5} />
+            </div>
+        </div>
+    </motion.div>
+);
+
 
 export default function FeedbackComplaintManagementPage() {
     const { userRole, user } = useAuth();
@@ -209,45 +271,37 @@ export default function FeedbackComplaintManagementPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-none shadow-sm bg-blue-50/50">
-                    <CardContent className="p-6 flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-blue-100 flex items-center justify-center">
-                            <MessageSquare className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-slate-500">Total Submissions</p>
-                            <p className="text-2xl font-bold text-slate-900">{submissions.length}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-none shadow-sm bg-rose-50/50">
-                    <CardContent className="p-6 flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-rose-100 flex items-center justify-center">
-                            <AlertCircle className="h-6 w-6 text-rose-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-slate-500">Pending Submissions</p>
-                            <p className="text-2xl font-bold text-slate-900">
-                                {submissions.filter(s => s.status === 'Pending').length}
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-none shadow-sm bg-emerald-50/50">
-                    <CardContent className="p-6 flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-emerald-100 flex items-center justify-center">
-                            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-slate-500">Resolved Items</p>
-                            <p className="text-2xl font-bold text-slate-900">
-                                {submissions.filter(s => s.status === 'Resolved').length}
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <AnimatedStatCard
+                    title="Total Submissions"
+                    value={submissions.length}
+                    subtitle={`${submissions.filter(s => {
+                        const now = new Date();
+                        const subDate = s.createdAt?.toDate();
+                        return subDate && subDate.getMonth() === now.getMonth() && subDate.getFullYear() === now.getFullYear();
+                    }).length} this month`}
+                    icon={MessageSquare}
+                    gradientClasses="bg-gradient-to-br from-blue-600 via-indigo-500 to-indigo-700"
+                    shadowClasses="shadow-[0_20px_40px_rgba(37,99,235,0.3)]"
+                />
+                <AnimatedStatCard
+                    title="Pending Submissions"
+                    value={submissions.filter(s => s.status === 'Pending').length}
+                    subtitle="Requires attention"
+                    icon={AlertCircle}
+                    gradientClasses="bg-gradient-to-br from-rose-500 via-pink-600 to-purple-600"
+                    shadowClasses="shadow-[0_20px_40px_rgba(225,29,72,0.3)]"
+                />
+                <AnimatedStatCard
+                    title="Resolved Items"
+                    value={submissions.filter(s => s.status === 'Resolved').length}
+                    subtitle="Successfully closed"
+                    icon={CheckCircle2}
+                    gradientClasses="bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600"
+                    shadowClasses="shadow-[0_20px_40px_rgba(16,185,129,0.3)]"
+                />
             </div>
+
 
             {/* Filters & Table */}
             <Card className="border-none shadow-xl bg-white overflow-hidden">
