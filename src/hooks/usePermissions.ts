@@ -39,7 +39,7 @@ export interface Permissions {
     canUpdateNoticeBoard: boolean;
 }
 
-export function usePermissions() {
+export function usePermissions(isActualSupervisor: boolean = false) {
     const { userRole } = useAuth();
 
     const permissions = useMemo((): Permissions => {
@@ -51,33 +51,33 @@ export function usePermissions() {
         // Removed explicit cast to string[] as UserRole should be compatible with string literals
         const isSupervisorRole = (roles as string[]).includes('Supervisor') || (roles as string[]).includes('Manager') || (roles as string[]).includes('DemoManager');
 
-        // We also check if the user is a supervisor via useSupervisorCheck elsewhere, 
-        // but role-based permissions are fixed here.
+        // Allow approval if user has supervisor role OR is an actual supervisor (has subordinates)
+        const canApprove = isAdmin || isHR || isSupervisorRole || isActualSupervisor;
 
         return {
             // Attendance
             canViewAllAttendance: isAdmin || isHR,
-            canViewTeamAttendance: isAdmin || isHR || isSupervisorRole,
+            canViewTeamAttendance: isAdmin || isHR || isSupervisorRole || isActualSupervisor,
             canViewSelfAttendance: true,
-            canApproveAttendance: isAdmin || isHR || isSupervisorRole,
+            canApproveAttendance: canApprove,
 
             // Leaves
             canViewAllLeaves: isAdmin || isHR,
-            canViewTeamLeaves: isAdmin || isHR || isSupervisorRole,
+            canViewTeamLeaves: isAdmin || isHR || isSupervisorRole || isActualSupervisor,
             canViewSelfLeaves: true,
-            canApproveLeaves: isAdmin || isHR || isSupervisorRole,
+            canApproveLeaves: canApprove,
 
             // Visits
             canViewAllVisits: isAdmin || isHR,
-            canViewTeamVisits: isAdmin || isHR || isSupervisorRole,
+            canViewTeamVisits: isAdmin || isHR || isSupervisorRole || isActualSupervisor,
             canViewSelfVisits: true,
-            canApproveVisits: isAdmin || isHR || isSupervisorRole,
+            canApproveVisits: canApprove,
 
             // Claims
             canViewAllClaims: isAdmin || isHR || isAccounts,
-            canViewTeamClaims: isAdmin || isHR || isAccounts || isSupervisorRole,
+            canViewTeamClaims: isAdmin || isHR || isAccounts || isSupervisorRole || isActualSupervisor,
             canViewSelfClaims: true,
-            canApproveClaims: isAdmin || isHR || isAccounts,
+            canApproveClaims: isAdmin || isHR || isAccounts, // Claims usually require specific roles, maybe not generic supervisors? Keeping as is for now unless requested.
 
             // Project Management
             canManageProjects: isAdmin || roles.includes('Service'),
@@ -88,7 +88,7 @@ export function usePermissions() {
             canManageSettings: isAdmin,
             canUpdateNoticeBoard: isAdmin || isHR,
         };
-    }, [userRole]);
+    }, [userRole, isActualSupervisor]);
 
     return permissions;
 }

@@ -42,7 +42,7 @@ import { useFirebaseMessaging } from '@/hooks/useFirebaseMessaging';
 export default function MobileDashboardPage() {
     const { user, userRole: globalUserRole, companyName, companyLogoUrl } = useAuth();
     const { isSupervisor, supervisedEmployeeIds, explicitSubordinateIds, currentEmployeeId } = useSupervisorCheck(user?.email);
-    const permissions = usePermissions();
+    const permissions = usePermissions(isSupervisor);
 
     // Context for data scoping - using explicitSubordinateIds for "own team" focus
     const scoperContext = useMemo(() => ({
