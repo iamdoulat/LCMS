@@ -59,6 +59,11 @@ const roleStyles: Record<UserRole, { bg: string; text: string; border: string }>
         bg: 'bg-gradient-to-r from-sky-400 to-sky-500',
         text: 'text-white',
         border: 'border-sky-300'
+    },
+    'Supervisor': {
+        bg: 'bg-gradient-to-r from-indigo-500 to-indigo-600',
+        text: 'text-white',
+        border: 'border-indigo-300'
     }
 };
 
