@@ -141,7 +141,7 @@ export default function ManageTasksPage() {
     // --- Actions ---
 
     const handleDelete = async (id: string) => {
-        const hasPermission = userRole?.some(role => ['Admin', 'Super Admin', 'Service'].includes(role));
+        const hasPermission = userRole?.some(role => ['Admin', 'Super Admin', 'Service', 'Supervisor'].includes(role));
 
         if (!hasPermission) {
             Swal.fire("Permission Denied", "You do not have permission to delete tasks.", "error");
@@ -327,7 +327,7 @@ export default function ManageTasksPage() {
                                                                 <DropdownMenuItem onClick={() => router.push(`/dashboard/project-management/tasks/edit/${task.id}`)}>
                                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                                 </DropdownMenuItem>
-                                                                {userRole?.some(role => ['Admin', 'Super Admin', 'Service'].includes(role)) && (
+                                                                {userRole?.some(role => ['Admin', 'Super Admin', 'Service', 'Supervisor'].includes(role)) && (
                                                                     <>
                                                                         <DropdownMenuSeparator />
                                                                         <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(task.id)}>
@@ -507,7 +507,7 @@ export default function ManageTasksPage() {
                                         <DropdownMenuItem onClick={() => router.push(`/dashboard/project-management/tasks/edit/${task.id}`)}>
                                             <Edit className="mr-2 h-4 w-4" /> Edit
                                         </DropdownMenuItem>
-                                        {userRole?.some(role => ['Admin', 'Super Admin', 'Service'].includes(role)) && (
+                                        {userRole?.some(role => ['Admin', 'Super Admin', 'Service', 'Supervisor'].includes(role)) && (
                                             <>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(task.id)}>

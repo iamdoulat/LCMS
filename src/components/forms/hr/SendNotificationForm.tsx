@@ -81,7 +81,7 @@ export function SendNotificationForm() {
             if (data.targetAll) {
                 // Broad roles to cover everyone. 
                 // Adjust this list based on your actual system roles.
-                payload.targetRoles = ['Super Admin', 'Admin', 'HR', 'Employee', 'Service', 'Accounts', 'Commercial', 'Viewer', 'DemoManager'];
+                payload.targetRoles = ['Super Admin', 'Admin', 'HR', 'Employee', 'Service', 'Accounts', 'Commercial', 'Viewer', 'DemoManager', 'Supervisor'];
                 payload.userIds = undefined;
             }
 

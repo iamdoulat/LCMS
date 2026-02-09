@@ -214,7 +214,7 @@ export default function MobileCheckInOutPage() {
 
             try {
                 // Check if current user has privileged role
-                const privilegedRoles = ['Super Admin', 'Admin', 'HR', 'Commercial', 'Service', 'DemoManager'];
+                const privilegedRoles = ['Super Admin', 'Admin', 'HR', 'Commercial', 'Service', 'DemoManager', 'Supervisor'];
                 const hasPrivilegedRole = userRole?.some(role => privilegedRoles.includes(role));
 
                 if (!hasPrivilegedRole) {

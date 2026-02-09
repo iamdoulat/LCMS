@@ -13,7 +13,7 @@ export default function MobileAddCataloguePage() {
     const { userRole } = useAuth();
 
     useEffect(() => {
-        if (userRole && !userRole.includes('Admin') && !userRole.includes('Service') && !userRole.includes('Super Admin')) {
+        if (userRole && !userRole.includes('Admin') && !userRole.includes('Service') && !userRole.includes('Super Admin') && !userRole.includes('Supervisor')) {
             Swal.fire("Access Denied", "You do not have permission to add catalogues.", "error");
             router.push('/mobile/service/catalogues');
         }

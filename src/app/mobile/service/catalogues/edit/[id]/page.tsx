@@ -19,7 +19,7 @@ export default function MobileEditCataloguePage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (userRole && !userRole.includes('Admin') && !userRole.includes('Service') && !userRole.includes('Super Admin')) {
+        if (userRole && !userRole.includes('Admin') && !userRole.includes('Service') && !userRole.includes('Super Admin') && !userRole.includes('Supervisor')) {
             Swal.fire("Access Denied", "You do not have permission to edit catalogues.", "error");
             router.push('/mobile/service/catalogues');
             return;

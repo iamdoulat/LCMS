@@ -80,8 +80,8 @@ export function usePermissions(isActualSupervisor: boolean = false) {
             canApproveClaims: isAdmin || isHR || isAccounts, // Claims usually require specific roles, maybe not generic supervisors? Keeping as is for now unless requested.
 
             // Project Management
-            canManageProjects: isAdmin || roles.includes('Service'),
-            canViewAllProjects: isAdmin || roles.includes('Service') || roles.includes('Viewer'),
+            canManageProjects: isAdmin || roles.includes('Service') || roles.includes('Supervisor'),
+            canViewAllProjects: isAdmin || roles.includes('Service') || roles.includes('Viewer') || roles.includes('Supervisor'),
 
             // HR / Admin
             canManageEmployees: isAdmin || isHR,

@@ -20,7 +20,7 @@ export function SummaryStats({ type }: SummaryStatsProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState<any>(null);
 
-    const allowedRoles = ['Super Admin', 'Admin', 'Service', 'DemoManager'];
+    const allowedRoles = ['Super Admin', 'Admin', 'Service', 'DemoManager', 'Supervisor'];
     const hasAccess = useMemo(() => {
         if (!userRole) return false;
         return userRole.some(role => allowedRoles.includes(role));

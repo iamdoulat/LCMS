@@ -65,7 +65,7 @@ export default function MachineryCataloguesPage() {
     const ITEMS_PER_PAGE = 10;
 
     const isManager = useMemo(() => {
-        return userRole?.some(role => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+        return userRole?.some(role => ['Admin', 'Service', 'Super Admin', 'Supervisor'].includes(role)) ?? false;
     }, [userRole]);
 
     const fetchCatalogues = async () => {

@@ -40,7 +40,7 @@ export default function MobileErrorCodesPage() {
 
     const { userRole } = useAuth();
     const isServiceRole = React.useMemo(() => {
-        return userRole?.some(role => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+        return userRole?.some(role => ['Admin', 'Service', 'Super Admin', 'Supervisor'].includes(role)) ?? false;
     }, [userRole]);
 
     const fetchErrorCodes = async (isNextPage = false) => {

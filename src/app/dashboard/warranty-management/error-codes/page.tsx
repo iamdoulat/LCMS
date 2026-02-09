@@ -64,7 +64,7 @@ export default function ErrorCodesPage() {
     // Auth & Permissions
     const { userRole } = useAuth();
     const isManager = React.useMemo(() => {
-        return userRole?.some(role => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+        return userRole?.some(role => ['Admin', 'Service', 'Super Admin', 'Supervisor'].includes(role)) ?? false;
     }, [userRole]);
 
     // Pagination State
