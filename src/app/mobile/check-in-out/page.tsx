@@ -512,7 +512,7 @@ export default function MobileCheckInOutPage() {
                     return !isDone && !isAutoDone && isUserRecord;
                 }
                 if (activeTab === 'Completed') {
-                    // Show User's completed visits OR visits that are auto-done (8h+)
+                    // Show User's completed visits OR visits that are auto-done (maxHours+)
                     return (isDone || isAutoDone) && isUserRecord;
                 }
                 // Supervision tab shows everything
@@ -604,7 +604,8 @@ export default function MobileCheckInOutPage() {
                                 // Auto check-out indicator
                                 const checkInTimestamp = new Date(visit.checkIn.timestamp).getTime();
                                 const now = new Date().getTime();
-                                const isAutoDone = !isDone && (now - checkInTimestamp) / (1000 * 60 * 60) > 8;
+                                const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 8;
+                                const isAutoDone = !isDone && (now - checkInTimestamp) / (1000 * 60 * 60) > maxHours && (multiCheckConfig?.isMaxHourLimitEnabled ?? true);
 
                                 // Calculate duration if both times exist
                                 let duration = '';
@@ -657,7 +658,7 @@ export default function MobileCheckInOutPage() {
                                             {(visit.checkOut || isAutoDone) && (
                                                 <div className="flex gap-4 relative">
                                                     <div className="w-20 pt-1 flex flex-col items-center shrink-0">
-                                                        <span className="text-xs font-semibold text-[#0a1e60] mb-0.5">{isAutoDone ? '8h+' : checkOutTime}</span>
+                                                        <span className="text-xs font-semibold text-[#0a1e60] mb-0.5">{isAutoDone ? `${maxHours}h+` : checkOutTime}</span>
                                                         <span className="text-[10px] text-slate-400 mb-1">{isAutoDone ? checkInDate : checkOutDate}</span>
                                                         <span className={`text-[8px] font-bold px-1 py-0.5 rounded border mb-2 leading-none ${isAutoDone ? 'text-amber-600 border-amber-100 bg-amber-50' : 'text-green-600 border-green-100 bg-green-50'}`}>
                                                             {isAutoDone ? 'AUTO' : 'OUT'}
@@ -672,7 +673,7 @@ export default function MobileCheckInOutPage() {
                                                                     <RefreshCw className="h-3 w-3 animate-spin-slow" />
                                                                     <span className="text-[10px] font-bold uppercase tracking-wider">System Auto-Closed</span>
                                                                 </div>
-                                                                <p className="text-[11px] text-slate-500 italic">Check-in session exceeded 8 hours limit. Automatically marked as completed.</p>
+                                                                <p className="text-[11px] text-slate-500 italic">Check-in session exceeded {maxHours} hours limit. Automatically marked as completed.</p>
                                                             </div>
                                                         ) : (
                                                             <>
