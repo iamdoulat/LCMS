@@ -42,6 +42,11 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
         return userRole.some(role => privilegedRoles.includes(role));
     }, [userRole]);
 
+    const hasSupervisorRole = useMemo(() => {
+        if (!userRole) return false;
+        return userRole.includes('Supervisor');
+    }, [userRole]);
+
     useEffect(() => {
         const fetchSupervisorInfo = async () => {
             if (!userEmail) return;
@@ -276,7 +281,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                     });
 
                     setInfo({
-                        isSupervisor: subordinateIds.length > 0,
+                        isSupervisor: hasSupervisorRole || subordinateIds.length > 0,
                         supervisedEmployees: supervisedEmployees,
                         explicitSubordinates: supervisedEmployees,
                         supervisedEmployeeIds: subordinateIds,
@@ -285,7 +290,11 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         isLoading: false
                     });
                 } else {
-                    setInfo(prev => ({ ...prev, isLoading: false }));
+                    setInfo(prev => ({
+                        ...prev,
+                        isSupervisor: hasSupervisorRole,
+                        isLoading: false
+                    }));
                 }
             } catch (error) {
                 console.error("Error fetching supervisor info:", error);

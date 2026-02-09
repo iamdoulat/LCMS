@@ -423,7 +423,7 @@ export interface AppNotification {
   link?: string;
 }
 
-export const userRoles = ["Super Admin", "Admin", "User", "Service", "DemoManager", "Accounts", "Viewer", "Commercial", "HR", "Employee"] as const;
+export const userRoles = ["Super Admin", "Admin", "User", "Service", "DemoManager", "Accounts", "Viewer", "Commercial", "HR", "Employee", "Supervisor"] as const;
 export type UserRole = typeof userRoles[number];
 
 export const NoticeBoardSettingsSchema = z.object({
