@@ -171,16 +171,19 @@ export function MobileDrawerSidebar() {
                     <span className="font-semibold text-base tracking-tight">Clear Cache</span>
                 </Button>
 
-                <Button
+                <button
                     onClick={logout}
-                    variant="ghost"
-                    className="w-full justify-start text-white hover:bg-white/10 hover:text-white mt-2 gap-4 pl-0"
+                    className="w-full bg-white rounded-full py-3 flex items-center justify-center gap-4 mt-8 transition-all active:scale-95 shadow-lg"
                 >
-                    <div className="w-8 flex justify-center">
-                        <LogOut className="h-6 w-6 opacity-90" />
+                    <div className="flex items-center justify-center">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M16 17L21 12L16 7" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M21 12H9" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                     </div>
-                    <span className="font-semibold text-base tracking-tight">Logout</span>
-                </Button>
+                    <span className="text-[#3b82f6] text-xl font-bold">Log out</span>
+                </button>
 
                 <div className="text-white/40 text-[10px] mt-4 text-center">
                     App Version: {appVersion || 'v1.1'}
