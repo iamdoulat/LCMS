@@ -72,7 +72,7 @@ export default function LCPaymentDonePage() {
   const [filterLcNumber, setFilterLcNumber] = useState('');
   const [filterApplicantId, setFilterApplicantId] = useState('');
   const [filterBeneficiaryId, setFilterBeneficiaryId] = useState('');
-  const [filterYear, setFilterYear] = useState<string>(ALL_YEARS_VALUE);
+  const [filterYear, setFilterYear] = useState<string>(currentSystemYear.toString());
 
   const [applicantOptions, setApplicantOptions] = useState<ComboboxOption[]>([]);
   const [beneficiaryOptions, setBeneficiaryOptions] = useState<ComboboxOption[]>([]);
@@ -206,7 +206,7 @@ export default function LCPaymentDonePage() {
     setFilterLcNumber('');
     setFilterApplicantId('');
     setFilterBeneficiaryId('');
-    setFilterYear(ALL_YEARS_VALUE);
+    setFilterYear(currentSystemYear.toString());
     setCurrentPage(1);
   };
 
