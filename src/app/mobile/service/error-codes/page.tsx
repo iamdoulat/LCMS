@@ -40,7 +40,11 @@ export default function MobileErrorCodesPage() {
 
     const { userRole } = useAuth();
     const isServiceRole = React.useMemo(() => {
-        return userRole?.some(role => ['Admin', 'Service', 'Super Admin', 'Supervisor'].includes(role)) ?? false;
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin', 'Supervisor'].includes(role)) ?? false;
+    }, [userRole]);
+
+    const canManageErrorCodes = React.useMemo(() => {
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
     }, [userRole]);
 
     const fetchErrorCodes = async (isNextPage = false) => {
@@ -123,7 +127,7 @@ export default function MobileErrorCodesPage() {
                         </div>
                     </div>
 
-                    {isServiceRole && (
+                    {canManageErrorCodes && (
                         <button
                             onClick={() => router.push('/mobile/service/error-codes/add')}
                             className="p-3 bg-blue-600 text-white rounded-2xl active:scale-95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] border border-blue-500/50"
@@ -183,7 +187,7 @@ export default function MobileErrorCodesPage() {
                                                         </Badge>
                                                         <span className="text-[10px] font-bold text-slate-400">{rec.brand}</span>
                                                     </div>
-                                                    {isServiceRole && (
+                                                    {canManageErrorCodes && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();

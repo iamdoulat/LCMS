@@ -37,7 +37,11 @@ export default function MobileCataloguesPage() {
 
     const { userRole } = useAuth();
     const isServiceRole = React.useMemo(() => {
-        return userRole?.some(role => ['Admin', 'Service', 'Super Admin', 'Supervisor'].includes(role)) ?? false;
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin', 'Supervisor'].includes(role)) ?? false;
+    }, [userRole]);
+
+    const canManageCatalogues = React.useMemo(() => {
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
     }, [userRole]);
 
     const fetchCatalogues = async (isNextPage = false) => {
@@ -115,7 +119,7 @@ export default function MobileCataloguesPage() {
                         </div>
                     </div>
 
-                    {isServiceRole && (
+                    {canManageCatalogues && (
                         <button
                             onClick={() => router.push('/mobile/service/catalogues/add')}
                             className="p-3 bg-blue-600 text-white rounded-2xl active:scale-95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.25)] border border-blue-500/50"
@@ -186,7 +190,7 @@ export default function MobileCataloguesPage() {
                                                     </Badge>
                                                 )}
                                             </div>
-                                            {isServiceRole && (
+                                            {canManageCatalogues && (
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
