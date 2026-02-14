@@ -181,6 +181,8 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
                 title: 'Location Error',
                 text: error.message || 'Could not get location',
                 icon: 'error',
+                timer: 3000,
+                showConfirmButton: false,
                 customClass: {
                     container: 'z-[99999] !important'
                 }
@@ -270,6 +272,8 @@ export function MobileBreakTimeModal({ isOpen, onClose, isFrozen = false, extern
                 title: "Error",
                 text: error.message || "Failed to process break.",
                 icon: "error",
+                timer: 3000,
+                showConfirmButton: false,
                 customClass: {
                     container: 'z-[99999] !important'
                 }
