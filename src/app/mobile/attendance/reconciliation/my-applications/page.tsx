@@ -57,6 +57,7 @@ export default function MyReconApplicationsPage() {
         try {
             const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
 
+
             let q;
             if (filterDays !== 'all') {
                 const endDate = new Date();
@@ -78,10 +79,11 @@ export default function MyReconApplicationsPage() {
             const snapshot = await getDocs(q);
             let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReconRequest));
 
+
             // Fetch actual attendance times for attendance reconciliations
             if (activeTab === 'attendance') {
                 const queryIds = [currentEmployeeId, user?.uid].filter((id): id is string => !!id);
-                console.log('fetchRequests: Fetching actual times for', data.length, 'requests using IDs:', queryIds);
+
 
                 try {
                     // Fetch all relevant attendance records in one query
@@ -100,7 +102,7 @@ export default function MyReconApplicationsPage() {
 
                     const attSnap = await getDocs(attQuery);
                     const allAttRecords = attSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-                    console.log(`fetchRequests: Found ${allAttRecords.length} attendance records total for matching`);
+
 
                     const getDhakaDateStr = (date: any) => {
                         if (!date) return '';
@@ -130,7 +132,7 @@ export default function MyReconApplicationsPage() {
                         if (record) {
                             req.actualInTime = record.inTime;
                             req.actualOutTime = record.outTime;
-                            console.log(`fetchRequests: Matched record for ${req.attendanceDate}:`, record.inTime, record.outTime);
+
                         }
                     });
                 } catch (e) {
@@ -138,9 +140,14 @@ export default function MyReconApplicationsPage() {
                 }
             }
 
-            // Apply status filter client-side
+            // Apply status filter client-side (case-insensitive)
             if (statusFilter !== 'all') {
-                data = data.filter(req => req.status === statusFilter);
+                data = data.filter(req => {
+                    const reqStatus = req.status?.toLowerCase();
+                    const filterStatus = statusFilter.toLowerCase();
+                    return reqStatus === filterStatus;
+                });
+
             }
 
             // Client side sort by date/created
@@ -149,6 +156,7 @@ export default function MyReconApplicationsPage() {
                 const dateB = b.attendanceDate || '';
                 return dateB.localeCompare(dateA); // Desc
             });
+
 
             setRequests(data);
         } catch (error) {
