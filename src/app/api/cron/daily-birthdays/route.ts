@@ -3,6 +3,7 @@ import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
 import { sendTelegram } from '@/lib/telegram/sender';
 import { getCompanyName, getCompanyTimezone } from '@/lib/settings/company';
+import moment from 'moment-timezone';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,14 +40,10 @@ export async function GET(request: Request) {
 
         // Use dynamic company timezone for date comparisons
         const tz = await getCompanyTimezone();
-        const today = new Date();
-        const currentMonthDay = new Intl.DateTimeFormat('en-US', {
-            month: 'numeric',
-            day: 'numeric',
-            timeZone: tz
-        }).format(today);
+        const todayBD = moment().tz(tz);
+        const currentMonthDay = todayBD.format('MM-DD');
 
-        console.log(`Birthday Cron checking for: ${currentMonthDay} (${tz})`);
+        console.log(`Birthday Cron checking for: ${currentMonthDay} (${tz}) [Local Time: ${todayBD.format('YYYY-MM-DD HH:mm:ss')}]`);
 
         // 2. Auto-Seed Templates if missing
         const templateSlug = 'employee_birthday_wish';
@@ -151,13 +148,10 @@ Best Wishes,
             }
 
             if (dobDate && !isNaN(dobDate.getTime())) {
-                // Extract month and day directly from the Date object (no timezone conversion)
-                // Birthday is a calendar date, not a time-instant, so we compare calendar dates
-                const dobMonth = dobDate.getMonth() + 1; // getMonth() is 0-indexed
-                const dobDay = dobDate.getDate();
-                const dobMonthDay = `${dobMonth}/${dobDay}`;
+                // Use moment for reliable calendar date comparison
+                const empDob = moment(dobDate).format('MM-DD');
 
-                if (dobMonthDay === currentMonthDay) {
+                if (empDob === currentMonthDay) {
                     const employeeName = emp.fullName || emp.name || 'Employee';
                     const data = { employee_name: employeeName, company_name: companyName };
 
