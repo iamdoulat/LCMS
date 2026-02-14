@@ -33,6 +33,23 @@ interface ReconRequest {
     employeeId?: string;
 }
 
+const ReconCardSkeleton = () => (
+    <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-slate-200 animate-pulse">
+        <div className="flex items-center justify-between mb-2 pr-20">
+            <div className="h-4 w-16 bg-slate-100 rounded"></div>
+            <div className="flex gap-2">
+                <div className="h-8 w-8 bg-slate-50 rounded-full"></div>
+                <div className="h-8 w-8 bg-slate-50 rounded-full"></div>
+            </div>
+        </div>
+        <div className="h-5 w-3/4 bg-slate-100 rounded mb-4"></div>
+        <div className="flex gap-3">
+            <div className="h-8 w-24 bg-slate-50 rounded-lg"></div>
+            <div className="h-8 w-24 bg-slate-50 rounded-lg"></div>
+        </div>
+    </div>
+);
+
 export default function MyReconApplicationsPage() {
     const { user } = useAuth();
     const { currentEmployeeId } = useSupervisorCheck(user?.email);
@@ -143,11 +160,10 @@ export default function MyReconApplicationsPage() {
             // Apply status filter client-side (case-insensitive)
             if (statusFilter !== 'all') {
                 data = data.filter(req => {
-                    const reqStatus = req.status?.toLowerCase();
-                    const filterStatus = statusFilter.toLowerCase();
+                    const reqStatus = req.status?.toLowerCase()?.trim();
+                    const filterStatus = statusFilter.toLowerCase().trim();
                     return reqStatus === filterStatus;
                 });
-
             }
 
             // Client side sort by date/created
@@ -210,11 +226,21 @@ export default function MyReconApplicationsPage() {
         }
     }
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'Approved': return 'bg-emerald-100 text-emerald-600';
-            case 'Rejected': return 'bg-red-100 text-red-600';
-            default: return 'bg-yellow-100 text-yellow-600'; // Pending
+    const getStatusColor = (status?: string) => {
+        const s = status?.toLowerCase();
+        switch (s) {
+            case 'approved': return 'bg-emerald-100 text-emerald-600';
+            case 'rejected': return 'bg-red-100 text-red-600';
+            default: return 'bg-yellow-100 text-yellow-600'; // pending
+        }
+    };
+
+    const getStatusBorderColor = (status?: string) => {
+        const s = status?.toLowerCase();
+        switch (s) {
+            case 'approved': return 'border-emerald-500';
+            case 'rejected': return 'border-red-500';
+            default: return 'border-yellow-500'; // pending
         }
     };
 
@@ -426,15 +452,16 @@ export default function MyReconApplicationsPage() {
                 {/* List */}
                 <div className="flex-1 px-6 pt-6 pb-[120px] space-y-4">
                     {loading ? (
-                        <div className="flex justify-center py-10">
-                            <Plus className="animate-spin text-blue-600 w-8 h-8 opacity-0" /> {/* Hack for icon, assume loader icon exists */}
-                            <span className="loading loading-spinner text-primary"></span>
-                        </div>
+                        <>
+                            {[...Array(5)].map((_, i) => (
+                                <ReconCardSkeleton key={i} />
+                            ))}
+                        </>
                     ) : requests.length > 0 ? (
                         requests.map((req) => (
                             <div
                                 key={req.id}
-                                className="bg-white p-5 rounded-2xl shadow-md border-l-4 border-emerald-500 active:scale-[0.98] transition-transform relative"
+                                className={`bg-white p-5 rounded-2xl shadow-md border-l-4 ${getStatusBorderColor(req.status)} active:scale-[0.98] transition-transform relative`}
                             >
                                 {/* Action Buttons - Top Right */}
                                 <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
