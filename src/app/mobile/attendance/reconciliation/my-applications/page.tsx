@@ -42,9 +42,9 @@ export default function MyReconApplicationsPage() {
     const [requests, setRequests] = useState<ReconRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedRequest, setSelectedRequest] = useState<ReconRequest | null>(null);
-    const [statusFilter, setStatusFilter] = useState<'all' | 'Pending' | 'Approved' | 'Rejected'>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'Pending' | 'Approved' | 'Rejected'>('Pending');
     const [showFilters, setShowFilters] = useState(false);
-    const [filterDays, setFilterDays] = useState<30 | 90 | 180 | 365 | 'all'>('all');
+    const [filterDays, setFilterDays] = useState<30 | 90 | 180 | 365 | 'all'>(30);
 
     const fetchRequests = async () => {
         if (!currentEmployeeId) {
