@@ -49,12 +49,19 @@ import {
     ChevronUp,
     RefreshCw,
     Filter,
-    Settings2
+    Settings2,
+    Package,
+    Users,
+    Truck,
+    Layers,
+    TrendingUp,
+    Coins,
+    Factory
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, orderBy, query, limit, startAfter, QueryDocumentSnapshot, where, getCountFromServer } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, getYear } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
 import type { LCEntryDocument, LCStatus } from '@/types';
 import { cn } from '@/lib/utils';
@@ -255,6 +262,51 @@ export default function MobileTotalLCPage() {
     const beneficiaries = useMemo(() => Array.from(new Set(lcs.map(lc => lc.beneficiaryName).filter(Boolean))), [lcs]);
     const years = useMemo(() => Array.from({ length: 2030 - 2015 + 1 }, (_, i) => (2030 - i).toString()), []);
 
+    const yearStats = useMemo(() => {
+        const yearToFilter = filterYear === 'All' ? null : Number(filterYear);
+        const currentYearNum = new Date().getFullYear();
+        const currentMonth = new Date().getMonth(); // 0-indexed
+
+        const yearLcs = lcs.filter(lc => yearToFilter === null || lc.year === yearToFilter);
+
+        const totalValue = yearLcs.reduce((sum, lc) => sum + (Number(lc.amount) || 0), 0);
+        const uniqueBeneficiaries = new Set(yearLcs.map(lc => lc.beneficiaryId).filter(Boolean)).size;
+        const uniqueApplicants = new Set(yearLcs.map(lc => lc.applicantId).filter(Boolean)).size;
+        const linkedPIs = yearLcs.filter(lc => lc.proformaInvoiceNumber).length;
+
+        // Monthly count only makes sense for the current year, or we can show it for the current month of any year
+        const monthlyLcs = yearLcs.filter(lc => {
+            const issueDate = lc.lcIssueDate ? parseISO(lc.lcIssueDate) : null;
+            return issueDate && isValid(issueDate) && issueDate.getMonth() === currentMonth && (yearToFilter === null || getYear(issueDate) === yearToFilter);
+        }).length;
+
+        return {
+            totalOpened: yearLcs.length,
+            totalValue,
+            activeBeneficiaries: uniqueBeneficiaries,
+            activeApplicants: uniqueApplicants,
+            linkedPIs,
+            monthlyQty: monthlyLcs,
+            monthName: format(new Date(), 'MMMM'),
+            displayYear: filterYear === 'All' ? 'ALL' : filterYear
+        };
+    }, [lcs, filterYear]);
+
+    const MiniStatCard = ({ title, value, icon: Icon, gradient, description }: any) => (
+        <div className={cn("p-2.5 rounded-2xl border border-white/5 relative overflow-hidden group shadow-sm shrink-0", gradient)}>
+            <div className="absolute -top-1 -right-1 p-1 opacity-20 group-hover:scale-110 transition-transform bg-white/10 rounded-full">
+                <Icon className="h-3 w-3 text-white" />
+            </div>
+            <div className="flex flex-col gap-0.5 relative z-10">
+                <span className="text-sm font-bold text-white uppercase tracking-tight leading-none mb-1.5">{title}</span>
+                <div className="flex items-baseline gap-1">
+                    <span className="text-xl font-black text-white leading-tight">{value}</span>
+                </div>
+                <span className="text-[10px] font-bold text-white/70 leading-none mt-1 truncate">{description}</span>
+            </div>
+        </div>
+    );
+
     const clearFilters = () => {
         setSearchTerm('');
         setFilterStatus('Shipment Pending');
@@ -298,7 +350,7 @@ export default function MobileTotalLCPage() {
                         >
                             <ArrowLeft className="h-6 w-6" />
                         </button>
-                        <h1 className="text-xl font-bold text-white">LC OR TT LIST</h1>
+                        <h1 className="text-xl font-bold text-white">Dashboard</h1>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={handleRefresh}
@@ -467,6 +519,52 @@ export default function MobileTotalLCPage() {
                 </div>
 
                 <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto z-10 p-4 pb-32">
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 gap-2 mb-6">
+                        <MiniStatCard
+                            title={`TOTAL L/CS (${yearStats.displayYear})`}
+                            value={yearStats.totalOpened}
+                            icon={Package}
+                            gradient="bg-gradient-to-br from-[#2563eb] to-[#4f46e5]"
+                            description={`${yearStats.monthlyQty} L/C this month`}
+                        />
+                        <MiniStatCard
+                            title={`TOTAL VALUE (${yearStats.displayYear})`}
+                            value={`$${(yearStats.totalValue / 1000000).toFixed(2)}M`}
+                            icon={Banknote}
+                            gradient="bg-gradient-to-br from-[#10b981] to-[#059669]"
+                            description="Total value in USD"
+                        />
+                        <MiniStatCard
+                            title={`BENEFICIARIES (${yearStats.displayYear})`}
+                            value={yearStats.activeBeneficiaries}
+                            icon={Truck}
+                            gradient="bg-gradient-to-br from-[#8b5cf6] to-[#6366f1]"
+                            description="Unique suppliers"
+                        />
+                        <MiniStatCard
+                            title={`APPLICANTS (${yearStats.displayYear})`}
+                            value={yearStats.activeApplicants}
+                            icon={Factory}
+                            gradient="bg-gradient-to-br from-[#f97316] to-[#ef4444]"
+                            description="Unique customers"
+                        />
+                        <MiniStatCard
+                            title={`LINKED PIS (${yearStats.displayYear})`}
+                            value={yearStats.linkedPIs}
+                            icon={Layers}
+                            gradient="bg-gradient-to-br from-[#0ea5e9] to-[#2563eb]"
+                            description="PIs connected to L/Cs"
+                        />
+                        <MiniStatCard
+                            title="MONTHLY QTY"
+                            value={yearStats.monthlyQty}
+                            icon={TrendingUp}
+                            gradient="bg-gradient-to-br from-[#a855f7] to-[#4f46e5]"
+                            description={`Opened in ${yearStats.monthName}`}
+                        />
+                    </div>
+
                     {/* Search and Filter */}
                     <div className="mb-6 space-y-4">
                         <div className="relative">
