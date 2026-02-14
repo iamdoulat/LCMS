@@ -19,6 +19,7 @@ import {
     Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, limit, startAfter, Timestamp, QueryDocumentSnapshot } from 'firebase/firestore';
 import { format, parseISO, isValid, getYear, isBefore, isAfter, startOfDay } from 'date-fns';
@@ -74,6 +75,11 @@ export default function MobileMachineProgramPage() {
     const [hasMore, setHasMore] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'All' | 'Upcoming' | 'Overdue'>('All');
+
+    const { userRole } = useAuth();
+    const canManageMachinePrograms = React.useMemo(() => {
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+    }, [userRole]);
 
     const fetchApplications = useCallback(async (isNextPage = false) => {
         if (isNextPage) setIsPaginating(true);
@@ -175,12 +181,14 @@ export default function MobileMachineProgramPage() {
                             <p className="text-[10px] font-bold text-blue-400/80 uppercase tracking-[0.2em]">Demo Applications</p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => router.push('/mobile/service/machine-program/add')}
-                        className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10"
-                    >
-                        <Plus className="h-6 w-6" />
-                    </button>
+                    {canManageMachinePrograms && (
+                        <button
+                            onClick={() => router.push('/mobile/service/machine-program/add')}
+                            className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10"
+                        >
+                            <Plus className="h-6 w-6" />
+                        </button>
+                    )}
                 </div>
 
                 <div className="relative">
@@ -203,8 +211,8 @@ export default function MobileMachineProgramPage() {
                             key={filter}
                             onClick={() => setStatusFilter(filter)}
                             className={`flex-1 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all ${statusFilter === filter
-                                    ? 'bg-white text-[#0a1e60] shadow-lg'
-                                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                                ? 'bg-white text-[#0a1e60] shadow-lg'
+                                : 'bg-white/10 text-white/70 hover:bg-white/20'
                                 }`}
                         >
                             {filter}
@@ -269,15 +277,17 @@ export default function MobileMachineProgramPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                router.push(`/mobile/service/machine-program/edit/${app.id}`);
-                                            }}
-                                            className="relative z-10 bg-blue-50 text-[#0a1e60] p-2.5 rounded-xl active:scale-90 transition-all shadow-sm border border-blue-100"
-                                        >
-                                            <Edit2 className="h-4 w-4" />
-                                        </button>
+                                        {canManageMachinePrograms && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/mobile/service/machine-program/edit/${app.id}`);
+                                                }}
+                                                className="relative z-10 bg-blue-50 text-[#0a1e60] p-2.5 rounded-xl active:scale-90 transition-all shadow-sm border border-blue-100"
+                                            >
+                                                <Edit2 className="h-4 w-4" />
+                                            </button>
+                                        )}
                                     </div>
 
                                     <div className="space-y-3">

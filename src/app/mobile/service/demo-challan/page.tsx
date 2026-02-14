@@ -32,7 +32,11 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function MobileDemoChallanPage() {
     const router = useRouter();
-    const { companyName } = useAuth();
+    const { companyName, userRole } = useAuth();
+    const canManageDemoChallans = React.useMemo(() => {
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+    }, [userRole]);
+
     const [challans, setChallans] = useState<DemoChallanDocument[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isPaginating, setIsPaginating] = useState(false);
@@ -264,12 +268,14 @@ export default function MobileDemoChallanPage() {
                         >
                             <Filter className="h-6 w-6" />
                         </button>
-                        <button
-                            onClick={() => router.push('/mobile/service/demo-challan/add')}
-                            className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10"
-                        >
-                            <Plus className="h-6 w-6" />
-                        </button>
+                        {canManageDemoChallans && (
+                            <button
+                                onClick={() => router.push('/mobile/service/demo-challan/add')}
+                                className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10"
+                            >
+                                <Plus className="h-6 w-6" />
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -390,15 +396,17 @@ export default function MobileDemoChallanPage() {
                                                 <Download className="h-4 w-4" />
                                             )}
                                         </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                router.push(`/mobile/service/demo-challan/edit/${challan.id}`);
-                                            }}
-                                            className="relative z-10 bg-blue-50 text-[#0a1e60] p-2.5 rounded-xl active:scale-90 transition-all shadow-sm border border-blue-100"
-                                        >
-                                            <Edit2 className="h-4 w-4" />
-                                        </button>
+                                        {canManageDemoChallans && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/mobile/service/demo-challan/edit/${challan.id}`);
+                                                }}
+                                                className="relative z-10 bg-blue-50 text-[#0a1e60] p-2.5 rounded-xl active:scale-90 transition-all shadow-sm border border-blue-100"
+                                            >
+                                                <Edit2 className="h-4 w-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 

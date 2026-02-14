@@ -20,6 +20,7 @@ import {
     MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, limit, startAfter, Timestamp, QueryDocumentSnapshot } from 'firebase/firestore';
 import { format, parseISO, isValid } from 'date-fns';
@@ -35,6 +36,11 @@ export default function MobileFactoriesListPage() {
     const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+
+    const { userRole } = useAuth();
+    const canManageFactories = React.useMemo(() => {
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+    }, [userRole]);
 
     const fetchFactories = useCallback(async (isNextPage = false) => {
         if (isNextPage) setIsPaginating(true);
@@ -149,12 +155,14 @@ export default function MobileFactoriesListPage() {
                             <p className="text-[10px] font-bold text-blue-400/80 uppercase tracking-[0.2em]">Demo Machine Directory</p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => router.push('/mobile/service/factories-list/add')}
-                        className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10"
-                    >
-                        <Plus className="h-6 w-6" />
-                    </button>
+                    {canManageFactories && (
+                        <button
+                            onClick={() => router.push('/mobile/service/factories-list/add')}
+                            className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10"
+                        >
+                            <Plus className="h-6 w-6" />
+                        </button>
+                    )}
                 </div>
 
                 <div className="relative">
@@ -214,15 +222,17 @@ export default function MobileFactoriesListPage() {
                                             </p>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            router.push(`/mobile/service/factories-list/edit/${factory.id}`);
-                                        }}
-                                        className="relative z-10 bg-blue-50 text-[#0a1e60] p-2.5 rounded-xl active:scale-90 transition-all shadow-sm border border-blue-100"
-                                    >
-                                        <Edit2 className="h-4 w-4" />
-                                    </button>
+                                    {canManageFactories && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                router.push(`/mobile/service/factories-list/edit/${factory.id}`);
+                                            }}
+                                            className="relative z-10 bg-blue-50 text-[#0a1e60] p-2.5 rounded-xl active:scale-90 transition-all shadow-sm border border-blue-100"
+                                        >
+                                            <Edit2 className="h-4 w-4" />
+                                        </button>
+                                    )}
                                 </div>
 
                                 <div className="space-y-3">

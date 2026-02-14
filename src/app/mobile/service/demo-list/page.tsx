@@ -22,6 +22,7 @@ import {
     Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, getDocs, orderBy, Timestamp, limit, startAfter, QueryDocumentSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,11 @@ export default function MobileDemoListPage() {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
+
+    const { userRole } = useAuth();
+    const canManageDemoMachines = useMemo(() => {
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+    }, [userRole]);
 
     // Filter States
     const [searchQuery, setSearchQuery] = useState('');
@@ -184,12 +190,14 @@ export default function MobileDemoListPage() {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => router.push('/mobile/service/demo-list/add')}
-                        className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10"
-                    >
-                        <Plus className="h-6 w-6" />
-                    </button>
+                    {canManageDemoMachines && (
+                        <button
+                            onClick={() => router.push('/mobile/service/demo-list/add')}
+                            className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10"
+                        >
+                            <Plus className="h-6 w-6" />
+                        </button>
+                    )}
 
                     <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                         <SheetTrigger asChild>
@@ -357,13 +365,15 @@ export default function MobileDemoListPage() {
                                     </div>
 
                                     <div className="flex items-center justify-between gap-3 pt-4 border-t border-dashed border-slate-100">
-                                        <Button
-                                            className="flex-1 h-12 rounded-2xl bg-emerald-500 hover:bg-blue-600 active:bg-blue-700 text-white font-black text-xs gap-2 shadow-lg transition-all"
-                                            onClick={() => router.push(`/mobile/service/demo-list/edit/${machine.id}`)}
-                                        >
-                                            <FileEdit className="h-4 w-4" />
-                                            Edit Machine
-                                        </Button>
+                                        {canManageDemoMachines && (
+                                            <Button
+                                                className="flex-1 h-12 rounded-2xl bg-emerald-500 hover:bg-blue-600 active:bg-blue-700 text-white font-black text-xs gap-2 shadow-lg transition-all"
+                                                onClick={() => router.push(`/mobile/service/demo-list/edit/${machine.id}`)}
+                                            >
+                                                <FileEdit className="h-4 w-4" />
+                                                Edit Machine
+                                            </Button>
+                                        )}
                                         <Button
                                             className="flex-1 h-12 rounded-2xl bg-emerald-500 hover:bg-blue-600 active:bg-blue-700 text-white font-black text-xs gap-2 shadow-lg transition-all"
                                             onClick={() => {/* View logic or other action */ }}
