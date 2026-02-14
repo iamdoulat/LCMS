@@ -268,18 +268,19 @@ export default function MobileFactoriesListPage() {
                                             <div>
                                                 <p className="text-[9px] font-bold text-slate-400 uppercase leading-none mb-1">Cell</p>
                                                 {factory.cellNumber ? (
-                                                    <div className="flex items-center gap-3">
-                                                        <a href={`tel:${factory.cellNumber}`} className="text-xs font-black text-blue-600 hover:underline">
+                                                    <div className="space-y-2">
+                                                        <a href={`tel:${factory.cellNumber}`} className="text-xs font-black text-blue-600 hover:underline block">
                                                             {factory.cellNumber}
                                                         </a>
                                                         <a
                                                             href={`https://wa.me/${factory.cellNumber.replace(/\D/g, '')}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="p-1.5 bg-green-50 text-green-600 rounded-lg border border-green-100 active:scale-90 transition-all shadow-sm"
+                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-green-50 text-green-600 rounded-lg border border-green-100 active:scale-90 transition-all shadow-sm text-xs font-bold"
                                                             onClick={(e) => e.stopPropagation()}
                                                         >
                                                             <MessageCircle className="h-3.5 w-3.5" />
+                                                            WhatsApp
                                                         </a>
                                                     </div>
                                                 ) : (
