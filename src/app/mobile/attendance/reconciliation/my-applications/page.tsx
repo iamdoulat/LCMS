@@ -7,7 +7,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, parseISO, subDays, parse } from 'date-fns';
-import { ChevronLeft, Calendar, Clock, X, Plus, ArrowLeft, Edit2, Trash2 } from 'lucide-react';
+import { ChevronLeft, Calendar, Clock, X, Plus, ArrowLeft, Edit2, Trash2, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -296,8 +296,12 @@ export default function MyReconApplicationsPage() {
                         <ArrowLeft className="h-6 w-6" />
                     </button>
                     <h1 className="text-xl font-bold text-white ml-2 flex-1">My Recon. Application</h1>
-
-
+                    <button
+                        onClick={fetchRequests}
+                        className="p-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d] active:scale-95"
+                    >
+                        <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
                 </div>
             </div>
 
