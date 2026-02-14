@@ -292,19 +292,60 @@ export default function MobileTotalLCPage() {
         };
     }, [lcs, filterYear]);
 
-    const MiniStatCard = ({ title, value, icon: Icon, gradient, description }: any) => (
-        <div className={cn("p-2.5 rounded-2xl border border-white/5 relative overflow-hidden group shadow-sm shrink-0", gradient)}>
-            <div className="absolute -top-1 -right-1 p-1 opacity-20 group-hover:scale-110 transition-transform bg-white/10 rounded-full">
-                <Icon className="h-3 w-3 text-white" />
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.2
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100, damping: 15 } }
+    };
+
+    const MiniStatCard = ({ title, value, icon: Icon, gradient, description, delay = 0 }: any) => (
+        <motion.div
+            variants={itemVariants}
+            whileTap={{ scale: 0.98 }}
+            className={cn(
+                "p-3 rounded-2xl border border-white/10 relative overflow-hidden group shadow-lg shrink-0 h-full",
+                gradient
+            )}
+        >
+            {/* Glossy Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-50 pointer-events-none" />
+            <div className="absolute -inset-x-20 top-0 h-[200%] w-[40%] bg-gradient-to-r from-transparent via-white/5 to-transparent rotate-45 -translate-y-1/2 group-hover:translate-x-[400%] transition-transform duration-1000 ease-in-out pointer-events-none" />
+
+            {/* Background Icon */}
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-20 group-hover:scale-110 group-hover:-rotate-12 transition-all duration-500">
+                <Icon className="h-16 w-16 text-white" />
             </div>
-            <div className="flex flex-col gap-0.5 relative z-10">
-                <span className="text-sm font-bold text-white uppercase tracking-tight leading-none mb-1.5">{title}</span>
-                <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-black text-white leading-tight">{value}</span>
+
+            {/* Content */}
+            <div className="flex flex-col gap-1 relative z-10 h-full justify-between">
+                <div className="space-y-1">
+                    <span className="text-sm font-bold text-white uppercase tracking-tight leading-none block drop-shadow-sm">{title}</span>
+                    <div className="flex items-baseline gap-1">
+                        <motion.span
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.3 + delay, type: 'spring' }}
+                            className="text-2xl font-black text-white leading-tight drop-shadow-md"
+                        >
+                            {value}
+                        </motion.span>
+                    </div>
                 </div>
-                <span className="text-[10px] font-bold text-white/70 leading-none mt-1 truncate">{description}</span>
+                <span className="text-[10px] font-bold text-white/80 leading-snug truncate backdrop-blur-[2px] bg-black/5 px-2 py-0.5 rounded-lg w-fit">
+                    {description}
+                </span>
             </div>
-        </div>
+        </motion.div>
     );
 
     const clearFilters = () => {
@@ -520,50 +561,61 @@ export default function MobileTotalLCPage() {
 
                 <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-y-auto z-10 p-4 pb-32">
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-2 gap-2 mb-6">
+                    <motion.div
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="show"
+                        className="grid grid-cols-2 gap-3 mb-8"
+                    >
                         <MiniStatCard
                             title={`TOTAL L/CS (${yearStats.displayYear})`}
                             value={yearStats.totalOpened}
                             icon={Package}
-                            gradient="bg-gradient-to-br from-[#2563eb] to-[#4f46e5]"
+                            gradient="bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 shadow-blue-500/20"
                             description={`${yearStats.monthlyQty} L/C this month`}
+                            delay={0.1}
                         />
                         <MiniStatCard
                             title={`TOTAL VALUE (${yearStats.displayYear})`}
                             value={`$${(yearStats.totalValue / 1000000).toFixed(2)}M`}
                             icon={Banknote}
-                            gradient="bg-gradient-to-br from-[#10b981] to-[#059669]"
+                            gradient="bg-gradient-to-br from-emerald-500 via-emerald-400 to-teal-600 shadow-emerald-500/20"
                             description="Total value in USD"
+                            delay={0.2}
                         />
                         <MiniStatCard
                             title={`BENEFICIARIES (${yearStats.displayYear})`}
                             value={yearStats.activeBeneficiaries}
                             icon={Truck}
-                            gradient="bg-gradient-to-br from-[#8b5cf6] to-[#6366f1]"
+                            gradient="bg-gradient-to-br from-violet-600 via-purple-500 to-indigo-600 shadow-purple-500/20"
                             description="Unique suppliers"
+                            delay={0.3}
                         />
                         <MiniStatCard
                             title={`APPLICANTS (${yearStats.displayYear})`}
                             value={yearStats.activeApplicants}
                             icon={Factory}
-                            gradient="bg-gradient-to-br from-[#f97316] to-[#ef4444]"
+                            gradient="bg-gradient-to-br from-orange-500 via-orange-400 to-red-600 shadow-orange-500/20"
                             description="Unique customers"
+                            delay={0.4}
                         />
                         <MiniStatCard
                             title={`LINKED PIS (${yearStats.displayYear})`}
                             value={yearStats.linkedPIs}
                             icon={Layers}
-                            gradient="bg-gradient-to-br from-[#0ea5e9] to-[#2563eb]"
+                            gradient="bg-gradient-to-br from-sky-500 via-sky-400 to-blue-600 shadow-sky-500/20"
                             description="PIs connected to L/Cs"
+                            delay={0.5}
                         />
                         <MiniStatCard
                             title="MONTHLY QTY"
                             value={yearStats.monthlyQty}
                             icon={TrendingUp}
-                            gradient="bg-gradient-to-br from-[#a855f7] to-[#4f46e5]"
+                            gradient="bg-gradient-to-br from-fuchsia-600 via-purple-500 to-pink-600 shadow-fuchsia-500/20"
                             description={`Opened in ${yearStats.monthName}`}
+                            delay={0.6}
                         />
-                    </div>
+                    </motion.div>
 
                     {/* Search and Filter */}
                     <div className="mb-6 space-y-4">
