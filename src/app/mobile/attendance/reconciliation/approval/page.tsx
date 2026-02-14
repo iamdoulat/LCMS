@@ -65,7 +65,7 @@ export default function ReconApprovalPage() {
 
         // Check if user is Admin, HR or Supervisor (has Supervision Power)
         // Check if user has administrative rights
-        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer", "Supervisor"];
+        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
         const isAdmin = userRole?.some(role => privilegedRoles.includes(role));
 
         const hasSupervision = effectiveSupervisedEmployees.length > 0;
