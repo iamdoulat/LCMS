@@ -128,7 +128,16 @@ export default function MobileTotalLCPage() {
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
-
+    const getEffectiveYear = useCallback((lc: any) => {
+        if (lc.year) return Number(lc.year);
+        if (lc.lcIssueDate) return new Date(lc.lcIssueDate).getFullYear();
+        const dateRef = lc.updatedAt || lc.createdAt;
+        if (dateRef) {
+            const date = (dateRef as any).toDate ? (dateRef as any).toDate() : new Date(dateRef);
+            return date.getFullYear();
+        }
+        return new Date().getFullYear();
+    }, []);
     // Temporarily breaking the function
     const calculatedStatusCounts = useMemo(() => {
         const counts: Record<string, number> = {
@@ -139,7 +148,8 @@ export default function MobileTotalLCPage() {
         // We filter the raw fetched LCs by the "global" context filters (Year, Applicant, Beneficiary, Terms)
         // to get accurate counts for the current context. Search is excluded to keep tab totals useful.
         const contextFilteredLcs = lcs.filter(lc => {
-            const matchesYear = filterYear === 'All' || lc.year === Number(filterYear);
+            const lcYear = getEffectiveYear(lc);
+            const matchesYear = filterYear === 'All' || lcYear === Number(filterYear);
             const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
             const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
             const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
@@ -237,8 +247,10 @@ export default function MobileTotalLCPage() {
                 (lc.applicantName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (lc.beneficiaryName?.toLowerCase().includes(searchTerm.toLowerCase()));
 
+            const lcYear = getEffectiveYear(lc);
+
             const matchesStatus = filterStatus === 'All' || (Array.isArray(lc.status) ? (lc.status as any[]).includes(filterStatus) : (lc.status as any) === filterStatus);
-            const matchesYear = filterYear === 'All' || lc.year === Number(filterYear);
+            const matchesYear = filterYear === 'All' || lcYear === Number(filterYear);
             const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
             const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
             const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
@@ -267,7 +279,10 @@ export default function MobileTotalLCPage() {
         const currentYearNum = new Date().getFullYear();
         const currentMonth = new Date().getMonth(); // 0-indexed
 
-        const yearLcs = lcs.filter(lc => yearToFilter === null || lc.year === yearToFilter);
+        const yearLcs = lcs.filter(lc => {
+            const lcYear = getEffectiveYear(lc);
+            return yearToFilter === null || lcYear === yearToFilter;
+        });
 
         const totalValue = yearLcs.reduce((sum, lc) => sum + (Number(lc.amount) || 0), 0);
         const uniqueBeneficiaries = new Set(yearLcs.map(lc => lc.beneficiaryId).filter(Boolean)).size;
