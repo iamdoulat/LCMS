@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer, QrCode, Banknote, Box, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { useBreakTime } from '@/context/BreakTimeContext';
 import { firestore } from '@/lib/firebase/config';
-import { doc, getDoc, getDocs, collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, onSnapshot, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min, isFriday, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from 'framer-motion';
@@ -703,7 +704,37 @@ export default function MobileDashboardPage() {
                             <div className="flex flex-col items-center gap-4 relative z-10 w-full">
                                 <motion.button
                                     whileTap={{ scale: 0.9 }}
-                                    onClick={() => {
+                                    onClick={async () => {
+                                        // Validation: Check for pending Check-In
+                                        const canonicalId = currentEmployeeId || user?.uid;
+                                        if (canonicalId) {
+                                            try {
+                                                // Determine if there is a pending check-in (latest record is 'Check In')
+                                                const q = query(
+                                                    collection(firestore, 'multiple_check_inout'),
+                                                    where('employeeId', '==', canonicalId),
+                                                    orderBy('timestamp', 'desc'),
+                                                    limit(1)
+                                                );
+                                                const snapshot = await getDocs(q);
+                                                if (!snapshot.empty) {
+                                                    const latest = snapshot.docs[0].data();
+                                                    if (latest.type === 'Check In') {
+                                                        Swal.fire({
+                                                            title: "Action Restricted",
+                                                            text: "Please check out from Check In tab first.",
+                                                            icon: "error",
+                                                            timer: 3000,
+                                                            showConfirmButton: false
+                                                        });
+                                                        return;
+                                                    }
+                                                }
+                                            } catch (error) {
+                                                console.error("Error checking pending check-ins:", error);
+                                            }
+                                        }
+
                                         setAttendanceType('out');
                                         setIsAttendanceModalOpen(true);
                                     }}

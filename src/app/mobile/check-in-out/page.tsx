@@ -11,13 +11,14 @@ import { format } from 'date-fns';
 import { MobileCheckInOutModal } from '@/components/mobile/MobileCheckInOutModal';
 import type { MultipleCheckInOutConfiguration } from '@/types';
 import { type MultipleCheckInOutRecord } from '@/types/checkInOut';
+import type { HolidayDocument, LeaveApplicationDocument, EmployeeDocument } from '@/types';
 import { useRouter } from 'next/navigation';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar as CalendarIcon, X, Search, MapPin, ArrowRight, RefreshCw } from 'lucide-react';
-import { startOfDay, endOfDay } from 'date-fns';
+import { startOfDay, endOfDay, isFriday, isSameDay, parse, isAfter, isBefore, isValid } from 'date-fns';
 import { DynamicStorageImage } from '@/components/ui/DynamicStorageImage';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
@@ -89,6 +90,11 @@ export default function MobileCheckInOutPage() {
     // Multiple check in/out configuration
     const [multiCheckConfig, setMultiCheckConfig] = useState<MultipleCheckInOutConfiguration | null>(null);
 
+    // Validation Data
+    const [employeeProfile, setEmployeeProfile] = useState<EmployeeDocument | null>(null);
+    const [holidays, setHolidays] = useState<HolidayDocument[]>([]);
+    const [leaves, setLeaves] = useState<LeaveApplicationDocument[]>([]);
+
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
@@ -137,6 +143,42 @@ export default function MobileCheckInOutPage() {
                 }
 
                 setCurrentUserEmployeeId(canonicalId);
+
+                // Fetch full employee profile
+                if (canonicalId) {
+                    const empRef = doc(firestore, 'employees', canonicalId);
+                    const empSnap = await getDoc(empRef);
+                    if (empSnap.exists()) {
+                        setEmployeeProfile({ id: empSnap.id, ...empSnap.data() } as EmployeeDocument);
+                    }
+                }
+
+                // Fetch Holidays
+                try {
+                    const holidaysSnap = await getDocs(collection(firestore, 'holidays'));
+                    const holidaysData = holidaysSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as HolidayDocument));
+                    setHolidays(holidaysData);
+                } catch (error) {
+                    console.error("Error fetching holidays:", error);
+                }
+
+                // Fetch Approved Leaves for this employee
+                if (canonicalId) {
+                    try {
+                        const leavesQuery = query(
+                            collection(firestore, 'leave_applications'),
+                            where('employeeId', '==', canonicalId),
+                            where('status', '==', 'Approved')
+                        );
+                        const leavesSnap = await getDocs(leavesQuery);
+                        const leavesData = leavesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
+                        setLeaves(leavesData);
+                    } catch (error) {
+                        console.error("Error fetching leaves:", error);
+                    }
+                }
+
+                // Setup listener using canonicalId
 
                 // Setup listener using canonicalId
                 const qValues = query(
@@ -305,11 +347,13 @@ export default function MobileCheckInOutPage() {
             const hasNoCheckOut = !records.find(out => out.type === 'Check Out' && out.companyName === r.companyName && new Date(out.timestamp).getTime() > new Date(r.timestamp).getTime());
 
             // Check if it's within the 8 hour auto-done window
-            const checkInTime = new Date(r.timestamp).getTime();
-            const now = new Date().getTime();
-            const isWithinWindow = (now - checkInTime) / (1000 * 60 * 60) <= 8;
+            // User Request: If any pending Check in Running must be cloased or check out then can give Out time.
+            // Removing 8-hour window to strict enforcement.
+            // const checkInTime = new Date(r.timestamp).getTime();
+            // const now = new Date().getTime();
+            // const isWithinWindow = (now - checkInTime) / (1000 * 60 * 60) <= 8;
 
-            return isCheckIn && isUserRecord && hasNoCheckOut && isWithinWindow;
+            return isCheckIn && isUserRecord && hasNoCheckOut;
         });
 
         if (activeCheckIn) {
@@ -320,6 +364,90 @@ export default function MobileCheckInOutPage() {
                 confirmButtonColor: "#0a1e60"
             });
             return;
+        }
+
+        // VALIDATION LOGIC
+        const today = new Date();
+
+        // 1. Weekend Check (Friday)
+        if (isFriday(today)) {
+            Swal.fire({
+                title: "Weekend Restricted",
+                text: "Check-in is not allowed on weekends (Friday).",
+                icon: "error",
+                timer: 3000,
+                showConfirmButton: false
+            });
+            return;
+        }
+
+        // 2. Holiday Check
+        const isHoliday = holidays.some(h => {
+            const hStart = new Date(h.fromDate);
+            const hEnd = h.toDate ? new Date(h.toDate) : hStart;
+            // Check if today falls within holiday range
+            return (today >= startOfDay(hStart) && today <= endOfDay(hEnd));
+        });
+
+        if (isHoliday) {
+            Swal.fire({
+                title: "Holiday Restricted",
+                text: "Check-in is not allowed on holidays.",
+                icon: "error",
+                timer: 3000,
+                showConfirmButton: false
+            });
+            return;
+        }
+
+        // 3. Leave Check
+        const isOnLeave = leaves.some(l => {
+            const lStart = new Date(l.fromDate);
+            const lEnd = new Date(l.toDate);
+            return (today >= startOfDay(lStart) && today <= endOfDay(lEnd));
+        });
+
+        if (isOnLeave) {
+            Swal.fire({
+                title: "Leave Restricted",
+                text: "Check-in is not allowed while on approved leave.",
+                icon: "error",
+                timer: 3000,
+                showConfirmButton: false
+            });
+            return;
+        }
+
+        // 4. InTime Check & OutTime Check
+        // Assuming inTime/outTime are in 'HH:mm' format on the employee profile (custom fields)
+        // Since we don't have them in the interface, we'll cast to any or use the 'shift' logic if implemented.
+        // For now, checking 'inTime' property on employeeProfile (as any)
+        const empAny = employeeProfile as any;
+
+        if (!empAny?.inTime) {
+            Swal.fire({
+                title: "InTime Not Found",
+                text: "You do not have a scheduled InTime. Check-in not allowed.",
+                icon: "error",
+                timer: 3000,
+                showConfirmButton: false
+            });
+            return;
+        }
+
+        // 5. Check if current time is past OutTime
+        if (empAny?.outTime) {
+            const outTimeDate = parse(empAny.outTime, 'HH:mm', today);
+            if (isValid(outTimeDate) && isAfter(today, outTimeDate)) {
+                Swal.fire({
+                    title: "Shift Over",
+                    text: "Current time is past your scheduled OutTime. Check-in not allowed.",
+                    icon: "error",
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+                return;
+            }
         }
 
         setCheckInOutType('Check In');
@@ -339,6 +467,57 @@ export default function MobileCheckInOutPage() {
                 text: "Minimum 10 minutes required before Check Out.",
                 icon: "warning",
                 confirmButtonColor: "#0a1e60"
+            });
+            return;
+        }
+
+        // VALIDATION LOGIC
+        const today = new Date();
+
+        // 1. Weekend Check (Friday)
+        if (isFriday(today)) {
+            Swal.fire({
+                title: "Weekend Restricted",
+                text: "Check-out is not allowed on weekends (Friday).",
+                icon: "error",
+                timer: 3000,
+                showConfirmButton: false
+            });
+            return;
+        }
+
+        // 2. Holiday Check
+        const isHoliday = holidays.some(h => {
+            const hStart = new Date(h.fromDate);
+            const hEnd = h.toDate ? new Date(h.toDate) : hStart;
+            return (today >= startOfDay(hStart) && today <= endOfDay(hEnd));
+        });
+
+        if (isHoliday) {
+            Swal.fire({
+                title: "Holiday Restricted",
+                text: "Check-out is not allowed on holidays.",
+                icon: "error",
+                timer: 3000,
+                showConfirmButton: false
+            });
+            return;
+        }
+
+        // 3. Leave Check
+        const isOnLeave = leaves.some(l => {
+            const lStart = new Date(l.fromDate);
+            const lEnd = new Date(l.toDate);
+            return (today >= startOfDay(lStart) && today <= endOfDay(lEnd));
+        });
+
+        if (isOnLeave) {
+            Swal.fire({
+                title: "Leave Restricted",
+                text: "Check-out is not allowed while on approved leave.",
+                icon: "error",
+                timer: 3000,
+                showConfirmButton: false
             });
             return;
         }
