@@ -355,14 +355,15 @@ export default function MobileCheckInOutPage() {
             const isUserRecord = r.employeeId === currentUserEmployeeId;
             const hasNoCheckOut = !records.find(out => out.type === 'Check Out' && out.companyName === r.companyName && new Date(out.timestamp).getTime() > new Date(r.timestamp).getTime());
 
-            // Check if it's within the 8 hour auto-done window
-            // User Request: If any pending Check in Running must be cloased or check out then can give Out time.
-            // Removing 8-hour window to strict enforcement.
-            // const checkInTime = new Date(r.timestamp).getTime();
-            // const now = new Date().getTime();
-            // const isWithinWindow = (now - checkInTime) / (1000 * 60 * 60) <= 8;
+            // Check if it's within the auto-done window
+            // If the record is "System Auto Closed" (expired), we should NOT consider it active.
+            const isMaxLimitEnabled = multiCheckConfig?.isMaxHourLimitEnabled ?? true;
+            const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 8;
+            const checkInTime = new Date(r.timestamp).getTime();
+            const now = new Date().getTime();
+            const isExpired = isMaxLimitEnabled && ((now - checkInTime) > (maxHours * 60 * 60 * 1000));
 
-            return isCheckIn && isUserRecord && hasNoCheckOut;
+            return isCheckIn && isUserRecord && hasNoCheckOut && !isExpired;
         });
 
         if (activeCheckIn) {
