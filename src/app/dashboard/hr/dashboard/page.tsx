@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { BarChart3, Calendar, Briefcase, FileText, UserCheck, Cake, UserX, Coffee, Plane, Wallet, BookOpen, Loader2, Search, MoreHorizontal, MapPin, Bell, Clock, CreditCard } from 'lucide-react';
+import { BarChart3, Calendar, Briefcase, FileText, UserCheck, Cake, UserX, Coffee, Plane, Wallet, BookOpen, Loader2, Search, MoreHorizontal, MapPin, Bell, Clock, CreditCard, FileDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, onSnapshot, orderBy } from 'firebase/firestore';
@@ -472,6 +472,43 @@ export default function HrmDashboardPage() {
         });
     }, [employees]);
 
+    const handleExportMissedAttendance = () => {
+        if (!missedAttendanceInRange || missedAttendanceInRange.length === 0) {
+            Swal.fire("Info", "No missed attendance records to export.", "info");
+            return;
+        }
+
+        try {
+            // CSV Header
+            const headers = ["Date", "Employee Name", "Employee Code", "Designation", "Branch", "Department"];
+
+            // CSV Rows
+            const rows = missedAttendanceInRange.map(item => {
+                const date = format(item.date, 'yyyy-MM-dd');
+                const name = `"${item.employee.fullName.replace(/"/g, '""')}"`;
+                const code = item.employee.employeeCode || '';
+                const designation = `"${(item.employee.designation || '').replace(/"/g, '""')}"`;
+                const branch = `"${(item.employee.branch || '').replace(/"/g, '""')}"`;
+                const dept = `"${(item.employee.department || '').replace(/"/g, '""')}"`;
+
+                return [date, name, code, designation, branch, dept].join(",");
+            });
+
+            const csvContent = [headers.join(","), ...rows].join("\n");
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Missed_Attendance_${format(missedDateRange?.from || new Date(), 'yyyy-MM-dd')}_to_${format(missedDateRange?.to || new Date(), 'yyyy-MM-dd')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error("Export error:", error);
+            Swal.fire("Error", "Failed to export data.", "error");
+        }
+    };
+
 
     if (isLoading) {
         return (
@@ -868,7 +905,19 @@ export default function HrmDashboardPage() {
                                         <CardTitle>Attendance Missed</CardTitle>
                                         <CardDescription>Employees who missed attendance.</CardDescription>
                                     </div>
-                                    <DatePickerWithRange date={missedDateRange} onDateChange={setMissedDateRange} />
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-9 hidden sm:flex"
+                                            onClick={handleExportMissedAttendance}
+                                            disabled={missedAttendanceInRange.length === 0}
+                                        >
+                                            <FileDown className="mr-2 h-4 w-4" />
+                                            Export
+                                        </Button>
+                                        <DatePickerWithRange date={missedDateRange} onDateChange={setMissedDateRange} />
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-0">

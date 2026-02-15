@@ -758,6 +758,35 @@ export default function DailyAttendancePage() {
         return merged.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
     }, [employees, usersData]);
 
+    const attendanceByEmployee = React.useMemo(() => {
+        const map = new Map<string, AttendanceDocument[]>();
+        if (allAttendance && (employees || usersData)) {
+            allAttendance.forEach(att => {
+                // Find matching employee by ID OR UID
+                const matchedEmp = combinedEmployees.find(e => e.id === att.employeeId || e.uid === att.employeeId);
+                const employeeKey = matchedEmp ? matchedEmp.id : att.employeeId;
+
+                if (!map.has(employeeKey)) {
+                    map.set(employeeKey, []);
+                }
+                map.get(employeeKey)!.push(att);
+            });
+        }
+        return map;
+    }, [allAttendance, combinedEmployees, employees, usersData]);
+
+    const getDefaultFlag = (date: Date, employeeId: string, holidays: HolidayDocument[], leaves: LeaveApplicationDocument[], visits: VisitApplicationDocument[]): AttendanceFlag => {
+        const dayOfWeek = getDay(date);
+        if (dayOfWeek === 5) return 'W';
+        const isHoliday = holidays.some(h => isWithinDateInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+        if (isHoliday) return 'H';
+        const isOnLeave = leaves.some(l => l.employeeId === employeeId && isWithinDateInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) && l.status === 'Approved');
+        if (isOnLeave) return 'L';
+        const isOnVisit = visits.some(v => v.employeeId === employeeId && isWithinDateInterval(date, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }) && v.status === 'Approved');
+        if (isOnVisit) return 'V';
+        return 'A';
+    };
+
     const filteredEmployees = React.useMemo(() => {
         if (!combinedEmployees) return [];
 
@@ -815,34 +844,9 @@ export default function DailyAttendancePage() {
     };
 
 
-    const attendanceByEmployee = React.useMemo(() => {
-        const map = new Map<string, AttendanceDocument[]>();
-        if (allAttendance && (employees || usersData)) {
-            allAttendance.forEach(att => {
-                // Find matching employee by ID OR UID
-                const matchedEmp = combinedEmployees.find(e => e.id === att.employeeId || e.uid === att.employeeId);
-                const employeeKey = matchedEmp ? matchedEmp.id : att.employeeId;
 
-                if (!map.has(employeeKey)) {
-                    map.set(employeeKey, []);
-                }
-                map.get(employeeKey)!.push(att);
-            });
-        }
-        return map;
-    }, [allAttendance, combinedEmployees, employees, usersData]);
 
-    const getDefaultFlag = (date: Date, employeeId: string, holidays: HolidayDocument[], leaves: LeaveApplicationDocument[], visits: VisitApplicationDocument[]): AttendanceFlag => {
-        const dayOfWeek = getDay(date);
-        if (dayOfWeek === 5) return 'W';
-        const isHoliday = holidays.some(h => isWithinDateInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
-        if (isHoliday) return 'H';
-        const isOnLeave = leaves.some(l => l.employeeId === employeeId && isWithinDateInterval(date, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) && l.status === 'Approved');
-        if (isOnLeave) return 'L';
-        const isOnVisit = visits.some(v => v.employeeId === employeeId && isWithinDateInterval(date, { start: parseISO(v.fromDate), end: parseISO(v.toDate) }) && v.status === 'Approved');
-        if (isOnVisit) return 'V';
-        return 'A';
-    };
+
 
     const isLoading = isLoadingEmployees || isLoadingUsers || isLoadingBranches || isLoadingUnits || isLoadingDepts || isLoadingAttendance || isLoadingHolidays || isLoadingLeaves || isLoadingVisits;
 
