@@ -94,6 +94,7 @@ export default function MobileCheckInOutPage() {
     const [employeeProfile, setEmployeeProfile] = useState<EmployeeDocument | null>(null);
     const [holidays, setHolidays] = useState<HolidayDocument[]>([]);
     const [leaves, setLeaves] = useState<LeaveApplicationDocument[]>([]);
+    const [todayAttendance, setTodayAttendance] = useState<any>(null);
 
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -132,26 +133,36 @@ export default function MobileCheckInOutPage() {
                 const empDocSnap = await getDoc(empDocRef);
 
                 if (empDocSnap.exists()) {
-                    canonicalId = empDocSnap.id;
+                    setEmployeeProfile({ id: empDocSnap.id, ...empDocSnap.data() } as EmployeeDocument);
+                    canonicalId = empDocSnap.id; // Update canonicalId if found by UID
                 } else if (user.email) {
                     // Try to find by email
                     const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
                     const snap = await getDocs(q);
                     if (!snap.empty) {
-                        canonicalId = snap.docs[0].id;
+                        const empSnap = snap.docs[0];
+                        canonicalId = empSnap.id;
+                        setEmployeeProfile({ id: empSnap.id, ...empSnap.data() } as EmployeeDocument);
                     }
                 }
 
                 setCurrentUserEmployeeId(canonicalId);
 
-                // Fetch full employee profile
-                if (canonicalId) {
-                    const empRef = doc(firestore, 'employees', canonicalId);
-                    const empSnap = await getDoc(empRef);
-                    if (empSnap.exists()) {
-                        setEmployeeProfile({ id: empSnap.id, ...empSnap.data() } as EmployeeDocument);
+                // Fetch Today's Attendance to check if user has clocked in
+                let todayAttendanceData = null;
+                try {
+                    const today = new Date();
+                    const dateKey = format(today, 'yyyy-MM-dd');
+                    const attDocRef = doc(firestore, 'attendance', `${canonicalId}_${dateKey}`);
+                    const attDocSnap = await getDoc(attDocRef);
+                    if (attDocSnap.exists()) {
+                        todayAttendanceData = attDocSnap.data();
                     }
+                } catch (e) {
+                    console.error("Error fetching today's attendance:", e);
                 }
+                setTodayAttendance(todayAttendanceData);
+
 
                 // Fetch Holidays
                 try {
@@ -177,8 +188,6 @@ export default function MobileCheckInOutPage() {
                         console.error("Error fetching leaves:", error);
                     }
                 }
-
-                // Setup listener using canonicalId
 
                 // Setup listener using canonicalId
                 const qValues = query(
@@ -292,7 +301,7 @@ export default function MobileCheckInOutPage() {
                 let allPrivRecords: MultipleCheckInOutRecord[] = [];
                 for (const chunk of chunks) {
                     const q = query(
-                        collection(firestore, 'multiple_check_inout'),
+                        collection(firestore, 'multiple_check_in_out'),
                         where('employeeId', 'in', chunk)
                     );
                     const snap = await getDocs(q);
@@ -419,15 +428,18 @@ export default function MobileCheckInOutPage() {
         }
 
         // 4. InTime Check & OutTime Check
-        // Assuming inTime/outTime are in 'HH:mm' format on the employee profile (custom fields)
-        // Since we don't have them in the interface, we'll cast to any or use the 'shift' logic if implemented.
-        // For now, checking 'inTime' property on employeeProfile (as any)
         const empAny = employeeProfile as any;
 
-        if (!empAny?.inTime) {
+        // Check if InTime exists in Profile OR if user has an approved InTime for today in Attendance
+        // Logic: If Profile InTime is missing, but Attendance InTime exists, allow it.
+        // If both are missing, block.
+        const hasProfileInTime = !!empAny?.inTime;
+        const hasAttendanceInTime = !!todayAttendance?.inTime;
+
+        if (!hasProfileInTime && !hasAttendanceInTime) {
             Swal.fire({
                 title: "InTime Not Found",
-                text: "You do not have a scheduled InTime. Check-in not allowed.",
+                text: "You do not have a scheduled InTime or valid Attendance InTime. Check-in not allowed.",
                 icon: "error",
                 timer: 3000,
                 showConfirmButton: false
