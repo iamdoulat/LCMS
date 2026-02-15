@@ -31,6 +31,7 @@ const reportFilterSchema = z.object({
 type ReportFilterFormValues = z.infer<typeof reportFilterSchema>;
 
 const PLACEHOLDER_EMPLOYEE_VALUE = "__ATTENDANCE_REPORT_EMPLOYEE__";
+const ALL_EMPLOYEES_VALUE = "ALL_EMPLOYEES";
 
 const escapeCsvCell = (cellData: any): string => {
   if (cellData === null || cellData === undefined) {
@@ -122,54 +123,139 @@ export default function AttendanceReportPage() {
 
   const employeeOptions = React.useMemo(() => {
     if (!employees) return [];
-    return employees.map(emp => ({ value: emp.id, label: `${emp.fullName} (${emp.employeeCode})` }));
+    const options = employees.map(emp => ({ value: emp.id, label: `${emp.fullName} (${emp.employeeCode})` }));
+    return [{ value: ALL_EMPLOYEES_VALUE, label: "Select All Employees" }, ...options];
   }, [employees]);
 
   const handleGeneratePdf = async (data: ReportFilterFormValues) => {
     setIsLoadingReportData(true);
     try {
-      const attendanceQuery = query(
-        collection(firestore, "attendance"),
-        where("employeeId", "==", data.employeeId),
-        where("date", ">=", format(data.dateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx")),
-        where("date", "<=", format(data.dateRange.to, "yyyy-MM-dd'T'23:59:59.999xxx"))
-      );
-      const leavesQuery = query(
-        collection(firestore, "leave_applications"),
-        where("employeeId", "==", data.employeeId),
-        where("status", "==", "Approved")
-      );
+      const isAllEmployees = data.employeeId === ALL_EMPLOYEES_VALUE;
+      const targetEmployees = isAllEmployees ? employees || [] : employees?.filter(e => e.id === data.employeeId) || [];
+
+      if (targetEmployees.length === 0) {
+        Swal.fire("Error", "No employees found to generate report.", "error");
+        setIsLoadingReportData(false);
+        return;
+      }
+
+      // Fetch common data (holidays)
       const holidaysQuery = query(collection(firestore, "holidays"));
-      const breaksQuery = query(
-        collection(firestore, "break_time"),
-        where("employeeId", "==", data.employeeId)
-      );
+      const holidaysSnapshot = await getDocs(holidaysQuery);
+      const holidays = holidaysSnapshot.docs.map(d => d.data() as HolidayDocument);
 
-      const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, breaksSnapshot] = await Promise.all([
-        getDocs(attendanceQuery),
-        getDocs(leavesQuery),
-        getDocs(holidaysQuery),
-        getDocs(breaksQuery)
-      ]);
+      const reportDataList = [];
 
-      const reportData = {
-        employee: employees?.find(e => e.id === data.employeeId),
-        dateRange: {
-          from: format(data.dateRange.from, "yyyy-MM-dd"),
-          to: format(data.dateRange.to, "yyyy-MM-dd"),
-        },
-        attendance: attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument),
-        leaves: leavesSnapshot.docs.map(d => d.data() as LeaveApplicationDocument),
-        holidays: holidaysSnapshot.docs.map(d => d.data() as HolidayDocument),
-        breaks: breaksSnapshot.docs
-          .map(d => d.data() as any)
-          .filter((b: any) => b.date >= format(data.dateRange.from, "yyyy-MM-dd") && b.date <= format(data.dateRange.to, "yyyy-MM-dd")),
-      };
+      // Determine date range filters
+      const fromDateStr = format(data.dateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
+      const toDateStr = format(data.dateRange.to, "yyyy-MM-dd'T'23:59:59.999xxx");
+      const fromDateSimple = format(data.dateRange.from, "yyyy-MM-dd");
+      const toDateSimple = format(data.dateRange.to, "yyyy-MM-dd");
 
-      localStorage.setItem('jobCardReportData', JSON.stringify(reportData));
-      window.open(`/dashboard/hr/attendance/reports/print`, '_blank');
+      // For all employees, we fetch ALL attendance/leaves/breaks in range and then filter in memory to avoid N queries
+      // Note: If dataset is huge, this might need batching or cloud functions. Assuming manageable size for now.
+      // Optimization: Fetch all attendance for the date range, then filter by employee.
+
+      let allAttendance: AttendanceDocument[] = [];
+      let allLeaves: LeaveApplicationDocument[] = [];
+      let allBreaks: any[] = [];
+
+      if (isAllEmployees) {
+        const attendanceQuery = query(
+          collection(firestore, "attendance"),
+          where("date", ">=", fromDateStr),
+          where("date", "<=", toDateStr)
+        );
+        const leavesQuery = query(
+          collection(firestore, "leave_applications"),
+          where("status", "==", "Approved"),
+          // Can't easily filter by date range overlap in one query without complex logic or multiple queries
+          // So we might fetch active leaves or approved leaves and filter in memory if "All" is selected
+          // To be safe and avoid fetching ALL history, let's fetch approved leaves. 
+          // Optimization: Just fetch all approved leaves. It might be large but likely cached or manageable.
+          // Better: Fetch approved leaves where toDate >= fromDate. 
+          where("toDate", ">=", fromDateSimple)
+        );
+        const breaksQuery = query(
+          collection(firestore, "break_time"),
+          where("date", ">=", fromDateSimple),
+          where("date", "<=", toDateSimple)
+        );
+
+        const [attSnap, leavesSnap, breaksSnap] = await Promise.all([
+          getDocs(attendanceQuery),
+          getDocs(leavesQuery),
+          getDocs(breaksQuery)
+        ]);
+
+        allAttendance = attSnap.docs.map(d => d.data() as AttendanceDocument);
+        allLeaves = leavesSnap.docs.map(d => d.data() as LeaveApplicationDocument);
+        allBreaks = breaksSnap.docs.map(d => d.data() as any);
+      } else {
+        // Single employee fetch (optimized as before)
+        const attendanceQuery = query(
+          collection(firestore, "attendance"),
+          where("employeeId", "==", data.employeeId),
+          where("date", ">=", fromDateStr),
+          where("date", "<=", toDateStr)
+        );
+        const leavesQuery = query(
+          collection(firestore, "leave_applications"),
+          where("employeeId", "==", data.employeeId),
+          where("status", "==", "Approved")
+        );
+        const breaksQuery = query(
+          collection(firestore, "break_time"),
+          where("employeeId", "==", data.employeeId)
+        );
+
+        const [attSnap, leavesSnap, breaksSnap] = await Promise.all([
+          getDocs(attendanceQuery),
+          getDocs(leavesQuery),
+          getDocs(breaksQuery)
+        ]);
+
+        allAttendance = attSnap.docs.map(d => d.data() as AttendanceDocument);
+        allLeaves = leavesSnap.docs.map(d => d.data() as LeaveApplicationDocument);
+        allBreaks = breaksSnap.docs.map(d => d.data() as any);
+      }
+
+
+      for (const employee of targetEmployees) {
+        const employeeAttendance = allAttendance.filter(a => a.employeeId === employee.id);
+        const employeeLeaves = allLeaves.filter(l => l.employeeId === employee.id);
+        // Filter leaves for date overlap again to be precise
+        const employeeLeavesInRange = employeeLeaves.filter(l => {
+          const lStart = parseISO(l.fromDate);
+          const lEnd = parseISO(l.toDate);
+          const rStart = data.dateRange.from;
+          const rEnd = data.dateRange.to;
+          return (lStart <= rEnd && lEnd >= rStart);
+        });
+
+        const employeeBreaks = allBreaks
+          .filter(b => b.employeeId === employee.id && b.date >= fromDateSimple && b.date <= toDateSimple);
+
+        reportDataList.push({
+          employee: employee,
+          dateRange: {
+            from: fromDateSimple,
+            to: toDateSimple,
+          },
+          attendance: employeeAttendance,
+          leaves: employeeLeavesInRange,
+          holidays: holidays,
+          breaks: employeeBreaks,
+        });
+      }
+
+      localStorage.setItem('jobCardReportData', JSON.stringify(isAllEmployees ? reportDataList : reportDataList[0]));
+
+      // If single employee, existing behavior. If multiple, print page needs to handle array.
+      window.open(`/dashboard/hr/attendance/reports/print?mode=${isAllEmployees ? 'bulk' : 'single'}`, '_blank');
 
     } catch (error: any) {
+      console.error("Report generation error:", error);
       Swal.fire("Error", `Could not generate report data: ${error.message}`, "error");
     } finally {
       setIsLoadingReportData(false);
@@ -180,177 +266,244 @@ export default function AttendanceReportPage() {
   const handleExportToExcel = async (data: ReportFilterFormValues) => {
     setIsLoadingReportData(true);
     try {
-      const attendanceQuery = query(
-        collection(firestore, "attendance"),
-        where("employeeId", "==", data.employeeId),
-        where("date", ">=", format(data.dateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx")),
-        where("date", "<=", format(data.dateRange.to, "yyyy-MM-dd'T'23:59:59.999xxx"))
-      );
-      const leavesQuery = query(
-        collection(firestore, "leave_applications"),
-        where("employeeId", "==", data.employeeId),
-        where("status", "==", "Approved")
-      );
+      const isAllEmployees = data.employeeId === ALL_EMPLOYEES_VALUE;
+      const targetEmployees = isAllEmployees ? employees || [] : employees?.filter(e => e.id === data.employeeId) || [];
+
+      if (targetEmployees.length === 0) {
+        Swal.fire("Error", "No employees found to export.", "error");
+        setIsLoadingReportData(false);
+        return;
+      }
+
+      // Fetch common data (holidays)
       const holidaysQuery = query(collection(firestore, "holidays"));
-      const breaksQuery = query(
-        collection(firestore, "break_time"),
-        where("employeeId", "==", data.employeeId)
-      );
-
-      const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, breaksSnapshot] = await Promise.all([
-        getDocs(attendanceQuery),
-        getDocs(leavesQuery),
-        getDocs(holidaysQuery),
-        getDocs(breaksQuery)
-      ]);
-
-      const employee = employees?.find(e => e.id === data.employeeId);
-      const attendance = attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument);
-      const leaves = leavesSnapshot.docs.map(d => d.data() as LeaveApplicationDocument);
+      const holidaysSnapshot = await getDocs(holidaysQuery);
       const holidays = holidaysSnapshot.docs.map(d => d.data() as HolidayDocument);
-      const breaks = breaksSnapshot.docs
-        .map(d => d.data() as any)
-        .filter((b: any) => b.date >= format(data.dateRange.from, "yyyy-MM-dd") && b.date <= format(data.dateRange.to, "yyyy-MM-dd"));
+
+      // Determine date range filters
+      const fromDateStr = format(data.dateRange.from, "yyyy-MM-dd'T'00:00:00.000xxx");
+      const toDateStr = format(data.dateRange.to, "yyyy-MM-dd'T'23:59:59.999xxx");
+      const fromDateSimple = format(data.dateRange.from, "yyyy-MM-dd");
+      const toDateSimple = format(data.dateRange.to, "yyyy-MM-dd");
+
+      let allAttendance: AttendanceDocument[] = [];
+      let allLeaves: LeaveApplicationDocument[] = [];
+      let allBreaks: any[] = [];
+
+      if (isAllEmployees) {
+        const attendanceQuery = query(
+          collection(firestore, "attendance"),
+          where("date", ">=", fromDateStr),
+          where("date", "<=", toDateStr)
+        );
+        const leavesQuery = query(
+          collection(firestore, "leave_applications"),
+          where("status", "==", "Approved"),
+          where("toDate", ">=", fromDateSimple)
+        );
+        const breaksQuery = query(
+          collection(firestore, "break_time"),
+          where("date", ">=", fromDateSimple),
+          where("date", "<=", toDateSimple)
+        );
+
+        const [attSnap, leavesSnap, breaksSnap] = await Promise.all([
+          getDocs(attendanceQuery),
+          getDocs(leavesQuery),
+          getDocs(breaksQuery)
+        ]);
+
+        allAttendance = attSnap.docs.map(d => d.data() as AttendanceDocument);
+        allLeaves = leavesSnap.docs.map(d => d.data() as LeaveApplicationDocument);
+        allBreaks = breaksSnap.docs.map(d => d.data() as any);
+      } else {
+        const attendanceQuery = query(
+          collection(firestore, "attendance"),
+          where("employeeId", "==", data.employeeId),
+          where("date", ">=", fromDateStr),
+          where("date", "<=", toDateStr)
+        );
+        const leavesQuery = query(
+          collection(firestore, "leave_applications"),
+          where("employeeId", "==", data.employeeId),
+          where("status", "==", "Approved")
+        );
+        const breaksQuery = query(
+          collection(firestore, "break_time"),
+          where("employeeId", "==", data.employeeId)
+        );
+
+        const [attSnap, leavesSnap, breaksSnap] = await Promise.all([
+          getDocs(attendanceQuery),
+          getDocs(leavesQuery),
+          getDocs(breaksQuery)
+        ]);
+
+        allAttendance = attSnap.docs.map(d => d.data() as AttendanceDocument);
+        allLeaves = leavesSnap.docs.map(d => d.data() as LeaveApplicationDocument);
+        allBreaks = breaksSnap.docs.map(d => d.data() as any);
+      }
 
       const days = eachDayOfInterval({ start: data.dateRange.from, end: data.dateRange.to });
+      let csvContent = "";
 
-      // CSV Header for Employee Info
-      const empHeaders = ["Employee Code", "Employee Name", "Join Date", "Designation", "Branch", "Division", "Department", "Job Status"];
-      const empData = [
-        escapeCsvCell(employee?.employeeCode),
-        escapeCsvCell(employee?.fullName),
-        escapeCsvCell(formatDisplayDateForExport(employee?.joinedDate)),
-        escapeCsvCell(employee?.designation),
-        escapeCsvCell(employee?.branch),
-        escapeCsvCell(employee?.division),
-        escapeCsvCell(employee?.department),
-        escapeCsvCell(employee?.status),
-      ];
+      // Headers (only once at the top? Or repeated? Ideally repeated for readability if concatenated, but usually one header is best for machine reading. 
+      // However, the requirement is "job card report", usually implies printable layout. 
+      // But standard Excel export usually implies a data table. 
+      // The previous implementation created a human-readable laid out CSV with summary at bottom. 
+      // For bulk, let's stack them separated by blank lines.
 
-      // CSV Header for Attendance Table
-      const tableHeaders = ["Attendance Date", "Status", "Expected Duty (Hour)", "In Time", "Out Time", "Break Time (Hour)", "Actual Duty (Hour)", "Extra/Less Duty (Hour)", "Remarks"];
-
-      let csvContent = empHeaders.join(",") + "\n" + empData.join(",") + "\n\n" + tableHeaders.join(",") + "\n";
-
-      let presentCount = 0;
-      let absentCount = 0;
-      let delayCount = 0;
-      let leaveCount = 0;
-      let weekendCount = 0;
-      let holidayCount = 0;
-      let totalActualDutyMinutes = 0;
-      const expectedDutyHour = 9;
-
-      days.forEach(day => {
-        const dayOfWeek = getDay(day);
-        const formattedDate = format(day, 'yyyy-MM-dd');
-        let status = 'A';
-        let inTime = '';
-        let outTime = '';
-        let remarks = '';
-        let actualDutyMinutes = 0;
+      for (const employee of targetEmployees) {
+        const employeeAttendance = allAttendance.filter(a => a.employeeId === employee.id);
+        const employeeLeaves = allLeaves.filter(l => l.employeeId === employee.id);
+        const employeeBreaks = allBreaks.filter(b => b.employeeId === employee.id && b.date >= fromDateSimple && b.date <= toDateSimple);
 
 
-        const attendanceRecord = attendance.find((a: AttendanceDocument) => format(parseISO(a.date), 'yyyy-MM-dd') === formattedDate);
-        const leaveRecord = leaves.find((l: LeaveApplicationDocument) => isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
-        const holidayRecord = holidays.find((h: HolidayDocument) => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
-
-        if (dayOfWeek === 5) {
-          status = 'W';
-          weekendCount++;
-        } else if (holidayRecord) {
-          status = 'H';
-          holidayCount++;
-          remarks = holidayRecord.name;
-        } else if (leaveRecord) {
-          status = 'L';
-          leaveCount++;
-        } else if (attendanceRecord) {
-          status = attendanceRecord.flag;
-          inTime = attendanceRecord.inTime || '';
-          outTime = attendanceRecord.outTime || '';
-          remarks = [attendanceRecord.inTimeRemarks, attendanceRecord.outTimeRemarks].filter(Boolean).join('; ');
-        }
-
-        if (status === 'P' || status === 'D') {
-          presentCount++;
-          if (inTime) {
-            const inTimeDate = parse12HourTime(inTime, formattedDate);
-            const expectedInTimeDate = parseISO(`${formattedDate}T09:00:00`);
-            if (inTimeDate && inTimeDate > expectedInTimeDate) {
-              delayCount++;
-              status = 'D'; // Mark as delayed
-            }
-          }
-          if (inTime && outTime) {
-            const inTimeDate = parse12HourTime(inTime, formattedDate);
-            const outTimeDate = parse12HourTime(outTime, formattedDate);
-            if (inTimeDate && outTimeDate && outTimeDate > inTimeDate) {
-              const totalMins = differenceInMinutes(outTimeDate, inTimeDate);
-
-              // Fetch actual break for this day
-              const dayBreaks = breaks.filter((b: any) => b.date === formattedDate);
-              const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
-              // Deduct only break time exceeding 60 minutes from total duration
-              const excessBreakMins = Math.max(0, actualBreakMins - 60);
-              actualDutyMinutes = Math.max(0, totalMins - excessBreakMins);
-              totalActualDutyMinutes += actualDutyMinutes;
-            }
-          }
-        } else if (status === 'A') {
-          absentCount++;
-        }
-
-        const extraLessMinutes = actualDutyMinutes > 0 ? actualDutyMinutes - (expectedDutyHour * 60) : 0;
-
-        const dayBreaks = breaks.filter((b: any) => b.date === formattedDate);
-        const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
-        const breakTimeStr = formatDurationForExport(actualBreakMins);
-
-        const row = [
-          format(day, 'dd-MM-yyyy (EEE)'),
-          status,
-          (status === 'P' || status === 'D') ? formatDurationForExport(expectedDutyHour * 60) : '-',
-          formatTimeForExport(inTime),
-          formatTimeForExport(outTime),
-          (status === 'P' || status === 'D') ? breakTimeStr : '00:00',
-          actualDutyMinutes > 0 ? formatDurationForExport(actualDutyMinutes) : '-',
-          actualDutyMinutes > 0 ? formatDurationForExport(extraLessMinutes) : '-',
-          remarks
+        // CSV Header for Employee Info
+        const empHeaders = ["Employee Code", "Employee Name", "Join Date", "Designation", "Branch", "Division", "Department", "Job Status"];
+        const empData = [
+          escapeCsvCell(employee?.employeeCode),
+          escapeCsvCell(employee?.fullName),
+          escapeCsvCell(formatDisplayDateForExport(employee?.joinedDate)),
+          escapeCsvCell(employee?.designation),
+          escapeCsvCell(employee?.branch),
+          escapeCsvCell(employee?.division),
+          escapeCsvCell(employee?.department),
+          escapeCsvCell(employee?.status),
         ];
-        csvContent += row.map(escapeCsvCell).join(",") + "\n";
-      });
 
-      // Summary Section
-      const expectedTotalHours = presentCount * expectedDutyHour;
-      csvContent += "\n\n" + "Summary\n";
-      const summaryHeaders = ["Metric", "Value"];
-      const summaryData = [
-        ["Present", presentCount],
-        ["Absent", absentCount],
-        ["Delay", delayCount],
-        ["Leave", leaveCount],
-        ["Weekend", weekendCount],
-        ["Holiday", holidayCount],
-        ["Expected Duty Hour", formatDurationForExport(expectedTotalHours * 60)],
-        ["Actual Duty Hour", formatDurationForExport(totalActualDutyMinutes)],
-        ["Total Days (Available in office)", `${days.length} (${presentCount})`],
-        ["Extra/Less Duty Hours", formatDurationForExport(totalActualDutyMinutes - (expectedTotalHours * 60))],
-      ];
-      csvContent += summaryHeaders.join(",") + "\n";
-      csvContent += summaryData.map(row => row.map(escapeCsvCell).join(",")).join("\n");
+        // CSV Header for Attendance Table
+        const tableHeaders = ["Attendance Date", "Status", "Expected Duty (Hour)", "In Time", "Out Time", "Break Time (Hour)", "Actual Duty (Hour)", "Extra/Less Duty (Hour)", "Remarks"];
+
+        csvContent += empHeaders.join(",") + "\n" + empData.join(",") + "\n\n" + tableHeaders.join(",") + "\n";
+
+        let presentCount = 0;
+        let absentCount = 0;
+        let delayCount = 0;
+        let leaveCount = 0;
+        let weekendCount = 0;
+        let holidayCount = 0;
+        let totalActualDutyMinutes = 0;
+        const expectedDutyHour = 9;
+
+        days.forEach(day => {
+          const dayOfWeek = getDay(day);
+          const formattedDate = format(day, 'yyyy-MM-dd');
+          let status = 'A';
+          let inTime = '';
+          let outTime = '';
+          let remarks = '';
+          let actualDutyMinutes = 0;
+
+
+          const attendanceRecord = employeeAttendance.find((a: AttendanceDocument) => format(parseISO(a.date), 'yyyy-MM-dd') === formattedDate);
+          const leaveRecord = employeeLeaves.find((l: LeaveApplicationDocument) => isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
+          const holidayRecord = holidays.find((h: HolidayDocument) => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+
+          if (dayOfWeek === 5) {
+            status = 'W';
+            weekendCount++;
+          } else if (holidayRecord) {
+            status = 'H';
+            holidayCount++;
+            remarks = holidayRecord.name;
+          } else if (leaveRecord) {
+            status = 'L';
+            leaveCount++;
+          } else if (attendanceRecord) {
+            status = attendanceRecord.flag;
+            inTime = attendanceRecord.inTime || '';
+            outTime = attendanceRecord.outTime || '';
+            remarks = [attendanceRecord.inTimeRemarks, attendanceRecord.outTimeRemarks].filter(Boolean).join('; ');
+          }
+
+          if (status === 'P' || status === 'D') {
+            presentCount++;
+            if (inTime) {
+              const inTimeDate = parse12HourTime(inTime, formattedDate);
+              const expectedInTimeDate = parseISO(`${formattedDate}T09:00:00`);
+              if (inTimeDate && inTimeDate > expectedInTimeDate) {
+                delayCount++;
+                status = 'D'; // Mark as delayed
+              }
+            }
+            if (inTime && outTime) {
+              const inTimeDate = parse12HourTime(inTime, formattedDate);
+              const outTimeDate = parse12HourTime(outTime, formattedDate);
+              if (inTimeDate && outTimeDate && outTimeDate > inTimeDate) {
+                const totalMins = differenceInMinutes(outTimeDate, inTimeDate);
+
+                // Fetch actual break for this day
+                const dayBreaks = employeeBreaks.filter((b: any) => b.date === formattedDate);
+                const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
+                // Deduct only break time exceeding 60 minutes from total duration
+                const excessBreakMins = Math.max(0, actualBreakMins - 60);
+                actualDutyMinutes = Math.max(0, totalMins - excessBreakMins);
+                totalActualDutyMinutes += actualDutyMinutes;
+              }
+            }
+          } else if (status === 'A') {
+            absentCount++;
+          }
+
+          const extraLessMinutes = actualDutyMinutes > 0 ? actualDutyMinutes - (expectedDutyHour * 60) : 0;
+
+          const dayBreaks = employeeBreaks.filter((b: any) => b.date === formattedDate);
+          const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
+          const breakTimeStr = formatDurationForExport(actualBreakMins);
+
+          const row = [
+            format(day, 'dd-MM-yyyy (EEE)'),
+            status,
+            (status === 'P' || status === 'D') ? formatDurationForExport(expectedDutyHour * 60) : '-',
+            formatTimeForExport(inTime),
+            formatTimeForExport(outTime),
+            (status === 'P' || status === 'D') ? breakTimeStr : '00:00',
+            actualDutyMinutes > 0 ? formatDurationForExport(actualDutyMinutes) : '-',
+            actualDutyMinutes > 0 ? formatDurationForExport(extraLessMinutes) : '-',
+            remarks
+          ];
+          csvContent += row.map(escapeCsvCell).join(",") + "\n";
+        });
+
+        // Summary Section
+        const expectedTotalHours = presentCount * expectedDutyHour;
+        csvContent += "\n" + "Summary\n";
+        const summaryHeaders = ["Metric", "Value"];
+        const summaryData = [
+          ["Present", presentCount],
+          ["Absent", absentCount],
+          ["Delay", delayCount],
+          ["Leave", leaveCount],
+          ["Weekend", weekendCount],
+          ["Holiday", holidayCount],
+          ["Expected Duty Hour", formatDurationForExport(expectedTotalHours * 60)],
+          ["Actual Duty Hour", formatDurationForExport(totalActualDutyMinutes)],
+          ["Total Days (Available in office)", `${days.length} (${presentCount})`],
+          ["Extra/Less Duty Hours", formatDurationForExport(totalActualDutyMinutes - (expectedTotalHours * 60))],
+        ];
+        csvContent += summaryHeaders.join(",") + "\n";
+        csvContent += summaryData.map(row => row.map(escapeCsvCell).join(",")).join("\n");
+
+        // Add a separator between employees
+        csvContent += "\n" + "=".repeat(20) + "\n\n";
+      }
 
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      link.setAttribute("download", `Job_Card_${employee?.employeeCode}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+      const filename = isAllEmployees
+        ? `Job_Card_All_Employees_${format(new Date(), 'yyyy-MM-dd')}.csv`
+        : `Job_Card_${targetEmployees[0]?.employeeCode}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
     } catch (error: any) {
+      console.error("Export error:", error);
       Swal.fire("Error", `Could not export data: ${error.message}`, "error");
     } finally {
       setIsLoadingReportData(false);

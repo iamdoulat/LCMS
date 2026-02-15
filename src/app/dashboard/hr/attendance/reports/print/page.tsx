@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Printer, AlertTriangle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -68,93 +68,14 @@ const formatDuration = (minutes: number) => {
     return `${isNegative ? '-' : ''}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 };
 
-export default function PrintJobCardPage() {
-    const router = useRouter();
-    const printContainerRef = React.useRef<HTMLDivElement>(null);
-    const [reportData, setReportData] = React.useState<any>(null);
-    const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile | null>(null);
-    const [isLoading, setIsLoading] = React.useState(true);
-    const [error, setError] = React.useState<string | null>(null);
+const ReportContent = ({ data, companyProfile, pageBreakArgs }: { data: any, companyProfile: CompanyProfile | null, pageBreakArgs?: any }) => {
+    const { employee, dateRange, attendance, leaves, holidays, breaks } = data;
+    // Handle potential string dates if they haven't been parsed yet (localStorage stores strings)
+    // Actually date-fns parseISO handles ISO strings well.
+    const fromDate = typeof dateRange.from === 'string' ? parseISO(dateRange.from) : dateRange.from;
+    const toDate = typeof dateRange.to === 'string' ? parseISO(dateRange.to) : dateRange.to;
 
-    React.useEffect(() => {
-        const loadData = async () => {
-            setIsLoading(true);
-            setError(null);
-            try {
-                const dataString = localStorage.getItem('jobCardReportData');
-                if (!dataString) {
-                    throw new Error("Report data not found. Please generate the report again.");
-                }
-                const parsedData = JSON.parse(dataString);
-
-                const profileDocRef = doc(firestore, 'financial_settings', 'main_settings');
-                const profileDocSnap = await getDoc(profileDocRef);
-                if (profileDocSnap.exists()) {
-                    setCompanyProfile(profileDocSnap.data() as CompanyProfile);
-                }
-
-                setReportData(parsedData);
-            } catch (err: any) {
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        loadData();
-    }, []);
-
-    const handleDownloadPdf = async () => {
-        const input = printContainerRef.current;
-        if (!input) {
-            Swal.fire("Error", "Could not find the content to download.", "error");
-            return;
-        }
-
-        const utilityButtons = input.querySelector('.noprint') as HTMLElement;
-        if (utilityButtons) utilityButtons.style.display = 'none';
-
-        try {
-            const canvas = await html2canvas(input, { scale: 2, useCORS: true });
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgRatio = canvas.height / canvas.width;
-            const imgHeight = pdfWidth * imgRatio;
-            let heightLeft = imgHeight;
-
-            let position = 0;
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-            heightLeft -= pdfHeight;
-
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-                heightLeft -= pdfHeight;
-            }
-            pdf.save(`Job_Card_${reportData?.employee?.employeeCode}.pdf`);
-        } catch (error) {
-            console.error("Error generating PDF:", error);
-            Swal.fire("Error", "An error occurred while generating the PDF.", "error");
-        } finally {
-            if (utilityButtons) utilityButtons.style.display = 'flex';
-        }
-    };
-
-
-    if (isLoading) {
-        return <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4">Loading Report...</p></div>;
-    }
-    if (error) {
-        return <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white"><AlertTriangle className="h-12 w-12 text-destructive mb-4" /><p className="font-semibold text-destructive">{error}</p><Button onClick={() => router.back()} className="mt-4">Go Back</Button></div>;
-    }
-    if (!reportData) {
-        return <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white"><p>No data found.</p></div>;
-    }
-
-    const { employee, dateRange, attendance, leaves, holidays, breaks } = reportData;
-    const days = eachDayOfInterval({ start: parseISO(dateRange.from), end: parseISO(dateRange.to) });
+    const days = eachDayOfInterval({ start: fromDate, end: toDate });
 
     let presentCount = 0;
     let absentCount = 0;
@@ -248,7 +169,7 @@ export default function PrintJobCardPage() {
     const expectedTotalHours = presentCount * expectedDutyHour;
 
     return (
-        <div ref={printContainerRef} className="bg-white font-sans text-gray-800 p-8" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+        <div className="bg-white font-sans text-gray-800 p-8" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', ...pageBreakArgs }}>
             <header className="flex justify-between items-center mb-4">
                 <div>
                     {companyProfile?.companyLogoUrl && <Image src={companyProfile.invoiceLogoUrl || ''} alt="Company Logo" width={199} height={52} className="object-contain" data-ai-hint="company logo" />}
@@ -258,7 +179,7 @@ export default function PrintJobCardPage() {
                     <p className="text-xs whitespace-pre-line">{companyProfile?.address || 'LIVING CRYSTAL, HOUSE#50/A, 1ST FLOOR (B-1), ROAD#10, SECTOR#10, UTTARA, DHAKA-1230'}</p>
                 </div>
             </header>
-            <h2 className="text-center text-lg font-bold mb-4 underline">General Employee Job Card Report ({formatDisplayDate(dateRange.from)} To {formatDisplayDate(dateRange.to)})</h2>
+            <h2 className="text-center text-lg font-bold mb-4 underline">General Employee Job Card Report ({formatDisplayDate(typeof dateRange.from === 'string' ? dateRange.from : format(dateRange.from, 'yyyy-MM-dd'))} To {formatDisplayDate(typeof dateRange.to === 'string' ? dateRange.to : format(dateRange.to, 'yyyy-MM-dd'))})</h2>
 
             <Table className="mb-4 text-xs border">
                 <TableBody>
@@ -295,7 +216,133 @@ export default function PrintJobCardPage() {
                 <p>Printed On: {format(new Date(), 'dd-MM-yyyy hh:mm a')}</p>
                 <div className="flex justify-end mt-2">Page 1 of 1</div>
             </footer>
-            <div className="text-center mt-6 noprint flex justify-center gap-4">
+        </div>
+    );
+};
+
+export default function PrintJobCardPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const mode = searchParams.get('mode');
+    const printContainerRef = React.useRef<HTMLDivElement>(null);
+    const [reportData, setReportData] = React.useState<any>(null);
+    const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile | null>(null);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
+
+    const isBulkMode = mode === 'bulk';
+
+    React.useEffect(() => {
+        const loadData = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const dataString = localStorage.getItem('jobCardReportData');
+                if (!dataString) {
+                    throw new Error("Report data not found. Please generate the report again.");
+                }
+                const parsedData = JSON.parse(dataString);
+
+                const profileDocRef = doc(firestore, 'financial_settings', 'main_settings');
+                const profileDocSnap = await getDoc(profileDocRef);
+                if (profileDocSnap.exists()) {
+                    setCompanyProfile(profileDocSnap.data() as CompanyProfile);
+                }
+
+                setReportData(parsedData);
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadData();
+    }, []);
+
+    const handleDownloadPdf = async () => {
+        const input = printContainerRef.current;
+        if (!input) {
+            Swal.fire("Error", "Could not find the content to download.", "error");
+            return;
+        }
+
+        const utilityButtons = input.querySelector('.noprint') as HTMLElement;
+        if (utilityButtons) utilityButtons.style.display = 'none';
+
+        try {
+            // For bulk export, standard html2canvas + jsPDF loop
+            // Just printing current view as is.
+            // If array, we have multiple 'pages' rendered in DOM separated by css breaks.
+            // html2canvas takes a snapshot of the whole thing.
+            const canvas = await html2canvas(input, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const imgRatio = canvas.height / canvas.width;
+            const imgHeight = pdfWidth * imgRatio;
+            let heightLeft = imgHeight;
+
+            let position = 0;
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                heightLeft -= pdfHeight;
+            }
+
+            const fileName = isBulkMode
+                ? `Job_Card_All_Employees_${format(new Date(), 'yyyy-MM-dd')}.pdf`
+                : `Job_Card_${Array.isArray(reportData) ? reportData[0]?.employee?.employeeCode : reportData?.employee?.employeeCode}.pdf`;
+
+            pdf.save(fileName);
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            Swal.fire("Error", "An error occurred while generating the PDF.", "error");
+        } finally {
+            if (utilityButtons) utilityButtons.style.display = 'flex';
+        }
+    };
+
+
+    if (isLoading) {
+        return <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4">Loading Report...</p></div>;
+    }
+    if (error) {
+        return <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white"><AlertTriangle className="h-12 w-12 text-destructive mb-4" /><p className="font-semibold text-destructive">{error}</p><Button onClick={() => router.back()} className="mt-4">Go Back</Button></div>;
+    }
+    if (!reportData) {
+        return <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-white"><p>No data found.</p></div>;
+    }
+
+    return (
+        <div ref={printContainerRef} className="print-container">
+            <style jsx global>{`
+                @media print {
+                    @page { margin: 0; }
+                    body { margin: 1.6cm; }
+                    .print-page-break { page-break-after: always; }
+                    .noprint { display: none !important; }
+                }
+            `}</style>
+
+            {Array.isArray(reportData) ? (
+                reportData.map((data: any, index: number) => (
+                    <ReportContent
+                        key={index}
+                        data={data}
+                        companyProfile={companyProfile}
+                        pageBreakArgs={index < reportData.length - 1 ? { pageBreakAfter: 'always', className: 'print-page-break' } : {}}
+                    />
+                ))
+            ) : (
+                <ReportContent data={reportData} companyProfile={companyProfile} />
+            )}
+
+            <div className="text-center mt-6 noprint flex justify-center gap-4 py-8">
                 <Button onClick={handleDownloadPdf}><Download className="mr-2 h-4 w-4" />Download PDF</Button>
                 <Button onClick={() => window.print()} variant="outline"><Printer className="mr-2 h-4 w-4" />Print</Button>
             </div>
