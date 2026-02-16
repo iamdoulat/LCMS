@@ -151,45 +151,72 @@ Best Wishes,
                 // Use moment for reliable calendar date comparison
                 const empDob = moment(dobDate).format('MM-DD');
 
+
                 if (empDob === currentMonthDay) {
                     const employeeName = emp.fullName || emp.name || 'Employee';
                     const data = { employee_name: employeeName, company_name: companyName };
 
+                    console.log(`🎂 Birthday Match Found: ${employeeName} (ID: ${emp.id})`);
+                    console.log(`   - Email: ${emp.email || 'NOT SET'}`);
+                    console.log(`   - Phone: ${emp.phone || 'NOT SET'}`);
+                    console.log(`   - DOB: ${emp.dateOfBirth} → ${empDob}`);
+
                     // Send Email
                     if (emp.email) {
                         try {
-                            await sendEmail({ to: emp.email, templateSlug, data });
-                        } catch (e) { console.error(`Failed to send Birthday Email to ${emp.id}`, e); }
+                            console.log(`   → Attempting to send Birthday Email to ${emp.email}...`);
+                            const emailResult = await sendEmail({ to: emp.email, templateSlug, data });
+                            console.log(`   ✓ Email sent successfully:`, emailResult);
+                        } catch (e: any) {
+                            console.error(`   ✗ Failed to send Birthday Email to ${emp.id}:`, e.message);
+                        }
+                    } else {
+                        console.log(`   ⚠ Skipping Email: No email address`);
                     }
 
                     // Send WhatsApp
                     if (emp.phone) {
                         try {
+                            console.log(`   → Attempting to send Birthday WhatsApp to ${emp.phone}...`);
                             const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
-                            await sendWhatsApp({ to: emp.phone, templateSlug, data });
-                        } catch (e) { console.error(`Failed to send Birthday WA to ${emp.id}`, e); }
+                            const waResult = await sendWhatsApp({ to: emp.phone, templateSlug, data });
+                            console.log(`   ✓ WhatsApp sent successfully:`, waResult);
+                        } catch (e: any) {
+                            console.error(`   ✗ Failed to send Birthday WA to ${emp.id}:`, e.message);
+                        }
+                    } else {
+                        console.log(`   ⚠ Skipping WhatsApp: No phone number`);
                     }
 
                     // Send Telegram
                     try {
-                        await sendTelegram({ templateSlug, data });
-                    } catch (e) { console.error(`Failed to send Birthday Telegram for ${emp.id}`, e); }
+                        console.log(`   → Attempting to send Birthday Telegram...`);
+                        const teleResult = await sendTelegram({ templateSlug, data });
+                        console.log(`   ✓ Telegram sent successfully:`, teleResult);
+                    } catch (e: any) {
+                        console.error(`   ✗ Failed to send Birthday Telegram for ${emp.id}:`, e.message);
+                    }
 
                     // Send FCM Push Notification
                     try {
                         if (emp.uid) {
+                            console.log(`   → Attempting to send Birthday Push to ${emp.uid}...`);
                             const { sendServerPushNotification } = await import('@/lib/services/notification-service');
-                            await sendServerPushNotification({
+                            const pushResult = await sendServerPushNotification({
                                 title: 'Happy Birthday! 🎉',
                                 body: `Wishing you a fantastic day, ${employeeName}! 🎂`,
                                 userIds: [emp.uid],
                                 url: '/mobile/dashboard'
                             });
+                            console.log(`   ✓ Push notification sent successfully:`, pushResult);
                         }
-                    } catch (e) { console.error(`Failed to send Birthday Push for ${emp.id}`, e); }
+                    } catch (e: any) {
+                        console.error(`   ✗ Failed to send Birthday Push for ${emp.id}:`, e.message);
+                    }
 
                     sentCount++;
                 }
+
             }
         }
 
