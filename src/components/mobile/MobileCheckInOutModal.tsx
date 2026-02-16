@@ -62,16 +62,33 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
         return () => unsub();
     }, []);
 
+    // Cleanup object URLs to prevent memory leaks
+    useEffect(() => {
+        return () => {
+            if (imagePreview && imagePreview.startsWith('blob:')) {
+                URL.revokeObjectURL(imagePreview);
+            }
+        };
+    }, [imagePreview]);
+
     // Reset state on open
     useEffect(() => {
         if (isOpen) {
             setCompanyName(initialCompanyName || '');
             setRemarks('');
             setSelectedFile(null);
+            // Cleanup old preview if it exists
+            if (imagePreview && imagePreview.startsWith('blob:')) {
+                URL.revokeObjectURL(imagePreview);
+            }
             setImagePreview('');
             setAddress('');
             setCurrentLocation(null); // Clear location to trigger loading state
             updateLocation(true); // Force fresh location on every open
+
+            // Ensure file input is reset
+            const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
         }
     }, [isOpen, initialCompanyName]);
 
@@ -107,11 +124,19 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             setSelectedFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+
+            // Cleanup old preview if it exists
+            if (imagePreview && imagePreview.startsWith('blob:')) {
+                URL.revokeObjectURL(imagePreview);
+            }
+
+            // Create memory-efficient object URL instead of large Base64 string
+            const objectUrl = URL.createObjectURL(file);
+            setImagePreview(objectUrl);
+
+            // CRITICAL: Reset the input value so the same file (or camera trigger) 
+            // can be selected again if needed, and to clear browser memory references.
+            e.target.value = '';
         }
     };
 
