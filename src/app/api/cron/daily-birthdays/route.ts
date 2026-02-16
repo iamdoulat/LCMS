@@ -148,8 +148,8 @@ Best Wishes,
             }
 
             if (dobDate && !isNaN(dobDate.getTime())) {
-                // Use moment for reliable calendar date comparison
-                const empDob = moment(dobDate).format('MM-DD');
+                // Use moment for reliable calendar date comparison in company timezone
+                const empDob = moment(dobDate).tz(tz).format('MM-DD');
 
 
                 if (empDob === currentMonthDay) {

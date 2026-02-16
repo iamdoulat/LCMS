@@ -114,7 +114,7 @@ export async function GET(request: Request) {
             }
 
             if (dobDate && !isNaN(dobDate.getTime())) {
-                const empDob = moment(dobDate).format('MM-DD');
+                const empDob = moment(dobDate).tz(tz).format('MM-DD');
 
                 if (empDob === currentMonthDay) {
                     debugInfo.employeesWithBirthdayToday.push({
