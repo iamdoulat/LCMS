@@ -18,7 +18,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar as CalendarIcon, X, Search, MapPin, ArrowRight, RefreshCw } from 'lucide-react';
-import { startOfDay, endOfDay, isFriday, isSameDay, parse, isAfter, isBefore, isValid } from 'date-fns';
+import { startOfDay, endOfDay, isFriday, isSameDay, parse, isAfter, isBefore, isValid, subMonths } from 'date-fns';
 import { DynamicStorageImage } from '@/components/ui/DynamicStorageImage';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
@@ -73,8 +73,8 @@ export default function MobileCheckInOutPage() {
     const [filteredSupervisionRecords, setFilteredSupervisionRecords] = useState<MultipleCheckInOutRecord[]>([]);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filterEmployeeName, setFilterEmployeeName] = useState('');
-    const [filterFromDate, setFilterFromDate] = useState('');
-    const [filterToDate, setFilterToDate] = useState('');
+    const [filterFromDate, setFilterFromDate] = useState(format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
+    const [filterToDate, setFilterToDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [selectedRecordForAction, setSelectedRecordForAction] = useState<MultipleCheckInOutRecord | null>(null);
 
     // Full-screen image modal
@@ -237,17 +237,35 @@ export default function MobileCheckInOutPage() {
 
                 let allSupRecords: MultipleCheckInOutRecord[] = [];
                 for (const chunk of chunks) {
-                    const q = query(
+                    let q = query(
                         collection(firestore, 'multiple_check_inout'),
                         where('employeeId', 'in', chunk)
                     );
+
+                    // Apply date filters to the query if present
+                    if (filterFromDate) {
+                        const from = startOfDay(new Date(filterFromDate)).toISOString();
+                        q = query(q, where('timestamp', '>=', from));
+                    }
+                    if (filterToDate) {
+                        const to = endOfDay(new Date(filterToDate)).toISOString();
+                        q = query(q, where('timestamp', '<=', to));
+                    }
+
                     const snap = await getDocs(q);
                     snap.docs.forEach(doc => allSupRecords.push({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
                 }
 
                 allSupRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
                 setSupervisionRecords(allSupRecords);
-                setFilteredSupervisionRecords(allSupRecords);
+
+                // Client-side filtering for employee name (since 'in' query is already used)
+                let filtered = [...allSupRecords];
+                if (filterEmployeeName) {
+                    const lowerName = filterEmployeeName.toLowerCase();
+                    filtered = filtered.filter(r => r.employeeName?.toLowerCase().includes(lowerName));
+                }
+                setFilteredSupervisionRecords(filtered);
             } catch (err) {
                 console.error("Error fetching supervision records:", err);
             } finally {
@@ -256,7 +274,7 @@ export default function MobileCheckInOutPage() {
         };
 
         fetchSupervisionData();
-    }, [isSupervisor, effectiveSupervisedEmployeeIds, activeTab, refreshTrigger]);
+    }, [isSupervisor, effectiveSupervisedEmployeeIds, activeTab, refreshTrigger, filterFromDate, filterToDate]);
 
     // Fetch Privileged Role Check-Ins
     useEffect(() => {
@@ -323,27 +341,8 @@ export default function MobileCheckInOutPage() {
     // Fetch missing profiles for avatars
 
     const applyFilters = () => {
-        let filtered = [...supervisionRecords];
-
-        if (filterEmployeeName) {
-            const lowerName = filterEmployeeName.toLowerCase();
-            filtered = filtered.filter(r =>
-                (r.employeeName?.toLowerCase().includes(lowerName))
-            );
-        }
-
-
-        if (filterFromDate) {
-            const from = startOfDay(new Date(filterFromDate)).getTime();
-            filtered = filtered.filter(r => new Date(r.timestamp).getTime() >= from);
-        }
-
-        if (filterToDate) {
-            const to = endOfDay(new Date(filterToDate)).getTime();
-            filtered = filtered.filter(r => new Date(r.timestamp).getTime() <= to);
-        }
-
-        setFilteredSupervisionRecords(filtered);
+        // Just trigger the effect to re-fetch with new dates
+        setRefreshTrigger(prev => prev + 1);
         setIsFilterOpen(false);
     };
 
@@ -675,9 +674,8 @@ export default function MobileCheckInOutPage() {
 
     // Memoized record processing
     const filteredGroupedRecords = React.useMemo(() => {
-        // Deduplicate using a Map
         const uniqueRecordsMap = new Map();
-        [...records, ...privilegedRoleRecords, ...supervisionRecords].forEach(r => {
+        [...records, ...privilegedRoleRecords, ...filteredSupervisionRecords].forEach(r => {
             if (!uniqueRecordsMap.has(r.id)) {
                 uniqueRecordsMap.set(r.id, r);
             }
