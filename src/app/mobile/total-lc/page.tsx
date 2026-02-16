@@ -180,10 +180,20 @@ export default function MobileTotalLCPage() {
                 collection(firestore, "lc_entries")
             ];
 
-            // Only fetch by year if it doesn't break. Actually, for safety against index errors, 
-            // we fetch the most recent records and filter client-side.
+            // Apply year filter server-side for accurate stats
+            if (filterYear !== 'All') {
+                constraints.push(where("year", "==", Number(filterYear)));
+            }
+
+            // For "All" years or when no specific year is selected, we order by createdAt
+            // Note: If filterYear is applied, we might need a composite index for orderBy.
+            // To be safe and ensure "Whole Year" data is fetched even without complex indices,
+            // we'll try to fetch a larger batch for the selected year.
             constraints.push(orderBy("createdAt", "desc"));
-            constraints.push(limit(200)); // Increased limit to ensure better client-side filtering and counting
+
+            // Increased limit to ENSURE we get more data for the selected year/context
+            const fetchLimit = filterYear === 'All' ? 100 : 1000;
+            constraints.push(limit(fetchLimit));
 
             if (isLoadMore && lastDocRef.current) {
                 constraints.push(startAfter(lastDocRef.current));
@@ -205,16 +215,33 @@ export default function MobileTotalLCPage() {
 
             const lastVisible = snapshot.docs[snapshot.docs.length - 1];
             lastDocRef.current = (lastVisible as QueryDocumentSnapshot) || null;
-            setHasMore(snapshot.docs.length === 200);
+            setHasMore(snapshot.docs.length === fetchLimit);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error fetching LCs:", error);
+            // Handle index error gracefully
+            if (error?.message?.includes("index")) {
+                console.warn("Firestore Index required for this query. Falling back to client-side filter.");
+                // Fallback: fetch recent records without year constraint if index is missing
+                // This allows the page to still function while index is being created
+                try {
+                    const fallbackQuery = query(collection(firestore, "lc_entries"), orderBy("createdAt", "desc"), limit(200));
+                    const fallbackSnapshot = await getDocs(fallbackQuery);
+                    const fallbackLcs = fallbackSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...(doc.data() as any)
+                    } as LCEntryDocument));
+                    setLcs(fallbackLcs);
+                } catch (fallbackError) {
+                    console.error("Fallback fetch failed:", fallbackError);
+                }
+            }
         } finally {
             if (isLoadMore) setLoadingMore(false);
             else if (isManual) setTimeout(() => setIsRefreshing(false), 600);
             else setIsLoading(false);
         }
-    }, [filterStatus, filterYear, filterApplicant, filterBeneficiary, filterTerms]);
+    }, [filterYear]);
 
 
     // Note: Dependencies are empty because lastDoc is now a Ref
