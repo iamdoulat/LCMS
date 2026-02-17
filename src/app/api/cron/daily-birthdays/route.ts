@@ -42,8 +42,38 @@ export async function GET(request: Request) {
         const tz = await getCompanyTimezone();
         const todayBD = moment().tz(tz);
         const currentMonthDay = todayBD.format('MM-DD');
+        const currentHour = todayBD.hour();
 
-        console.log(`Birthday Cron checking for: ${currentMonthDay} (${tz}) [Local Time: ${todayBD.format('YYYY-MM-DD HH:mm:ss')}]`);
+        console.log(`Birthday Cron execution attempt at: ${todayBD.format('YYYY-MM-DD HH:mm:ss')} (${tz})`);
+
+        // Check if it's 9 AM (Alternative Smart Method)
+        // This allows the cron to be triggered every hour but only execute logic at 9 AM
+        if (currentHour !== 9) {
+            console.log(`- Skipping: Current hour is ${currentHour}, execution window is 9 AM.`);
+            return NextResponse.json({
+                success: true,
+                message: `Skipping: Current hour ${currentHour} is outside the 9 AM window.`
+            });
+        }
+
+        // Check for duplicate execution today
+        const startOfToday = todayBD.clone().startOf('day').toDate();
+        const duplicateCheck = await db.collection('cron_logs')
+            .where('job', '==', 'daily-birthdays')
+            .where('status', '==', 'success')
+            .where('executedAt', '>=', startOfToday)
+            .limit(1)
+            .get();
+
+        if (!duplicateCheck.empty) {
+            console.log(`- Skipping: Birthday wishes already successfully sent today.`);
+            return NextResponse.json({
+                success: true,
+                message: "Skipping: Birthday wishes already sent today."
+            });
+        }
+
+        console.log(`- Execution Window OK (9 AM). Checking for birthdays on: ${currentMonthDay}`);
 
         // 2. Auto-Seed Templates if missing
         const templateSlug = 'employee_birthday_wish';
@@ -119,7 +149,6 @@ Best Wishes,
         }
 
         // 3. Fetch Non-Terminated Employees
-        // Using 'status' field as per EmployeeSchema. Any status except 'Terminated' should receive wishes.
         const snapshot = await db.collection('employees').where('status', 'in', ['Active', 'On Leave']).get();
         const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
@@ -127,30 +156,28 @@ Best Wishes,
 
         // 4. Check for Birthdays
         for (const emp of employees) {
-            if (!emp.dateOfBirth) continue;
+            let dobMoment: moment.Moment | null = null;
+            const rawDob = emp.dateOfBirth;
 
-            let dobDate: Date | null = null;
-            if (emp.dateOfBirth.toDate) {
-                dobDate = emp.dateOfBirth.toDate();
-            } else if (typeof emp.dateOfBirth === 'string') {
-                // Handle different string formats (YYYY-MM-DD or DD-MM-YYYY)
-                const parts = emp.dateOfBirth.split(/[-/]/);
-                if (parts.length === 3) {
-                    if (parts[0].length === 4) { // YYYY-MM-DD
-                        dobDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                    } else if (parts[2].length === 4) { // DD-MM-YYYY
-                        dobDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            if (rawDob) {
+                if (rawDob.toDate) {
+                    dobMoment = moment(rawDob.toDate()).tz(tz);
+                } else if (typeof rawDob === 'string') {
+                    const isoMoment = moment(rawDob);
+                    if (isoMoment.isValid() && rawDob.includes('T')) {
+                        dobMoment = isoMoment.tz(tz);
+                    } else {
+                        const formats = ["YYYY-MM-DD", "DD-MM-YYYY", "MM-DD-YYYY", "DD/MM/YYYY", "MM/DD/YYYY"];
+                        const m = moment.tz(rawDob, formats, tz);
+                        if (m.isValid()) {
+                            dobMoment = m;
+                        }
                     }
-                }
-                if (!dobDate || isNaN(dobDate.getTime())) {
-                    dobDate = new Date(emp.dateOfBirth);
                 }
             }
 
-            if (dobDate && !isNaN(dobDate.getTime())) {
-                // Use moment for reliable calendar date comparison in company timezone
-                const empDob = moment(dobDate).tz(tz).format('MM-DD');
-
+            if (dobMoment && dobMoment.isValid()) {
+                const empDob = dobMoment.format('MM-DD');
 
                 if (empDob === currentMonthDay) {
                     const employeeName = emp.fullName || emp.name || 'Employee';
@@ -170,8 +197,6 @@ Best Wishes,
                         } catch (e: any) {
                             console.error(`   ✗ Failed to send Birthday Email to ${emp.id}:`, e.message);
                         }
-                    } else {
-                        console.log(`   ⚠ Skipping Email: No email address`);
                     }
 
                     // Send WhatsApp
@@ -184,8 +209,6 @@ Best Wishes,
                         } catch (e: any) {
                             console.error(`   ✗ Failed to send Birthday WA to ${emp.id}:`, e.message);
                         }
-                    } else {
-                        console.log(`   ⚠ Skipping WhatsApp: No phone number`);
                     }
 
                     // Send Telegram
@@ -202,13 +225,13 @@ Best Wishes,
                         if (emp.uid) {
                             console.log(`   → Attempting to send Birthday Push to ${emp.uid}...`);
                             const { sendServerPushNotification } = await import('@/lib/services/notification-service');
-                            const pushResult = await sendServerPushNotification({
+                            await sendServerPushNotification({
                                 title: 'Happy Birthday! 🎉',
                                 body: `Wishing you a fantastic day, ${employeeName}! 🎂`,
                                 userIds: [emp.uid],
                                 url: '/mobile/dashboard'
                             });
-                            console.log(`   ✓ Push notification sent successfully:`, pushResult);
+                            console.log(`   ✓ Push notification sent successfully`);
                         }
                     } catch (e: any) {
                         console.error(`   ✗ Failed to send Birthday Push for ${emp.id}:`, e.message);
@@ -216,7 +239,6 @@ Best Wishes,
 
                     sentCount++;
                 }
-
             }
         }
 

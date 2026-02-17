@@ -26,10 +26,13 @@ export async function GET(request: Request) {
         const tz = await getCompanyTimezone();
         const todayBD = moment().tz(tz);
         const currentMonthDay = todayBD.format('MM-DD');
+        const currentHour = todayBD.hour();
 
         const debugInfo: any = {
             timezone: tz,
             currentDate: todayBD.format('YYYY-MM-DD HH:mm:ss'),
+            currentHour: currentHour,
+            is9AMWindow: currentHour === 9,
             currentMonthDay: currentMonthDay,
             companyName: companyName,
             employeesWithBirthdayToday: []

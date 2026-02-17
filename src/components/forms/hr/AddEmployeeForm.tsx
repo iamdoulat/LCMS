@@ -43,6 +43,10 @@ const toComboboxOptions = (data: any[], labelKey: string): ComboboxOption[] => {
 };
 
 
+import { getCompanyName, getCompanyTimezone } from '@/lib/settings/company';
+import moment from 'moment-timezone';
+
+
 export function AddEmployeeForm() {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -242,6 +246,9 @@ export function AddEmployeeForm() {
     try {
       let photoDownloadURL: string | null = null;
 
+      // 1. Get Company Timezone for Date Normalization
+      const tz = await getCompanyTimezone();
+
       // Process image upload first (client-side)
       if (selectedFile) {
         const tempId = Math.random().toString(36).substring(2, 15);
@@ -255,16 +262,23 @@ export function AddEmployeeForm() {
 
       const fullName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ');
 
+      // Helper to normalize dates to the company timezone's midnight
+      const normalizeDate = (d?: Date) => {
+        if (!d) return null;
+        // Use YYYY-MM-DD from the local date picked in calendar, then interpret as company TZ midnight
+        return moment.tz(moment(d).format('YYYY-MM-DD'), tz).toISOString();
+      };
+
       const apiPayload = {
         ...data,
         leaveGroupName: selectedLeaveGroup?.groupName || '',
         fullName,
         photoURL: photoDownloadURL,
-        // Convert dates to ISO strings for JSON transport
-        dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString() : null,
-        joinedDate: data.joinedDate ? data.joinedDate.toISOString() : null,
-        jobStatusEffectiveDate: data.jobStatusEffectiveDate ? data.jobStatusEffectiveDate.toISOString() : null,
-        jobBaseEffectiveDate: data.jobBaseEffectiveDate ? data.jobBaseEffectiveDate.toISOString() : null,
+        // Convert dates to ISO strings for JSON transport with company timezone aware normalization
+        dateOfBirth: normalizeDate(data.dateOfBirth),
+        joinedDate: normalizeDate(data.joinedDate),
+        jobStatusEffectiveDate: normalizeDate(data.jobStatusEffectiveDate),
+        jobBaseEffectiveDate: normalizeDate(data.jobBaseEffectiveDate),
         educationDetails: data.educationDetails?.map(edu => ({
           ...edu,
           scale: Number(edu.scale) || undefined,
@@ -272,7 +286,7 @@ export function AddEmployeeForm() {
         })),
         salaryStructure: data.salaryStructure ? {
           ...data.salaryStructure,
-          structureDate: data.salaryStructure.structureDate ? data.salaryStructure.structureDate.toISOString() : null,
+          structureDate: normalizeDate(data.salaryStructure.structureDate),
           totalSalary: salaryAmount,
           totalIncrement: increasedAmount,
           grossSalary: totalAmount,
