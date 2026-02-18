@@ -22,7 +22,8 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { getSalaryCalculationSettings } from '@/lib/settings/salary-calculation';
-import { format, getDaysInMonth, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWithinInterval, parseISO } from 'date-fns';
+import { format, getDaysInMonth, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWithinInterval, parseISO, isValid, differenceInDays } from 'date-fns';
+import { getActivePolicyForDate } from '@/lib/attendance';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { sendPushNotification } from '@/lib/notifications';
 
@@ -283,8 +284,15 @@ export default function SalaryGenerationPage() {
                 for (const day of daysInterval) {
                     const dateKey = format(day, 'yyyy-MM-dd');
                     const breakMinutes = breaksMap[`${employee.id}_${dateKey}`] || 0;
-                    if (breakMinutes > threshold) {
-                        totalExcessBreakMinutes += (breakMinutes - threshold);
+
+                    // Fetch active policy for this day
+                    const activePolicy = getActivePolicyForDate(employee, day, attendancePolicies);
+                    const currentDayName = format(day, 'EEEE');
+                    const dailyPolicy = activePolicy?.dailyPolicies?.find((dp: DailyAttendancePolicy) => dp.day === currentDayName);
+                    const policyBreakMin = dailyPolicy?.breakTime ?? activePolicy?.breakTime ?? 60; // Fallback to 60 for legacy
+
+                    if (breakMinutes > policyBreakMin) {
+                        totalExcessBreakMinutes += (breakMinutes - policyBreakMin);
                     }
                 }
 

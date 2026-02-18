@@ -7,10 +7,11 @@ import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, orderBy, where, getDocs } from 'firebase/firestore';
-import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument } from '@/types';
+import type { EmployeeDocument, AttendanceDocument, HolidayDocument, LeaveApplicationDocument, AttendancePolicyDocument, DailyAttendancePolicy } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { cn } from '@/lib/utils';
 import { format, isValid, parseISO, eachDayOfInterval, differenceInMinutes, getDay, isWithinInterval } from 'date-fns';
+import { getActivePolicyForDate } from '@/lib/attendance';
 
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -104,6 +105,12 @@ export default function AttendanceReportPage() {
     query(collection(firestore, "employees"), orderBy("fullName")),
     undefined,
     ['employees_for_attendance_report']
+  );
+
+  const { data: attendancePolicies, isLoading: isLoadingPolicies } = useFirestoreQuery<AttendancePolicyDocument[]>(
+    query(collection(firestore, "hrm_settings/attendance_policies/items"), orderBy("name")),
+    undefined,
+    ['attendance_policies']
   );
 
   const [isLoadingReportData, setIsLoadingReportData] = React.useState(false);
@@ -246,6 +253,7 @@ export default function AttendanceReportPage() {
           leaves: employeeLeavesInRange,
           holidays: holidays,
           breaks: employeeBreaks,
+          attendancePolicies: attendancePolicies, // Pass policies to print page
         });
       }
 
@@ -433,11 +441,18 @@ export default function AttendanceReportPage() {
               if (inTimeDate && outTimeDate && outTimeDate > inTimeDate) {
                 const totalMins = differenceInMinutes(outTimeDate, inTimeDate);
 
+                // Fetch active policy for this day
+                const activePolicy = getActivePolicyForDate(employee, day, attendancePolicies || []);
+                const currentDayName = format(day, 'EEEE');
+                const dailyPolicy = activePolicy?.dailyPolicies?.find((dp: DailyAttendancePolicy) => dp.day === currentDayName);
+                const policyBreakMin = dailyPolicy?.breakTime ?? activePolicy?.breakTime ?? 60; // Fallback to 60 for legacy
+
                 // Fetch actual break for this day
                 const dayBreaks = employeeBreaks.filter((b: any) => b.date === formattedDate);
                 const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
-                // Deduct only break time exceeding 60 minutes from total duration
-                const excessBreakMins = Math.max(0, actualBreakMins - 60);
+
+                // Deduct only break time exceeding policy break time from total duration
+                const excessBreakMins = Math.max(0, actualBreakMins - policyBreakMin);
                 actualDutyMinutes = Math.max(0, totalMins - excessBreakMins);
                 totalActualDutyMinutes += actualDutyMinutes;
               }

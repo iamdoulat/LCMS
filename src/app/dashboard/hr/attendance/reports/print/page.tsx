@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Printer, AlertTriangle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { AttendanceDocument, HolidayDocument, LeaveApplicationDocument, CompanyProfile } from '@/types';
 import { format, parseISO, isValid, eachDayOfInterval, differenceInMinutes, getDay, isWithinInterval } from 'date-fns';
+import { getActivePolicyForDate } from '@/lib/attendance';
 import { firestore } from '@/lib/firebase/config';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import type { AttendanceDocument, HolidayDocument, LeaveApplicationDocument, CompanyProfile, AttendancePolicyDocument, DailyAttendancePolicy } from '@/types';
 import Image from 'next/image';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -68,7 +69,7 @@ const formatDuration = (minutes: number) => {
     return `${isNegative ? '-' : ''}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 };
 
-const ReportContent = ({ data, companyProfile, pageBreakArgs }: { data: any, companyProfile: CompanyProfile | null, pageBreakArgs?: any }) => {
+const ReportContent = ({ data, companyProfile, attendancePolicies, pageBreakArgs }: { data: any, companyProfile: CompanyProfile | null, attendancePolicies: AttendancePolicyDocument[], pageBreakArgs?: any }) => {
     const { employee, dateRange, attendance, leaves, holidays, breaks } = data;
     // Handle potential string dates if they haven't been parsed yet (localStorage stores strings)
     // Actually date-fns parseISO handles ISO strings well.
@@ -133,11 +134,18 @@ const ReportContent = ({ data, companyProfile, pageBreakArgs }: { data: any, com
                 if (inTimeDate && outTimeDate && outTimeDate > inTimeDate) {
                     const totalMins = differenceInMinutes(outTimeDate, inTimeDate);
 
+                    // Fetch active policy for this day
+                    const activePolicy = getActivePolicyForDate(employee, day, attendancePolicies || []);
+                    const currentDayName = format(day, 'EEEE');
+                    const dailyPolicy = activePolicy?.dailyPolicies?.find((dp: DailyAttendancePolicy) => dp.day === currentDayName);
+                    const policyBreakMin = dailyPolicy?.breakTime ?? activePolicy?.breakTime ?? 60; // Fallback to 60 for legacy
+
                     // Fetch actual break for this day
                     const dayBreaks = breaks?.filter((b: any) => b.date === formattedDate) || [];
                     const actualBreakMins = dayBreaks.reduce((sum: number, b: any) => sum + (b.durationMinutes || 0), 0);
-                    // Deduct only break time exceeding 60 minutes from total duration
-                    const excessBreakMins = Math.max(0, actualBreakMins - 60);
+
+                    // Deduct only break time exceeding policy break time from total duration
+                    const excessBreakMins = Math.max(0, actualBreakMins - policyBreakMin);
                     actualDutyMinutes = Math.max(0, totalMins - excessBreakMins);
                     totalActualDutyMinutes += actualDutyMinutes;
                 }
@@ -227,6 +235,7 @@ export default function PrintJobCardPage() {
     const printContainerRef = React.useRef<HTMLDivElement>(null);
     const [reportData, setReportData] = React.useState<any>(null);
     const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile | null>(null);
+    const [attendancePolicies, setAttendancePolicies] = React.useState<AttendancePolicyDocument[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
 
@@ -250,6 +259,18 @@ export default function PrintJobCardPage() {
                 }
 
                 setReportData(parsedData);
+
+                // Fetch policies if not passed in data
+                if (parsedData.attendancePolicies) {
+                    setAttendancePolicies(parsedData.attendancePolicies);
+                } else if (Array.isArray(parsedData) && parsedData[0]?.attendancePolicies) {
+                    setAttendancePolicies(parsedData[0].attendancePolicies);
+                } else {
+                    const policiesQuery = query(collection(firestore, "hrm_settings/attendance_policies/items"), orderBy("name"));
+                    const policiesSnap = await getDocs(policiesQuery);
+                    setAttendancePolicies(policiesSnap.docs.map(d => ({ id: d.id, ...d.data() } as AttendancePolicyDocument)));
+                }
+
             } catch (err: any) {
                 setError(err.message);
             } finally {
@@ -335,11 +356,12 @@ export default function PrintJobCardPage() {
                         key={index}
                         data={data}
                         companyProfile={companyProfile}
+                        attendancePolicies={attendancePolicies}
                         pageBreakArgs={index < reportData.length - 1 ? { pageBreakAfter: 'always', className: 'print-page-break' } : {}}
                     />
                 ))
             ) : (
-                <ReportContent data={reportData} companyProfile={companyProfile} />
+                <ReportContent data={reportData} companyProfile={companyProfile} attendancePolicies={attendancePolicies} />
             )}
 
             <div className="text-center mt-6 noprint flex justify-center gap-4 py-8">
