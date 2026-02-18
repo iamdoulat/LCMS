@@ -17,7 +17,7 @@ import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, where, getDocs, writeBatch, doc, serverTimestamp, getDoc, documentId } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { getDailyBreakMinutes } from '@/lib/firebase/breakTime';
-import type { BranchDocument, DepartmentDocument, UnitDocument, EmployeeDocument, Payslip, AttendanceDocument, LeaveApplicationDocument, HolidayDocument, SalaryGenerationPolicy } from '@/types';
+import type { BranchDocument, DepartmentDocument, UnitDocument, EmployeeDocument, Payslip, AttendanceDocument, LeaveApplicationDocument, HolidayDocument, SalaryGenerationPolicy, AttendancePolicyDocument, DailyAttendancePolicy } from '@/types';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
@@ -139,6 +139,32 @@ export default function SalaryGenerationPage() {
                 break;
         }
 
+        const getActivePolicyForDate = (employee: EmployeeDocument, date: Date, allPolicies: AttendancePolicyDocument[]) => {
+            const history = employee.policyHistory || [];
+            const targetDateStr = format(date, 'yyyy-MM-dd');
+
+            if (history.length === 0) {
+                return allPolicies.find((p: AttendancePolicyDocument) => p.id === employee.attendancePolicyId);
+            }
+
+            const sortedHistory = [...history].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+            const assignment = sortedHistory.find(h => {
+                try {
+                    const effectiveDate = format(parseISO(h.effectiveFrom), 'yyyy-MM-dd');
+                    return effectiveDate <= targetDateStr;
+                } catch (err) {
+                    return false;
+                }
+            });
+
+            if (assignment) {
+                return allPolicies.find((p: AttendancePolicyDocument) => p.id === assignment.policyId);
+            }
+
+            const firstAssignment = sortedHistory[sortedHistory.length - 1];
+            return allPolicies.find((p: AttendancePolicyDocument) => p.id === (firstAssignment?.policyId || employee.attendancePolicyId));
+        };
+
         try {
             const employeesSnapshot = await getDocs(employeesToProcessQuery);
             if (employeesSnapshot.empty) {
@@ -152,18 +178,20 @@ export default function SalaryGenerationPage() {
             const startDate = startOfMonth(new Date(year, monthIndex));
             const endDate = endOfMonth(new Date(year, monthIndex));
 
-            const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, policySnapshot, breaksSnapshot, calcSettings] = await Promise.all([
+            const [attendanceSnapshot, leavesSnapshot, holidaysSnapshot, policySnapshot, breaksSnapshot, calcSettings, attendancePoliciesSnapshot] = await Promise.all([
                 getDocs(query(collection(firestore, "attendance"), where("date", ">=", format(startDate, "yyyy-MM-dd'T'00:00:00.000xxx")), where("date", "<=", format(endDate, "yyyy-MM-dd'T'23:59:59.999xxx")))),
                 getDocs(query(collection(firestore, "leave_applications"), where("status", "==", "Approved"))),
                 getDocs(collection(firestore, "holidays")),
                 getDoc(doc(firestore, 'hrm_settings', 'salary_generation_policy')),
                 getDocs(query(collection(firestore, "break_time"), where("date", ">=", format(startDate, "yyyy-MM-dd")), where("date", "<=", format(endDate, "yyyy-MM-dd")), where("status", "!=", "rejected"))),
-                getSalaryCalculationSettings()
+                getSalaryCalculationSettings(),
+                getDocs(collection(firestore, "attendance_policies"))
             ]);
 
             const attendanceRecs = attendanceSnapshot.docs.map(d => d.data() as AttendanceDocument);
             const approvedLeaves = leavesSnapshot.docs.map(d => d.data() as LeaveApplicationDocument);
             const holidays = holidaysSnapshot.docs.map(d => d.data() as HolidayDocument);
+            const attendancePolicies = attendancePoliciesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as AttendancePolicyDocument));
 
             // Create a break lookup map: employeeId_date -> totalDurationMinutes
             const breaksMap: Record<string, number> = {};
@@ -219,13 +247,21 @@ export default function SalaryGenerationPage() {
 
                 daysInterval.forEach(day => {
                     const attendance = attendanceRecs.find(a => a.employeeId === employee.id && format(new Date(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+
+                    const activePolicy = getActivePolicyForDate(employee, day, attendancePolicies);
+                    const currentDayName = format(day, 'EEEE');
+                    const dailyPolicy = activePolicy?.dailyPolicies?.find((dp: DailyAttendancePolicy) => dp.day === currentDayName);
+
                     const dayOfWeek = getDay(day);
 
-                    // FIX: Use optional chaining for all policy checks
-                    const isWeeklyHoliday = dayOfWeek === 5 && (salaryPolicy?.includeWeeklyHoliday ?? false);
+                    // Holiday/Leave logic from salaryPolicy
                     const isGovtHoliday = holidays.some(h => h.type === 'Public Holiday' && isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })) && (salaryPolicy?.includeGovtHoliday ?? false);
                     const isFestivalHoliday = holidays.some(h => h.type === 'Company Holiday' && isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })) && (salaryPolicy?.includeFestivalHoliday ?? false);
                     const isOnLeave = approvedLeaves.some(l => l.employeeId === employee.id && isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }) && l.status === 'Approved');
+
+                    // Weekend logic: combine salaryPolicy and employee's activePolicy
+                    const isWeeklyHoliday = (dayOfWeek === 5 && (salaryPolicy?.includeWeeklyHoliday ?? false)) ||
+                        (dailyPolicy?.workingType === 'Weekend' || dailyPolicy?.workingType === 'Off Day');
 
                     if (attendance) {
                         if (attendance.flag === 'A') {
@@ -257,6 +293,11 @@ export default function SalaryGenerationPage() {
                 if (data.includeOverTime) {
                     daysInterval.forEach(day => {
                         const attendance = attendanceRecs.find(a => a.employeeId === employee.id && format(new Date(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+
+                        // Respect ignoreOtAndDeduction flag from record or policy
+                        const activePolicy = getActivePolicyForDate(employee, day, attendancePolicies);
+                        if (attendance?.ignoreOtAndDeduction || activePolicy?.ignoreOtAndDeduction) return;
+
                         if (attendance && attendance.inTime && attendance.outTime) {
                             const inMin = getTimeInMinutes(attendance.inTime);
                             const outMin = getTimeInMinutes(attendance.outTime);
@@ -266,7 +307,18 @@ export default function SalaryGenerationPage() {
                                 // Handle overnight shift if necessary (outMin < inMin)
                                 if (workedMin < 0) workedMin += 1440;
 
-                                const extraMin = workedMin - 480; // 8 hours = 480 min
+                                // Determine required hours for this day
+                                const currentDayName = format(day, 'EEEE');
+                                const dailyPolicy = activePolicy?.dailyPolicies?.find((dp: DailyAttendancePolicy) => dp.day === currentDayName);
+
+                                const policyWorkingHoursStr = dailyPolicy?.workingHours || activePolicy?.workingHours || "08:00";
+                                const policyBreakMin = dailyPolicy?.breakTime ?? activePolicy?.breakTime ?? 60;
+
+                                const [h, m] = policyWorkingHoursStr.split(':').map(Number);
+                                const requiredMin = (h * 60) + (m || 0);
+
+                                // OT = Gross worked time - Break time - Required work time
+                                const extraMin = workedMin - policyBreakMin - requiredMin;
                                 if (extraMin >= 30) {
                                     totalMonthlyOTMinutes += extraMin;
                                 }
