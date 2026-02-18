@@ -41,7 +41,7 @@ export default function MobileCataloguesPage() {
     }, [userRole]);
 
     const canManageCatalogues = React.useMemo(() => {
-        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin', 'DemoManager'].includes(role)) ?? false;
     }, [userRole]);
 
     const fetchCatalogues = async (isNextPage = false) => {

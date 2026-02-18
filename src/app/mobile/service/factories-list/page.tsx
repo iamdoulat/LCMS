@@ -39,7 +39,7 @@ export default function MobileFactoriesListPage() {
 
     const { userRole } = useAuth();
     const canManageFactories = React.useMemo(() => {
-        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin', 'DemoManager'].includes(role)) ?? false;
     }, [userRole]);
 
     const fetchFactories = useCallback(async (isNextPage = false) => {

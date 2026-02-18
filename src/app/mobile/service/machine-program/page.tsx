@@ -78,7 +78,7 @@ export default function MobileMachineProgramPage() {
 
     const { userRole } = useAuth();
     const canManageMachinePrograms = React.useMemo(() => {
-        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin', 'DemoManager'].includes(role)) ?? false;
     }, [userRole]);
 
     const fetchApplications = useCallback(async (isNextPage = false) => {

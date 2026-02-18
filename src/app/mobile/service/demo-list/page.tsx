@@ -83,7 +83,7 @@ export default function MobileDemoListPage() {
 
     const { userRole } = useAuth();
     const canManageDemoMachines = useMemo(() => {
-        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin', 'DemoManager'].includes(role)) ?? false;
     }, [userRole]);
 
     // Filter States
@@ -190,78 +190,80 @@ export default function MobileDemoListPage() {
                         </div>
                     </div>
 
-                    {canManageDemoMachines && (
-                        <button
-                            onClick={() => router.push('/mobile/service/demo-list/add')}
-                            className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10"
-                        >
-                            <Plus className="h-6 w-6" />
-                        </button>
-                    )}
+                    <div className="flex gap-2">
+                        <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                            <SheetTrigger asChild>
+                                <button className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10">
+                                    <Filter className="h-6 w-6" />
+                                </button>
+                            </SheetTrigger>
+                            <SheetContent side="bottom" className="rounded-t-[2.5rem] p-8 max-h-[85vh] overflow-y-auto border-none">
+                                <SheetHeader className="mb-6 text-left">
+                                    <SheetTitle className="text-xl font-black text-[#0a1e60]">Filter Machines</SheetTitle>
+                                    <p className="text-sm text-slate-500 font-medium">Refine your demo machine search.</p>
+                                </SheetHeader>
 
-                    <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                        <SheetTrigger asChild>
-                            <button className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10">
-                                <Filter className="h-6 w-6" />
+                                <div className="space-y-6 pb-8">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Status</label>
+                                        <Select value={filterStatus} onValueChange={setFilterStatus}>
+                                            <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-slate-100 font-bold">
+                                                <SelectValue placeholder="All Statuses" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
+                                                {demoMachineStatusOptions.map(opt => (
+                                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Machine Owner</label>
+                                        <Select value={filterOwner} onValueChange={setFilterOwner}>
+                                            <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-slate-100 font-bold">
+                                                <SelectValue placeholder="All Owners" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value={ALL_OWNERS_VALUE}>All Owners</SelectItem>
+                                                {demoMachineOwnerOptions.map(opt => (
+                                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <Button
+                                        className="w-full h-14 rounded-2xl bg-[#0a1e60] hover:bg-blue-900 text-white font-black text-lg shadow-xl active:scale-95 transition-all mt-4"
+                                        onClick={() => setIsFilterOpen(false)}
+                                    >
+                                        Apply Filters
+                                    </Button>
+
+                                    <Button
+                                        variant="ghost"
+                                        className="w-full h-12 text-slate-400 font-black hover:text-slate-600"
+                                        onClick={() => {
+                                            setFilterStatus(ALL_STATUSES_VALUE);
+                                            setFilterOwner(ALL_OWNERS_VALUE);
+                                        }}
+                                    >
+                                        Reset Filters
+                                    </Button>
+                                </div>
+                            </SheetContent>
+                        </Sheet>
+
+                        {canManageDemoMachines && (
+                            <button
+                                onClick={() => router.push('/mobile/service/demo-list/add')}
+                                className="p-3 bg-white/10 text-white rounded-2xl active:scale-95 transition-all backdrop-blur-md border border-white/10"
+                            >
+                                <Plus className="h-6 w-6" />
                             </button>
-                        </SheetTrigger>
-                        <SheetContent side="bottom" className="rounded-t-[2.5rem] p-8 max-h-[85vh] overflow-y-auto border-none">
-                            <SheetHeader className="mb-6 text-left">
-                                <SheetTitle className="text-xl font-black text-[#0a1e60]">Filter Machines</SheetTitle>
-                                <p className="text-sm text-slate-500 font-medium">Refine your demo machine search.</p>
-                            </SheetHeader>
-
-                            <div className="space-y-6 pb-8">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Status</label>
-                                    <Select value={filterStatus} onValueChange={setFilterStatus}>
-                                        <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-slate-100 font-bold">
-                                            <SelectValue placeholder="All Statuses" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value={ALL_STATUSES_VALUE}>All Statuses</SelectItem>
-                                            {demoMachineStatusOptions.map(opt => (
-                                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Machine Owner</label>
-                                    <Select value={filterOwner} onValueChange={setFilterOwner}>
-                                        <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-slate-100 font-bold">
-                                            <SelectValue placeholder="All Owners" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value={ALL_OWNERS_VALUE}>All Owners</SelectItem>
-                                            {demoMachineOwnerOptions.map(opt => (
-                                                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <Button
-                                    className="w-full h-14 rounded-2xl bg-[#0a1e60] hover:bg-blue-900 text-white font-black text-lg shadow-xl active:scale-95 transition-all mt-4"
-                                    onClick={() => setIsFilterOpen(false)}
-                                >
-                                    Apply Filters
-                                </Button>
-
-                                <Button
-                                    variant="ghost"
-                                    className="w-full h-12 text-slate-400 font-black hover:text-slate-600"
-                                    onClick={() => {
-                                        setFilterStatus(ALL_STATUSES_VALUE);
-                                        setFilterOwner(ALL_OWNERS_VALUE);
-                                    }}
-                                >
-                                    Reset Filters
-                                </Button>
-                            </div>
-                        </SheetContent>
-                    </Sheet>
+                        )}
+                    </div>
                 </div>
 
                 <div className="relative">

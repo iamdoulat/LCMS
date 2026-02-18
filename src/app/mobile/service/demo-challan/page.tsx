@@ -34,7 +34,7 @@ export default function MobileDemoChallanPage() {
     const router = useRouter();
     const { companyName, userRole } = useAuth();
     const canManageDemoChallans = React.useMemo(() => {
-        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin'].includes(role)) ?? false;
+        return userRole?.some((role: string) => ['Admin', 'Service', 'Super Admin', 'DemoManager'].includes(role)) ?? false;
     }, [userRole]);
 
     const [challans, setChallans] = useState<DemoChallanDocument[]>([]);
