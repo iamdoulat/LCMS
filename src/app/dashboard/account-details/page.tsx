@@ -2648,7 +2648,7 @@ export default function AccountDetailsPage() {
                     type="button"
                     variant={checkInOutType === 'Check In' ? 'default' : 'outline'}
                     onClick={() => setCheckInOutType('Check In')}
-                    disabled={lastCheckInOutRecord?.type === 'Check In'}
+                    disabled={lastCheckInOutRecord?.type === 'Check In' && !multiCheckConfig?.isMultipleCheckInAllowedWithoutCheckOut}
                     className={cn(
                       "flex-1 transition-all duration-300",
                       checkInOutType === 'Check In' && "bg-blue-600 hover:bg-blue-700 text-white shadow-md transform scale-105"
@@ -2858,7 +2858,7 @@ export default function AccountDetailsPage() {
                     }
 
                     // 4. Logic: Multiple check-out against single check-in
-                    if (checkInOutType === 'Check Out' && !multiCheckConfig.isMultipleCheckOutAllowedAgainstSingleCheckIn) {
+                    if (checkInOutType === 'Check Out') {
                       if (!lastRecord || lastRecord.type === 'Check Out') {
                         Swal.fire('Access Denied', 'You must check-in before you can mark a check-out.', 'warning');
                         return;

@@ -180,7 +180,6 @@ export default function HrmSettingsPage() {
         isCheckInImageMandatory: true,
         isCheckOutImageMandatory: true,
         isMultipleCheckInAllowedWithoutCheckOut: false,
-        isMultipleCheckOutAllowedAgainstSingleCheckIn: false,
         isMaxHourLimitEnabled: true,
         maxHourLimitOfCheckOut: 24,
     });
@@ -506,17 +505,6 @@ export default function HrmSettingsPage() {
                                         </Label>
                                     </div>
 
-                                    <div className="flex items-center space-x-3">
-                                        <Checkbox
-                                            id="isMultipleCheckOutAllowedAgainstSingleCheckIn"
-                                            checked={multiCheckConfig.isMultipleCheckOutAllowedAgainstSingleCheckIn}
-                                            onCheckedChange={(checked) => setMultiCheckConfig(prev => ({ ...prev, isMultipleCheckOutAllowedAgainstSingleCheckIn: !!checked }))}
-                                            disabled={isReadOnly}
-                                        />
-                                        <Label htmlFor="isMultipleCheckOutAllowedAgainstSingleCheckIn" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
-                                            Is multiple check out allowed against single check in
-                                        </Label>
-                                    </div>
                                 </div>
                             </div>
 

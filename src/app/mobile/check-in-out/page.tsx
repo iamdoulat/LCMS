@@ -365,7 +365,7 @@ export default function MobileCheckInOutPage() {
             return isCheckIn && isUserRecord && hasNoCheckOut && !isExpired;
         });
 
-        if (activeCheckIn) {
+        if (activeCheckIn && !multiCheckConfig?.isMultipleCheckInAllowedWithoutCheckOut) {
             Swal.fire({
                 title: "Multiple Check Ins Not Allowed",
                 text: "First Check Out Then Check In again",

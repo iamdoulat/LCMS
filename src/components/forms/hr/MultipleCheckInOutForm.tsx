@@ -146,7 +146,7 @@ export function MultipleCheckInOutForm({ employeeId, employeeName, onSuccess, on
             }
 
             // 4. Logic: Multiple check-out against single check-in
-            if (data.type === 'Check Out' && !multiCheckConfig.isMultipleCheckOutAllowedAgainstSingleCheckIn) {
+            if (data.type === 'Check Out') {
                 if (!lastRecord || lastRecord.type === 'Check Out') {
                     Swal.fire('Access Denied', 'You must check-in before you can mark a check-out.', 'warning');
                     return;
