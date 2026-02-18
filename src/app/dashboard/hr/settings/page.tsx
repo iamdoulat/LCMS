@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format, parseISO } from 'date-fns';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -45,7 +46,9 @@ import { AddLeaveTypeForm } from '@/components/forms/hr';
 import { EditLeaveTypeForm } from '@/components/forms/hr';
 import { AddLeaveGroupForm } from '@/components/forms/hr';
 import { EditLeaveGroupForm } from '@/components/forms/hr';
-import type { LeaveTypeDefinition, LeaveGroupDocument } from '@/types';
+import { AddAttendancePolicyForm } from '@/components/forms/hr';
+import { EditAttendancePolicyForm } from '@/components/forms/hr';
+import type { LeaveTypeDefinition, LeaveGroupDocument, AttendancePolicyDocument } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BranchListTable } from '@/components/dashboard/hr/BranchListTable';
@@ -147,6 +150,12 @@ export default function HrmSettingsPage() {
     const [isAddLeaveGroupDialogOpen, setIsAddLeaveGroupDialogOpen] = React.useState(false);
     const [editingLeaveGroup, setEditingLeaveGroup] = React.useState<LeaveGroupDocument | null>(null);
     const [isEditLeaveGroupDialogOpen, setIsEditLeaveGroupDialogOpen] = React.useState(false);
+
+    // Attendance Policy State
+    const { data: attendancePolicies, isLoading: isLoadingAttendancePolicies } = useFirestoreQuery<AttendancePolicyDocument[]>(query(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'), orderBy("name", "asc")), undefined, ['attendance_policies']);
+    const [isAddAttendancePolicyDialogOpen, setIsAddAttendancePolicyDialogOpen] = React.useState(false);
+    const [editingAttendancePolicy, setEditingAttendancePolicy] = React.useState<AttendancePolicyDocument | null>(null);
+    const [isEditAttendancePolicyDialogOpen, setIsEditAttendancePolicyDialogOpen] = React.useState(false);
 
     // Attendance Reconciliation Configuration State
     const [reconConfig, setReconConfig] = React.useState<AttendanceReconciliationConfiguration>({
@@ -274,6 +283,10 @@ export default function HrmSettingsPage() {
 
     const handleDeleteLeaveGroup = async (id: string) => {
         handleDelete('hrm_settings/leave_groups/items', id, 'Leave Group');
+    };
+
+    const handleDeleteAttendancePolicy = async (id: string) => {
+        handleDelete('hrm_settings/attendance_policies/items', id, 'Attendance Policy');
     };
 
     const renderTableSection = (
@@ -833,6 +846,61 @@ export default function HrmSettingsPage() {
                         </CardContent>
                     </Card>
 
+                    {/* Attendance Policies Section */}
+                    <Card className="md:col-span-2 shadow-lg border-t-4 border-t-primary">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Attendance Policies</CardTitle>
+                                <CardDescription>Manage daily attendance rules and timings</CardDescription>
+                            </div>
+                            <Button size="sm" disabled={isReadOnly} onClick={() => setIsAddAttendancePolicyDialogOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Add New</Button>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingAttendancePolicies ? <DataTableSkeleton /> :
+                                !attendancePolicies || attendancePolicies.length === 0 ? <div className="text-muted-foreground text-center p-4">No data found.</div> :
+                                    (
+                                        <div className="rounded-md border overflow-x-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Policy Name</TableHead>
+                                                        <TableHead>Effective From</TableHead>
+                                                        <TableHead>Working Hours</TableHead>
+                                                        <TableHead>In Time</TableHead>
+                                                        <TableHead>Delay Buff (min)</TableHead>
+                                                        <TableHead>Break (min)</TableHead>
+                                                        <TableHead className="text-right w-[50px]">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {attendancePolicies.map(item => (
+                                                        <TableRow key={item.id}>
+                                                            <TableCell className="font-medium">{item.name}</TableCell>
+                                                            <TableCell>{item.effectiveFrom ? format(parseISO(item.effectiveFrom), "PP") : 'N/A'}</TableCell>
+                                                            <TableCell>{item.workingHours}</TableCell>
+                                                            <TableCell>{item.inTime}</TableCell>
+                                                            <TableCell>{item.delayBuffer}</TableCell>
+                                                            <TableCell>{item.breakTime}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingAttendancePolicy, setIsEditAttendancePolicyDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem onClick={() => handleDeleteAttendancePolicy(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
+                        </CardContent>
+                    </Card>
+
                     <Dialog open={isAddDivisionDialogOpen} onOpenChange={setIsAddDivisionDialogOpen}>
                         {renderTableSection("Divisions", "Manage company divisions.", divisions, isLoadingDivisions, () => setIsAddDivisionDialogOpen(true), (item) => handleEdit(item, setEditingDivision, setIsEditDivisionDialogOpen), "divisions")}
                         <DialogContent className="sm:max-w-md">
@@ -967,6 +1035,35 @@ export default function HrmSettingsPage() {
                     </DialogHeader>
                     {editingLeaveGroup && (
                         <EditLeaveGroupForm leaveGroup={editingLeaveGroup} onSuccess={() => { setIsEditLeaveGroupDialogOpen(false); setEditingLeaveGroup(null); }} />
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Attendance Policy Dialogs */}
+            <Dialog open={isAddAttendancePolicyDialogOpen} onOpenChange={setIsAddAttendancePolicyDialogOpen}>
+                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Add New Attendance Policy</DialogTitle>
+                        <DialogDescription>Create a new policy for attendance rules.</DialogDescription>
+                    </DialogHeader>
+                    <AddAttendancePolicyForm onSuccess={() => setIsAddAttendancePolicyDialogOpen(false)} />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isEditAttendancePolicyDialogOpen} onOpenChange={setIsEditAttendancePolicyDialogOpen}>
+                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Edit Attendance Policy</DialogTitle>
+                        <DialogDescription>Update the attendance policy details.</DialogDescription>
+                    </DialogHeader>
+                    {editingAttendancePolicy && (
+                        <EditAttendancePolicyForm
+                            policy={editingAttendancePolicy as AttendancePolicyDocument}
+                            onSuccess={() => {
+                                setIsEditAttendancePolicyDialogOpen(false);
+                                setEditingAttendancePolicy(null);
+                            }}
+                        />
                     )}
                 </DialogContent>
             </Dialog>

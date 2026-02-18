@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { determineAttendanceFlag } from '@/lib/firebase/utils';
 import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDocs } from 'firebase/firestore';
-import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, UserDocumentForAdmin } from '@/types';
+import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, UserDocumentForAdmin, AttendancePolicyDocument, DailyAttendancePolicy } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { cn } from '@/lib/utils';
@@ -92,6 +92,7 @@ const AttendanceDayRow = ({
     holidays,
     leaves,
     visits,
+    attendancePolicies,
 }: {
     employee: EmployeeDocument;
     date: Date;
@@ -100,15 +101,45 @@ const AttendanceDayRow = ({
     holidays: HolidayDocument[];
     leaves: LeaveApplicationDocument[];
     visits: VisitApplicationDocument[];
+    attendancePolicies: AttendancePolicyDocument[];
 }) => {
     const { user } = useAuth();
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [workingHours, setWorkingHours] = React.useState<string | undefined>(undefined);
 
-    const getDefaultFlag = React.useCallback((): AttendanceFlag => {
-        const dayOfWeek = getDay(date);
-        if (dayOfWeek === 5) return 'W'; // Friday
+    const getActivePolicy = React.useCallback(() => {
+        if (!attendancePolicies || attendancePolicies.length === 0) return null;
 
+        const history = employee.policyHistory || [];
+        const targetDateStr = format(date, 'yyyy-MM-dd');
+
+        if (history.length === 0) {
+            return attendancePolicies.find((p: AttendancePolicyDocument) => p.id === employee.attendancePolicyId);
+        }
+
+        const sortedHistory = [...history].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+        const assignment = sortedHistory.find(h => {
+            try {
+                const effectiveDate = format(parseISO(h.effectiveFrom), 'yyyy-MM-dd');
+                return effectiveDate <= targetDateStr;
+            } catch (err) {
+                return false;
+            }
+        });
+
+        if (assignment) {
+            return attendancePolicies.find((p: AttendancePolicyDocument) => p.id === assignment.policyId);
+        }
+
+        const firstAssignment = sortedHistory[sortedHistory.length - 1];
+        return attendancePolicies.find((p: AttendancePolicyDocument) => p.id === (firstAssignment?.policyId || employee.attendancePolicyId));
+    }, [employee.policyHistory, employee.attendancePolicyId, attendancePolicies, date]);
+
+    const activePolicy = React.useMemo(() => getActivePolicy(), [getActivePolicy]);
+    const currentDayName = format(date, 'EEEE');
+    const dailyPolicy = activePolicy?.dailyPolicies?.find((dp: DailyAttendancePolicy) => dp.day === currentDayName);
+
+    const getDefaultFlag = React.useCallback((): AttendanceFlag => {
         const isHoliday = holidays.some(h =>
             isWithinDateInterval(date, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) })
         );
@@ -128,8 +159,14 @@ const AttendanceDayRow = ({
         );
         if (isOnVisit) return 'V';
 
+        if (dailyPolicy?.workingType === 'Weekend' || dailyPolicy?.workingType === 'Off Day') {
+            return 'W';
+        }
+        // Fallback for missing policy or explicit Friday if no daily policy
+        if (!dailyPolicy && getDay(date) === 5) return 'W';
+
         return 'A'; // Default to Absent if no other condition is met
-    }, [date, holidays, leaves, visits, employee.id]);
+    }, [date, holidays, leaves, visits, employee.id, dailyPolicy]);
 
     const form = useForm<AttendanceDayFormValues>({
         resolver: zodResolver(attendanceDaySchema),
@@ -153,18 +190,25 @@ const AttendanceDayRow = ({
     const outTime = watch('outTime');
     const flag = watch('flag');
 
+    const formatTimeForFirestore = React.useCallback((timeString?: string) => {
+        if (!timeString) return undefined;
+        try {
+            const dateObj = parseDateFns(timeString, 'HH:mm', new Date());
+            return format(dateObj, 'hh:mm a');
+        } catch {
+            return undefined;
+        }
+    }, []);
+
     React.useEffect(() => {
         if (!initialData && inTime && flag === 'A') {
-            try {
-                const [hours, minutes] = inTime.split(':').map(Number);
-                if (hours > 9 || (hours === 9 && minutes > 10)) {
-                    setValue('flag', 'D', { shouldValidate: true });
-                } else {
-                    setValue('flag', 'P', { shouldValidate: true });
-                }
-            } catch { }
+            const formattedInTime = formatTimeForFirestore(inTime);
+            if (formattedInTime) {
+                const autoFlag = determineAttendanceFlag(formattedInTime, dailyPolicy || activePolicy || undefined);
+                setValue('flag', autoFlag, { shouldValidate: true });
+            }
         }
-    }, [inTime, flag, setValue, initialData]);
+    }, [inTime, flag, setValue, initialData, dailyPolicy, activePolicy, formatTimeForFirestore]);
 
     React.useEffect(() => {
         if (flag !== 'P' && flag !== 'D') {
@@ -179,7 +223,12 @@ const AttendanceDayRow = ({
             const inDate = parseDateFns(inTime, 'HH:mm', new Date());
             const outDate = parseDateFns(outTime, 'HH:mm', new Date());
             if (isValid(inDate) && isValid(outDate) && outDate >= inDate) {
-                const diffMins = differenceInMinutes(outDate, inDate);
+                let diffMins = differenceInMinutes(outDate, inDate);
+
+                // Subtract break time from policy
+                const breakTime = dailyPolicy?.breakTime ?? activePolicy?.breakTime ?? 0;
+                diffMins = Math.max(0, diffMins - breakTime);
+
                 const hours = Math.floor(diffMins / 60);
                 const minutes = diffMins % 60;
                 setWorkingHours(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
@@ -189,7 +238,7 @@ const AttendanceDayRow = ({
         } catch {
             setWorkingHours("Error");
         }
-    }, [inTime, outTime, flag]);
+    }, [inTime, outTime, flag, dailyPolicy, activePolicy]);
 
     const onSave = async (data: AttendanceDayFormValues) => {
         if (!user) {
@@ -208,30 +257,24 @@ const AttendanceDayRow = ({
             date: format(date, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
             flag: data.flag,
             workingHours: workingHours,
+            requiredWorkingHours: dailyPolicy?.workingHours || activePolicy?.workingHours || "08:00",
+            ignoreOtAndDeduction: activePolicy?.ignoreOtAndDeduction,
+            excludeFromAttReports: activePolicy?.excludeFromAttReports,
+            discardAttOnWeekend: activePolicy?.discardAttOnWeekend,
             updatedBy: user.uid,
             updatedAt: serverTimestamp(),
         };
 
         if (data.flag === 'P' || data.flag === 'D') {
-            const formatTimeForFirestore = (timeString?: string) => {
-                if (!timeString) return undefined;
-                try {
-                    const dateObj = parseDateFns(timeString, 'HH:mm', new Date());
-                    return format(dateObj, 'hh:mm a');
-                } catch {
-                    return undefined;
-                }
-            };
-
             const formattedInTime = formatTimeForFirestore(data.inTime);
             dataToSave.inTime = formattedInTime;
             dataToSave.inTimeRemarks = data.inTimeRemarks;
             dataToSave.outTime = formatTimeForFirestore(data.outTime);
             dataToSave.outTimeRemarks = data.outTimeRemarks;
 
-            // Auto-determine flag based on in-time (P if ≤09:10 AM, D if >09:10 AM)
+            // Auto-determine flag based on in-time using the active policy
             if (formattedInTime) {
-                dataToSave.flag = determineAttendanceFlag(formattedInTime);
+                dataToSave.flag = determineAttendanceFlag(formattedInTime, dailyPolicy || activePolicy || undefined);
             }
         }
 
@@ -395,6 +438,7 @@ const EmployeeAttendanceRow = ({
     holidays,
     leaves,
     visits,
+    attendancePolicies,
     onRecordUpdate
 }: {
     employee: EmployeeDocument,
@@ -403,6 +447,7 @@ const EmployeeAttendanceRow = ({
     holidays: HolidayDocument[],
     leaves: LeaveApplicationDocument[],
     visits: VisitApplicationDocument[],
+    attendancePolicies: AttendancePolicyDocument[],
     onRecordUpdate: () => void;
 }) => {
     const [isExpanded, setIsExpanded] = React.useState(false);
@@ -484,6 +529,7 @@ const EmployeeAttendanceRow = ({
                                                 holidays={holidays}
                                                 leaves={leaves}
                                                 visits={visits}
+                                                attendancePolicies={attendancePolicies}
                                             />
                                         );
                                     })}
@@ -544,6 +590,11 @@ export default function DailyAttendancePage() {
         query(collection(firestore, "visit_applications"), where("status", "==", "Approved")),
         undefined,
         ['approved_visits']
+    );
+    const { data: attendancePolicies, isLoading: isLoadingPolicies } = useFirestoreQuery<AttendancePolicyDocument[]>(
+        query(collection(firestore, "hrm_settings/attendance_policies/items"), orderBy("name")),
+        undefined,
+        ['attendance_policies']
     );
 
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -1017,6 +1068,7 @@ export default function DailyAttendancePage() {
                                         holidays={holidays || []}
                                         leaves={leaves || []}
                                         visits={visits || []}
+                                        attendancePolicies={attendancePolicies || []}
                                         onRecordUpdate={refetchAttendance}
                                     />
                                 ))

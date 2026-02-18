@@ -1580,6 +1580,58 @@ export interface ClaimReportDocument {
 }
 // --- END Claim Report Types ---
 
+// --- Attendance Policy Types ---
+export const DailyAttendancePolicySchema = z.object({
+  day: z.string(),
+  inTime: z.string().optional(),
+  workingHours: z.string().optional(),
+  delayBuffer: z.number().default(0),
+  extendedDelayBuffer: z.number().default(0),
+  earlyOutTime: z.string().optional(),
+  breakTime: z.number().default(0),
+  workingType: z.enum(['Full Day', 'Half Day', 'Weekend', 'Off Day']).default('Full Day'),
+});
+
+export type DailyAttendancePolicy = z.infer<typeof DailyAttendancePolicySchema>;
+
+export const AttendancePolicySchema = z.object({
+  name: z.string().min(1, "Policy Name is required"),
+  effectiveFrom: z.date({ required_error: "Effective from date is required" }),
+  workingHours: z.string().default("08:00"),
+  inTime: z.string().default("09:00 AM"),
+  delayBuffer: z.number().default(10),
+  extendedDelayBuffer: z.number().default(0),
+  earlyOutTime: z.string().optional(),
+  breakTime: z.number().default(60),
+  ignoreOtAndDeduction: z.boolean().default(false),
+  excludeFromAttReports: z.boolean().default(false),
+  discardAttOnWeekend: z.boolean().default(false),
+  dailyPolicies: z.array(DailyAttendancePolicySchema),
+});
+
+export type AttendancePolicyFormValues = z.infer<typeof AttendancePolicySchema>;
+
+export interface AttendancePolicy {
+  id?: string;
+  name: string;
+  effectiveFrom: string; // ISO string
+  workingHours: string;
+  inTime: string;
+  delayBuffer: number;
+  extendedDelayBuffer: number;
+  earlyOutTime?: string;
+  breakTime: number;
+  ignoreOtAndDeduction: boolean;
+  excludeFromAttReports: boolean;
+  discardAttOnWeekend: boolean;
+  dailyPolicies: DailyAttendancePolicy[];
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export type AttendancePolicyDocument = AttendancePolicy & { id: string };
+// --- END Attendance Policy Types ---
+
 // --- Employee Types ---
 export const educationLevelOptions = ["SSC", "HSC", "Diploma", "Bachelors", "Masters", "PhD"] as const;
 export const gradeDivisionOptions = ["1st Division", "2nd Division", "3rd Division", "A+", "A", "A-", "B", "C", "D"] as const;
@@ -1652,6 +1704,18 @@ const AddressSchema = z.object({
 });
 
 
+export interface EmployeePolicyAssignment {
+  policyId: string;
+  policyName: string;
+  effectiveFrom: string; // ISO string
+}
+
+export const EmployeePolicyAssignmentSchema = z.object({
+  policyId: z.string(),
+  policyName: z.string(),
+  effectiveFrom: z.string(),
+});
+
 export interface SupervisorConfig {
   supervisorId: string;
   isDirectSupervisor: boolean;
@@ -1688,6 +1752,9 @@ export const EmployeeSchema = z.object({
   status: z.enum(employeeStatusOptions).default('Active'),
   leaveGroupId: z.string().optional(),
   leaveGroupName: z.string().optional(),
+  attendancePolicyId: z.string().optional(),
+  attendancePolicyName: z.string().optional(),
+  policyHistory: z.array(EmployeePolicyAssignmentSchema).optional(),
   // New Fields
   division: z.string().optional(),
   branch: z.string().optional(),
@@ -1744,6 +1811,9 @@ export interface Employee {
   role?: UserRole[]; // Role(s) of the employee
   leaveGroupId?: string;
   leaveGroupName?: string;
+  attendancePolicyId?: string;
+  attendancePolicyName?: string;
+  policyHistory?: EmployeePolicyAssignment[];
   createdAt?: any;
   updatedAt?: any;
   // New Fields
@@ -2031,6 +2101,10 @@ export interface Attendance {
   approvalStatus?: 'Pending' | 'Approved' | 'Rejected';
   inTimeApprovalStatus?: 'Pending' | 'Approved' | 'Rejected';
   outTimeApprovalStatus?: 'Pending' | 'Approved' | 'Rejected';
+  ignoreOtAndDeduction?: boolean;
+  excludeFromAttReports?: boolean;
+  discardAttOnWeekend?: boolean;
+  requiredWorkingHours?: string;
 }
 export type AttendanceDocument = Attendance & { id: string };
 // --- END Attendance Types ---
@@ -2212,6 +2286,8 @@ export const MultipleCheckInOutSchema = z.object({
 });
 
 export type MultipleCheckInOutConfiguration = z.infer<typeof MultipleCheckInOutSchema>;
+
+
 // --- END HRM Settings Types ---
 
 

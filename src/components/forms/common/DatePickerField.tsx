@@ -41,7 +41,7 @@ export function DatePickerField({
 
   return (
     <div className={cn("relative w-full", className)}>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <Button
             variant={"outline"}
@@ -59,7 +59,13 @@ export function DatePickerField({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 flex flex-col sm:flex-row shadow-2xl" align="start">
+        <PopoverContent
+          className="w-auto p-0 flex flex-col sm:flex-row shadow-2xl z-[100]"
+          align="start"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <Calendar
             mode="single"
             selected={field?.value ? new Date(field.value) : undefined}

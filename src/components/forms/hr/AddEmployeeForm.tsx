@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query as firestoreQuery, orderBy, setDoc, doc } from 'firebase/firestore';
 import { uploadFile } from '@/lib/storage/storage';
-import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument, LeaveGroupDocument } from '@/types';
+import type { EmployeeFormValues, EmployeeDocument, Education, BankDetails, SalaryBreakup, DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument, LeaveGroupDocument, AttendancePolicyDocument } from '@/types';
 import { EmployeeSchema, genderOptions, maritalStatusOptions, bloodGroupOptions, employeeStatusOptions, jobBaseOptions, jobStatusOptions, educationLevelOptions, gradeDivisionOptions, bankNameOptions, paymentFrequencyOptions, salaryBreakupOptions } from '@/types';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -75,6 +75,7 @@ export function AddEmployeeForm() {
   const { data: divisions, isLoading: isLoadingDivisions } = useFirestoreQuery<DivisionDocument[]>(firestoreQuery(collection(firestore, "divisions"), orderBy("name")), undefined, ['divisions']);
   const { data: leaveGroups, isLoading: isLoadingLeaveGroups } = useFirestoreQuery<LeaveGroupDocument[]>(firestoreQuery(collection(firestore, 'hrm_settings', 'leave_groups', 'items'), orderBy("groupName", "asc")), undefined, ['leave_groups']);
   const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(firestoreQuery(collection(firestore, "employees"), orderBy("employeeCode", "asc")), undefined, ['employees_list']);
+  const { data: attendancePolicies, isLoading: isLoadingAttendancePolicies } = useFirestoreQuery<AttendancePolicyDocument[]>(firestoreQuery(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'), orderBy("name", "asc")), undefined, ['attendance_policies']);
 
   // ... (keeping existing memoized options) ...
   const designationOptions = React.useMemo(() => toComboboxOptions(designations || [], 'name'), [designations]);
@@ -83,6 +84,7 @@ export function AddEmployeeForm() {
   const unitOptions = React.useMemo(() => toComboboxOptions(units || [], 'name'), [units]);
   const divisionOptions = React.useMemo(() => toComboboxOptions(divisions || [], 'name'), [divisions]);
   const leaveGroupOptions = React.useMemo(() => leaveGroups?.map(g => ({ value: g.id, label: g.groupName })) || [], [leaveGroups]);
+  const attendancePolicyOptions = React.useMemo(() => attendancePolicies?.map(p => ({ value: p.id!, label: p.name })) || [], [attendancePolicies]);
   const supervisorOptions = React.useMemo(() => employees?.map(e => ({ value: e.id, label: `${e.fullName} (${e.employeeCode})` })) || [], [employees]);
 
   const isLoadingHrmOptions = isLoadingBranches || isLoadingDepts || isLoadingUnits || isLoadingDivisions;
@@ -259,6 +261,7 @@ export function AddEmployeeForm() {
       }
 
       const selectedLeaveGroup = leaveGroups?.find(lg => lg.id === data.leaveGroupId);
+      const selectedAttendancePolicy = attendancePolicies?.find(ap => ap.id === data.attendancePolicyId);
 
       const fullName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(' ');
 
@@ -272,6 +275,7 @@ export function AddEmployeeForm() {
       const apiPayload = {
         ...data,
         leaveGroupName: selectedLeaveGroup?.groupName || '',
+        attendancePolicyName: selectedAttendancePolicy?.name || '',
         fullName,
         photoURL: photoDownloadURL,
         // Convert dates to ISO strings for JSON transport with company timezone aware normalization
@@ -291,6 +295,11 @@ export function AddEmployeeForm() {
           totalIncrement: increasedAmount,
           grossSalary: totalAmount,
         } : undefined,
+        policyHistory: data.attendancePolicyId ? [{
+          policyId: data.attendancePolicyId,
+          policyName: selectedAttendancePolicy?.name || '',
+          effectiveFrom: normalizeDate(new Date()) || new Date().toISOString()
+        }] : [],
         // Synchronize supervisor fields
         directSupervisorId: data.supervisorId !== 'unassigned' ? data.supervisorId : null,
         supervisor: data.supervisorId !== 'unassigned' ? data.supervisorId : null,
@@ -532,65 +541,84 @@ export function AddEmployeeForm() {
           <FormField control={control} name="phone" render={({ field }) => (<FormItem><FormLabel>Mobile No*</FormLabel><FormControl><Input type="tel" placeholder="+8801851046320" {...field} /></FormControl><FormMessage /></FormItem>)} />
         </div>
 
-        <FormField control={control} name="status" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Employee Status</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {employeeStatusOptions.map(o => (
-                  <SelectItem key={o} value={o}>{o}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField control={control} name="status" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Employee Status</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {employeeStatusOptions.map(o => (
+                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
 
+          <FormField control={control} name="supervisorId" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Direct Supervisor</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select Supervisor"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {supervisorOptions.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
 
+          <FormField control={control} name="leaveGroupId" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Leave Group (Policy)*</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isLoadingLeaveGroups ? "Loading..." : "Select Leave Group"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {leaveGroupOptions.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
 
-        <FormField control={control} name="supervisorId" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Direct Supervisor</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select Supervisor"} />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {supervisorOptions.map(o => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )} />
-
-        <FormField control={control} name="leaveGroupId" render={({ field }) => (
-          <FormItem>
-            <FormLabel>Leave Group (Policy)*</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingLeaveGroups ? "Loading..." : "Select Leave Group"} />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {leaveGroupOptions.map(o => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )} />
+          <FormField control={control} name="attendancePolicyId" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Attendance Policy*</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isLoadingAttendancePolicies ? "Loading..." : "Select Attendance Policy"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {attendancePolicyOptions.map(o => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
+        </div>
 
         <Separator />
 
