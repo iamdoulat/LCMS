@@ -357,7 +357,7 @@ export default function MobileCheckInOutPage() {
             // Check if it's within the auto-done window
             // If the record is "System Auto Closed" (expired), we should NOT consider it active.
             const isMaxLimitEnabled = multiCheckConfig?.isMaxHourLimitEnabled ?? true;
-            const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 8;
+            const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 12;
             const checkInTime = new Date(r.timestamp).getTime();
             const now = new Date().getTime();
             const isExpired = isMaxLimitEnabled && ((now - checkInTime) > (maxHours * 60 * 60 * 1000));
@@ -694,11 +694,11 @@ export default function MobileCheckInOutPage() {
                 const checkInTime = new Date(visit.checkIn.timestamp).getTime();
                 const now = new Date().getTime();
                 const diffHours = (now - checkInTime) / (1000 * 60 * 60);
-                const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 8;
+                const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 12;
                 const isAutoDone = !isDone && diffHours > maxHours && (multiCheckConfig?.isMaxHourLimitEnabled ?? true);
 
                 if (activeTab === 'Check Ins') {
-                    // Show only User's pending visits that are NOT older than 8 hours
+                    // Show only User's pending visits that are NOT older than 12 hours
                     return !isDone && !isAutoDone && isUserRecord;
                 }
                 if (activeTab === 'Completed') {
@@ -794,7 +794,7 @@ export default function MobileCheckInOutPage() {
                                 // Auto check-out indicator
                                 const checkInTimestamp = new Date(visit.checkIn.timestamp).getTime();
                                 const now = new Date().getTime();
-                                const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 8;
+                                const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 12;
                                 const isAutoDone = !isDone && (now - checkInTimestamp) / (1000 * 60 * 60) > maxHours && (multiCheckConfig?.isMaxHourLimitEnabled ?? true);
 
                                 // Calculate duration if both times exist
@@ -807,7 +807,7 @@ export default function MobileCheckInOutPage() {
                                 } else if (isAutoDone && multiCheckConfig && multiCheckConfig.isMaxHourLimitEnabled) {
                                     // For auto-done cases, calculate duration as the configured max hours limit
                                     // Only if the feature is enabled
-                                    const maxHours = multiCheckConfig.maxHourLimitOfCheckOut || 8;
+                                    const maxHours = multiCheckConfig.maxHourLimitOfCheckOut || 12;
                                     const maxDurationMs = maxHours * 60 * 60 * 1000;
                                     const hours = Math.floor(maxDurationMs / 3600000);
                                     const minutes = Math.floor((maxDurationMs % 3600000) / 60000);

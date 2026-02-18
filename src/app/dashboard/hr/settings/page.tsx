@@ -181,7 +181,7 @@ export default function HrmSettingsPage() {
         isCheckOutImageMandatory: true,
         isMultipleCheckInAllowedWithoutCheckOut: false,
         isMaxHourLimitEnabled: true,
-        maxHourLimitOfCheckOut: 24,
+        maxHourLimitOfCheckOut: 12,
     });
     const [isSavingMultiCheck, setIsSavingMultiCheck] = React.useState(false);
 
