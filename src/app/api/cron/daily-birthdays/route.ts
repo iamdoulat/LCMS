@@ -59,13 +59,15 @@ export async function GET(request: Request) {
         // Check for duplicate execution today
         const startOfToday = todayBD.clone().startOf('day').toDate();
         const duplicateCheck = await db.collection('cron_logs')
-            .where('job', '==', 'daily-birthdays')
-            .where('status', '==', 'success')
             .where('executedAt', '>=', startOfToday)
-            .limit(1)
             .get();
 
-        if (!duplicateCheck.empty) {
+        const alreadyRan = duplicateCheck.docs.some(doc => {
+            const data = doc.data();
+            return data.job === 'daily-birthdays' && data.status === 'success';
+        });
+
+        if (alreadyRan) {
             console.log(`- Skipping: Birthday wishes already successfully sent today.`);
             return NextResponse.json({
                 success: true,
