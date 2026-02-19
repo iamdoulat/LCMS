@@ -149,6 +149,7 @@ export default function MobileDashboardPage() {
     const [allPolicies, setAllPolicies] = useState<AttendancePolicyDocument[]>([]);
     const [calculatedPolicy, setCalculatedPolicy] = useState<AttendancePolicyDocument | null>(null);
     const [todayDailyPolicy, setTodayDailyPolicy] = useState<DailyAttendancePolicy | null>(null);
+    const [workedTime, setWorkedTime] = useState<string>('00:00');
 
     // Load settings from localStorage
     useEffect(() => {
@@ -627,6 +628,44 @@ export default function MobileDashboardPage() {
         return () => clearInterval(interval);
     }, [checkRestrictions]);
 
+    // Live Work Timer Effect
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+
+        const updateWorkedTime = () => {
+            if (todayAttendance?.outTime && todayAttendance?.inTime) {
+                // Case 1: Checked Out - Show final duration
+                const duration = calculateWorkHours(todayAttendance.inTime, todayAttendance.outTime);
+                setWorkedTime(duration || '00:00');
+            } else if (todayAttendance?.inTime) {
+                // Case 2: Checked In (Working) - Show live timer
+                const inFormat = (todayAttendance.inTime.includes('AM') || todayAttendance.inTime.includes('PM')) ? 'hh:mm a' : 'HH:mm';
+                const start = parse(todayAttendance.inTime, inFormat, new Date());
+                const now = new Date();
+
+                let diff = now.getTime() - start.getTime();
+                if (diff < 0) diff = 0; // Should not happen usually
+
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+                setWorkedTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} hr(s)`);
+            } else {
+                // Case 3: Not Checked In - Show 0
+                setWorkedTime('00:00 hr(s)');
+            }
+        };
+
+        // Initial update
+        updateWorkedTime();
+
+        // Update every minute (or second if strict live feel needed, user said '00:01' implying minutes)
+        // Updating every 10 seconds to align reasonably well without too much load
+        interval = setInterval(updateWorkedTime, 10000);
+
+        return () => clearInterval(interval);
+    }, [todayAttendance, todayDailyPolicy, calculatedPolicy]);
+
     const refreshAttendanceData = async () => {
         const canonicalId = currentEmployeeId || user?.uid;
         if (!canonicalId) return;
@@ -857,7 +896,7 @@ export default function MobileDashboardPage() {
                                     <span className="text-[11px] font-semibold text-slate-700 font-mono text-center">
                                         {restrictionNote ? '---' :
                                             todayAttendance?.outTimeApprovalStatus === 'Pending' ? 'Waiting For Approval' :
-                                                calculateWorkHours(todayAttendance?.inTime, todayAttendance?.outTime) || (todayDailyPolicy?.workingHours ? `${todayDailyPolicy.workingHours} hr(s)` : calculatedPolicy?.workingHours ? `${calculatedPolicy.workingHours} hr(s)` : 'Waiting...')}
+                                                workedTime}
                                     </span>
                                 </div>
                             </div>
