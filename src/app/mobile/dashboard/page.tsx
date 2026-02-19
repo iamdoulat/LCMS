@@ -15,6 +15,8 @@ import { useBreakTime } from '@/context/BreakTimeContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, getDocs, collection, query, where, onSnapshot, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min, isFriday, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { getActivePolicyForDate } from '@/lib/attendance';
+import type { AttendancePolicyDocument, EmployeeDocument, DailyAttendancePolicy } from '@/types';
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMemo } from 'react';
@@ -22,6 +24,7 @@ import Image from 'next/image';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRealtimeData, useRealtimeDoc } from '@/hooks/useRealtimeData';
 import { dataScoper } from '@/lib/data/dataScoper';
+import { parseTimeToMinutes } from '@/lib/firebase/utils';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
@@ -67,7 +70,14 @@ export default function MobileDashboardPage() {
             return timeStr;
         }
     };
-    const getAttendanceStatus = (flag?: any, approvalStatus?: string, inTimeApprovalStatus?: string, outTimeApprovalStatus?: string) => {
+    const getAttendanceStatus = (
+        flag?: any,
+        approvalStatus?: string,
+        inTimeApprovalStatus?: string,
+        outTimeApprovalStatus?: string,
+        recordedInTime?: string,
+        policy?: { inTime?: string; delayBuffer?: number }
+    ) => {
         if (typeof flag !== 'string') return null;
         if (flag === 'A') return 'Absent';
         if (flag === 'L') return 'On Leave';
@@ -78,6 +88,21 @@ export default function MobileDashboardPage() {
             if (inTimeApprovalStatus === 'Pending') return 'In-Time Pending';
             if (outTimeApprovalStatus === 'Pending') return 'Out-Time Pending';
             if (approvalStatus === 'Pending') return 'Attendance Pending';
+
+            if (flag === 'D' && recordedInTime && policy?.inTime) {
+                const inMinutes = parseTimeToMinutes(recordedInTime);
+                const policyMinutes = parseTimeToMinutes(policy.inTime);
+                const delay = inMinutes - policyMinutes;
+                if (delay > 0) {
+                    const hours = Math.floor(delay / 60);
+                    const minutes = delay % 60;
+                    let delayStr = '';
+                    if (hours > 0) delayStr += `${hours}h `;
+                    delayStr += `${minutes}m`;
+                    return `Delayed (${delayStr.trim()})`;
+                }
+            }
+
             return flag === 'P' ? 'Present' : 'Delayed Entry';
         }
         return null;
@@ -120,6 +145,10 @@ export default function MobileDashboardPage() {
     // Local role for display/legacy check, but we'll prioritize globalUserRole
     const [localUserRole, setLocalUserRole] = useState<string>('user');
     const [restrictionNote, setRestrictionNote] = useState<string | null>(null);
+    const [employeeData, setEmployeeData] = useState<EmployeeDocument | null>(null);
+    const [allPolicies, setAllPolicies] = useState<AttendancePolicyDocument[]>([]);
+    const [calculatedPolicy, setCalculatedPolicy] = useState<AttendancePolicyDocument | null>(null);
+    const [todayDailyPolicy, setTodayDailyPolicy] = useState<DailyAttendancePolicy | null>(null);
 
     // Load settings from localStorage
     useEffect(() => {
@@ -518,6 +547,66 @@ export default function MobileDashboardPage() {
     }, [user]);
 
     useEffect(() => {
+        const fetchData = async () => {
+            if (!user) return;
+            try {
+                // Fetch All Policies
+                const policySnap = await getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'));
+                const policies = policySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendancePolicyDocument));
+                setAllPolicies(policies);
+
+                // Fetch Employee Data
+                let empDoc = await getDoc(doc(firestore, 'employees', currentEmployeeId || user.uid));
+                if (!empDoc.exists() && user.email) {
+                    const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) empDoc = snap.docs[0];
+                }
+
+                if (empDoc.exists()) {
+                    setEmployeeData(empDoc.data() as EmployeeDocument);
+                }
+            } catch (err) {
+                console.error("Error fetching policy data:", err);
+            }
+        };
+        fetchData();
+    }, [user, currentEmployeeId, refreshKey]);
+
+    useEffect(() => {
+        if (employeeData && allPolicies.length > 0) {
+            const today = new Date();
+            let policy = getActivePolicyForDate(employeeData, today, allPolicies);
+
+            // Fallback to General policy if no policy assigned to employee
+            if (!policy && allPolicies.length > 0) {
+                policy = allPolicies.find(p => p.name === 'General') || allPolicies[0];
+            }
+
+            setCalculatedPolicy(policy);
+
+            if (policy && policy.dailyPolicies) {
+                const dayName = format(today, 'EEEE');
+                const daily = policy.dailyPolicies.find(dp => dp.day?.trim() === dayName);
+
+                if (daily) {
+                    setTodayDailyPolicy({
+                        ...daily,
+                        inTime: daily.inTime || policy.inTime,
+                        delayBuffer: (daily.delayBuffer !== undefined && daily.delayBuffer !== 0)
+                            ? daily.delayBuffer
+                            : policy.delayBuffer
+                    });
+                } else {
+                    setTodayDailyPolicy(null);
+                }
+            } else {
+                setTodayDailyPolicy(null);
+            }
+        }
+    }, [employeeData, allPolicies]);
+
+    useEffect(() => {
         checkRestrictions();
         // Re-check every hour to handle day transitions
         const interval = setInterval(checkRestrictions, 60 * 60 * 1000);
@@ -691,7 +780,7 @@ export default function MobileDashboardPage() {
                                 <div className="flex flex-col items-center gap-0.5">
                                     <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">Status</span>
                                     <span className="text-[11px] font-semibold text-slate-700 text-center px-1 font-mono">
-                                        {restrictionNote || getAttendanceStatus(todayAttendance?.flag, todayAttendance?.approvalStatus, todayAttendance?.inTimeApprovalStatus, todayAttendance?.outTimeApprovalStatus) || '08:00 hr(s)'}
+                                        {restrictionNote || getAttendanceStatus(todayAttendance?.flag, todayAttendance?.approvalStatus, todayAttendance?.inTimeApprovalStatus, todayAttendance?.outTimeApprovalStatus, todayAttendance?.inTime, todayDailyPolicy || calculatedPolicy || undefined) || (todayDailyPolicy?.workingHours ? `${todayDailyPolicy.workingHours} hr(s) Working Hours` : calculatedPolicy?.workingHours ? `${calculatedPolicy.workingHours} hr(s) Working Hours` : '08:00 hr(s) Working Hours')}
                                     </span>
                                 </div>
                             </div>
@@ -768,7 +857,7 @@ export default function MobileDashboardPage() {
                                     <span className="text-[11px] font-semibold text-slate-700 font-mono text-center">
                                         {restrictionNote ? '---' :
                                             todayAttendance?.outTimeApprovalStatus === 'Pending' ? 'Waiting For Approval' :
-                                                calculateWorkHours(todayAttendance?.inTime, todayAttendance?.outTime) || 'Waiting...'}
+                                                calculateWorkHours(todayAttendance?.inTime, todayAttendance?.outTime) || (todayDailyPolicy?.workingHours ? `${todayDailyPolicy.workingHours} hr(s)` : calculatedPolicy?.workingHours ? `${calculatedPolicy.workingHours} hr(s)` : 'Waiting...')}
                                     </span>
                                 </div>
                             </div>

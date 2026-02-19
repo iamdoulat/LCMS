@@ -15,6 +15,8 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { reverseGeocode } from '@/lib/firebase/checkInOut';
 import { determineAttendanceFlag } from '@/lib/firebase/utils';
+import { getActivePolicyForDate } from '@/lib/attendance';
+import type { AttendancePolicyDocument, EmployeeDocument, DailyAttendancePolicy } from '@/types';
 
 interface MobileAttendanceModalProps {
     isOpen: boolean;
@@ -55,6 +57,8 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
     const [distanceFromBranch, setDistanceFromBranch] = useState<number>(0);
     const [isLoadingGeodata, setIsLoadingGeodata] = useState(false);
     const [isGeocoding, setIsGeocoding] = useState(false);
+    const [employeeData, setEmployeeData] = useState<EmployeeDocument | null>(null);
+    const [allPolicies, setAllPolicies] = useState<AttendancePolicyDocument[]>([]);
 
     // Fetch branch and hotspots
     React.useEffect(() => {
@@ -77,7 +81,8 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 let branchIdForHotspots = '';
 
                 if (empDoc.exists()) {
-                    const empData = empDoc.data();
+                    const empData = empDoc.data() as EmployeeDocument;
+                    setEmployeeData(empData);
                     // Store the found employee document ID for attendance submission
                     // We can use a ref or just rely on the same logic in handleSubmit
 
@@ -119,6 +124,11 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
 
                 const hotspotsSnap = await getDocs(hotspotsQuery);
                 setBranchHotspots(hotspotsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+                // Fetch All Policies
+                const policySnap = await getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'));
+                const policies = policySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendancePolicyDocument));
+                setAllPolicies(policies);
             } catch (err) {
                 console.error("Error fetching geodata:", err);
             } finally {
@@ -282,12 +292,12 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
             }
 
             const canonicalId = employeeDoc.exists() ? employeeDoc.id : user.uid;
-            const employeeData = employeeDoc.exists() ? employeeDoc.data() : {
+            const empLocalData = employeeDoc.exists() ? employeeDoc.data() as EmployeeDocument : {
                 fullName: user.displayName || 'Unknown',
                 employeeCode: `EMP-${user.uid.substring(0, 5).toUpperCase()}`,
                 email: user.email || '',
                 phone: ''
-            };
+            } as any;
 
             const today = new Date();
             const dateKey = format(today, 'yyyy-MM-dd');
@@ -306,13 +316,39 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 // Geofence Validation (already calculated by validateGeofence and local state)
                 let status: 'Approved' | 'Pending' = (isInsideGeofence || isPrivilegedRole) ? 'Approved' : 'Pending';
 
-                // Determine attendance flag
-                const flag = determineAttendanceFlag(currentTime);
+                // Determine attendance flag using policy
+                const today = new Date();
+                const employeeForPolicy = employeeData || (employeeDoc.exists() ? employeeDoc.data() as EmployeeDocument : null);
+                let activePolicy = employeeForPolicy ? getActivePolicyForDate(employeeForPolicy, today, allPolicies) : null;
+
+                // Fallback to General policy if no policy assigned
+                if (!activePolicy && allPolicies.length > 0) {
+                    activePolicy = allPolicies.find(p => p.name === 'General') || allPolicies[0];
+                }
+
+                let dailyPolicy = null;
+                if (activePolicy && activePolicy.dailyPolicies) {
+                    const dayName = format(today, 'EEEE');
+                    const foundDaily = activePolicy.dailyPolicies.find((dp: DailyAttendancePolicy) => dp.day?.trim() === dayName);
+
+                    if (foundDaily) {
+                        // Merge with global policy fallback for missing/zero values
+                        dailyPolicy = {
+                            ...foundDaily,
+                            inTime: foundDaily.inTime || activePolicy.inTime,
+                            delayBuffer: (foundDaily.delayBuffer !== undefined && foundDaily.delayBuffer !== 0)
+                                ? foundDaily.delayBuffer
+                                : activePolicy.delayBuffer
+                        };
+                    }
+                }
+
+                const flag = determineAttendanceFlag(currentTime, dailyPolicy || activePolicy || undefined);
 
                 // Save attendance record
                 const attendanceData = {
                     employeeId: canonicalId,
-                    employeeName: employeeData.fullName || user.displayName || 'Unknown',
+                    employeeName: (empLocalData as any).fullName || user.displayName || 'Unknown',
                     date: format(today, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
                     inTime: currentTime,
                     flag: flag,
@@ -360,12 +396,11 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                             'Authorization': `Bearer ${idToken}`
                         },
                         body: JSON.stringify({
-                            type: 'in_time',
                             employeeId: user.uid,
-                            employeeName: employeeData.fullName || user.displayName || 'Unknown',
-                            employeeCode: employeeData.employeeCode,
-                            employeeEmail: employeeData.email,
-                            employeePhone: employeeData.phone,
+                            employeeName: (empLocalData as any).fullName || user.displayName || 'Unknown',
+                            employeeCode: (empLocalData as any).employeeCode,
+                            employeeEmail: (empLocalData as any).email,
+                            employeePhone: (empLocalData as any).phone,
                             time: currentTime,
                             date: format(today, 'PPP'),
                             flag: flag,
@@ -439,10 +474,10 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                         body: JSON.stringify({
                             type: 'out_time',
                             employeeId: user.uid,
-                            employeeName: employeeData.fullName || user.displayName || 'Unknown',
-                            employeeCode: employeeData.employeeCode,
-                            employeeEmail: employeeData.email,
-                            employeePhone: employeeData.phone,
+                            employeeName: (empLocalData as any).fullName || user.displayName || 'Unknown',
+                            employeeCode: (empLocalData as any).employeeCode,
+                            employeeEmail: (empLocalData as any).email,
+                            employeePhone: (empLocalData as any).phone,
                             time: currentTime,
                             date: format(today, 'PPP'),
                             location: {
