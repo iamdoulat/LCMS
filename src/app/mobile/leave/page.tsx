@@ -12,7 +12,8 @@ import {
     ChevronLeft,
     ChevronRight,
     CheckCircle,
-    Cake
+    Cake,
+    Palmtree
 } from 'lucide-react';
 import {
     format, isWithinInterval, parseISO, getMonth, getYear, getDaysInMonth, getDay,
@@ -25,6 +26,7 @@ import type { LeaveApplicationDocument, VisitApplicationDocument, EmployeeDocume
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 interface LeaveAction {
     label: string;
@@ -182,6 +184,9 @@ export default function MobileLeavePage() {
         setPullDistance(0);
     };
 
+    const { userRole } = useAuth();
+    const canManageHolidays = userRole?.some(role => ['Super Admin', 'Admin', 'HR'].includes(role));
+
     const leaveActions: LeaveAction[] = [
         { label: 'Leave Calendar', icon: CalendarIcon, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/leave/calendar' },
         { label: 'My Leave Balance', icon: Users, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/leave/balance' },
@@ -189,6 +194,7 @@ export default function MobileLeavePage() {
         { label: 'Visit Applications', icon: MapPin, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/visit' },
         { label: 'Sub-Ordinate Leave Balance', icon: Users, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/leave/subordinate?view=team' },
         { label: 'Approve Application', icon: CheckCircle, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/approve' },
+        ...(canManageHolidays ? [{ label: 'Holidays', icon: Palmtree, color: 'bg-blue-100', iconColor: 'text-blue-600', href: '/mobile/holidays' }] : []),
     ];
 
     const navigateMonth = (direction: 'prev' | 'next') => {
