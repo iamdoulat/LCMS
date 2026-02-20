@@ -22,7 +22,7 @@ const INVOICE_LOGO_URL_STORAGE_KEY = 'appInvoiceLogoUrl';
 const APP_VERSION_STORAGE_KEY = 'appVersion';
 const DEFAULT_COMPANY_NAME = 'LCMS';
 const DEFAULT_COMPANY_LOGO_URL = "/icons/icon-192x192.png";
-const DEFAULT_APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || 'v1.1';
+const DEFAULT_APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || 'v1.2';
 
 // Helper function to parse emails from environment variables
 const getEmailsFromEnv = (envVar?: string): string[] => {
@@ -62,6 +62,10 @@ interface AuthContextType {
   employeeData: Employee | null;
   refreshEmployeeData: () => Promise<void>;
   updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address' | 'hideCompanyLogo' | 'hideCompanyName' | 'appVersion'>>) => void;
+  ghostMode: boolean;
+  setGhostMode: (mode: boolean) => void;
+  godMode: boolean;
+  setGodMode: (mode: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -82,6 +86,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [hideCompanyLogo, setHideCompanyLogo] = useState<boolean>(false);
   const [hideCompanyName, setHideCompanyName] = useState<boolean>(false);
   const [employeeData, setEmployeeData] = useState<Employee | null>(null);
+  const [ghostMode, setGhostModeState] = useState<boolean>(false);
+  const [godMode, setGodModeState] = useState<boolean>(false);
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -266,9 +272,25 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     const savedMode = localStorage.getItem('preferred_view_mode') as 'web' | 'mobile' | null;
     if (savedMode) setViewModeState(savedMode);
 
+    const savedGhostMode = localStorage.getItem('ghost_mode') === 'true';
+    if (savedGhostMode) setGhostModeState(true);
+
+    const savedGodMode = localStorage.getItem('god_mode') === 'true';
+    if (savedGodMode) setGodModeState(true);
+
     const unsubscribe = onAuthStateChanged(auth, handleUserAuth);
     return () => unsubscribe();
   }, [fetchInitialCompanyProfile, handleUserAuth]);
+
+  const setGhostMode = useCallback((mode: boolean) => {
+    setGhostModeState(mode);
+    localStorage.setItem('ghost_mode', String(mode));
+  }, []);
+
+  const setGodMode = useCallback((mode: boolean) => {
+    setGodModeState(mode);
+    localStorage.setItem('god_mode', String(mode));
+  }, []);
 
   const setViewMode = useCallback((mode: 'web' | 'mobile') => {
     setViewModeState(mode);
@@ -526,7 +548,11 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       hideCompanyName,
       employeeData,
       refreshEmployeeData,
-      updateCompanyProfile
+      updateCompanyProfile,
+      ghostMode,
+      setGhostMode,
+      godMode,
+      setGodMode
     }}>
       {children}
     </AuthContext.Provider>

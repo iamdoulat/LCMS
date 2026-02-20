@@ -22,9 +22,10 @@ import { Input } from '@/components/ui/input';
 import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { Switch } from '@/components/ui/switch';
 
 export function AppHeader() {
-  const { user, logout, loading, companyName, companyLogoUrl, setViewMode } = useAuth();
+  const { user, userRole, logout, loading, companyName, companyLogoUrl, setViewMode, ghostMode, setGhostMode, godMode, setGodMode } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchPopoverOpen, setIsSearchPopoverOpen] = useState(false);
@@ -167,6 +168,19 @@ export function AppHeader() {
                   <span>Mobile Mode</span>
                 </DropdownMenuItem>
               </Link>
+              {userRole?.includes('Super Admin') && (
+                <>
+                  <DropdownMenuSeparator />
+                  <div className="p-2 flex items-center justify-between">
+                    <span className="text-sm">Ghost Mode</span>
+                    <Switch checked={ghostMode} onCheckedChange={setGhostMode} />
+                  </div>
+                  <div className="p-2 flex items-center justify-between">
+                    <span className="text-sm">God Mode</span>
+                    <Switch checked={godMode} onCheckedChange={setGodMode} />
+                  </div>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout}>
                 <LogOut className="mr-2 h-4 w-4" />
