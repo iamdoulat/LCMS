@@ -12,7 +12,9 @@ import {
     Palmtree,
     Loader2,
     Plus,
-    Edit2
+    Edit2,
+    Mail,
+    MessageCircle
 } from 'lucide-react';
 import type { HolidayDocument } from '@/types';
 import { format, parseISO } from 'date-fns';
@@ -123,9 +125,19 @@ export default function MobileHolidaysPage() {
                                                             {holiday.type} • {format(fromDate, 'MMM dd, yyyy')}{toDate ? ` - ${format(toDate, 'MMM dd, yyyy')}` : ''}
                                                         </p>
                                                         {holiday.announcementDate && (
-                                                            <p className="text-[10px] text-emerald-600 font-medium mt-1 bg-emerald-50 px-2 py-0.5 rounded-md inline-block">
-                                                                Announcement: {format(parseISO(holiday.announcementDate), 'MMM dd, yyyy hh:mm a')}
-                                                            </p>
+                                                            <div className="flex items-center justify-between mt-1">
+                                                                <p className="text-[10px] text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-md inline-block">
+                                                                    Announcement: {format(parseISO(holiday.announcementDate), 'MMM dd, hh:mm a')}
+                                                                </p>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Mail
+                                                                        className={`h-3.5 w-3.5 ${holiday.emailSent ? 'text-emerald-600' : 'text-slate-300'}`}
+                                                                    />
+                                                                    <MessageCircle
+                                                                        className={`h-3.5 w-3.5 ${holiday.whatsappSent ? 'text-emerald-600' : 'text-slate-300'}`}
+                                                                    />
+                                                                </div>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>

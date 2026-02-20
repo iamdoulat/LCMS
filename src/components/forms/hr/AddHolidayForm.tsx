@@ -4,6 +4,7 @@
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
+import { useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
@@ -27,6 +28,7 @@ interface AddHolidayFormProps {
 }
 
 export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const form = useForm<HolidayFormValues>({
     resolver: zodResolver(HolidaySchema),
@@ -40,7 +42,7 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
     },
   });
 
-  async function onSubmit(data: HolidayFormValues) {
+  async function onSubmit(data: HolidayFormValues, forceImmediate?: boolean) {
     setIsSubmitting(true);
 
     // Normalize announcementDate to company timezone
@@ -76,8 +78,8 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
       const docRef = await addDoc(collection(firestore, "holidays"), dataToSave);
 
       // Trigger Email Notifications asynchronously
-      // Trigger Email Notifications asynchronously only if no announcement date or it's now/past
-      const shouldNotifyImmediately = !data.announcementDate || new Date(data.announcementDate) <= new Date();
+      // Trigger Email Notifications asynchronously only if no announcement date or it's now/past OR forced
+      const shouldNotifyImmediately = forceImmediate || !data.announcementDate || new Date(data.announcementDate) <= new Date();
 
       if (shouldNotifyImmediately) {
         fetch('/api/notify/holiday', {
@@ -93,10 +95,14 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
               toDate: data.toDate ? format(data.toDate, 'PPPP') : undefined,
               type: data.type,
               description: data.message || '',
+              forceSend: forceImmediate
             }
           }),
         }).catch(err => console.error("Holiday Notification Error:", err));
       }
+
+      // Invalidate holiday queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['mobile_holidays_page'] });
 
       Swal.fire({
         title: "Holiday Added!",
@@ -116,7 +122,7 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+      <form onSubmit={form.handleSubmit((values) => onSubmit(values, false))} className="space-y-4 py-4">
         <FormField
           control={form.control}
           name="name"
@@ -226,7 +232,7 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
 
               if (result.isConfirmed) {
                 form.setValue('announcementDate', new Date());
-                form.handleSubmit(onSubmit)();
+                form.handleSubmit((values) => onSubmit(values, true))();
               }
             }}
             className="border-primary text-primary hover:bg-primary hover:text-white"
@@ -255,7 +261,7 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
                 });
                 return;
               }
-              form.handleSubmit(onSubmit)();
+              form.handleSubmit((values) => onSubmit(values, false))();
             }}
           >
             {isSubmitting ? (

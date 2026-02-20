@@ -209,9 +209,13 @@ function ReconciliationForm() {
             });
             router.back();
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error submitting reconciliation:", error);
-            Swal.fire("Error", "Failed to submit request.", "error");
+            if (error.message === 'A pending reconciliation request already exists for this date.') {
+                Swal.fire("Record Found", error.message, "info");
+            } else {
+                Swal.fire("Error", "Failed to submit request.", "error");
+            }
         } finally {
             setLoading(false);
         }

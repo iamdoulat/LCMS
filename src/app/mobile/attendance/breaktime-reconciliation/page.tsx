@@ -142,9 +142,13 @@ export default function BreaktimeReconciliationPage() {
             });
 
             router.push('/mobile/attendance/reconciliation/my-applications');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error submitting breaktime reconciliation:', error);
-            Swal.fire('Error', 'Failed to submit reconciliation request. Please try again.', 'error');
+            if (error.message === 'A pending break reconciliation request already exists for this date.') {
+                Swal.fire('Record Found', error.message, 'info');
+            } else {
+                Swal.fire('Error', 'Failed to submit reconciliation request. Please try again.', 'error');
+            }
         } finally {
             setSubmitting(false);
         }

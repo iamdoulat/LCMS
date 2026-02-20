@@ -1991,6 +1991,7 @@ export interface HolidayDocument {
   message?: string;
   announcementDate?: string; // ISO string
   emailSent?: boolean;
+  whatsappSent?: boolean;
   createdAt: any;
 }
 // --- END Holiday Types ---

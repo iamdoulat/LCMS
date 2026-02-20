@@ -98,6 +98,7 @@ export async function GET(request: Request) {
 
                 await holidayDoc.ref.update({
                     emailSent: true,
+                    whatsappSent: true,
                     emailSentAt: admin.firestore.FieldValue.serverTimestamp()
                 });
                 processedCount++;

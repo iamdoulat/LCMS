@@ -4,6 +4,7 @@
 
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
+import { useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
@@ -28,6 +29,7 @@ interface EditHolidayFormProps {
 }
 
 export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormProps) {
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const form = useForm<HolidayFormValues>({
     resolver: zodResolver(HolidaySchema),
@@ -41,7 +43,7 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
     },
   });
 
-  async function onSubmit(data: HolidayFormValues) {
+  async function onSubmit(data: HolidayFormValues, forceImmediate?: boolean) {
     setIsSubmitting(true);
 
     // Normalize announcementDate to company timezone
@@ -62,9 +64,10 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
       updatedAt: serverTimestamp(),
     };
 
-    // If announcementDate is changed, reset emailSent flag to allow new notifications
+    // If announcementDate is changed, reset status flags to allow new notifications
     if (form.formState.dirtyFields.announcementDate) {
       (dataToUpdate as any).emailSent = false;
+      (dataToUpdate as any).whatsappSent = false;
     }
 
     // Ensure undefined fields are handled correctly for Firestore
@@ -82,8 +85,8 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
       const holidayDocRef = doc(firestore, "holidays", initialData.id);
       await updateDoc(holidayDocRef, dataToUpdate);
 
-      // Trigger Email Notifications asynchronously only if no announcement date or it's now/past
-      const shouldNotifyImmediately = !data.announcementDate || new Date(data.announcementDate) <= new Date();
+      // Trigger Email Notifications asynchronously only if no announcement date or it's now/past OR forced
+      const shouldNotifyImmediately = forceImmediate || !data.announcementDate || new Date(data.announcementDate) <= new Date();
 
       if (shouldNotifyImmediately) {
         fetch('/api/notify/holiday', {
@@ -99,10 +102,14 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
               toDate: data.toDate ? format(data.toDate, 'PPPP') : undefined,
               type: data.type,
               description: data.message || '',
+              forceSend: forceImmediate
             }
           }),
         }).catch(err => console.error("Holiday Notification Error:", err));
       }
+
+      // Invalidate holiday queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['mobile_holidays_page'] });
 
       Swal.fire({
         title: "Holiday Updated!",
@@ -120,7 +127,7 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+      <form onSubmit={form.handleSubmit((values) => onSubmit(values, false))} className="space-y-4 py-4">
         <FormField
           control={form.control}
           name="name"
@@ -230,7 +237,7 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
 
               if (result.isConfirmed) {
                 form.setValue('announcementDate', new Date());
-                form.handleSubmit(onSubmit)();
+                form.handleSubmit((values) => onSubmit(values, true))();
               }
             }}
             className="border-primary text-primary hover:bg-primary hover:text-white"
@@ -259,7 +266,7 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
                 });
                 return;
               }
-              form.handleSubmit(onSubmit)();
+              form.handleSubmit((values) => onSubmit(values, false))();
             }}
           >
             {isSubmitting ? (

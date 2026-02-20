@@ -27,6 +27,18 @@ const ATTENDANCE_COLLECTION = 'attendance';
 // Create a new reconciliation request
 export const createReconciliationRequest = async (data: CreateReconciliationData, userId: string) => {
     try {
+        // Check if a pending request already exists for this employee and date
+        const q = query(
+            collection(firestore, RECONCILIATION_COLLECTION),
+            where('employeeId', '==', data.employeeId),
+            where('attendanceDate', '==', data.attendanceDate),
+            where('status', '==', 'pending')
+        );
+        const existingDocs = await getDocs(q);
+        if (!existingDocs.empty) {
+            throw new Error('A pending reconciliation request already exists for this date.');
+        }
+
         const docRef = await addDoc(collection(firestore, RECONCILIATION_COLLECTION), {
             ...data,
             status: 'pending',
@@ -59,6 +71,18 @@ export const createBreaktimeReconciliationRequest = async (
     userId: string
 ) => {
     try {
+        // Check if a pending request already exists for this employee and date
+        const q = query(
+            collection(firestore, 'break_reconciliation'),
+            where('employeeId', '==', data.employeeId),
+            where('attendanceDate', '==', data.attendanceDate),
+            where('status', '==', 'pending')
+        );
+        const existingDocs = await getDocs(q);
+        if (!existingDocs.empty) {
+            throw new Error('A pending break reconciliation request already exists for this date.');
+        }
+
         const docRef = await addDoc(collection(firestore, 'break_reconciliation'), {
             ...data,
             employeeCode: data.employeeCode || 'N/A',
