@@ -42,6 +42,9 @@ export default function LoginPage() {
   const [isEmailLoading, setIsEmailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Ban States
+  const [banTimeRemaining, setBanTimeRemaining] = useState<number | null>(null);
+
   // Device Approval States
   const [showDevicePopup, setShowDevicePopup] = useState(false);
   const [isCheckingDevice, setIsCheckingDevice] = useState(false);
@@ -239,6 +242,35 @@ export default function LoginPage() {
     }
   }, [user, userRole, authLoading, router]); // removing showDevicePopup from dependency to avoid loop, but we use it in logic
 
+  // Check ban status on mount and update timer
+  useEffect(() => {
+    const checkBanStatus = () => {
+      const banDataStr = localStorage.getItem('login_ban_data');
+      if (banDataStr) {
+        try {
+          const banData = JSON.parse(banDataStr);
+          if (banData.lockUntil) {
+            const timeRemaining = banData.lockUntil - Date.now();
+            if (timeRemaining > 0) {
+              setBanTimeRemaining(Math.ceil(timeRemaining / 1000));
+            } else {
+              // Ban expired, clear the data
+              localStorage.removeItem('login_ban_data');
+              setBanTimeRemaining(null);
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing ban data", e);
+          localStorage.removeItem('login_ban_data');
+        }
+      }
+    };
+
+    checkBanStatus();
+    const intervalId = setInterval(checkBanStatus, 1000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   const handleCheckNow = async () => {
     if (user) {
       await verifyDevice(user);
@@ -255,16 +287,39 @@ export default function LoginPage() {
 
 
   const onEmailSubmit = async (data: LoginFormValues) => {
+    if (banTimeRemaining !== null && banTimeRemaining > 0) {
+      setError(`Too many failed attempts. Please try again in ${Math.ceil(banTimeRemaining / 60)} minutes.`);
+      return;
+    }
+
     setIsEmailLoading(true);
     setError(null);
     try {
       await contextLogin(data.email, data.password);
+      // Success: clear ban data
+      localStorage.removeItem('login_ban_data');
       // Success is handled by onAuthStateChanged, which will redirect
     } catch (err: any) {
-      // The context now throws the error, so we can catch it here if needed,
-      // but the user-facing alert is already shown in the context.
-      // We can still set a local error state if we want to display it inline.
-      setError(err.message || "Login failed.");
+      // Handle failure: increment ban count
+      try {
+        const banDataStr = localStorage.getItem('login_ban_data');
+        let banData = banDataStr ? JSON.parse(banDataStr) : { count: 0, lockUntil: null };
+
+        banData.count += 1;
+
+        if (banData.count >= 5) {
+          banData.lockUntil = Date.now() + 10 * 60 * 1000; // 10 minutes
+          setBanTimeRemaining(10 * 60);
+          setError(`Too many failed attempts. You have been blocked for 10 minutes.`);
+        } else {
+          setError(`${err.message || "Login failed."} (${5 - banData.count} attempts left)`);
+        }
+
+        localStorage.setItem('login_ban_data', JSON.stringify(banData));
+      } catch (e) {
+        console.error("Error updating ban data", e);
+        setError(err.message || "Login failed.");
+      }
     } finally {
       setIsEmailLoading(false);
     }
@@ -397,12 +452,18 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isEmailLoading}>
+              <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/90"
+                disabled={isEmailLoading || (banTimeRemaining !== null && banTimeRemaining > 0)}
+              >
                 {isEmailLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Logging in...
                   </>
+                ) : banTimeRemaining !== null && banTimeRemaining > 0 ? (
+                  `Blocked for ${Math.ceil(banTimeRemaining / 60)} min`
                 ) : (
                   <>
                     <LogIn className="mr-2 h-4 w-4" />
@@ -412,6 +473,13 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
+
+          {error && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
         </CardContent>
       </Card>

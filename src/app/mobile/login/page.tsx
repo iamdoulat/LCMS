@@ -34,6 +34,10 @@ export default function MobileLoginPage() {
     const [showDevicePopup, setShowDevicePopup] = useState(false);
     const [isCheckingDevice, setIsCheckingDevice] = useState(false);
 
+    // Ban States
+    const [banTimeRemaining, setBanTimeRemaining] = useState<number | null>(null);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
     const form = useForm<LoginFormValues>({
         resolver: zodResolver(loginSchema),
         defaultValues: {
@@ -206,6 +210,36 @@ export default function MobileLoginPage() {
         }
     }, [user, userRole, authLoading, viewMode]);
 
+    // Check ban status on mount and update timer
+    useEffect(() => {
+        const checkBanStatus = () => {
+            const banDataStr = localStorage.getItem('mobile_login_ban_data');
+            if (banDataStr) {
+                try {
+                    const banData = JSON.parse(banDataStr);
+                    if (banData.lockUntil) {
+                        const timeRemaining = banData.lockUntil - Date.now();
+                        if (timeRemaining > 0) {
+                            setBanTimeRemaining(Math.ceil(timeRemaining / 1000));
+                        } else {
+                            // Ban expired, clear the data
+                            localStorage.removeItem('mobile_login_ban_data');
+                            setBanTimeRemaining(null);
+                            setErrorMsg(null);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error parsing ban data", e);
+                    localStorage.removeItem('mobile_login_ban_data');
+                }
+            }
+        };
+
+        checkBanStatus();
+        const intervalId = setInterval(checkBanStatus, 1000);
+        return () => clearInterval(intervalId);
+    }, []);
+
     const handleCheckNow = async () => {
         if (user) {
             await verifyDevice(user);
@@ -219,17 +253,62 @@ export default function MobileLoginPage() {
     };
 
     const onEmailSubmit = async (data: LoginFormValues) => {
+        if (banTimeRemaining !== null && banTimeRemaining > 0) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Too Many Attempts',
+                text: `Please try again in ${Math.ceil(banTimeRemaining / 60)} minutes.`,
+                confirmButtonColor: '#0a1e60'
+            });
+            return;
+        }
+
         setIsEmailLoading(true);
+        setErrorMsg(null);
         try {
             await contextLogin(data.email, data.password);
             // Device check will happen in useEffect
+            localStorage.removeItem('mobile_login_ban_data');
         } catch (err: any) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Login Failed',
-                text: err.message || "Invalid credentials",
-                confirmButtonColor: '#0a1e60'
-            });
+            // Handle failure: increment ban count
+            try {
+                const banDataStr = localStorage.getItem('mobile_login_ban_data');
+                let banData = banDataStr ? JSON.parse(banDataStr) : { count: 0, lockUntil: null };
+
+                banData.count += 1;
+
+                if (banData.count >= 5) {
+                    banData.lockUntil = Date.now() + 10 * 60 * 1000; // 10 minutes
+                    setBanTimeRemaining(10 * 60);
+                    const msg = `Too many failed attempts. You have been blocked for 10 minutes.`;
+                    setErrorMsg(msg);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Blocked',
+                        text: msg,
+                        confirmButtonColor: '#0a1e60'
+                    });
+                } else {
+                    const msg = `${err.message || "Invalid credentials"} (${5 - banData.count} attempts left)`;
+                    setErrorMsg(msg);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Login Failed',
+                        text: msg,
+                        confirmButtonColor: '#0a1e60'
+                    });
+                }
+
+                localStorage.setItem('mobile_login_ban_data', JSON.stringify(banData));
+            } catch (e) {
+                console.error("Error updating ban data", e);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Login Failed',
+                    text: err.message || "Invalid credentials",
+                    confirmButtonColor: '#0a1e60'
+                });
+            }
         } finally {
             setIsEmailLoading(false);
         }
@@ -329,11 +408,27 @@ export default function MobileLoginPage() {
                             )}
                         />
 
-                        <Button type="submit" className="w-full h-12 rounded-xl bg-[#0a1e60] hover:bg-[#0a1e60]/90 text-lg shadow-lg shadow-blue-900/20" disabled={isEmailLoading}>
-                            {isEmailLoading ? <Loader2 className="animate-spin" /> : "Sign In"}
+                        <Button
+                            type="submit"
+                            className="w-full h-12 rounded-xl bg-[#0a1e60] hover:bg-[#0a1e60]/90 text-lg shadow-lg shadow-blue-900/20"
+                            disabled={isEmailLoading || (banTimeRemaining !== null && banTimeRemaining > 0)}
+                        >
+                            {isEmailLoading ? (
+                                <Loader2 className="animate-spin" />
+                            ) : banTimeRemaining !== null && banTimeRemaining > 0 ? (
+                                `Blocked (${Math.ceil(banTimeRemaining / 60)} min)`
+                            ) : (
+                                "Sign In"
+                            )}
                         </Button>
                     </form>
                 </Form>
+
+                {errorMsg && (
+                    <div className="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center font-medium border border-red-100">
+                        {errorMsg}
+                    </div>
+                )}
             </div>
             <p className="mt-8 text-white/50 text-xs">© {new Date().getFullYear()} {companyName}. All rights reserved.</p>
 
