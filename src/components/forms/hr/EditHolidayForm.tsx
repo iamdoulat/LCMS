@@ -11,6 +11,8 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { HolidayFormValues, HolidayDocument } from '@/types';
 import { HolidaySchema, holidayTypeOptions } from '@/types';
 import { format, parseISO } from 'date-fns';
+import moment from 'moment-timezone';
+import { getCompanyTimezone } from '@/lib/settings/company';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,17 +43,27 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
 
   async function onSubmit(data: HolidayFormValues) {
     setIsSubmitting(true);
+
+    // Normalize announcementDate to company timezone
+    let announcementDateIso = undefined;
+    if (data.announcementDate) {
+      const tz = await getCompanyTimezone();
+      // Interpret the selected date/time as being in the company's timezone
+      const localDateTimeStr = format(data.announcementDate, "yyyy-MM-dd HH:mm:ss");
+      announcementDateIso = moment.tz(localDateTimeStr, tz).toISOString();
+    }
+
     const dataToUpdate = {
       ...data,
       fromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
       toDate: data.toDate ? format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       message: data.message || undefined,
-      announcementDate: data.announcementDate ? format(data.announcementDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      announcementDate: announcementDateIso,
       updatedAt: serverTimestamp(),
     };
 
-    // If announcementDate is changed to a future date, reset emailSent flag
-    if (form.formState.dirtyFields.announcementDate && data.announcementDate && data.announcementDate > new Date()) {
+    // If announcementDate is changed, reset emailSent flag to allow new notifications
+    if (form.formState.dirtyFields.announcementDate) {
       (dataToUpdate as any).emailSent = false;
     }
 
@@ -69,6 +81,29 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
     try {
       const holidayDocRef = doc(firestore, "holidays", initialData.id);
       await updateDoc(holidayDocRef, dataToUpdate);
+
+      // Trigger Email Notifications asynchronously only if no announcement date or it's now/past
+      const shouldNotifyImmediately = !data.announcementDate || new Date(data.announcementDate) <= new Date();
+
+      if (shouldNotifyImmediately) {
+        fetch('/api/notify/holiday', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            holidayId: initialData.id,
+            holidayData: {
+              title: data.name,
+              fromDate: format(data.fromDate, 'PPPP'),
+              toDate: data.toDate ? format(data.toDate, 'PPPP') : undefined,
+              type: data.type,
+              description: data.message || '',
+            }
+          }),
+        }).catch(err => console.error("Holiday Notification Error:", err));
+      }
+
       Swal.fire({
         title: "Holiday Updated!",
         icon: "success",
@@ -177,8 +212,56 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
             </FormItem>
           )}
         />
-        <div className="flex justify-end pt-2">
-          <Button type="submit" disabled={isSubmitting}>
+        <div className="flex justify-end gap-3 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isSubmitting}
+            onClick={async () => {
+              const result = await Swal.fire({
+                title: "Send Immediately?",
+                text: "Are you sure you want to send the notification now? This will set the announcement date to the current time.",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonColor: "hsl(var(--primary))",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Yes, Send Now",
+              });
+
+              if (result.isConfirmed) {
+                form.setValue('announcementDate', new Date());
+                form.handleSubmit(onSubmit)();
+              }
+            }}
+            className="border-primary text-primary hover:bg-primary hover:text-white"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                Send Now
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            disabled={isSubmitting}
+            onClick={async () => {
+              const announcementDate = form.getValues('announcementDate');
+              if (!announcementDate) {
+                Swal.fire({
+                  title: "Announcement Date Required",
+                  text: "Please select an announcement date and time to schedule the notification, or click 'Send Now' to notify employees immediately.",
+                  icon: "warning",
+                });
+                return;
+              }
+              form.handleSubmit(onSubmit)();
+            }}
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -187,7 +270,7 @@ export function EditHolidayForm({ initialData, onFormSubmit }: EditHolidayFormPr
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                Save Changes
+                Send Schedule
               </>
             )}
           </Button>
