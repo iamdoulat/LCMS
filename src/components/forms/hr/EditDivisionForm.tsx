@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import Swal from 'sweetalert2';
+import { useToast } from "@/hooks/use-toast";
 import { firestore } from '@/lib/firebase/config';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { DivisionFormValues, DivisionDocument } from '@/types';
@@ -26,6 +26,7 @@ interface EditDivisionFormProps {
 }
 
 export function EditDivisionForm({ initialData, onFormSubmit }: EditDivisionFormProps) {
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const router = useRouter();
   const form = useForm<DivisionFormValues>({
@@ -45,15 +46,16 @@ export function EditDivisionForm({ initialData, onFormSubmit }: EditDivisionForm
     try {
       const divisionDocRef = doc(firestore, "divisions", initialData.id);
       await updateDoc(divisionDocRef, dataToUpdate);
-      Swal.fire({
+      toast({
         title: "Division Updated!",
-        icon: "success",
-        timer: 1000,
-        showConfirmButton: false,
       });
       onFormSubmit();
     } catch (error: any) {
-      Swal.fire("Update Failed", `Failed to update division: ${error.message}`, "error");
+      toast({
+        title: "Update Failed",
+        description: `Failed to update division: ${error.message}`,
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -76,19 +78,19 @@ export function EditDivisionForm({ initialData, onFormSubmit }: EditDivisionForm
           )}
         />
         <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
-                <>
+              <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
-                </>
+              </>
             ) : (
-                <>
+              <>
                 <Save className="mr-2 h-4 w-4" />
                 Save Changes
-                </>
+              </>
             )}
-            </Button>
+          </Button>
         </div>
       </form>
     </Form>

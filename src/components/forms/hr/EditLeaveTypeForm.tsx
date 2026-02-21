@@ -16,7 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import Swal from 'sweetalert2';
+import { useToast } from "@/hooks/use-toast";
 import type { LeaveTypeDefinition } from '@/types';
 
 const formSchema = z.object({
@@ -32,6 +32,7 @@ interface EditLeaveTypeFormProps {
 }
 
 export function EditLeaveTypeForm({ leaveType, onSuccess }: EditLeaveTypeFormProps) {
+    const { toast } = useToast();
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -50,17 +51,18 @@ export function EditLeaveTypeForm({ leaveType, onSuccess }: EditLeaveTypeFormPro
                 ...values,
                 updatedAt: serverTimestamp(),
             });
-            Swal.fire({
+            toast({
                 title: 'Success',
-                text: 'Leave Type updated successfully',
-                icon: 'success',
-                timer: 1000,
-                showConfirmButton: false
+                description: 'Leave Type updated successfully',
             });
             onSuccess();
         } catch (error) {
             console.error('Error updating leave type:', error);
-            Swal.fire('Error', 'Failed to update leave type', 'error');
+            toast({
+                title: 'Error',
+                description: 'Failed to update leave type',
+                variant: 'destructive',
+            });
         }
     }
 

@@ -15,10 +15,10 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AddPettyCashTransactionForm } from '@/components/forms/financial';
-import { EditPettyCashTransactionForm } from '@/components/forms/financial';
+import { AddPettyCashTransactionForm, EditPettyCashTransactionForm } from '@/components/forms/financial';
 import { useAuth } from '@/context/AuthContext';
-import Swal from 'sweetalert2';
+import { useToast } from "@/hooks/use-toast";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import dynamic from 'next/dynamic';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -148,6 +148,11 @@ export default function PettyCashDashboardPage() {
     const [isEditFormOpen, setIsEditFormOpen] = React.useState(false);
     const [editingTransaction, setEditingTransaction] = React.useState<PettyCashTransactionDocument | null>(null);
     const [currentPage, setCurrentPage] = React.useState(1);
+    const { toast } = useToast();
+    const [confirmDelete, setConfirmDelete] = React.useState<{ isOpen: boolean; transactionId: string }>({
+        isOpen: false,
+        transactionId: '',
+    });
 
     const [accountPieChartData, setAccountPieChartData] = React.useState<PieChartDataItem[]>([]);
     const [monthlyBarChartData, setMonthlyBarChartData] = React.useState<MonthlyChartData[]>([]);
@@ -319,45 +324,51 @@ export default function PettyCashDashboardPage() {
 
     const handleDelete = (transactionId: string) => {
         if (isReadOnly) return;
-        Swal.fire({
-            title: 'Are you sure?',
-            text: `This will delete the transaction and update the account balance. This action cannot be undone.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: 'hsl(var(--destructive))',
-            confirmButtonText: 'Yes, delete it!'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await runTransaction(firestore, async (transaction) => {
-                        const txDocRef = doc(firestore, "petty_cash_transactions", transactionId);
-                        const txDocSnap = await transaction.get(txDocRef);
-
-                        if (!txDocSnap.exists()) {
-                            throw new Error("Transaction not found.");
-                        }
-
-                        const txData = txDocSnap.data() as PettyCashTransactionDocument;
-                        const accountDocRef = doc(firestore, "petty_cash_accounts", txData.accountId);
-                        const accountDocSnap = await transaction.get(accountDocRef);
-
-                        if (accountDocSnap.exists()) {
-                            const accountData = accountDocSnap.data();
-                            const currentBalance = accountData.balance || 0;
-                            const newBalance = txData.type === 'Credit'
-                                ? currentBalance - txData.amount
-                                : currentBalance + txData.amount;
-                            transaction.update(accountDocRef, { balance: newBalance, updatedAt: serverTimestamp() });
-                        }
-
-                        transaction.delete(txDocRef);
-                    });
-                    Swal.fire('Deleted!', 'The transaction has been removed and account balance updated.', 'success');
-                } catch (error: any) {
-                    Swal.fire('Error!', `Could not delete transaction: ${error.message}`, 'error');
-                }
-            }
+        setConfirmDelete({
+            isOpen: true,
+            transactionId,
         });
+    };
+
+    const executeDelete = async () => {
+        const { transactionId } = confirmDelete;
+        try {
+            await runTransaction(firestore, async (transaction) => {
+                const txDocRef = doc(firestore, "petty_cash_transactions", transactionId);
+                const txDocSnap = await transaction.get(txDocRef);
+
+                if (!txDocSnap.exists()) {
+                    throw new Error("Transaction not found.");
+                }
+
+                const txData = txDocSnap.data() as PettyCashTransactionDocument;
+                const accountDocRef = doc(firestore, "petty_cash_accounts", txData.accountId);
+                const accountDocSnap = await transaction.get(accountDocRef);
+
+                if (accountDocSnap.exists()) {
+                    const accountData = accountDocSnap.data();
+                    const currentBalance = accountData.balance || 0;
+                    const newBalance = txData.type === 'Credit'
+                        ? currentBalance - txData.amount
+                        : currentBalance + txData.amount;
+                    transaction.update(accountDocRef, { balance: newBalance, updatedAt: serverTimestamp() });
+                }
+
+                transaction.delete(txDocRef);
+            });
+            toast({
+                title: 'Deleted!',
+                description: 'The transaction has been removed and account balance updated.',
+            });
+        } catch (error: any) {
+            toast({
+                title: 'Error!',
+                description: `Could not delete transaction: ${error.message}`,
+                variant: 'destructive',
+            });
+        } finally {
+            setConfirmDelete({ isOpen: false, transactionId: '' });
+        }
     };
 
     const netFlow = stats.thisMonthCredits - stats.thisMonthDebits;
@@ -475,131 +486,130 @@ export default function PettyCashDashboardPage() {
                 </CardContent>
             </Card>
 
-            <Dialog open={isAddFormOpen} onOpenChange={setIsAddFormOpen}>
-                <Card className="shadow-xl">
-                    <CardHeader>
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div>
-                                <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
-                                    <Banknote className="h-7 w-7 text-primary" />
-                                    Daily Petty Cash Transactions
-                                </CardTitle>
-                                <CardDescription>
-                                    Add and view daily debit/credit transactions for your petty cash accounts.
-                                </CardDescription>
-                            </div>
-                            <DialogTrigger asChild>
-                                <Button disabled={isReadOnly}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Transaction
-                                </Button>
-                            </DialogTrigger>
+            <Card className="shadow-xl">
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <CardTitle className={cn("font-bold text-2xl lg:text-3xl flex items-center gap-2 text-primary", "bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out")}>
+                                <Banknote className="h-7 w-7 text-primary" />
+                                Daily Petty Cash Transactions
+                            </CardTitle>
+                            <CardDescription>
+                                Add and view daily debit/credit transactions for your petty cash accounts.
+                            </CardDescription>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        {isLoading ? (
-                            <div className="flex justify-center items-center h-64"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
-                        ) : fetchError ? (
-                            <div className="text-destructive-foreground bg-destructive/10 p-4 rounded-md text-center">
-                                <AlertTriangle className="mx-auto mb-2 h-8 w-8" />
-                                <p className="font-semibold">Error Loading Transactions</p>
-                                <p className="text-sm">{fetchError}</p>
-                            </div>
-                        ) : transactions.length === 0 ? (
-                            <div className="text-muted-foreground text-center py-10">
-                                <Info className="mx-auto mb-2 h-10 w-10" />
-                                <p className="font-semibold">No Transactions Found</p>
-                                <p className="text-sm">Click "Add Transaction" to get started.</p>
-                            </div>
-                        ) : (
-                            <div className="rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Account</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Payee/Purpose</TableHead>
-                                            <TableHead>Category</TableHead>
-                                            <TableHead className="text-right">Amount</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
+                        <Button disabled={isReadOnly} onClick={() => setIsAddFormOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Transaction
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? (
+                        <div className="flex justify-center items-center h-64"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
+                    ) : fetchError ? (
+                        <div className="text-destructive-foreground bg-destructive/10 p-4 rounded-md text-center">
+                            <AlertTriangle className="mx-auto mb-2 h-8 w-8" />
+                            <p className="font-semibold">Error Loading Transactions</p>
+                            <p className="text-sm">{fetchError}</p>
+                        </div>
+                    ) : transactions.length === 0 ? (
+                        <div className="text-muted-foreground text-center py-10">
+                            <Info className="mx-auto mb-2 h-10 w-10" />
+                            <p className="font-semibold">No Transactions Found</p>
+                            <p className="text-sm">Click "Add Transaction" to get started.</p>
+                        </div>
+                    ) : (
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Account</TableHead>
+                                        <TableHead>Type</TableHead>
+                                        <TableHead>Payee/Purpose</TableHead>
+                                        <TableHead>Category</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {currentTransactions.map(tx => (
+                                        <TableRow key={tx.id}>
+                                            <TableCell>{formatDisplayDate(tx.transactionDate)}</TableCell>
+                                            <TableCell>{tx.accountName || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <span className={cn("font-semibold", tx.type === 'Debit' ? 'text-red-600' : 'text-green-600')}>
+                                                    {tx.type}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>{tx.payeeName}</TableCell>
+                                            <TableCell>{tx.categoryNames?.join(', ') || 'N/A'}</TableCell>
+                                            <TableCell className="text-right font-medium">{formatCurrencyValue(tx.amount)}</TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}>
+                                                            <span className="sr-only">Open menu</span>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuItem onSelect={() => setTimeout(() => handleEdit(tx), 0)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onSelect={() => setTimeout(() => handleDelete(tx.id), 0)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {currentTransactions.map(tx => (
-                                            <TableRow key={tx.id}>
-                                                <TableCell>{formatDisplayDate(tx.transactionDate)}</TableCell>
-                                                <TableCell>{tx.accountName || 'N/A'}</TableCell>
-                                                <TableCell>
-                                                    <span className={cn("font-semibold", tx.type === 'Debit' ? 'text-red-600' : 'text-green-600')}>
-                                                        {tx.type}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell>{tx.payeeName}</TableCell>
-                                                <TableCell>{tx.categoryNames?.join(', ') || 'N/A'}</TableCell>
-                                                <TableCell className="text-right font-medium">{formatCurrencyValue(tx.amount)}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={isReadOnly}>
-                                                                <span className="sr-only">Open menu</span>
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuItem onClick={() => handleEdit(tx)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem onClick={() => handleDelete(tx.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                    <TableCaption>
-                                        Showing {currentTransactions.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-
-                                        {Math.min(currentPage * ITEMS_PER_PAGE, transactions.length)} of {transactions.length} transactions.
-                                    </TableCaption>
-                                </Table>
-                            </div>
-                        )}
-                        {totalPages > 1 && (
-                            <div className="flex items-center justify-center space-x-2 py-4 mt-4">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handlePageChange(currentPage - 1)}
-                                    disabled={currentPage === 1}
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                    Previous
-                                </Button>
-                                {getPageNumbers().map((page, index) =>
-                                    typeof page === 'number' ? (
-                                        <Button
-                                            key={`page-${page}`}
-                                            variant={currentPage === page ? 'default' : 'outline'}
-                                            size="sm"
-                                            onClick={() => handlePageChange(page)}
-                                            className="w-9 h-9 p-0"
-                                        >
-                                            {page}
-                                        </Button>
-                                    ) : (<span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">{page}</span>)
-                                )}
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    disabled={currentPage === totalPages}
-                                >
-                                    Next
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                    ))}
+                                </TableBody>
+                                <TableCaption>
+                                    Showing {currentTransactions.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0}-
+                                    {Math.min(currentPage * ITEMS_PER_PAGE, transactions.length)} of {transactions.length} transactions.
+                                </TableCaption>
+                            </Table>
+                        </div>
+                    )}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center space-x-2 py-4 mt-4">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                                Previous
+                            </Button>
+                            {getPageNumbers().map((page, index) =>
+                                typeof page === 'number' ? (
+                                    <Button
+                                        key={`page-${page}`}
+                                        variant={currentPage === page ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => handlePageChange(page)}
+                                        className="w-9 h-9 p-0"
+                                    >
+                                        {page}
+                                    </Button>
+                                ) : (<span key={`ellipsis-${index}`} className="px-2 py-1 text-sm">{page}</span>)
+                            )}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                            >
+                                Next
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Dialog open={isAddFormOpen} onOpenChange={setIsAddFormOpen}>
                 <DialogContent className="sm:max-w-[550px]">
                     <DialogHeader>
                         <DialogTitle>Add New Transaction</DialogTitle>
@@ -695,6 +705,16 @@ export default function PettyCashDashboardPage() {
                     <SalesInvoiceList showFilters={false} itemsPerPage={5} />
                 </CardContent>
             </Card>
+
+            <ConfirmDialog
+                isOpen={confirmDelete.isOpen}
+                onOpenChange={(open) => setConfirmDelete(prev => ({ ...prev, isOpen: open }))}
+                title="Are you sure?"
+                description="This will delete the transaction and update the account balance. This action cannot be undone."
+                onConfirm={executeDelete}
+                confirmText="Delete"
+                variant="destructive"
+            />
         </div>
     );
 }

@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import Swal from 'sweetalert2';
+import { useToast } from "@/hooks/use-toast";
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { DesignationFormValues } from '@/types';
@@ -20,6 +20,7 @@ interface AddDesignationFormProps {
 }
 
 export function AddDesignationForm({ onFormSubmit }: AddDesignationFormProps) {
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const form = useForm<DesignationFormValues>({
     resolver: zodResolver(DesignationSchema),
@@ -37,16 +38,17 @@ export function AddDesignationForm({ onFormSubmit }: AddDesignationFormProps) {
 
     try {
       await addDoc(collection(firestore, "designations"), dataToSave);
-      Swal.fire({
+      toast({
         title: "Designation Created!",
-        icon: "success",
-        timer: 1000,
-        showConfirmButton: false,
       });
       form.reset();
       onFormSubmit(); // Close the dialog
     } catch (error: any) {
-      Swal.fire("Save Failed", `Failed to create designation: ${error.message}`, "error");
+      toast({
+        title: "Save Failed",
+        description: `Failed to create designation: ${error.message}`,
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -69,19 +71,19 @@ export function AddDesignationForm({ onFormSubmit }: AddDesignationFormProps) {
           )}
         />
         <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
-                <>
+              <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
-                </>
+              </>
             ) : (
-                <>
+              <>
                 <Save className="mr-2 h-4 w-4" />
                 Save Designation
-                </>
+              </>
             )}
-            </Button>
+          </Button>
         </div>
       </form>
     </Form>

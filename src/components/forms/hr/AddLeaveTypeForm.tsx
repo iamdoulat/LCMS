@@ -16,7 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import Swal from 'sweetalert2';
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -30,6 +30,7 @@ interface AddLeaveTypeFormProps {
 }
 
 export function AddLeaveTypeForm({ onSuccess }: AddLeaveTypeFormProps) {
+    const { toast } = useToast();
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -49,17 +50,18 @@ export function AddLeaveTypeForm({ onSuccess }: AddLeaveTypeFormProps) {
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             });
-            Swal.fire({
+            toast({
                 title: 'Success',
-                text: 'Leave Type added successfully',
-                icon: 'success',
-                timer: 1000,
-                showConfirmButton: false
+                description: 'Leave Type added successfully',
             });
             onSuccess();
         } catch (error) {
             console.error('Error adding leave type:', error);
-            Swal.fire('Error', 'Failed to add leave type', 'error');
+            toast({
+                title: 'Error',
+                description: 'Failed to add leave type',
+                variant: 'destructive',
+            });
         }
     }
 

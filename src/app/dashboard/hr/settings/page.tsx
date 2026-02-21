@@ -32,7 +32,8 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, orderBy, deleteDoc, doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { AttendanceReconciliationSchema, type AttendanceReconciliationConfiguration, type MultipleCheckInOutConfiguration } from '@/types';
 import type { DesignationDocument, BranchDocument, DepartmentDocument, UnitDocument, DivisionDocument } from '@/types';
-import Swal from 'sweetalert2';
+import { useToast } from "@/hooks/use-toast";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useAuth } from '@/context/AuthContext';
 import { AddDesignationForm } from '@/components/forms/hr';
 import { EditDesignationForm } from '@/components/forms/hr';
@@ -130,16 +131,17 @@ export default function HrmSettingsPage() {
                 updatedAt: serverTimestamp(),
             }, { merge: true });
 
-            Swal.fire({
+            toast({
                 title: 'Saved',
-                text: 'Cancellation window configuration updated.',
-                icon: 'success',
-                timer: 1000,
-                showConfirmButton: false
+                description: 'Cancellation window configuration updated.',
             });
             setIsCancellationDialogOpen(false);
         } catch (error: any) {
-            Swal.fire('Error', `Failed to save: ${error.message}`, 'error');
+            toast({
+                title: 'Error',
+                description: `Failed to save: ${error.message}`,
+                variant: 'destructive',
+            });
         } finally {
             setIsSavingCancellation(false);
         }
@@ -163,6 +165,19 @@ export default function HrmSettingsPage() {
         maxDaysLimit: 30,
         maxDateOfCurrentMonth: 2,
     });
+    const { toast } = useToast();
+    const [confirmDelete, setConfirmDelete] = React.useState<{
+        isOpen: boolean;
+        collectionName: string;
+        docId: string;
+        docName: string;
+    }>({
+        isOpen: false,
+        collectionName: '',
+        docId: '',
+        docName: '',
+    });
+
     const [isSavingRecon, setIsSavingRecon] = React.useState(false);
 
     useEffect(() => {
@@ -203,15 +218,16 @@ export default function HrmSettingsPage() {
                 updatedAt: serverTimestamp(),
             };
             await setDoc(doc(firestore, 'hrm_settings', 'multi_check_in_out'), dataToSave, { merge: true });
-            Swal.fire({
+            toast({
                 title: 'Saved',
-                text: 'Multiple Check In/Out Configuration updated.',
-                icon: 'success',
-                timer: 1000,
-                showConfirmButton: false
+                description: 'Multiple Check In/Out Configuration updated.',
             });
         } catch (error: any) {
-            Swal.fire('Error', `Failed to save: ${error.message}`, 'error');
+            toast({
+                title: 'Error',
+                description: `Failed to save: ${error.message}`,
+                variant: 'destructive',
+            });
         } finally {
             setIsSavingMultiCheck(false);
         }
@@ -226,15 +242,16 @@ export default function HrmSettingsPage() {
                 updatedAt: serverTimestamp(),
             };
             await setDoc(doc(firestore, 'hrm_settings', 'attendance_reconciliation'), dataToSave, { merge: true });
-            Swal.fire({
+            toast({
                 title: 'Saved',
-                text: 'Attendance Reconciliation Configuration updated.',
-                icon: 'success',
-                timer: 1000,
-                showConfirmButton: false
+                description: 'Attendance Reconciliation Configuration updated.',
             });
         } catch (error: any) {
-            Swal.fire('Error', `Failed to save: ${error.message}`, 'error');
+            toast({
+                title: 'Error',
+                description: `Failed to save: ${error.message}`,
+                variant: 'destructive',
+            });
         } finally {
             setIsSavingRecon(false);
         }
@@ -245,31 +262,33 @@ export default function HrmSettingsPage() {
         setIsEditDialogOpen(true);
     };
 
-    const handleDelete = async (collectionName: string, docId: string, docName: string) => {
+    const handleDelete = (collectionName: string, docId: string, docName: string) => {
         if (isReadOnly) return;
-        Swal.fire({
-            title: `Delete '${docName}'?`,
-            text: "This will permanently delete the item.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: 'hsl(var(--destructive))',
-            confirmButtonText: 'Yes, delete it!'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await deleteDoc(doc(firestore, collectionName, docId));
-                    Swal.fire({
-                        title: 'Deleted!',
-                        text: `'${docName}' has been removed.`,
-                        icon: 'success',
-                        timer: 1000,
-                        showConfirmButton: false
-                    });
-                } catch (error: any) {
-                    Swal.fire('Error!', `Could not delete item: ${error.message}`, 'error');
-                }
-            }
+        setConfirmDelete({
+            isOpen: true,
+            collectionName,
+            docId,
+            docName,
         });
+    };
+
+    const executeDelete = async () => {
+        const { collectionName, docId, docName } = confirmDelete;
+        try {
+            await deleteDoc(doc(firestore, collectionName, docId));
+            toast({
+                title: 'Deleted!',
+                description: `'${docName}' has been removed.`,
+            });
+        } catch (error: any) {
+            toast({
+                title: 'Error!',
+                description: `Could not delete item: ${error.message}`,
+                variant: 'destructive',
+            });
+        } finally {
+            setConfirmDelete(prev => ({ ...prev, isOpen: false }));
+        }
     };
 
     const handleDeleteDesignation = async (id: string) => {
@@ -322,9 +341,9 @@ export default function HrmSettingsPage() {
                                                         <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                            <DropdownMenuItem onClick={() => onEditClick(item)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                            <DropdownMenuItem onSelect={() => setTimeout(() => onEditClick(item), 0)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem onClick={() => handleDelete(collectionName, item.id, item.name)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                            <DropdownMenuItem onSelect={() => setTimeout(() => handleDelete(collectionName, item.id, item.name), 0)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
@@ -582,16 +601,7 @@ export default function HrmSettingsPage() {
                         </CardContent>
                     </Card>
 
-                    <Dialog open={isAddDepartmentDialogOpen} onOpenChange={setIsAddDepartmentDialogOpen}>
-                        {renderTableSection("Departments", "Manage company departments.", departments, isLoadingDepts, () => setIsAddDepartmentDialogOpen(true), (item) => handleEdit(item, setEditingDepartment, setIsEditDepartmentDialogOpen), "departments")}
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Add New Department</DialogTitle>
-                                <DialogDescription>Create a new company department.</DialogDescription>
-                            </DialogHeader>
-                            <AddDepartmentForm onFormSubmit={() => setIsAddDepartmentDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
+                    {renderTableSection("Departments", "Manage company departments.", departments, isLoadingDepts, () => setIsAddDepartmentDialogOpen(true), (item) => handleEdit(item, setEditingDepartment, setIsEditDepartmentDialogOpen), "departments")}
 
                     {/* Supervisor Setup Section */}
                     <Card>
@@ -675,9 +685,9 @@ export default function HrmSettingsPage() {
                                                                     <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                                     <DropdownMenuContent align="end">
                                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuItem onSelect={() => setTimeout(() => handleEdit(item, setEditingDesignation, setIsEditDesignationDialogOpen), 0)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
                                                                         <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem onClick={() => handleDeleteDesignation(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                        <DropdownMenuItem onSelect={() => setTimeout(() => handleDeleteDesignation(item.id), 0)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
                                                                     </DropdownMenuContent>
                                                                 </DropdownMenu>
                                                             </TableCell>
@@ -734,9 +744,9 @@ export default function HrmSettingsPage() {
                                                                     <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                                     <DropdownMenuContent align="end">
                                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingLeaveType, setIsEditLeaveTypeDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuItem onSelect={() => setTimeout(() => handleEdit(item, setEditingLeaveType, setIsEditLeaveTypeDialogOpen), 0)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
                                                                         <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem onClick={() => handleDeleteLeaveType(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                        <DropdownMenuItem onSelect={() => setTimeout(() => handleDeleteLeaveType(item.id), 0)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
                                                                     </DropdownMenuContent>
                                                                 </DropdownMenu>
                                                             </TableCell>
@@ -819,9 +829,9 @@ export default function HrmSettingsPage() {
                                                                     <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                                     <DropdownMenuContent align="end">
                                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingLeaveGroup, setIsEditLeaveGroupDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuItem onSelect={() => setTimeout(() => handleEdit(item, setEditingLeaveGroup, setIsEditLeaveGroupDialogOpen), 0)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
                                                                         <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem onClick={() => handleDeleteLeaveGroup(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                        <DropdownMenuItem onSelect={() => setTimeout(() => handleDeleteLeaveGroup(item.id), 0)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
                                                                     </DropdownMenuContent>
                                                                 </DropdownMenu>
                                                             </TableCell>
@@ -874,9 +884,9 @@ export default function HrmSettingsPage() {
                                                                     <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Open menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                                     <DropdownMenuContent align="end">
                                                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                        <DropdownMenuItem onClick={() => handleEdit(item, setEditingAttendancePolicy, setIsEditAttendancePolicyDialogOpen)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
+                                                                        <DropdownMenuItem onSelect={() => setTimeout(() => handleEdit(item, setEditingAttendancePolicy, setIsEditAttendancePolicyDialogOpen), 0)} disabled={isReadOnly}><Edit className="mr-2 h-4 w-4" /><span>Edit</span></DropdownMenuItem>
                                                                         <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem onClick={() => handleDeleteAttendancePolicy(item.id)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
+                                                                        <DropdownMenuItem onSelect={() => setTimeout(() => handleDeleteAttendancePolicy(item.id), 0)} className="text-destructive focus:text-destructive" disabled={isReadOnly}><Trash2 className="mr-2 h-4 w-4" /><span>Delete</span></DropdownMenuItem>
                                                                     </DropdownMenuContent>
                                                                 </DropdownMenu>
                                                             </TableCell>
@@ -889,29 +899,42 @@ export default function HrmSettingsPage() {
                         </CardContent>
                     </Card>
 
-                    <Dialog open={isAddDivisionDialogOpen} onOpenChange={setIsAddDivisionDialogOpen}>
-                        {renderTableSection("Divisions", "Manage company divisions.", divisions, isLoadingDivisions, () => setIsAddDivisionDialogOpen(true), (item) => handleEdit(item, setEditingDivision, setIsEditDivisionDialogOpen), "divisions")}
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Add New Division</DialogTitle>
-                                <DialogDescription>Create a new company division.</DialogDescription>
-                            </DialogHeader>
-                            <AddDivisionForm onFormSubmit={() => setIsAddDivisionDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
+                    {renderTableSection("Divisions", "Manage company divisions.", divisions, isLoadingDivisions, () => setIsAddDivisionDialogOpen(true), (item) => handleEdit(item, setEditingDivision, setIsEditDivisionDialogOpen), "divisions")}
 
-                    <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
-                        {renderTableSection("Units", "Manage organizational units.", units, isLoadingUnits, () => setIsAddUnitDialogOpen(true), (item) => handleEdit(item, setEditingUnit, setIsEditUnitDialogOpen), "units")}
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>Add New Unit</DialogTitle>
-                                <DialogDescription>Create a new organizational unit.</DialogDescription>
-                            </DialogHeader>
-                            <AddUnitForm onFormSubmit={() => setIsAddUnitDialogOpen(false)} />
-                        </DialogContent>
-                    </Dialog>
+                    {renderTableSection("Units", "Manage organizational units.", units, isLoadingUnits, () => setIsAddUnitDialogOpen(true), (item) => handleEdit(item, setEditingUnit, setIsEditUnitDialogOpen), "units")}
                 </CardContent>
             </Card>
+
+            {/* Add Dialogs */}
+            <Dialog open={isAddDepartmentDialogOpen} onOpenChange={setIsAddDepartmentDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Add New Department</DialogTitle>
+                        <DialogDescription>Create a new company department.</DialogDescription>
+                    </DialogHeader>
+                    <AddDepartmentForm onFormSubmit={() => setIsAddDepartmentDialogOpen(false)} />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddDivisionDialogOpen} onOpenChange={setIsAddDivisionDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Add New Division</DialogTitle>
+                        <DialogDescription>Create a new company division.</DialogDescription>
+                    </DialogHeader>
+                    <AddDivisionForm onFormSubmit={() => setIsAddDivisionDialogOpen(false)} />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isAddUnitDialogOpen} onOpenChange={setIsAddUnitDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Add New Unit</DialogTitle>
+                        <DialogDescription>Create a new organizational unit.</DialogDescription>
+                    </DialogHeader>
+                    <AddUnitForm onFormSubmit={() => setIsAddUnitDialogOpen(false)} />
+                </DialogContent>
+            </Dialog>
 
             {editingDivision && (
                 <Dialog open={isEditDivisionDialogOpen} onOpenChange={setIsEditDivisionDialogOpen}>
@@ -1055,6 +1078,16 @@ export default function HrmSettingsPage() {
                     )}
                 </DialogContent>
             </Dialog>
+            {/* Confirmation Dialogs */}
+            <ConfirmDialog
+                isOpen={confirmDelete.isOpen}
+                onOpenChange={(open) => setConfirmDelete(prev => ({ ...prev, isOpen: open }))}
+                title={`Delete ${confirmDelete.docName}?`}
+                description="This action cannot be undone. This will permanently delete the item from our servers."
+                onConfirm={executeDelete}
+                confirmText="Delete"
+                variant="destructive"
+            />
         </div>
     );
 }

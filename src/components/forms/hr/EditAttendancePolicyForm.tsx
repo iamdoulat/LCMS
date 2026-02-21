@@ -17,7 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, CalendarIcon } from 'lucide-react';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import Swal from 'sweetalert2';
+import { useToast } from "@/hooks/use-toast";
 import { AttendancePolicySchema, type AttendancePolicyFormValues, type AttendancePolicyDocument } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -32,6 +32,7 @@ interface EditAttendancePolicyFormProps {
 const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 export function EditAttendancePolicyForm({ policy, onSuccess }: EditAttendancePolicyFormProps) {
+    const { toast } = useToast();
     const form = useForm<AttendancePolicyFormValues>({
         resolver: zodResolver(AttendancePolicySchema),
         defaultValues: {
@@ -76,17 +77,18 @@ export function EditAttendancePolicyForm({ policy, onSuccess }: EditAttendancePo
 
             await updateDoc(doc(firestore, 'hrm_settings', 'attendance_policies', 'items', policy.id), dataToUpdate);
 
-            Swal.fire({
+            toast({
                 title: 'Success',
-                text: 'Attendance Policy updated successfully',
-                icon: 'success',
-                timer: 1000,
-                showConfirmButton: false
+                description: 'Attendance Policy updated successfully',
             });
             onSuccess();
         } catch (error: any) {
             console.error('Error updating attendance policy:', error);
-            Swal.fire('Error', `Failed to update attendance policy: ${error.message}`, 'error');
+            toast({
+                title: 'Error',
+                description: `Failed to update attendance policy: ${error.message}`,
+                variant: 'destructive',
+            });
         }
     }
 

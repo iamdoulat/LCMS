@@ -16,7 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Trash2 } from 'lucide-react';
 import { addDoc, collection, serverTimestamp, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import Swal from 'sweetalert2';
+import { useToast } from "@/hooks/use-toast";
 import type { LeaveTypeDefinition, LeavePolicyRule } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,6 +60,7 @@ interface AddLeaveGroupFormProps {
 }
 
 export function AddLeaveGroupForm({ onSuccess }: AddLeaveGroupFormProps) {
+    const { toast } = useToast();
     const [leaveTypes, setLeaveTypes] = useState<LeaveTypeDefinition[]>([]);
     const [loadingTypes, setLoadingTypes] = useState(true);
 
@@ -136,7 +137,11 @@ export function AddLeaveGroupForm({ onSuccess }: AddLeaveGroupFormProps) {
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         if (values.policies.length === 0) {
-            Swal.fire('Error', 'Please add at least one leave type policy', 'error');
+            toast({
+                title: 'Error',
+                description: 'Please add at least one leave type policy',
+                variant: 'destructive',
+            });
             return;
         }
 
@@ -147,17 +152,18 @@ export function AddLeaveGroupForm({ onSuccess }: AddLeaveGroupFormProps) {
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             });
-            Swal.fire({
+            toast({
                 title: 'Success',
-                text: 'Leave Group added successfully',
-                icon: 'success',
-                timer: 1000,
-                showConfirmButton: false
+                description: 'Leave Group added successfully',
             });
             onSuccess();
         } catch (error) {
             console.error('Error adding leave group:', error);
-            Swal.fire('Error', 'Failed to add leave group', 'error');
+            toast({
+                title: 'Error',
+                description: 'Failed to add leave group',
+                variant: 'destructive',
+            });
         }
     }
 
