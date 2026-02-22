@@ -15,6 +15,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { updateCheckInOutStatus } from '@/lib/firebase/checkInOut';
 import Swal from 'sweetalert2';
 import { sendPushNotification } from '@/lib/notifications';
+import { determineAttendanceFlag } from '@/lib/firebase/utils';
+import { getActivePolicyForDate } from '@/lib/attendance';
+import type { AttendancePolicyDocument } from '@/types';
 import {
     Dialog,
     DialogContent,
@@ -69,6 +72,7 @@ export default function RemoteAttendanceApprovalPage() {
     const [selectedRecord, setSelectedRecord] = useState<UnifiedApprovalRecord | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [processingId, setProcessingId] = useState<string | null>(null);
+    const [allPolicies, setAllPolicies] = useState<AttendancePolicyDocument[]>([]);
     const [visibleCount, setVisibleCount] = useState(50);
 
     // Month selection logic
@@ -304,6 +308,19 @@ export default function RemoteAttendanceApprovalPage() {
     };
 
     useEffect(() => {
+        const fetchPolicies = async () => {
+            try {
+                const snapshot = await getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'));
+                const policyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendancePolicyDocument));
+                setAllPolicies(policyData);
+            } catch (error) {
+                console.error("Error fetching policies:", error);
+            }
+        };
+        fetchPolicies();
+    }, []);
+
+    useEffect(() => {
         setVisibleCount(50); // Reset count on filter change
         if (!isSupervisorLoading) {
             fetchRemoteAttendance();
@@ -362,10 +379,32 @@ export default function RemoteAttendanceApprovalPage() {
                 if (selectedRecord.type === 'In Time') {
                     if (action === 'Approved') {
                         const snap = await getDoc(docRef);
-                        const inTime = snap.data()?.inTime;
-                        const { determineAttendanceFlag } = await import('@/lib/firebase/utils');
-                        const calculatedFlag = determineAttendanceFlag(inTime);
-                        const flag = calculatedFlag || 'P'; // Safety fallback
+                        const attendanceData = snap.data();
+                        const inTime = attendanceData?.inTime;
+
+                        // Fetch employee data and determine policy accurately
+                        const empSnap = await getDoc(doc(firestore, 'employees', selectedRecord.employeeId));
+                        const empData = empSnap.exists() ? empSnap.data() : {};
+                        const targetDate = selectedRecord.timestamp ? new Date(selectedRecord.timestamp) : new Date();
+
+                        const activePolicy = getActivePolicyForDate(empData, targetDate, allPolicies);
+                        let mergedPolicy = activePolicy;
+                        if (activePolicy?.dailyPolicies) {
+                            const dayName = format(targetDate, 'EEEE');
+                            const dp = activePolicy.dailyPolicies.find((d: any) => d.day === dayName);
+                            if (dp) {
+                                mergedPolicy = {
+                                    ...activePolicy,
+                                    ...dp,
+                                    inTime: dp.inTime || activePolicy.inTime,
+                                    delayBuffer: (dp.delayBuffer !== undefined && dp.delayBuffer !== 0)
+                                        ? dp.delayBuffer
+                                        : activePolicy.delayBuffer
+                                } as any;
+                            }
+                        }
+
+                        const flag = determineAttendanceFlag(inTime, mergedPolicy || undefined);
 
                         await updateDoc(docRef, {
                             approvalStatus: 'Approved',

@@ -33,8 +33,9 @@ import { format, startOfDay, endOfDay } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
 import { determineAttendanceFlag } from '@/lib/firebase/utils';
-import type { EmployeeDocument, AttendanceDocument, BranchDocument } from '@/types';
+import type { EmployeeDocument, AttendanceDocument, BranchDocument, AttendancePolicyDocument } from '@/types';
 import { RoleBadge } from '@/components/ui/RoleBadge';
+import { getActivePolicyForDate } from '@/lib/attendance';
 
 interface TeamAttendanceCardProps {
     supervisedEmployeeIds: string[];
@@ -50,6 +51,7 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
     const [employees, setEmployees] = useState<EmployeeDocument[]>([]);
     const [attendance, setAttendance] = useState<AttendanceDocument[]>([]);
     const [branches, setBranches] = useState<BranchDocument[]>([]);
+    const [allPolicies, setAllPolicies] = useState<AttendancePolicyDocument[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'All' | 'P' | 'A' | 'D' | 'Pending'>('All');
@@ -94,7 +96,19 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                 console.error("Error fetching branches:", error);
             }
         };
+
+        const fetchPolicies = async () => {
+            try {
+                const snapshot = await getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'));
+                const policyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendancePolicyDocument));
+                setAllPolicies(policyData);
+            } catch (error) {
+                console.error("Error fetching policies:", error);
+            }
+        };
+
         fetchBranches();
+        fetchPolicies();
     }, []);
 
     // Helper: Calculate Distance (Haversine Formula)
@@ -114,14 +128,33 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
     };
 
     // Helper: Handle Approval
-    const handleApprove = async (attendanceId: string, time: string | undefined, type: 'in' | 'out') => {
+    const handleApprove = async (emp: any, time: string | undefined, type: 'in' | 'out') => {
         try {
+            const attendanceId = emp.attendanceId;
             const updateData: any = {};
             if (type === 'in') {
-                const newFlag = determineAttendanceFlag(time);
+                // Fetch and merge policy
+                const today = new Date();
+                const activePolicy = getActivePolicyForDate(emp, today, allPolicies);
+                let mergedPolicy = activePolicy;
+                if (activePolicy?.dailyPolicies) {
+                    const dayName = format(today, 'EEEE');
+                    const dp = activePolicy.dailyPolicies.find((d: any) => d.day === dayName);
+                    if (dp) {
+                        mergedPolicy = {
+                            ...activePolicy,
+                            ...dp,
+                            inTime: dp.inTime || activePolicy.inTime,
+                            delayBuffer: (dp.delayBuffer !== undefined && dp.delayBuffer !== 0)
+                                ? dp.delayBuffer
+                                : activePolicy.delayBuffer
+                        } as any;
+                    }
+                }
+
+                const newFlag = determineAttendanceFlag(time, mergedPolicy || undefined);
                 updateData.flag = newFlag;
                 updateData.inTimeApprovalStatus = 'Approved';
-                // For backward compatibility, also update general status
                 updateData.approvalStatus = 'Approved';
             } else {
                 updateData.outTimeApprovalStatus = 'Approved';
@@ -533,7 +566,7 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                                                     <Button
                                                         size="sm"
                                                         className="h-6 w-6 p-0 bg-green-500 hover:bg-green-600 rounded-full"
-                                                        onClick={() => handleApprove(emp.attendanceId!, emp.inTime, 'in')}
+                                                        onClick={() => handleApprove(emp, emp.inTime, 'in')}
                                                         title="Approve"
                                                     >
                                                         <Check className="h-3 w-3 text-white" />
@@ -562,7 +595,7 @@ export function TeamAttendanceCard({ supervisedEmployeeIds }: TeamAttendanceCard
                                                     <Button
                                                         size="sm"
                                                         className="h-6 w-6 p-0 bg-green-500 hover:bg-green-600 rounded-full"
-                                                        onClick={() => handleApprove(emp.attendanceId!, emp.outTime, 'out')}
+                                                        onClick={() => handleApprove(emp, emp.outTime, 'out')}
                                                         title="Approve"
                                                     >
                                                         <Check className="h-3 w-3 text-white" />

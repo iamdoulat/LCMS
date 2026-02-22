@@ -20,6 +20,8 @@ import type {
     CreateReconciliationData,
     ReconciliationStatus
 } from '@/types/reconciliation';
+import { getActivePolicyForDate } from '../attendance';
+import type { AttendancePolicyDocument, EmployeeDocument, DailyAttendancePolicy } from '@/types';
 
 const RECONCILIATION_COLLECTION = 'attendance_reconciliation';
 const ATTENDANCE_COLLECTION = 'attendance';
@@ -169,6 +171,10 @@ export const approveReconciliation = async (
     reviewerId: string
 ) => {
     try {
+        // Fetch policies outside transaction for cleaner logic
+        const policySnap = await getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'));
+        const allPolicies = policySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendancePolicyDocument));
+
         await runTransaction(firestore, async (transaction) => {
             // 1. Get the attendance document reference
             // ID format is employeeId_yyyy-MM-dd
@@ -206,8 +212,39 @@ export const approveReconciliation = async (
                     attendanceUpdates.inTime = reconciliation.requestedInTime;
                 }
 
-                // Auto-update flag based on new in-time (P if ≤09:10 AM, D if >09:10 AM)
-                attendanceUpdates.flag = determineAttendanceFlag(attendanceUpdates.inTime);
+                // Auto-update flag based on new in-time using the active policy
+                try {
+                    // Fetch employee data
+                    const empRef = doc(firestore, 'employees', reconciliation.employeeId);
+                    const empDoc = await transaction.get(empRef);
+                    const empData = (empDoc.exists() ? empDoc.data() : {}) as EmployeeDocument;
+
+                    // Determine active policy for the date
+                    const targetDate = reconciliation.attendanceDate ? new Date(reconciliation.attendanceDate) : new Date();
+                    const activePolicy = getActivePolicyForDate(empData, targetDate, allPolicies);
+
+                    // Handle Daily Policy merging
+                    let mergedPolicy = activePolicy;
+                    if (activePolicy?.dailyPolicies) {
+                        const dayName = format(targetDate, 'EEEE');
+                        const dp = activePolicy.dailyPolicies.find((d: any) => d.day === dayName);
+                        if (dp) {
+                            mergedPolicy = {
+                                ...activePolicy,
+                                ...dp,
+                                inTime: dp.inTime || activePolicy.inTime,
+                                delayBuffer: (dp.delayBuffer !== undefined && dp.delayBuffer !== 0)
+                                    ? dp.delayBuffer
+                                    : activePolicy.delayBuffer
+                            } as any;
+                        }
+                    }
+
+                    attendanceUpdates.flag = determineAttendanceFlag(attendanceUpdates.inTime, mergedPolicy || undefined);
+                } catch (err) {
+                    console.error("Error determining flag in reconciliation:", err);
+                    attendanceUpdates.flag = determineAttendanceFlag(attendanceUpdates.inTime);
+                }
             }
             if (reconciliation.requestedOutTime) {
                 try {

@@ -104,12 +104,59 @@ export async function POST(req: NextRequest) {
 
                     // Process Times
                     if (reconData.requestedInTime) {
-                        // updates.inTime = formatToBDTime(reconData.requestedInTime); // OLD: Saved formatted time
-                        updates.inTime = reconData.requestedInTime; // NEW: Save ISO string
-
-                        // Calculate flag using BD time
                         const bdTime = formatToBDTime(reconData.requestedInTime);
-                        updates.flag = determineAttendanceFlag(bdTime);
+                        updates.inTime = reconData.requestedInTime;
+
+                        // Calculate flag using BD time and policy
+                        try {
+                            const policySnap = await transaction.get(db.collection('hrm_settings').doc('attendance_policies').collection('items'));
+                            const allPolicies: any[] = [];
+                            policySnap.forEach(doc => allPolicies.push({ id: doc.id, ...doc.data() }));
+
+                            const empDoc = await transaction.get(db.collection('employees').doc(employeeId));
+                            const empData = empDoc.exists ? empDoc.data() : {};
+
+                            // Re-implement getActivePolicyForDate logic for admin context or import it
+                            // Since it's self-contained logic, let's see if we can import
+                            const targetDateStr = datePart;
+                            const history = (empData as any).policyHistory || [];
+
+                            let activePolicy = null;
+                            if (history.length === 0) {
+                                activePolicy = allPolicies.find(p => p.id === (empData as any).attendancePolicyId);
+                            } else {
+                                const sortedHistory = [...history].sort((a: any, b: any) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+                                const assignment = sortedHistory.find((h: any) => h.effectiveFrom <= targetDateStr);
+                                if (assignment) {
+                                    activePolicy = allPolicies.find(p => p.id === assignment.policyId);
+                                } else {
+                                    const firstAssignment = sortedHistory[sortedHistory.length - 1];
+                                    activePolicy = allPolicies.find(p => p.id === (firstAssignment?.policyId || (empData as any).attendancePolicyId));
+                                }
+                            }
+
+                            // Handle Daily Policy merging
+                            let mergedPolicy = activePolicy;
+                            if (activePolicy?.dailyPolicies) {
+                                const dayName = format(new Date(reconData.attendanceDate), 'EEEE');
+                                const dp = activePolicy.dailyPolicies.find((d: any) => d.day === dayName);
+                                if (dp) {
+                                    mergedPolicy = {
+                                        ...activePolicy,
+                                        ...dp,
+                                        inTime: dp.inTime || activePolicy.inTime,
+                                        delayBuffer: (dp.delayBuffer !== undefined && dp.delayBuffer !== 0)
+                                            ? dp.delayBuffer
+                                            : activePolicy.delayBuffer
+                                    };
+                                }
+                            }
+
+                            updates.flag = determineAttendanceFlag(bdTime, mergedPolicy || undefined);
+                        } catch (err) {
+                            console.error("Error determining flag in API:", err);
+                            updates.flag = determineAttendanceFlag(bdTime);
+                        }
                     }
 
                     if (reconData.requestedOutTime) {

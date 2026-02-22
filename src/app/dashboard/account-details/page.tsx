@@ -37,6 +37,8 @@ import { startBreak, stopBreak } from '@/lib/firebase/breakTime';
 import type { BreakTimeRecord } from '@/types/breakTime';
 import { format, isWithinInterval, parseISO, startOfDay, endOfDay, getDay, startOfMonth, endOfMonth, differenceInCalendarDays, eachDayOfInterval, subDays, isFuture, max, min, getDate, isSameMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { getActivePolicyForDate } from '@/lib/attendance';
+import type { AttendancePolicyDocument, DailyAttendancePolicy } from '@/types';
 import StarBorder from '@/components/ui/StarBorder';
 import { LeaveCalendar } from '@/components/dashboard/LeaveCalendar';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -141,6 +143,7 @@ export default function AccountDetailsPage() {
   const [userAdvanceSalary, setUserAdvanceSalary] = useState<AdvanceSalaryDocument[]>([]);
   const [dayStatus, setDayStatus] = useState<DayStatus>('Working Day');
   const [isDayStatusLoading, setIsDayStatusLoading] = useState(true);
+  const [allPolicies, setAllPolicies] = useState<AttendancePolicyDocument[]>([]);
 
   const [allEmployees, setAllEmployees] = useState<EmployeeDocument[]>([]);
   const [birthdaysToday, setBirthdaysToday] = React.useState<EmployeeDocument[]>([]);
@@ -203,7 +206,19 @@ export default function AccountDetailsPage() {
         console.error("Error fetching company profile", error);
       }
     };
+
+    const fetchPolicies = async () => {
+      try {
+        const snapshot = await getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'));
+        const policyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendancePolicyDocument));
+        setAllPolicies(policyData);
+      } catch (error) {
+        console.error("Error fetching policies:", error);
+      }
+    };
+
     fetchProfile();
+    fetchPolicies();
   }, []);
 
   const claimStats = useMemo(() => {
@@ -1584,7 +1599,25 @@ export default function AccountDetailsPage() {
 
     try {
       if (dailyAttendanceType === 'in') {
-        const flag = determineAttendanceFlag(currentTime);
+        // Fetch and merge policy for dynamic flag determination
+        const activePolicy = getActivePolicyForDate(employeeData, now, allPolicies);
+        let mergedPolicy = activePolicy;
+        if (activePolicy?.dailyPolicies) {
+          const dayName = format(now, 'EEEE');
+          const dp = activePolicy.dailyPolicies.find((d: any) => d.day === dayName);
+          if (dp) {
+            mergedPolicy = {
+              ...activePolicy,
+              ...dp,
+              inTime: dp.inTime || activePolicy.inTime,
+              delayBuffer: (dp.delayBuffer !== undefined && dp.delayBuffer !== 0)
+                ? dp.delayBuffer
+                : activePolicy.delayBuffer
+            } as any;
+          }
+        }
+
+        const flag = determineAttendanceFlag(currentTime, mergedPolicy || undefined);
         const dataToSet = {
           employeeId: employeeData.id,
           employeeName: employeeData.fullName,
@@ -1594,7 +1627,7 @@ export default function AccountDetailsPage() {
           inTimeRemarks: attendanceRemarks,
           inTimeLocation: attendanceLocation,
           updatedBy: user.uid,
-          approvalStatus: isPrivilegedRole ? 'Approved' : 'Approved', // Keeping existing behavior but ensuring field exists
+          approvalStatus: 'Approved',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };

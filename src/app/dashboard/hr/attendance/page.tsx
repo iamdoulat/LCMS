@@ -204,7 +204,17 @@ const AttendanceDayRow = ({
         if (!initialData && inTime && flag === 'A') {
             const formattedInTime = formatTimeForFirestore(inTime);
             if (formattedInTime) {
-                const autoFlag = determineAttendanceFlag(formattedInTime, dailyPolicy || activePolicy || undefined);
+                // Determine correctly merged policy for flag calculation
+                const mergedPolicy = dailyPolicy ? {
+                    ...activePolicy,
+                    ...dailyPolicy,
+                    inTime: dailyPolicy.inTime || activePolicy?.inTime,
+                    delayBuffer: (dailyPolicy.delayBuffer !== undefined && dailyPolicy.delayBuffer !== 0)
+                        ? dailyPolicy.delayBuffer
+                        : activePolicy?.delayBuffer
+                } : activePolicy;
+
+                const autoFlag = determineAttendanceFlag(formattedInTime, mergedPolicy || undefined);
                 setValue('flag', autoFlag, { shouldValidate: true });
             }
         }
@@ -272,9 +282,18 @@ const AttendanceDayRow = ({
             dataToSave.outTime = formatTimeForFirestore(data.outTime);
             dataToSave.outTimeRemarks = data.outTimeRemarks;
 
-            // Auto-determine flag based on in-time using the active policy
+            // Auto-determine flag based on in-time using the correctly merged policy
             if (formattedInTime) {
-                dataToSave.flag = determineAttendanceFlag(formattedInTime, dailyPolicy || activePolicy || undefined);
+                const mergedPolicy = dailyPolicy ? {
+                    ...activePolicy,
+                    ...dailyPolicy,
+                    inTime: dailyPolicy.inTime || activePolicy?.inTime,
+                    delayBuffer: (dailyPolicy.delayBuffer !== undefined && dailyPolicy.delayBuffer !== 0)
+                        ? dailyPolicy.delayBuffer
+                        : activePolicy?.delayBuffer
+                } : activePolicy;
+
+                dataToSave.flag = determineAttendanceFlag(formattedInTime, mergedPolicy || undefined);
             }
         }
 
@@ -709,9 +728,54 @@ export default function DailyAttendancePage() {
                     if (formattedInTime) dataToSave.inTime = formattedInTime;
                     if (formattedOutTime) dataToSave.outTime = formattedOutTime;
 
-                    // Auto-determine flag based on in-time (P if ≤09:10 AM, D if >09:10 AM)
+                    // Auto-determine flag based on in-time using the employee's assigned policy
                     if (formattedInTime) {
-                        dataToSave.flag = determineAttendanceFlag(formattedInTime);
+                        try {
+                            const today = parsedDate;
+                            const history = employee.policyHistory || [];
+                            const targetDateStr = format(today, 'yyyy-MM-dd');
+
+                            let activePolicy = null;
+                            if (history.length === 0) {
+                                activePolicy = attendancePolicies?.find(p => p.id === employee.attendancePolicyId);
+                            } else {
+                                const sortedHistory = [...history].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+                                const assignment = sortedHistory.find(h => {
+                                    try {
+                                        const effectiveDate = format(parseISO(h.effectiveFrom), 'yyyy-MM-dd');
+                                        return effectiveDate <= targetDateStr;
+                                    } catch { return false; }
+                                });
+                                if (assignment) {
+                                    activePolicy = attendancePolicies?.find(p => p.id === assignment.policyId);
+                                } else {
+                                    const firstAssignment = sortedHistory[sortedHistory.length - 1];
+                                    activePolicy = attendancePolicies?.find(p => p.id === (firstAssignment?.policyId || employee.attendancePolicyId));
+                                }
+                            }
+
+                            // Handle Daily Policy merging for bulk upload too
+                            let mergedPolicy = activePolicy;
+                            if (activePolicy?.dailyPolicies) {
+                                const dayName = format(today, 'EEEE');
+                                const dp = activePolicy.dailyPolicies.find((d: any) => d.day === dayName);
+                                if (dp) {
+                                    mergedPolicy = {
+                                        ...activePolicy,
+                                        ...dp,
+                                        inTime: dp.inTime || activePolicy.inTime,
+                                        delayBuffer: (dp.delayBuffer !== undefined && dp.delayBuffer !== 0)
+                                            ? dp.delayBuffer
+                                            : activePolicy.delayBuffer
+                                    };
+                                }
+                            }
+
+                            dataToSave.flag = determineAttendanceFlag(formattedInTime, mergedPolicy || undefined);
+                        } catch (err) {
+                            console.error("Error determining flag in bulk upload:", err);
+                            dataToSave.flag = determineAttendanceFlag(formattedInTime); // Fallback to default
+                        }
                     }
                 }
 

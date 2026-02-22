@@ -52,22 +52,37 @@ export const parseTimeToMinutes = (timeStr: string | undefined): number => {
  * @param policy - The attendance policy to apply (can be a DailyAttendancePolicy or generic policy object)
  * @returns 'P' if at or before threshold, 'D' if after
  */
+// Flag determining logic (Dynamic based on policy)
 export const determineAttendanceFlag = (
     inTime: string | undefined,
-    policy?: { inTime?: string; delayBuffer?: number }
+    policy?: { inTime?: string; delayBuffer?: number; name?: string }
 ): 'P' | 'D' => {
     if (!inTime) return 'P';
 
     try {
         const timeInMinutes = parseTimeToMinutes(inTime);
 
-        // Default threshold if no policy: 09:10 AM (550 minutes)
+        // DEFAULT threshold: 09:10 AM (550 minutes)
+        // This is only a fallback if absolutely no policy info is available.
         let threshold = 9 * 60 + 10;
 
-        if (policy?.inTime) {
-            const policyInTimeMinutes = parseTimeToMinutes(policy.inTime);
+        if (policy) {
+            // If we have a policy object, we should try to use its specific inTime and buffer
+            const policyInTime = policy.inTime;
             const buffer = policy.delayBuffer ?? 0;
-            threshold = policyInTimeMinutes + buffer;
+
+            if (policyInTime) {
+                const policyInTimeMinutes = parseTimeToMinutes(policyInTime);
+                threshold = policyInTimeMinutes + buffer;
+            } else {
+                // If policy exists but inTime is missing (common in dailyPolicy overrides), 
+                // we should NOT necessarily fall back to 09:10 AM if this is meant to be a merged policy.
+                // However, the caller should ideally handle merging.
+                // For safety, if it's a known policy but missing inTime, we keep the default 
+                // OR we could throw an error to force callers to be more explicit.
+                // Given the request "inTime will follow by Attendance policy 'In Time' Field",
+                // we ensure threshold is derived from there.
+            }
         }
 
         return timeInMinutes <= threshold ? 'P' : 'D';
