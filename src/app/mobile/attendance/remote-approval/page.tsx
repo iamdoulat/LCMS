@@ -384,10 +384,13 @@ export default function RemoteAttendanceApprovalPage() {
 
                         // Fetch employee data and determine policy accurately
                         const empSnap = await getDoc(doc(firestore, 'employees', selectedRecord.employeeId));
-                        const empData = empSnap.exists() ? empSnap.data() : {};
+                        const empData = empSnap.exists() ? { id: empSnap.id, ...empSnap.data() } : null;
                         const targetDate = selectedRecord.timestamp ? new Date(selectedRecord.timestamp) : new Date();
 
-                        const activePolicy = getActivePolicyForDate(empData, targetDate, allPolicies);
+                        let activePolicy = null;
+                        if (empData) {
+                            activePolicy = getActivePolicyForDate(empData as any, targetDate, allPolicies);
+                        }
                         let mergedPolicy = activePolicy;
                         if (activePolicy?.dailyPolicies) {
                             const dayName = format(targetDate, 'EEEE');
