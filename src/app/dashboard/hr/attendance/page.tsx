@@ -175,14 +175,33 @@ const AttendanceDayRow = ({
     React.useEffect(() => {
         const defaultFlag = getDefaultFlag();
         const isPresent = initialData?.flag === 'P' || initialData?.flag === 'D';
+
+        let computedFlag = initialData?.flag || defaultFlag;
+
+        // If there's an existing record with an inTime, recalculate the flag
+        // using the current active policy rather than trusting the stale saved value.
+        if (isPresent && initialData?.inTime) {
+            const mergedPolicy = dailyPolicy ? {
+                ...activePolicy,
+                ...dailyPolicy,
+                inTime: dailyPolicy.inTime || activePolicy?.inTime,
+                delayBuffer: (dailyPolicy.delayBuffer !== undefined && dailyPolicy.delayBuffer !== 0)
+                    ? dailyPolicy.delayBuffer
+                    : activePolicy?.delayBuffer
+            } : activePolicy;
+
+            computedFlag = determineAttendanceFlag(initialData.inTime, mergedPolicy || undefined);
+        }
+
         form.reset({
-            flag: initialData?.flag || defaultFlag,
+            flag: computedFlag as AttendanceFlag,
             inTime: isPresent ? normalizeTimeTo24Hour(initialData?.inTime) : '',
             outTime: isPresent ? normalizeTimeTo24Hour(initialData?.outTime) : '',
             inTimeRemarks: initialData?.inTimeRemarks || '',
             outTimeRemarks: initialData?.outTimeRemarks || '',
         });
-    }, [initialData, getDefaultFlag, form]);
+    }, [initialData, getDefaultFlag, form, activePolicy, dailyPolicy]);
+
 
 
     const { watch, control, handleSubmit, setValue } = form;
