@@ -396,6 +396,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                             'Authorization': `Bearer ${idToken}`
                         },
                         body: JSON.stringify({
+                            type: 'in_time',
                             employeeId: user.uid,
                             employeeName: (empLocalData as any).fullName || user.displayName || 'Unknown',
                             employeeCode: (empLocalData as any).employeeCode,
