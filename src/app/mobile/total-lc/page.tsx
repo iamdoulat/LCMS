@@ -1073,16 +1073,16 @@ export default function MobileTotalLCPage() {
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <a
-                                                                    href={lc.shipmentMode === 'Air' && lc.flightNumber ? `https://www.flightradar24.com/data/flights/${lc.flightNumber}` : `https://www.marinetraffic.com/en/ais/details/ships/imo:${lc.vesselImoNumber}`}
+                                                                    href={lc.shipmentMode?.includes('Air') && lc.flightNumber ? `https://www.flightradar24.com/data/flights/${lc.flightNumber}` : `https://www.marinetraffic.com/en/ais/details/ships/imo:${lc.vesselImoNumber}`}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform"
                                                                 >
-                                                                    {lc.shipmentMode === 'Air' ? <Plane className="h-3.5 w-3.5 text-slate-400" /> : <Ship className="h-3.5 w-3.5 text-slate-400" />}
-                                                                    {lc.shipmentMode === 'Air' ? 'Flight' : 'Vessel'}
+                                                                    {lc.shipmentMode?.includes('Air') ? <Plane className="h-3.5 w-3.5 text-slate-400" /> : <Ship className="h-3.5 w-3.5 text-slate-400" />}
+                                                                    {lc.shipmentMode?.includes('Air') ? 'Flight' : 'Vessel'}
                                                                 </a>
                                                             </TooltipTrigger>
-                                                            <TooltipContent side="top">Track {lc.shipmentMode === 'Air' ? 'Flight' : 'Vessel'}</TooltipContent>
+                                                            <TooltipContent side="top">Track {lc.shipmentMode?.includes('Air') ? 'Flight' : 'Vessel'}</TooltipContent>
                                                         </Tooltip>
                                                     )}
                                                 </>
