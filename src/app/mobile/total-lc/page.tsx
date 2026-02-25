@@ -1022,11 +1022,11 @@ export default function MobileTotalLCPage() {
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <div className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform">
-                                                                    {lc.shipmentMode === 'Air' ? <Plane className="h-3.5 w-3.5 text-slate-400" /> : <Ship className="h-3.5 w-3.5 text-slate-400" />}
+                                                                    {lc.shipmentMode?.includes('Air') ? <Plane className="h-3.5 w-3.5 text-slate-400" /> : <Ship className="h-3.5 w-3.5 text-slate-400" />}
                                                                     {getShipmentTermLabel(lc.shipmentTerms)}
                                                                 </div>
                                                             </TooltipTrigger>
-                                                            <TooltipContent side="top">Shipment Terms: {lc.shipmentTerms}</TooltipContent>
+                                                            <TooltipContent side="top">Shipment Terms: {Array.isArray(lc.shipmentTerms) ? lc.shipmentTerms.join(', ') : lc.shipmentTerms}</TooltipContent>
                                                         </Tooltip>
                                                     )}
 
