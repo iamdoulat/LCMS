@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, MapPin, Loader2, CheckCircle2, AlertCircle, Navigation, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -49,6 +49,11 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
     const [location, setLocation] = useState<LocationData | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const isOpenRef = useRef(isOpen);
+
+    useEffect(() => {
+        isOpenRef.current = isOpen;
+    }, [isOpen]);
     const [address, setAddress] = useState<string | null>(null);
     const [remarks, setRemarks] = useState('');
     const [employeeBranch, setEmployeeBranch] = useState<any>(null);
@@ -209,7 +214,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
 
     if (!isOpen) return null;
 
-    const captureLocation = async () => {
+    const captureLocation = async (isRetry = false) => {
         setIsCapturing(true);
         setError(null);
         setAddress(null); // Clear previous address for feedback
@@ -261,15 +266,27 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
         // Attempt Reverse Geocoding for readable address
         if (newLocation) {
             setIsGeocoding(true);
+            let finalAddress: string | null = null;
             try {
-                const readableAddress = await reverseGeocode(newLocation.latitude, newLocation.longitude);
-                setAddress(readableAddress);
+                finalAddress = await reverseGeocode(newLocation.latitude, newLocation.longitude);
+                setAddress(finalAddress);
             } catch (err) {
                 console.error('Reverse geocoding error:', err);
-                setAddress(`Coords: ${newLocation.latitude.toFixed(6)}, ${newLocation.longitude.toFixed(6)}`);
+                finalAddress = `Coords: ${newLocation.latitude.toFixed(6)}, ${newLocation.longitude.toFixed(6)}`;
+                setAddress(finalAddress);
             } finally {
                 setIsGeocoding(false);
             }
+
+            // Auto-retry if address is unavailable
+            if ((!finalAddress || finalAddress.toLowerCase().includes('unavailable')) && isOpenRef.current) {
+                console.log("[LOCATION] Address unavailable, retrying in 3s...");
+                setTimeout(() => captureLocation(true), 3000);
+            }
+        } else if (isOpenRef.current) {
+            // Even if location failed, retry after a delay
+            console.log("[LOCATION] Location capture failed, retrying in 5s...");
+            setTimeout(() => captureLocation(true), 5000);
         }
     };
 
@@ -552,7 +569,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                                             name: h.name,
                                             address: h.address
                                         }))}
-                                        onRefresh={captureLocation}
+                                        onRefresh={() => captureLocation()}
                                         isLoading={isCapturing || isGeocoding}
                                     />
                                 </div>
@@ -564,7 +581,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                                     We need your location to mark attendance. Please allow location access.
                                 </p>
                                 <Button
-                                    onClick={captureLocation}
+                                    onClick={() => captureLocation()}
                                     variant="outline"
                                     className="border-slate-300 text-slate-600"
                                     disabled={isCapturing}
@@ -601,7 +618,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                                             <Button
                                                 variant="link"
                                                 size="sm"
-                                                onClick={captureLocation}
+                                                onClick={() => captureLocation()}
                                                 className="text-blue-600 h-auto p-0 text-[11px] mt-0.5"
                                             >
                                                 <RefreshCw className="h-3 w-3 mr-1" /> Retry Fetch Address

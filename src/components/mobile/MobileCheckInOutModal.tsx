@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -43,6 +43,11 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
     const [companyName, setCompanyName] = useState(initialCompanyName || '');
     const [remarks, setRemarks] = useState('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const isOpenRef = useRef(isOpen);
+
+    useEffect(() => {
+        isOpenRef.current = isOpen;
+    }, [isOpen]);
     const [imagePreview, setImagePreview] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentLocation, setCurrentLocation] = useState<MultipleCheckInOutLocation | null>(null);
@@ -92,10 +97,10 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
         }
     }, [isOpen, initialCompanyName]);
 
-    const updateLocation = async (force: boolean = true) => {
+    const updateLocation = async (force: boolean = true, isRetry = false) => {
         setIsLoadingLocation(true);
         setLocationError(null);
-        setAddress(''); // Clear previous address to show "Fetching..." 
+        if (!isRetry) setAddress(''); // Only clear address on first/manual refresh
         setLocationProgress('Initializing geolocation...');
         try {
             const loc = await getCurrentLocation({
@@ -104,17 +109,28 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
             });
             setCurrentLocation(loc);
 
+            let finalAddress = '';
             // Get address
             if (loc) {
                 setLocationProgress('Fetching address...');
-                const addr = await reverseGeocode(loc.latitude, loc.longitude);
-                setAddress(addr);
+                finalAddress = await reverseGeocode(loc.latitude, loc.longitude);
+                setAddress(finalAddress);
             }
             setLocationProgress('');
+
+            // Auto-retry if unavailable
+            if ((!finalAddress || finalAddress.toLowerCase().includes('unavailable')) && isOpenRef.current) {
+                console.log("[LOCATION] Address unavailable, retrying in 3s...");
+                setTimeout(() => updateLocation(force, true), 3000);
+            }
         } catch (error: any) {
             console.error("Error getting location:", error);
             setLocationError(error.message || "Failed to capture location.");
             setLocationProgress('');
+            if (isOpenRef.current) {
+                console.log("[LOCATION] Retrying in 5s due to error...");
+                setTimeout(() => updateLocation(force, true), 5000);
+            }
         } finally {
             setIsLoadingLocation(false);
         }
@@ -322,7 +338,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                                     readOnly={true}
                                     onLocationSelect={() => { }}
                                     onAddressFound={(addr) => setAddress(addr)}
-                                    onRefresh={updateLocation}
+                                    onRefresh={() => updateLocation(true)}
                                     isRefreshing={isLoadingLocation}
                                 />
                             </div>
