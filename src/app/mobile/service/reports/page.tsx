@@ -189,7 +189,7 @@ export default function ServiceReportsPage() {
 
         const details = [
             ['Commercial Invoice:', report.commercialInvoiceNumber || 'N/A', 'Invoice Date:', report.commercialInvoiceDate ? format(parseISO(report.commercialInvoiceDate), 'PPP') : 'N/A'],
-            ['L/C Number:', report.documentaryCreditNumber || 'N/A', 'Total Qty:', String(report.totalMachineQtyFromLC || 0)],
+            ['L/C Number:', report.documentaryCreditNumber || 'N/A', 'Invoice Qty:', String(report.totalMachineQtyFromLC || 0)],
             ['Applicant:', report.applicantName || 'N/A', 'Beneficiary:', report.beneficiaryName || 'N/A'],
             ['Technician:', report.technicianName || 'N/A', 'Engineer:', report.reportingEngineerName || 'N/A'],
         ];

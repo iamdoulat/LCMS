@@ -249,6 +249,18 @@ export function NewLCEntryForm() {
     "firstPartialCbm", "secondPartialCbm", "thirdPartialCbm"
   ] as const;
 
+  // Auto-calculate Total L/C Machine Qty from Commercial Invoices
+  const watchedCommercialInvoices = watch("commercialInvoices") || [];
+  React.useEffect(() => {
+    if (watchedPartialShipmentAllowed === "Yes") {
+      const total = watchedCommercialInvoices.reduce((sum, inv) => {
+        const qty = Number(inv.invoiceMachineQty) || 0;
+        return sum + qty;
+      }, 0);
+      setValue("totalMachineQty", total, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [watchedCommercialInvoices, watchedPartialShipmentAllowed, setValue]);
+
   const watchedPartialValues = watch(partialFieldsToWatch);
 
   React.useEffect(() => {
@@ -727,8 +739,20 @@ export function NewLCEntryForm() {
               <FormItem>
                 <FormLabel>Total L/C Machine Qty*</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
+                  <Input
+                    type="number"
+                    placeholder="e.g., 5"
+                    {...field}
+                    value={field.value ?? ''}
+                    readOnly={watchedPartialShipmentAllowed === "Yes"}
+                    className={cn(watchedPartialShipmentAllowed === "Yes" && "bg-muted cursor-not-allowed")}
+                  />
                 </FormControl>
+                {watchedPartialShipmentAllowed === "Yes" && (
+                  <FormDescription className="text-xs text-blue-600 font-medium">
+                    Calculated automatically from partial invoices below.
+                  </FormDescription>
+                )}
                 <FormMessage />
               </FormItem>
             )}
@@ -781,7 +805,7 @@ export function NewLCEntryForm() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => appendCommercialInvoice({ invoiceNumber: '', invoiceDate: undefined })}
+                  onClick={() => appendCommercialInvoice({ invoiceNumber: '', invoiceDate: undefined, invoiceMachineQty: undefined })}
                 >
                   <Plus className="mr-2 h-4 w-4" /> Add Invoice
                 </Button>
@@ -809,6 +833,25 @@ export function NewLCEntryForm() {
                       <FormItem className="flex flex-col">
                         <FormLabel>Invoice Date #{index + 1}</FormLabel>
                         <DatePickerField field={field} placeholder="Select C.I. date" />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name={`commercialInvoices.${index}.invoiceMachineQty`}
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Invoice Machine Qty* #{index + 1}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="e.g., 2"
+                            {...field}
+                            value={field.value ?? ''}
+                            onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

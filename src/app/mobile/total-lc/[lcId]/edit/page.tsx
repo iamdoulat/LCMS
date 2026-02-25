@@ -97,6 +97,19 @@ export default function MobileEditLCPage() {
             }
         };
 
+        useEffect(() => {
+            if (lcDetail && lcDetail.partialShipmentAllowed === "Yes") {
+                const total = (lcDetail.commercialInvoices || []).reduce((sum, inv: any) => {
+                    const qty = Number(inv.invoiceMachineQty) || 0;
+                    return sum + qty;
+                }, 0);
+
+                if (lcDetail.totalMachineQty !== total) {
+                    setLcDetail(prev => prev ? { ...prev, totalMachineQty: total } : null);
+                }
+            }
+        }, [lcDetail?.commercialInvoices, lcDetail?.partialShipmentAllowed]);
+
         if (lcId) fetchLC();
     }, [lcId, userRole, router]);
 
@@ -341,6 +354,24 @@ export default function MobileEditLCPage() {
                                         />
                                     </div>
                                 </div>
+
+                                <div className="space-y-1.5">
+                                    <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Total Machine Qty*</Label>
+                                    <Input
+                                        type="number"
+                                        value={lcDetail.totalMachineQty === 0 ? '' : (lcDetail.totalMachineQty || '')}
+                                        onChange={(e) => handleChange('totalMachineQty', parseInt(e.target.value) || 0)}
+                                        readOnly={lcDetail.partialShipmentAllowed === "Yes"}
+                                        placeholder="e.g. 10"
+                                        className={cn(
+                                            "rounded-xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-bold text-slate-700 h-11",
+                                            lcDetail.partialShipmentAllowed === "Yes" && "bg-slate-100 text-slate-500 cursor-not-allowed"
+                                        )}
+                                    />
+                                    {lcDetail.partialShipmentAllowed === "Yes" && (
+                                        <p className="text-[10px] text-blue-500 font-bold italic mt-1 px-1">Calculated from invoices</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -559,6 +590,16 @@ export default function MobileEditLCPage() {
                                                     value={inv.invoiceDate || ''}
                                                     onChange={(e) => handleCommercialInvoiceChange(index, 'invoiceDate', e.target.value)}
                                                     className="rounded-xl border-slate-100 bg-white font-bold text-slate-700 h-10 text-[10px]"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Invoice Machine Qty #{index + 1}</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={inv.invoiceMachineQty || ''}
+                                                    onChange={(e) => handleCommercialInvoiceChange(index, 'invoiceMachineQty', parseInt(e.target.value) || 0)}
+                                                    placeholder="Qty"
+                                                    className="rounded-xl border-slate-100 bg-white font-bold text-slate-700 h-10 text-xs"
                                                 />
                                             </div>
                                             <button

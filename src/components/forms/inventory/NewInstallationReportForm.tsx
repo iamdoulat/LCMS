@@ -142,7 +142,7 @@ export function NewInstallationReportForm() {
       const [customersSnap, suppliersSnap, lcsSnap, existingReportsSnap] = await Promise.all([
         getDocs(collection(firestore, "customers")),
         getDocs(collection(firestore, "suppliers")),
-        getDocs(query(collection(firestore, "lc_entries"), where("commercialInvoiceNumber", "!=", ""))),
+        getDocs(collection(firestore, "lc_entries")),
         getDocs(collection(firestore, "installation_reports"))
       ]);
 
@@ -153,36 +153,46 @@ export function NewInstallationReportForm() {
         suppliersSnap.docs.map(doc => ({ value: doc.id, label: (doc.data() as SupplierDocument).beneficiaryName || 'Unnamed Beneficiary' }))
       );
 
-      const usedLcIdsForReports = new Set(
-        existingReportsSnap.docs.map(doc => (doc.data() as InstallationReportDocument).selectedCommercialInvoiceLcId).filter(Boolean)
+      const usedLcInvoicePairs = new Set(
+        existingReportsSnap.docs
+          .map(doc => {
+            const d = doc.data() as InstallationReportDocument;
+            return `${d.selectedCommercialInvoiceLcId}|${d.commercialInvoiceNumber}`;
+          })
+          .filter(val => val !== "undefined|undefined" && val !== "null|null" && val !== "|")
       );
 
       const fetchedLcOptions: LcForInvoiceDropdownOption[] = [];
       lcsSnap.forEach(docSnap => {
-        if (!usedLcIdsForReports.has(docSnap.id)) { // Filter out used L/Cs
-          const data = docSnap.data() as LCEntryDocument;
+        const data = docSnap.data() as LCEntryDocument;
 
-          // Handle multi-invoice L/Cs
-          if (data.commercialInvoices && data.commercialInvoices.length > 0) {
-            data.commercialInvoices.forEach((inv) => {
-              if (inv.invoiceNumber) {
+        // Handle multi-invoice L/Cs
+        if (data.commercialInvoices && data.commercialInvoices.length > 0) {
+          data.commercialInvoices.forEach((inv) => {
+            if (inv.invoiceNumber) {
+              const compositeKey = `${docSnap.id}|${inv.invoiceNumber}`;
+              if (!usedLcInvoicePairs.has(compositeKey)) {
                 fetchedLcOptions.push({
-                  value: `${docSnap.id}|${inv.invoiceNumber}`, // Composite key
+                  value: compositeKey, // Composite key
                   label: inv.invoiceNumber,
                   lcData: {
                     ...data,
                     id: docSnap.id,
                     commercialInvoiceNumber: inv.invoiceNumber, // Override for form auto-fill
-                    commercialInvoiceDate: inv.invoiceDate     // Override for form auto-fill
+                    commercialInvoiceDate: inv.invoiceDate,     // Override for form auto-fill
+                    totalMachineQty: inv.invoiceMachineQty || data.totalMachineQty // Override for form auto-fill
                   },
                 });
               }
-            });
-          }
-          // Fallback handled via existing single field if no multi-invoices array
-          else if (data.commercialInvoiceNumber) {
+            }
+          });
+        }
+        // Fallback for single invoice
+        else if (data.commercialInvoiceNumber) {
+          const compositeKey = `${docSnap.id}|${data.commercialInvoiceNumber}`;
+          if (!usedLcInvoicePairs.has(compositeKey)) {
             fetchedLcOptions.push({
-              value: `${docSnap.id}|${data.commercialInvoiceNumber}`,
+              value: compositeKey,
               label: data.commercialInvoiceNumber,
               lcData: { ...data, id: docSnap.id },
             });
@@ -630,7 +640,7 @@ export function NewInstallationReportForm() {
             name="totalMachineQtyFromLC"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Total L/C Machine Qty*</FormLabel>
+                <FormLabel className="flex items-center"><Package className="mr-2 h-4 w-4 text-muted-foreground" />Invoice Machine Qty*</FormLabel>
                 <FormControl><Input type="number" placeholder="Qty" {...field} value={field.value ?? ""} readOnly={isLcSelected} className={cn(isLcSelected && "bg-muted/50 cursor-not-allowed")} onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} /></FormControl>
                 <FormMessage />
               </FormItem>
