@@ -213,7 +213,8 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
         setIsCapturing(true);
         setError(null);
         setAddress(null); // Clear previous address for feedback
-        setLocation(null); // Clear location to show scanning state
+        // Only clear location if it's the first time to show map
+        if (!location) setLocation(null);
         let newLocation: LocationData | null = null;
 
         try {
@@ -668,11 +669,11 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 <div className="p-4 bg-white border-t space-y-3 mt-auto">
                     <Button
                         onClick={handleSubmit}
-                        disabled={isSubmitting || !location || !address || isGeocoding || address.includes('(Address unavailable)')}
+                        disabled={isSubmitting || !location || !address || isGeocoding || address.toLowerCase().includes('unavailable')}
                         className={`w-full h-12 text-base font-medium ${type === 'in'
-                            ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-100'
-                            : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'
-                            } shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+                            ? 'bg-blue-600 hover:bg-blue-700'
+                            : 'bg-indigo-600 hover:bg-indigo-700'
+                            } shadow-lg disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         {isSubmitting ? (
                             <>

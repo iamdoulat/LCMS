@@ -452,9 +452,12 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                             Cancel
                         </Button>
                         <Button
-                            className={`flex-1 ${checkInOutType === 'Check In' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'}`}
                             onClick={handleSubmit}
-                            disabled={isSubmitting || isLoadingLocation || !address || address.includes('(Address unavailable)')}
+                            disabled={isSubmitting || isLoadingLocation || !address || address.toLowerCase().includes('unavailable')}
+                            className={`flex-1 h-12 text-sm font-semibold transition-all duration-200 ${checkInOutType === 'Check In'
+                                ? 'bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-100'
+                                : 'bg-purple-600 hover:bg-purple-700 shadow-md shadow-purple-100'
+                                } disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                             {isSubmitting ? (
                                 <>
@@ -468,6 +471,6 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                     </div>
                 </DialogFooter>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }
