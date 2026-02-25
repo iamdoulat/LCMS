@@ -298,7 +298,7 @@ export function AddEmployeeForm() {
         policyHistory: data.attendancePolicyId ? [{
           policyId: data.attendancePolicyId,
           policyName: selectedAttendancePolicy?.name || '',
-          effectiveFrom: normalizeDate(new Date()) || new Date().toISOString()
+          effectiveFrom: normalizeDate(data.attendancePolicyEffectiveDate || new Date()) || new Date().toISOString()
         }] : [],
         // Synchronize supervisor fields
         directSupervisorId: data.supervisorId !== 'unassigned' ? data.supervisorId : null,
@@ -615,6 +615,14 @@ export function AddEmployeeForm() {
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <FormField control={control} name="attendancePolicyEffectiveDate" render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Policy Effective Date</FormLabel>
+              <DatePickerField field={field} placeholder="Select date (optional)" />
               <FormMessage />
             </FormItem>
           )} />

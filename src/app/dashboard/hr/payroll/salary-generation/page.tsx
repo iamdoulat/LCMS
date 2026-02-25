@@ -145,21 +145,38 @@ export default function SalaryGenerationPage() {
             const targetDateStr = format(date, 'yyyy-MM-dd');
 
             if (history.length === 0) {
-                return allPolicies.find((p: AttendancePolicyDocument) => p.id === employee.attendancePolicyId);
+                const policy = allPolicies.find((p: AttendancePolicyDocument) => p.id === employee.attendancePolicyId);
+                if (policy) {
+                    try {
+                        const policyEffectiveDate = format(parseISO(policy.effectiveFrom), 'yyyy-MM-dd');
+                        if (policyEffectiveDate <= targetDateStr) {
+                            return policy;
+                        }
+                    } catch (err) {
+                        return policy;
+                    }
+                }
+                return null;
             }
 
             const sortedHistory = [...history].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
-            const assignment = sortedHistory.find(h => {
+            const validAssignment = sortedHistory.find(h => {
                 try {
-                    const effectiveDate = format(parseISO(h.effectiveFrom), 'yyyy-MM-dd');
-                    return effectiveDate <= targetDateStr;
+                    const assignmentEffectiveDate = format(parseISO(h.effectiveFrom), 'yyyy-MM-dd');
+                    if (assignmentEffectiveDate > targetDateStr) return false;
+
+                    const policy = allPolicies.find((p: AttendancePolicyDocument) => p.id === h.policyId);
+                    if (!policy) return false;
+
+                    const policyEffectiveDate = format(parseISO(policy.effectiveFrom), 'yyyy-MM-dd');
+                    return policyEffectiveDate <= targetDateStr;
                 } catch (err) {
                     return false;
                 }
             });
 
-            if (assignment) {
-                return allPolicies.find((p: AttendancePolicyDocument) => p.id === assignment.policyId);
+            if (validAssignment) {
+                return allPolicies.find((p: AttendancePolicyDocument) => p.id === validAssignment.policyId);
             }
 
             const firstAssignment = sortedHistory[sortedHistory.length - 1];

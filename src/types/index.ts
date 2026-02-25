@@ -1788,6 +1788,7 @@ export const EmployeeSchema = z.object({
   leaveGroupId: z.string().optional(),
   leaveGroupName: z.string().optional(),
   attendancePolicyId: z.string().optional(),
+  attendancePolicyEffectiveDate: z.date().optional(),
   attendancePolicyName: z.string().optional(),
   policyHistory: z.array(EmployeePolicyAssignmentSchema).optional(),
   // New Fields

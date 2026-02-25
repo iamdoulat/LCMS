@@ -123,15 +123,39 @@ export async function POST(req: NextRequest) {
 
                             let activePolicy = null;
                             if (history.length === 0) {
-                                activePolicy = allPolicies.find(p => p.id === (empData as any).attendancePolicyId);
+                                const policy = allPolicies.find(p => p.id === (empData as any).attendancePolicyId);
+                                if (policy) {
+                                    try {
+                                        const policyEffectiveDate = format(new Date(policy.effectiveFrom), 'yyyy-MM-dd');
+                                        if (policyEffectiveDate <= targetDateStr) {
+                                            activePolicy = policy;
+                                        }
+                                    } catch (err) {
+                                        activePolicy = policy;
+                                    }
+                                }
                             } else {
                                 const sortedHistory = [...history].sort((a: any, b: any) => b.effectiveFrom.localeCompare(a.effectiveFrom));
-                                const assignment = sortedHistory.find((h: any) => h.effectiveFrom <= targetDateStr);
-                                if (assignment) {
-                                    activePolicy = allPolicies.find(p => p.id === assignment.policyId);
+                                const validAssignment = sortedHistory.find((h: any) => {
+                                    try {
+                                        const assignmentEffectiveDate = format(new Date(h.effectiveFrom), 'yyyy-MM-dd');
+                                        if (assignmentEffectiveDate > targetDateStr) return false;
+
+                                        const policy = allPolicies.find(p => p.id === h.policyId);
+                                        if (!policy) return false;
+
+                                        const policyEffectiveDate = format(new Date(policy.effectiveFrom), 'yyyy-MM-dd');
+                                        return policyEffectiveDate <= targetDateStr;
+                                    } catch (err) {
+                                        return false;
+                                    }
+                                });
+
+                                if (validAssignment) {
+                                    activePolicy = allPolicies.find(p => p.id === validAssignment.policyId) || null;
                                 } else {
                                     const firstAssignment = sortedHistory[sortedHistory.length - 1];
-                                    activePolicy = allPolicies.find(p => p.id === (firstAssignment?.policyId || (empData as any).attendancePolicyId));
+                                    activePolicy = allPolicies.find(p => p.id === (firstAssignment?.policyId || (empData as any).attendancePolicyId)) || null;
                                 }
                             }
 

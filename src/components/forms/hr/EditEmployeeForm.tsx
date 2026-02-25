@@ -313,7 +313,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
           updatedHistory.push({
             policyId: data.attendancePolicyId,
             policyName: selectedAttendancePolicy?.name || '',
-            effectiveFrom: normalizeDate(new Date()) || new Date().toISOString()
+            effectiveFrom: normalizeDate(data.attendancePolicyEffectiveDate || new Date()) || new Date().toISOString()
           });
         }
       }
@@ -662,6 +662,15 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )} />
+
+          <FormField control={control} name="attendancePolicyEffectiveDate" render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Policy Effective Date</FormLabel>
+              <DatePickerField field={field} placeholder="Select date (optional)" />
+              <FormDescription className="text-xs">If left blank, today's date will be used.</FormDescription>
               <FormMessage />
             </FormItem>
           )} />
