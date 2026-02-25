@@ -323,6 +323,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                                     onLocationSelect={() => { }}
                                     onAddressFound={(addr) => setAddress(addr)}
                                     onRefresh={updateLocation}
+                                    isRefreshing={isLoadingLocation}
                                 />
                             </div>
                         ) : (
@@ -453,7 +454,7 @@ export function MobileCheckInOutModal({ isOpen, onClose, onSuccess, checkInOutTy
                         <Button
                             className={`flex-1 ${checkInOutType === 'Check In' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'}`}
                             onClick={handleSubmit}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isLoadingLocation || !address || address.includes('(Address unavailable)')}
                         >
                             {isSubmitting ? (
                                 <>

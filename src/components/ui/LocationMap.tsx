@@ -6,6 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { RefreshCw, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 // Fix for default marker icon in Leaflet with Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -23,6 +24,7 @@ interface LocationMapProps {
     onLocationSelect: (lat: number, lng: number) => void;
     onAddressFound?: (address: string) => void;
     onRefresh?: () => void;
+    isRefreshing?: boolean;
 }
 
 // Helper components defined outside to prevent recreation on render
@@ -54,7 +56,7 @@ const RecenterMap = ({ lat, lng }: { lat: number, lng: number }) => {
     return null;
 }
 
-const MapControls = ({ onRefresh, onRecenter }: { onRefresh?: () => void, onRecenter?: () => void }) => {
+const MapControls = ({ onRefresh, onRecenter, isRefreshing }: { onRefresh?: () => void, onRecenter?: () => void, isRefreshing?: boolean }) => {
     return (
         <div className="leaflet-top leaflet-right" style={{ marginTop: '10px', marginRight: '10px', pointerEvents: 'auto' }}>
             <div className="flex flex-col gap-2">
@@ -70,7 +72,7 @@ const MapControls = ({ onRefresh, onRecenter }: { onRefresh?: () => void, onRece
                             }}
                             title="Refresh Location"
                         >
-                            <RefreshCw className="h-5 w-5 text-blue-600" />
+                            <RefreshCw className={cn("h-5 w-5 text-blue-600", isRefreshing && "animate-spin")} />
                         </Button>
                     </div>
                 )}
@@ -95,7 +97,7 @@ const MapControls = ({ onRefresh, onRecenter }: { onRefresh?: () => void, onRece
     );
 };
 
-export default function LocationMap({ latitude, longitude, radius, readOnly, onLocationSelect, onAddressFound, onRefresh }: LocationMapProps) {
+export default function LocationMap({ latitude, longitude, radius, readOnly, onLocationSelect, onAddressFound, onRefresh, isRefreshing }: LocationMapProps) {
     const defaultCenter = { lat: 23.8103, lng: 90.4125 }; // Dhaka center as default
     const [position, setPosition] = useState<L.LatLng | null>(
         latitude && longitude ? new L.LatLng(latitude, longitude) : new L.LatLng(defaultCenter.lat, defaultCenter.lng)
@@ -162,6 +164,7 @@ export default function LocationMap({ latitude, longitude, radius, readOnly, onL
                         // Position update triggers flyTo in LocationMarker
                         if (position) setPosition(new L.LatLng(position.lat, position.lng));
                     }}
+                    isRefreshing={isRefreshing}
                 />
                 {/* Recenter mechanism if needed */}
             </MapContainer>
