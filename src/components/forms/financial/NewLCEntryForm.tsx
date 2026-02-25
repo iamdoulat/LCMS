@@ -1221,7 +1221,7 @@ export function NewLCEntryForm() {
                 <Button
                   type="button"
                   variant="default"
-                  onClick={handleTrackVessel}
+                  onClick={() => handleTrackVessel()}
                   disabled={!watch("vesselImoNumber") || isSubmitting}
                   className="md:col-span-1"
                   title="Track Vessel via IMO Number"
