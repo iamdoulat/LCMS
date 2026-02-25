@@ -358,6 +358,27 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const watchedIsThirdShipment = watch("isThirdShipment");
   const watchedPartialShippingInfo = watch("partialShippingInfo") || [];
 
+  // Automation: If 2nd or 3rd shipment is ON, set Partial Shipment Allowed to "Yes"
+  React.useEffect(() => {
+    if (watchedIsSecondShipment || watchedIsThirdShipment) {
+      if (watchedPartialShipmentAllowed !== "Yes") {
+        setValue("partialShipmentAllowed", "Yes", { shouldValidate: true, shouldDirty: true });
+      }
+    }
+  }, [watchedIsSecondShipment, watchedIsThirdShipment, watchedPartialShipmentAllowed, setValue]);
+
+  // Automation: If Partial Shipment Allowed is "No", turn OFF 2nd and 3rd shipment toggles
+  React.useEffect(() => {
+    if (watchedPartialShipmentAllowed === "No") {
+      if (watchedIsSecondShipment) {
+        setValue("isSecondShipment", false, { shouldValidate: true, shouldDirty: true });
+      }
+      if (watchedIsThirdShipment) {
+        setValue("isThirdShipment", false, { shouldValidate: true, shouldDirty: true });
+      }
+    }
+  }, [watchedPartialShipmentAllowed, watchedIsSecondShipment, watchedIsThirdShipment, setValue]);
+
   const partialFieldsToWatch = [
     "firstPartialQty", "secondPartialQty", "thirdPartialQty",
     "firstPartialAmount", "secondPartialAmount", "thirdPartialAmount",
@@ -1370,91 +1391,114 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           Shipping Information
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mb-6">
-          <FormField
-            control={form.control}
-            name="isFirstShipment"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-background/50">
-                <FormLabel className="text-sm font-normal text-foreground">
-                  1st Shipment
-                </FormLabel>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="isSecondShipment"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-background/50">
-                <FormLabel className="text-sm font-normal text-foreground">
-                  2nd Shipment
-                </FormLabel>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="isThirdShipment"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-background/50">
-                <FormLabel className="text-sm font-normal text-foreground">
-                  3rd Shipment
-                </FormLabel>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 mt-2">
+          {/* 1st Shipment Card */}
+          <div className="flex flex-col gap-4 p-5 rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/50">
+            <FormField
+              control={form.control}
+              name="isFirstShipment"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border border-slate-100 p-4 shadow-sm bg-white">
+                  <FormLabel className="text-sm font-bold text-slate-700">
+                    1st Shipment
+                  </FormLabel>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="firstShipmentNote"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">1st Shipment Note</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Note for 1st shipment..."
+                      {...field}
+                      value={field.value ?? ''}
+                      className="min-h-[80px] bg-white border-slate-100 text-sm"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <FormField
-            control={control}
-            name="firstShipmentNote"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>1st Shipment Note</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Note for 1st shipment..." {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="secondShipmentNote"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>2nd Shipment Note</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Note for 2nd shipment..." {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="thirdShipmentNote"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>3rd Shipment Note</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Note for 3rd shipment..." {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* 2nd Shipment Card */}
+          <div className="flex flex-col gap-4 p-5 rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/50">
+            <FormField
+              control={form.control}
+              name="isSecondShipment"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border border-slate-100 p-4 shadow-sm bg-white">
+                  <FormLabel className="text-sm font-bold text-slate-700">
+                    2nd Shipment
+                  </FormLabel>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="secondShipmentNote"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">2nd Shipment Note</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Note for 2nd shipment..."
+                      {...field}
+                      value={field.value ?? ''}
+                      className="min-h-[80px] bg-white border-slate-100 text-sm"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* 3rd Shipment Card */}
+          <div className="flex flex-col gap-4 p-5 rounded-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/50">
+            <FormField
+              control={form.control}
+              name="isThirdShipment"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border border-slate-100 p-4 shadow-sm bg-white">
+                  <FormLabel className="text-sm font-bold text-slate-700">
+                    3rd Shipment
+                  </FormLabel>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="thirdShipmentNote"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">3rd Shipment Note</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Note for 3rd shipment..."
+                      {...field}
+                      value={field.value ?? ''}
+                      className="min-h-[80px] bg-white border-slate-100 text-sm"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
         {watchedPartialShipmentAllowed !== "Yes" ? (

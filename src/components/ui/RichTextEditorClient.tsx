@@ -15,7 +15,7 @@ const modules = {
   toolbar: [
     [{ 'header': [1, 2, 3, false] }],
     ['bold', 'italic', 'underline', 'strike', 'blockquote'],
-    [{'list': 'ordered'}, {'list': 'bullet'}, {'indent': '-1'}, {'indent': '+1'}],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
     ['link', 'image'],
     ['clean']
   ],
@@ -30,11 +30,21 @@ const formats = [
 
 // This component contains the actual ReactQuill editor and is only loaded on the client.
 export default function RichTextEditorClient({ value, onChange, placeholder }: RichTextEditorClientProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="bg-muted rounded-md border h-[241px] animate-pulse" />;
+  }
+
   return (
     <div className="bg-background rounded-md border border-input">
-       <ReactQuill 
+      <ReactQuill
         theme="snow"
-        value={value}
+        value={value || ""}
         onChange={onChange}
         modules={modules}
         formats={formats}
