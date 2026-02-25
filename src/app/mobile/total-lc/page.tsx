@@ -881,7 +881,21 @@ export default function MobileTotalLCPage() {
                                                             <div className="border-t border-slate-100/50" />
 
                                                             {/* CI Details */}
-                                                            {lc.commercialInvoiceNumber ? (
+                                                            {lc.commercialInvoices && lc.commercialInvoices.length > 0 ? (
+                                                                <div className="flex flex-col gap-0.5">
+                                                                    <div className="flex justify-between items-end">
+                                                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">CI#</span>
+                                                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">CI DT#</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className="text-[10px] font-bold text-slate-600 truncate max-w-[80px]">
+                                                                            {lc.commercialInvoices[0].invoiceNumber}
+                                                                            {lc.commercialInvoices.length > 1 && ` (+${lc.commercialInvoices.length - 1})`}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-bold text-slate-600">{formatDisplayDate(lc.commercialInvoices[0].invoiceDate)}</span>
+                                                                    </div>
+                                                                </div>
+                                                            ) : lc.commercialInvoiceNumber ? (
                                                                 <div className="flex flex-col gap-0.5">
                                                                     <div className="flex justify-between items-end">
                                                                         <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tight">CI#</span>

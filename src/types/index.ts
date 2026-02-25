@@ -87,6 +87,7 @@ export interface LCEntry {
   invoiceDate?: Date | null | undefined;
   commercialInvoiceNumber?: string;
   commercialInvoiceDate?: Date | null | undefined;
+  commercialInvoices?: { invoiceNumber?: string; invoiceDate?: string }[];
   totalMachineQty: number | undefined;
   numberOfAmendments?: number;
   status?: LCStatus[];
@@ -177,6 +178,10 @@ export const lcEntrySchema = z.object({
   invoiceDate: z.date().optional().nullable(),
   commercialInvoiceNumber: z.string().optional(),
   commercialInvoiceDate: z.date().optional().nullable(),
+  commercialInvoices: z.array(z.object({
+    invoiceNumber: z.string().optional(),
+    invoiceDate: z.date().optional().nullable(),
+  })).optional().default([]),
   totalMachineQty: z.preprocess(
     (val) => (val === "" || val === undefined || val === null ? undefined : Number(String(val).trim())),
     z.number({ invalid_type_error: "Quantity must be a number" }).int().positive("Quantity must be positive")
@@ -311,6 +316,7 @@ export interface LCEntryDocument {
   invoiceDate?: string; // ISO string
   commercialInvoiceNumber?: string;
   commercialInvoiceDate?: string; // ISO string
+  commercialInvoices?: { invoiceNumber?: string; invoiceDate?: string }[];
   totalMachineQty: number;
   numberOfAmendments?: number;
   status?: LCStatus[] | LCStatus;

@@ -15,6 +15,7 @@ import {
     Calendar,
     Link as LinkIcon,
     FileText,
+    ReceiptText,
     Banknote,
     CheckCircle2,
     Ship,
@@ -24,7 +25,8 @@ import {
     CalendarClock,
     Search,
     Layers,
-    Box
+    Box,
+    X
 } from 'lucide-react';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
@@ -75,6 +77,11 @@ export default function MobileEditLCPage() {
                             etd: item.etd ? item.etd.split('T')[0] : '',
                             eta: item.eta ? item.eta.split('T')[0] : '',
                             shipmentMode: Array.isArray(item.shipmentMode) ? item.shipmentMode : (item.shipmentMode ? [item.shipmentMode] : []),
+                        })),
+                        commercialInvoiceDate: data.commercialInvoiceDate ? data.commercialInvoiceDate.split('T')[0] : '',
+                        commercialInvoices: (data.commercialInvoices || []).map((inv: any) => ({
+                            ...inv,
+                            invoiceDate: inv.invoiceDate ? inv.invoiceDate.split('T')[0] : ''
                         }))
                     };
                     setLcDetail({ ...formattedData, id: docSnap.id } as LCEntryDocument);
@@ -110,6 +117,15 @@ export default function MobileEditLCPage() {
             if (updateData.latestShipmentDate && updateData.latestShipmentDate !== "") updateData.latestShipmentDate = format(new Date(updateData.latestShipmentDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
             if (updateData.etd && updateData.etd !== "") updateData.etd = format(new Date(updateData.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
             if (updateData.eta && updateData.eta !== "") updateData.eta = format(new Date(updateData.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
+            if (updateData.commercialInvoiceDate && updateData.commercialInvoiceDate !== "") updateData.commercialInvoiceDate = format(new Date(updateData.commercialInvoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
+
+            // Handle commercialInvoices dates
+            if (updateData.commercialInvoices) {
+                updateData.commercialInvoices = updateData.commercialInvoices.map((inv: any) => ({
+                    ...inv,
+                    invoiceDate: inv.invoiceDate && inv.invoiceDate !== "" ? format(new Date(inv.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+                }));
+            }
 
             // Handle partialShippingInfo dates
             if (updateData.partialShippingInfo) {
@@ -200,6 +216,36 @@ export default function MobileEditLCPage() {
         });
     };
 
+    const handleCommercialInvoiceChange = (index: number, field: string, value: any) => {
+        setLcDetail(prev => {
+            if (!prev || !prev.commercialInvoices) return prev;
+            const newInvoices = [...prev.commercialInvoices];
+            newInvoices[index] = { ...newInvoices[index], [field]: value };
+            return { ...prev, commercialInvoices: newInvoices };
+        });
+    };
+
+    const addCommercialInvoice = () => {
+        setLcDetail(prev => {
+            if (!prev) return prev;
+            const currentInvoices = prev.commercialInvoices || [];
+            return {
+                ...prev,
+                commercialInvoices: [...currentInvoices, { invoiceNumber: '', invoiceDate: '' }]
+            };
+        });
+    };
+
+    const removeCommercialInvoice = (index: number) => {
+        setLcDetail(prev => {
+            if (!prev || !prev.commercialInvoices) return prev;
+            return {
+                ...prev,
+                commercialInvoices: prev.commercialInvoices.filter((_, i) => i !== index)
+            };
+        });
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
@@ -260,6 +306,18 @@ export default function MobileEditLCPage() {
                                         readOnly
                                         className="rounded-xl border-slate-100 bg-slate-50 text-slate-400 font-bold h-11 pointer-events-none"
                                     />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Partial Shipment Allowed?</Label>
+                                    <select
+                                        value={lcDetail.partialShipmentAllowed || 'No'}
+                                        onChange={(e) => handleChange('partialShipmentAllowed', e.target.value)}
+                                        className="w-full h-11 rounded-xl border-slate-100 bg-slate-50/50 px-3 font-bold text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                    >
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
                                 </div>
 
                                 <div className="space-y-1.5">
@@ -435,6 +493,87 @@ export default function MobileEditLCPage() {
                                             />
                                         </div>
                                     </div>
+
+                                    {lcDetail.partialShipmentAllowed !== "Yes" && (
+                                        <div className="grid grid-cols-1 gap-4 pt-2 border-t border-slate-100 mt-2">
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Commercial Invoice Number</Label>
+                                                <Input
+                                                    value={lcDetail.commercialInvoiceNumber || ''}
+                                                    onChange={(e) => handleChange('commercialInvoiceNumber', e.target.value)}
+                                                    placeholder="Enter C.I. number"
+                                                    className="rounded-xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-bold text-slate-700 h-11"
+                                                />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <Label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Commercial Invoice Date</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={lcDetail.commercialInvoiceDate || ''}
+                                                    onChange={(e) => handleChange('commercialInvoiceDate', e.target.value)}
+                                                    className="rounded-xl border-slate-100 bg-slate-50/50 focus:bg-white transition-all font-bold text-slate-700 h-11 text-[11px]"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {lcDetail.partialShipmentAllowed === "Yes" && (
+                            <div className="p-6 bg-white border-t border-slate-50">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-2 bg-blue-50 rounded-lg">
+                                            <ReceiptText className="h-4 w-4 text-blue-600" />
+                                        </div>
+                                        <h2 className="text-xs font-black uppercase tracking-widest text-slate-800">Commercial Invoices</h2>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={addCommercialInvoice}
+                                        className="rounded-xl h-8 px-2 text-[9px] font-bold uppercase tracking-wider"
+                                    >
+                                        <Plus className="mr-1 h-3 w-3" /> Add
+                                    </Button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {lcDetail.commercialInvoices && lcDetail.commercialInvoices.map((inv, index) => (
+                                        <div key={index} className="space-y-3 p-4 bg-slate-50/50 rounded-2xl relative border border-slate-100">
+                                            <div className="space-y-1">
+                                                <Label className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Invoice Number #{index + 1}</Label>
+                                                <Input
+                                                    value={inv.invoiceNumber || ''}
+                                                    onChange={(e) => handleCommercialInvoiceChange(index, 'invoiceNumber', e.target.value)}
+                                                    placeholder="C.I. Number"
+                                                    className="rounded-xl border-slate-100 bg-white font-bold text-slate-700 h-10 text-xs"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Invoice Date #{index + 1}</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={inv.invoiceDate || ''}
+                                                    onChange={(e) => handleCommercialInvoiceChange(index, 'invoiceDate', e.target.value)}
+                                                    className="rounded-xl border-slate-100 bg-white font-bold text-slate-700 h-10 text-[10px]"
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeCommercialInvoice(index)}
+                                                className="absolute -top-2 -right-2 bg-rose-500 text-white p-1 rounded-full shadow-lg"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    {(!lcDetail.commercialInvoices || lcDetail.commercialInvoices.length === 0) && (
+                                        <p className="text-[10px] text-slate-400 italic text-center py-2">No commercial invoices added.</p>
+                                    )}
                                 </div>
                             </div>
                         )}

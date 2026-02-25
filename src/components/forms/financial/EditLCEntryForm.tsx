@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePickerField } from '@/components/forms/common';
-import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, LinkIcon, Plus, Minus, PlusCircle, Trash2, Save } from 'lucide-react';
+import { Loader2, Landmark, FileText, CalendarDays, Ship, Plane, Layers, FileSignature, Edit3, BellRing, Users, Building, Hash, ExternalLink, PackageCheck, Search, CheckSquare, UploadCloud, DollarSign, Package, FileIcon, Box, Weight, Scale, LinkIcon, Plus, Minus, PlusCircle, Trash2, Save, X } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Separator } from '@/components/ui/separator';
@@ -48,6 +48,7 @@ const defaultFormValues: LCEditFormValues = {
   invoiceDate: undefined,
   commercialInvoiceNumber: '',
   commercialInvoiceDate: undefined,
+  commercialInvoices: [],
   totalMachineQty: 0,
   numberOfAmendments: 0,
   status: [lcStatusOptions[0]],
@@ -153,6 +154,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const { fields: partialShippingFields, append: appendPartialShipping, remove: removePartialShipping } = useFieldArray({
     control,
     name: "partialShippingInfo"
+  });
+
+  const { fields: commercialInvoiceFields, append: appendCommercialInvoice, remove: removeCommercialInvoice } = useFieldArray({
+    control,
+    name: "commercialInvoices",
   });
 
   React.useEffect(() => {
@@ -298,6 +304,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           etd: item.etd && isValid(parseISO(item.etd)) ? parseISO(item.etd) : undefined,
           eta: item.eta && isValid(parseISO(item.eta)) ? parseISO(item.eta) : undefined,
         })) as any,
+        commercialInvoices: (initialData.commercialInvoices || []).map(inv => ({
+          ...inv,
+          invoiceDate: inv.invoiceDate && isValid(parseISO(inv.invoiceDate)) ? parseISO(inv.invoiceDate) : undefined,
+        })),
       };
       reset(valuesToSet);
     }
@@ -548,6 +558,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       })),
       year: extractedYear,
       updatedAt: serverTimestamp(),
+      commercialInvoices: finalData.partialShipmentAllowed === "Yes" ? finalData.commercialInvoices?.map(inv => ({
+        ...inv,
+        invoiceDate: inv.invoiceDate ? format(new Date(inv.invoiceDate), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined
+      })) : undefined,
     };
 
     const finalObjectForFirestore: Record<string, any> = {};
@@ -850,30 +864,90 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="commercialInvoiceNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Commercial Invoice Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter C.I. number" {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="commercialInvoiceDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Commercial Invoice Date</FormLabel>
-                <DatePickerField field={field} placeholder="Select C.I. date" />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {watchedPartialShipmentAllowed !== "Yes" ? (
+            <>
+              <FormField
+                control={form.control}
+                name="commercialInvoiceNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Commercial Invoice Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter C.I. number" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="commercialInvoiceDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Commercial Invoice Date</FormLabel>
+                    <DatePickerField field={field} placeholder="Select C.I. date" />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          ) : (
+            <div className="md:col-span-2 space-y-4">
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-base font-semibold">Commercial Invoices (Partial Shipments)</FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => appendCommercialInvoice({ invoiceNumber: '', invoiceDate: undefined })}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add Invoice
+                </Button>
+              </div>
+
+              {commercialInvoiceFields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-lg relative bg-muted/30">
+                  <FormField
+                    control={control}
+                    name={`commercialInvoices.${index}.invoiceNumber`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Invoice Number #{index + 1}</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter C.I. number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name={`commercialInvoices.${index}.invoiceDate`}
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Invoice Date #{index + 1}</FormLabel>
+                        <DatePickerField field={field} placeholder="Select C.I. date" />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-6 w-6 rounded-full"
+                    onClick={() => removeCommercialInvoice(index)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+
+              {commercialInvoiceFields.length === 0 && (
+                <p className="text-sm text-muted-foreground italic">No commercial invoices added. Click "Add Invoice" to begin.</p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start pt-4">
