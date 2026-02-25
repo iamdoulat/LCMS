@@ -97,21 +97,22 @@ export default function MobileEditLCPage() {
             }
         };
 
-        useEffect(() => {
-            if (lcDetail && lcDetail.partialShipmentAllowed === "Yes") {
-                const total = (lcDetail.commercialInvoices || []).reduce((sum, inv: any) => {
-                    const qty = Number(inv.invoiceMachineQty) || 0;
-                    return sum + qty;
-                }, 0);
-
-                if (lcDetail.totalMachineQty !== total) {
-                    setLcDetail(prev => prev ? { ...prev, totalMachineQty: total } : null);
-                }
-            }
-        }, [lcDetail?.commercialInvoices, lcDetail?.partialShipmentAllowed]);
 
         if (lcId) fetchLC();
     }, [lcId, userRole, router]);
+
+    useEffect(() => {
+        if (lcDetail && lcDetail.partialShipmentAllowed === "Yes") {
+            const total = (lcDetail.commercialInvoices || []).reduce((sum, inv: any) => {
+                const qty = Number(inv.invoiceMachineQty) || 0;
+                return sum + qty;
+            }, 0);
+
+            if (lcDetail.totalMachineQty !== total) {
+                setLcDetail(prev => prev ? { ...prev, totalMachineQty: total } : null);
+            }
+        }
+    }, [lcDetail?.commercialInvoices, lcDetail?.partialShipmentAllowed]);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();

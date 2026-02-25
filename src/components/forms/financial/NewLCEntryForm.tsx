@@ -1251,6 +1251,94 @@ export function NewLCEntryForm() {
           <Ship className="mr-2 h-5 w-5 text-primary" />
           Shipping Information
         </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mb-6">
+          <FormField
+            control={form.control}
+            name="isFirstShipment"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-background/50">
+                <FormLabel className="text-sm font-normal text-foreground">
+                  1st Shipment
+                </FormLabel>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="isSecondShipment"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-background/50">
+                <FormLabel className="text-sm font-normal text-foreground">
+                  2nd Shipment
+                </FormLabel>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="isThirdShipment"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-background/50">
+                <FormLabel className="text-sm font-normal text-foreground">
+                  3rd Shipment
+                </FormLabel>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <FormField
+            control={control}
+            name="firstShipmentNote"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>1st Shipment Note</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Note for 1st shipment..." {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="secondShipmentNote"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>2nd Shipment Note</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Note for 2nd shipment..." {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="thirdShipmentNote"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>3rd Shipment Note</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Note for 3rd shipment..." {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         {watchedPartialShipmentAllowed !== "Yes" ? (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
@@ -1661,93 +1749,6 @@ export function NewLCEntryForm() {
           </div>
         )}
 
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
-          <FormField
-            control={form.control}
-            name="isFirstShipment"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-                <FormLabel className="text-sm font-normal text-foreground">
-                  1st Shipment
-                </FormLabel>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="isSecondShipment"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-                <FormLabel className="text-sm font-normal text-foreground">
-                  2nd Shipment
-                </FormLabel>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="isThirdShipment"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
-                <FormLabel className="text-sm font-normal text-foreground">
-                  3rd Shipment
-                </FormLabel>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormField
-            control={control}
-            name="firstShipmentNote"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>1st Shipment Note</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Note for 1st shipment..." {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="secondShipmentNote"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>2nd Shipment Note</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Note for 2nd shipment..." {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="thirdShipmentNote"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>3rd Shipment Note</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Note for 3rd shipment..." {...field} value={field.value ?? ''} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
 
         {watchedPartialShipmentAllowed !== "Yes" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">

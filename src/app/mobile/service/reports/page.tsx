@@ -446,7 +446,7 @@ export default function ServiceReportsPage() {
                                     <div className="space-y-2 pt-3 border-t border-dashed border-slate-200">
                                         <div className="grid grid-cols-3 gap-2 py-3 bg-white rounded-3xl px-3 mt-1 border border-slate-200 shadow-[0_4px_12px_rgb(0,0,0,0.03)]">
                                             <div className="text-center border-r border-blue-400 last:border-0">
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">Total Qty</p>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter mb-0.5">Invoice Qty</p>
                                                 <p className="text-sm font-black text-[#0a1e60]">{report.totalMachineQtyFromLC || 0}</p>
                                             </div>
                                             <div className="text-center border-r border-blue-400 last:border-0">
