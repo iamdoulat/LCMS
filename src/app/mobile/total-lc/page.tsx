@@ -1089,10 +1089,10 @@ export default function MobileTotalLCPage() {
                                             )}
 
                                             {/* Shipping Document (Dynamic) */}
-                                            {lc.shippingDocumentUrl && (
+                                            {lc.shippingDocumentsUrl && (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <a href={lc.shippingDocumentUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center">
+                                                        <a href={lc.shippingDocumentsUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center">
                                                             DOC
                                                         </a>
                                                     </TooltipTrigger>
