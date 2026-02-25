@@ -62,7 +62,7 @@ export function EditPaymentTrackingEntryForm({ initialData }: EditPaymentTrackin
       isSecondShipment: initialData.isSecondShipment,
       isThirdShipment: initialData.isThirdShipment,
       shipmentDate: parseISO(initialData.shipmentDate as string),
-      shipmentMode: initialData.shipmentMode,
+      shipmentMode: (Array.isArray(initialData.shipmentMode) ? initialData.shipmentMode[0] : initialData.shipmentMode) as ShipmentMode,
       maturityDate: parseISO(initialData.maturityDate as string),
       goodsDescription: initialData.goodsDescription,
       status: (initialData.status === "Payment Pending" || initialData.status === "Payment Done") ? initialData.status : "Payment Pending",
