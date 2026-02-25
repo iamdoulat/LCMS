@@ -552,7 +552,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                                             address: h.address
                                         }))}
                                         onRefresh={captureLocation}
-                                        isLoading={isCapturing}
+                                        isLoading={isCapturing || isGeocoding}
                                     />
                                 </div>
                             </div>
@@ -668,7 +668,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                 <div className="p-4 bg-white border-t space-y-3 mt-auto">
                     <Button
                         onClick={handleSubmit}
-                        disabled={isSubmitting || !location}
+                        disabled={isSubmitting || !location || !address || isGeocoding || address.includes('(Address unavailable)')}
                         className={`w-full h-12 text-base font-medium ${type === 'in'
                             ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-100'
                             : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100'
