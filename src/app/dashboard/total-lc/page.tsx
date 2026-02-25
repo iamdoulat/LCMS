@@ -371,13 +371,17 @@ export default function TotalLCPage() {
     return pageNumbers;
   };
 
-  const getShipmentTermLabel = (term?: string) => {
+  const getShipmentTermLabel = (term?: string | string[]) => {
     if (!term) return null;
-    if (term.includes("CFR")) return "CFR";
-    if (term.includes("CPT")) return "CPT";
-    if (term === "FOB") return "FOB";
-    if (term === "EXW") return "EXW";
-    return null;
+    const firstTerm = Array.isArray(term) ? term[0] : term;
+    if (!firstTerm || typeof firstTerm !== 'string') return null;
+
+    const t = firstTerm.toUpperCase();
+    if (t.includes("CFR")) return "CFR";
+    if (t.includes("CPT")) return "CPT";
+    if (t === "FOB") return "FOB";
+    if (t === "EXW") return "EXW";
+    return firstTerm;
   };
 
   return (
