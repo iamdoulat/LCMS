@@ -1411,7 +1411,8 @@ export function NewLCEntryForm() {
                         shipmentIndex: idx as any,
                         vesselOrFlightName: '',
                         trackingCourier: '',
-                        trackingNumber: ''
+                        trackingNumber: '',
+                        shipmentMode: []
                       })}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Vessel/Tracking
@@ -1605,7 +1606,7 @@ export function NewLCEntryForm() {
                       <div className="flex flex-col items-center justify-center py-10 border border-dashed rounded-lg bg-muted/10">
                         <Ship className="h-8 w-8 text-muted-foreground/40 mb-2" />
                         <p className="text-sm text-muted-foreground italic">No shipping details added for this shipment index.</p>
-                        <Button type="button" variant="link" onClick={() => appendPartialShipping({ shipmentIndex: idx as any, vesselOrFlightName: '', trackingCourier: '', trackingNumber: '' })}>
+                        <Button type="button" variant="link" onClick={() => appendPartialShipping({ shipmentIndex: idx as any, vesselOrFlightName: '', trackingCourier: '', trackingNumber: '', shipmentMode: [] })}>
                           Add Details Now
                         </Button>
                       </div>
