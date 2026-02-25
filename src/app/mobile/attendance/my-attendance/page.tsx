@@ -384,41 +384,53 @@ export default function MyAttendancePage() {
         }
     };
 
-    const calculateWorkTime = (inTime?: string, outTime?: string) => {
+    const calculateWorkTime = (inTime?: string, outTime?: string, recordDate?: string) => {
         if (!inTime || !outTime) {
             return '-';
         }
 
         try {
-            let inDate: Date;
-            let outDate: Date;
+            const parseTime = (timeStr: string) => {
+                const trimmed = timeStr.trim();
+                // 1. Try ISO
+                const isoDate = parseISO(trimmed);
+                if (!isNaN(isoDate.getTime())) return isoDate;
 
-            // Try parsing as ISO string first
-            inDate = parseISO(inTime);
-            outDate = parseISO(outTime);
+                // 2. Try common formats using a consistent base date
+                // If recordDate is available (YYYY-MM-DD), use it to avoid day mismatches
+                const baseDate = recordDate ? parseISO(recordDate) : new Date();
+                const formats = ['hh:mm a', 'h:mm a', 'hh:mmA', 'h:mmA', 'HH:mm', 'H:mm'];
 
-            // If parseISO fails (returns Invalid Date), try parsing as formatted time (e.g., "09:00 AM")
-            if (isNaN(inDate.getTime()) || isNaN(outDate.getTime())) {
-                // These are formatted times like "09:00 AM", need to combine with today's date
-                // Use the attendance record's date if available, otherwise use today
-                const baseDate = new Date();
+                for (const fmt of formats) {
+                    const parsed = parse(trimmed, fmt, baseDate);
+                    if (!isNaN(parsed.getTime())) return parsed;
+                }
+                return null;
+            };
 
-                // Parse the time portion using date-fns parse
-                inDate = parse(inTime, 'hh:mm a', baseDate);
-                outDate = parse(outTime, 'hh:mm a', baseDate);
+            const inDate = parseTime(inTime);
+            const outDate = parseTime(outTime);
 
-                // Check if parsing succeeded
-                if (isNaN(inDate.getTime()) || isNaN(outDate.getTime())) {
-                    return '-';
+            if (!inDate || !outDate) return '-';
+
+            let finalIn = inDate;
+            let finalOut = outDate;
+
+            // Simple duration check - if they are on different days but one was manual, 
+            // normalize to same day for calculation
+            const isIso = (ts: string) => /^\d{4}-\d{2}-\d{2}T/.test(ts.trim());
+            if (!isIso(inTime) || !isIso(outTime)) {
+                finalOut = new Date(finalIn.getTime());
+                finalOut.setHours(outDate.getHours(), outDate.getMinutes(), outDate.getSeconds(), outDate.getMilliseconds());
+
+                // If out is still before in, it might be an overnight shift
+                if (finalOut < finalIn) {
+                    finalOut.setDate(finalOut.getDate() + 1);
                 }
             }
 
-            const diffMs = outDate.getTime() - inDate.getTime();
-
-            // Handle negative time (out before in)
-            if (diffMs < 0) {
-                return '-';
-            }
+            const diffMs = finalOut.getTime() - finalIn.getTime();
+            if (diffMs < 0) return '-';
 
             const hours = Math.floor(diffMs / (1000 * 60 * 60));
             const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -566,7 +578,7 @@ export default function MyAttendancePage() {
                                             </div>
 
                                             <div className="h-10 w-16 rounded-lg bg-slate-50 flex flex-col items-center justify-center border border-slate-100 shrink-0 shadow-[0_3px_8px_rgba(0,0,0,0.1)]">
-                                                <span className="text-[10px] font-bold text-[#0a1e60] leading-none mb-0.5">{calculateWorkTime(record.inTime, record.outTime)}</span>
+                                                <span className="text-[10px] font-bold text-[#0a1e60] leading-none mb-0.5">{calculateWorkTime(record.inTime, record.outTime, record.date)}</span>
                                                 <span className="text-[7px] font-bold text-slate-400 uppercase leading-none">Work</span>
                                             </div>
 

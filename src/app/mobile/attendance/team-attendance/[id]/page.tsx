@@ -167,23 +167,57 @@ export default function SubordinateAttendanceDetailsPage() {
         }
     };
 
-    const calculateWorkTime = (inTime?: string, outTime?: string) => {
+    const calculateWorkTime = (inTime?: string, outTime?: string, recordDate?: string) => {
         if (!inTime || !outTime) return '-';
         try {
-            let inDate = parseISO(inTime);
-            let outDate = parseISO(outTime);
+            const parseTime = (timeStr: string) => {
+                const trimmed = timeStr.trim();
+                // 1. Try ISO
+                const isoDate = parseISO(trimmed);
+                if (!isNaN(isoDate.getTime())) return isoDate;
 
-            if (isNaN(inDate.getTime()) || isNaN(outDate.getTime())) {
-                const baseDate = new Date();
-                inDate = parse(inTime, 'hh:mm a', baseDate);
-                outDate = parse(outTime, 'hh:mm a', baseDate);
+                // 2. Try common formats using a consistent base date
+                // If recordDate is available (YYYY-MM-DD), use it to avoid day mismatches
+                const baseDate = recordDate ? parseISO(recordDate) : new Date();
+                const formats = ['hh:mm a', 'h:mm a', 'hh:mmA', 'h:mmA', 'HH:mm', 'H:mm'];
 
-                if (isNaN(inDate.getTime()) || isNaN(outDate.getTime())) {
-                    return '-';
+                for (const fmt of formats) {
+                    const parsed = parse(trimmed, fmt, baseDate);
+                    if (!isNaN(parsed.getTime())) return parsed;
+                }
+                return null;
+            };
+
+            const inDate = parseTime(inTime);
+            const outDate = parseTime(outTime);
+
+            if (!inDate || !outDate) return '-';
+
+            // If one is ISO (real date) and the other is manual (base date), 
+            // the year/month/day might not match. For duration, we only care about the time 
+            // if we're on the same day.
+            // But if they are on different days (e.g. overnight), we should respect that if both are ISO.
+            // If at least one is NOT ISO, we should probably normalize them to the same day 
+            // unless we have specific knowledge. 
+            // In this app, attendance records are per-day.
+
+            let finalIn = inDate;
+            let finalOut = outDate;
+
+            // Simple duration check - if they are on different days but one was manual, 
+            // normalize to same day for calculation
+            const isIso = (ts: string) => /^\d{4}-\d{2}-\d{2}T/.test(ts.trim());
+            if (!isIso(inTime) || !isIso(outTime)) {
+                finalOut = new Date(finalIn.getTime());
+                finalOut.setHours(outDate.getHours(), outDate.getMinutes(), outDate.getSeconds(), outDate.getMilliseconds());
+
+                // If out is still before in, it might be an overnight shift
+                if (finalOut < finalIn) {
+                    finalOut.setDate(finalOut.getDate() + 1);
                 }
             }
 
-            const diffMs = outDate.getTime() - inDate.getTime();
+            const diffMs = finalOut.getTime() - finalIn.getTime();
             if (diffMs < 0) return '-';
             const hours = Math.floor(diffMs / (1000 * 60 * 60));
             const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));

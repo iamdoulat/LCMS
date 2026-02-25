@@ -65,18 +65,26 @@ const normalizeTimeTo24Hour = (time?: string): string => {
 
     // Check if it's already in 24-hour format (HH:mm)
     if (/^\d{1,2}:\d{2}$/.test(trimmedTime)) {
-        // Already in 24-hour format, just return it
         return trimmedTime;
     }
 
-    // Try to parse as 12-hour format (hh:mm a)
-    try {
-        const date = parseDateFns(trimmedTime, 'hh:mm a', new Date());
-        if (isValid(date)) {
-            return format(date, 'HH:mm');
+    // Attempt parsing as ISO string first
+    const isoDate = parseISO(trimmedTime);
+    if (!isNaN(isoDate.getTime())) {
+        return format(isoDate, 'HH:mm');
+    }
+
+    // Try to parse using common formatting patterns
+    const formats = ['hh:mm a', 'h:mm a', 'hh:mmA', 'h:mmA', 'HH:mm', 'H:mm'];
+    for (const fmt of formats) {
+        try {
+            const date = parseDateFns(trimmedTime, fmt, new Date());
+            if (isValid(date)) {
+                return format(date, 'HH:mm');
+            }
+        } catch (e) {
+            // Ignore parse errors and try the next format
         }
-    } catch (e) {
-        console.warn(`Could not parse time: ${trimmedTime}`, e);
     }
 
     return ''; // Return empty if parsing fails
@@ -114,21 +122,40 @@ const AttendanceDayRow = ({
         const targetDateStr = format(date, 'yyyy-MM-dd');
 
         if (history.length === 0) {
-            return attendancePolicies.find((p: AttendancePolicyDocument) => p.id === employee.attendancePolicyId);
+            const policy = attendancePolicies.find((p: AttendancePolicyDocument) => p.id === employee.attendancePolicyId);
+            if (policy) {
+                try {
+                    const policyEffectiveDate = format(parseISO(policy.effectiveFrom), 'yyyy-MM-dd');
+                    if (policyEffectiveDate <= targetDateStr) {
+                        return policy;
+                    }
+                } catch (err) {
+                    return policy;
+                }
+            }
+            return null;
         }
 
         const sortedHistory = [...history].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
-        const assignment = sortedHistory.find(h => {
+        const validAssignment = sortedHistory.find(h => {
             try {
-                const effectiveDate = format(parseISO(h.effectiveFrom), 'yyyy-MM-dd');
-                return effectiveDate <= targetDateStr;
+                // 1. Assignment must have happened before or on the target date
+                const assignmentEffectiveDate = format(parseISO(h.effectiveFrom), 'yyyy-MM-dd');
+                if (assignmentEffectiveDate > targetDateStr) return false;
+
+                // 2. The globally defined policy must ALSO be effective
+                const policy = attendancePolicies.find((p: AttendancePolicyDocument) => p.id === h.policyId);
+                if (!policy) return false;
+
+                const policyEffectiveDate = format(parseISO(policy.effectiveFrom), 'yyyy-MM-dd');
+                return policyEffectiveDate <= targetDateStr;
             } catch (err) {
                 return false;
             }
         });
 
-        if (assignment) {
-            return attendancePolicies.find((p: AttendancePolicyDocument) => p.id === assignment.policyId);
+        if (validAssignment) {
+            return attendancePolicies.find((p: AttendancePolicyDocument) => p.id === validAssignment.policyId);
         }
 
         const firstAssignment = sortedHistory[sortedHistory.length - 1];
@@ -190,7 +217,10 @@ const AttendanceDayRow = ({
                     : activePolicy?.delayBuffer
             } : activePolicy;
 
-            computedFlag = determineAttendanceFlag(initialData.inTime, mergedPolicy || undefined);
+            // Use the parsed 24-hour time to ensure determineAttendanceFlag receives a valid format 
+            // instead of a potentially raw ISO string.
+            const parsedInTimeStr = normalizeTimeTo24Hour(initialData.inTime);
+            computedFlag = determineAttendanceFlag(parsedInTimeStr, mergedPolicy || undefined);
         }
 
         form.reset({

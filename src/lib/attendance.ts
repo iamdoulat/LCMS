@@ -18,29 +18,53 @@ export function getActivePolicyForDate(
     const history = employee.policyHistory || [];
     const targetDateStr = format(date, 'yyyy-MM-dd');
 
-    // If no history, use the current attendancePolicyId
+    // If no history, we still need to check if the current policy globally applies based on its effectiveFrom
     if (history.length === 0) {
-        return attendancePolicies.find((p) => p.id === employee.attendancePolicyId) || null;
+        const policy = attendancePolicies.find((p) => p.id === employee.attendancePolicyId);
+        if (policy) {
+            try {
+                const policyEffectiveDate = format(parseISO(policy.effectiveFrom), 'yyyy-MM-dd');
+                if (policyEffectiveDate <= targetDateStr) {
+                    return policy;
+                }
+            } catch (err) {
+                // Return if date parsing fails to be safe
+                return policy;
+            }
+        }
+        // If the only policy isn't effective yet, we don't have a fallback in history.
+        // It's safer to either return null (so logic uses 'W' default / 09:00 default) or the policy itself.
+        // Returning null allows page.tsx and other functions to know there's no active policy *yet*.
+        return null;
     }
 
     // Sort history by effective date descending to find the closest previous or same-day assignment
     const sortedHistory = [...history].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
 
-    const assignment = sortedHistory.find(h => {
+    const validAssignment = sortedHistory.find(h => {
         try {
-            const effectiveDate = format(parseISO(h.effectiveFrom), 'yyyy-MM-dd');
-            return effectiveDate <= targetDateStr;
+            // 1. The assignment must have happened before or on the target date
+            const assignmentEffectiveDate = format(parseISO(h.effectiveFrom), 'yyyy-MM-dd');
+            if (assignmentEffectiveDate > targetDateStr) return false;
+
+            // 2. The globally defined policy must ALSO be effective on or before the target date
+            const policy = attendancePolicies.find((p) => p.id === h.policyId);
+            if (!policy) return false;
+
+            const policyEffectiveDate = format(parseISO(policy.effectiveFrom), 'yyyy-MM-dd');
+            return policyEffectiveDate <= targetDateStr;
         } catch (err) {
             return false;
         }
     });
 
-    if (assignment) {
-        return attendancePolicies.find((p) => p.id === assignment.policyId) || null;
+    if (validAssignment) {
+        return attendancePolicies.find((p) => p.id === validAssignment.policyId) || null;
     }
 
-    // Fallback: If no assignment matches (meaning the date is before any history started), 
-    // use the oldest assignment available or the current policy.
+    // Fallback: If no assignment matches (meaning the date is before any history started, or 
+    // the currently assigned policies haven't globally started yet),
+    // use the oldest assignment available, assuming we must have *some* policy.
     const firstAssignment = sortedHistory[sortedHistory.length - 1];
     return attendancePolicies.find((p) => p.id === (firstAssignment?.policyId || employee.attendancePolicyId)) || null;
 }
