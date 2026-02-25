@@ -161,11 +161,30 @@ export function NewInstallationReportForm() {
       lcsSnap.forEach(docSnap => {
         if (!usedLcIdsForReports.has(docSnap.id)) { // Filter out used L/Cs
           const data = docSnap.data() as LCEntryDocument;
-          if (data.commercialInvoiceNumber) {
+
+          // Handle multi-invoice L/Cs
+          if (data.commercialInvoices && data.commercialInvoices.length > 0) {
+            data.commercialInvoices.forEach((inv) => {
+              if (inv.invoiceNumber) {
+                fetchedLcOptions.push({
+                  value: `${docSnap.id}|${inv.invoiceNumber}`, // Composite key
+                  label: inv.invoiceNumber,
+                  lcData: {
+                    ...data,
+                    id: docSnap.id,
+                    commercialInvoiceNumber: inv.invoiceNumber, // Override for form auto-fill
+                    commercialInvoiceDate: inv.invoiceDate     // Override for form auto-fill
+                  },
+                });
+              }
+            });
+          }
+          // Fallback handled via existing single field if no multi-invoices array
+          else if (data.commercialInvoiceNumber) {
             fetchedLcOptions.push({
-              value: docSnap.id, // L/C document ID
-              label: data.commercialInvoiceNumber, // Commercial Invoice Number for display
-              lcData: { ...data, id: docSnap.id }, // Store the full L/C data
+              value: `${docSnap.id}|${data.commercialInvoiceNumber}`,
+              label: data.commercialInvoiceNumber,
+              lcData: { ...data, id: docSnap.id },
             });
           }
         }
@@ -189,6 +208,8 @@ export function NewInstallationReportForm() {
       const selectedOption = lcOptionsForCommercialInvoice.find(opt => opt.value === watchedSelectedCommercialInvoiceLcId);
       if (selectedOption) {
         const lc = selectedOption.lcData;
+        const [lcId] = watchedSelectedCommercialInvoiceLcId.split('|');
+
         setValue("applicantId", lc.applicantId || '', { shouldValidate: true });
         setValue("beneficiaryId", lc.beneficiaryId || '', { shouldValidate: true });
         setValue("documentaryCreditNumber", lc.documentaryCreditNumber || '', { shouldValidate: true });
@@ -204,7 +225,7 @@ export function NewInstallationReportForm() {
           isFirstShipment: lc.isFirstShipment,
           isSecondShipment: lc.isSecondShipment,
           isThirdShipment: lc.isThirdShipment,
-          lcIdForLink: lc.id,
+          lcIdForLink: lcId,
           partialShipmentAllowed: lc.partialShipmentAllowed,
           firstPartialQty: lc.firstPartialQty, firstPartialPkgs: lc.firstPartialPkgs, firstPartialNetWeight: lc.firstPartialNetWeight, firstPartialGrossWeight: lc.firstPartialGrossWeight, firstPartialCbm: lc.firstPartialCbm,
           secondPartialQty: lc.secondPartialQty, secondPartialPkgs: lc.secondPartialPkgs, secondPartialNetWeight: lc.secondPartialNetWeight, secondPartialGrossWeight: lc.secondPartialGrossWeight, secondPartialCbm: lc.secondPartialCbm,
@@ -259,7 +280,7 @@ export function NewInstallationReportForm() {
       applicantName: selectedApplicant?.label || 'N/A',
       beneficiaryId: data.beneficiaryId,
       beneficiaryName: selectedBeneficiary?.label || 'N/A',
-      selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId || undefined,
+      selectedCommercialInvoiceLcId: data.selectedCommercialInvoiceLcId ? data.selectedCommercialInvoiceLcId.split('|')[0] : undefined,
       commercialInvoiceNumber: selectedLcOption?.label || undefined,
       commercialInvoiceDate: data.commercialInvoiceDate ? format(data.commercialInvoiceDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
       documentaryCreditNumber: data.documentaryCreditNumber || undefined,
