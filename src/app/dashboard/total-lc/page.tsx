@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ListChecks, FileEdit, Trash2, Search, Filter, XCircle, ChevronLeft, ChevronRight, PlusCircle, MoreHorizontal, ShieldAlert, Landmark, CalendarClock, Ship, Plane } from 'lucide-react';
+import { ListChecks, FileEdit, Trash2, Search, Filter, XCircle, ChevronLeft, ChevronRight, PlusCircle, MoreHorizontal, ShieldAlert, Landmark, CalendarClock, Ship, Plane, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -597,25 +597,89 @@ export default function TotalLCPage() {
                                       <Ship className="mr-1.5 h-3.5 w-3.5" /> {getShipmentTermLabel(lc.shipmentTerms)}
                                     </Button>
                                   )}
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button variant="outline" size="sm" className={"h-7"}>
-                                        <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
-                                        ETD/ETA
+                                  {lc.partialShippingInfo && lc.partialShippingInfo.length > 0 ? (
+                                    lc.partialShippingInfo.map((shipInfo, sIdx) => {
+                                      const rowShipmentMode = shipInfo.shipmentMode || [];
+                                      return (
+                                        <div key={sIdx} className="flex items-center gap-1 p-1 bg-background border rounded-md shadow-md border-muted-foreground/20 hover:shadow-lg transition-shadow duration-200">
+                                          <div className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-bold border border-primary/20 mr-0.5">S{shipInfo.shipmentIndex}</div>
+
+                                          {/* ETD/ETA */}
+                                          {(shipInfo.etd || shipInfo.eta) && (
+                                            <Popover>
+                                              <PopoverTrigger asChild>
+                                                <Button variant="outline" size="sm" className="h-7 px-2 text-[11px] shadow-sm">
+                                                  <CalendarClock className="mr-1 h-3.5 w-3.5 text-primary" />
+                                                  ETD/ETA
+                                                </Button>
+                                              </PopoverTrigger>
+                                              <PopoverContent className="w-auto p-3">
+                                                <div className="space-y-1.5 text-sm">
+                                                  <p className="flex justify-between gap-4"><strong>ETD:</strong> <span className="text-muted-foreground">{formatDisplayDate(shipInfo.etd)}</span></p>
+                                                  <p className="flex justify-between gap-4"><strong>ETA:</strong> <span className="text-muted-foreground">{formatDisplayDate(shipInfo.eta)}</span></p>
+                                                </div>
+                                              </PopoverContent>
+                                            </Popover>
+                                          )}
+
+                                          {/* Track Document */}
+                                          {shipInfo.trackingCourier && shipInfo.trackingNumber && (
+                                            <Button variant="outline" size="sm" asChild className="h-7 px-2 text-[11px] shadow-sm" title={`Track ${shipInfo.trackingCourier}`}>
+                                              <a href={shipInfo.trackingCourier === "DHL" ? `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(shipInfo.trackingNumber).trim())}&submit=1` : shipInfo.trackingCourier === "FedEx" ? `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(shipInfo.trackingNumber).trim())}` : shipInfo.trackingCourier === "UPS" ? `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(shipInfo.trackingNumber).trim())}` : '#'} target="_blank" rel="noopener noreferrer">
+                                                <Search className="mr-1 h-3.5 w-3.5 text-blue-500" />
+                                                {shipInfo.trackingCourier}
+                                              </a>
+                                            </Button>
+                                          )}
+
+                                          {/* Track Vessel/Flight */}
+                                          {(shipInfo.vesselImoNumber || shipInfo.flightNumber) && (
+                                            <Button variant="outline" size="sm" asChild className="h-7 px-2 text-[11px] shadow-sm">
+                                              <a href={rowShipmentMode.includes('Air') && shipInfo.flightNumber ? `https://www.flightradar24.com/${shipInfo.flightNumber}` : `https://www.vesselfinder.com/vessels/details/${shipInfo.vesselImoNumber}`} target="_blank" rel="noopener noreferrer" title={rowShipmentMode.includes('Air') ? 'Track Flight' : 'Track Vessel'}>
+                                                {rowShipmentMode.includes('Air') ? <Plane className="mr-1 h-3.5 w-3.5 text-sky-500" /> : <Ship className="mr-1 h-3.5 w-3.5 text-primary" />}
+                                                {rowShipmentMode.includes('Air') ? 'Flight' : 'Vessel'}
+                                              </a>
+                                            </Button>
+                                          )}
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <>
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <Button variant="outline" size="sm" className={"h-7"}>
+                                            <CalendarClock className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                                            ETD/ETA
+                                          </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-2">
+                                          <div className="space-y-1 text-sm">
+                                            <p><strong>ETD:</strong> {formatDisplayDate(lc.etd)}</p>
+                                            <p><strong>ETA:</strong> {formatDisplayDate(lc.eta)}</p>
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+
+                                      <Button variant="outline" size="sm" asChild className="h-7" title="Track Original Document" disabled={!lc.trackingCourier || !lc.trackingNumber}>
+                                        <a href={lc.trackingCourier === "DHL" ? `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(lc.trackingNumber || '').trim())}&submit=1` : lc.trackingCourier === "FedEx" ? `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(lc.trackingNumber || '').trim())}` : lc.trackingCourier === "UPS" ? `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(lc.trackingNumber || '').trim())}` : '#'} target="_blank" rel="noopener noreferrer" >
+                                          <Search className="mr-1.5 h-3.5 w-3.5 text-blue-500" />
+                                          {lc.trackingCourier || "Track Docs"}
+                                        </a>
                                       </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-2">
-                                      <div className="space-y-1 text-sm">
-                                        <p><strong>ETD:</strong> {formatDisplayDate(lc.etd)}</p>
-                                        <p><strong>ETA:</strong> {formatDisplayDate(lc.eta)}</p>
-                                      </div>
-                                    </PopoverContent>
-                                  </Popover>
+                                      <Button variant="outline" size="sm" asChild className="h-7" disabled={!(lc.vesselImoNumber || lc.flightNumber)}>
+                                        <a href={lc.shipmentMode?.includes('Air') && lc.flightNumber ? `https://www.flightradar24.com/${lc.flightNumber}` : `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}`} target="_blank" rel="noopener noreferrer" title={lc.shipmentMode?.includes('Air') ? 'Track Flight' : 'Track Vessel'}>
+                                          {lc.shipmentMode?.includes('Air') ? <Plane className="mr-1.5 h-3.5 w-3.5 text-sky-500" /> : <Ship className="mr-1.5 h-3.5 w-3.5 text-primary" />}
+                                          {lc.shipmentMode?.includes('Air') ? 'Air' : 'Vessel'}
+                                        </a>
+                                      </Button>
+                                    </>
+                                  )}
                                   {isDeferredPayment && (
                                     <Popover>
                                       <PopoverTrigger asChild>
                                         <Button variant="outline" size="sm" className="h-7 cursor-default">
-                                          <Landmark className="mr-1.5 h-3.5 w-3.5" /> Maturity
+                                          <Landmark className="mr-1.5 h-3.5 w-3.5 text-orange-500" /> Maturity
                                         </Button>
                                       </PopoverTrigger>
                                       <PopoverContent className="w-auto p-2">
@@ -623,18 +687,6 @@ export default function TotalLCPage() {
                                       </PopoverContent>
                                     </Popover>
                                   )}
-                                  <Button variant="outline" size="sm" asChild className="h-7" title="Track Original Document" disabled={!lc.trackingCourier || !lc.trackingNumber}>
-                                    <a href={lc.trackingCourier === "DHL" ? `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(lc.trackingNumber || '').trim())}&submit=1` : lc.trackingCourier === "FedEx" ? `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(lc.trackingNumber || '').trim())}` : lc.trackingCourier === "UPS" ? `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(lc.trackingNumber || '').trim())}` : '#'} target="_blank" rel="noopener noreferrer" >
-                                      <Search className="mr-1.5 h-3.5 w-3.5" />
-                                      {lc.trackingCourier || "Track Docs"}
-                                    </a>
-                                  </Button>
-                                  <Button variant="outline" size="sm" asChild className="h-7" disabled={!(lc.vesselImoNumber || lc.flightNumber)}>
-                                    <a href={lc.shipmentMode === 'Air' && lc.flightNumber ? `https://www.flightradar24.com/${lc.flightNumber}` : `https://www.vesselfinder.com/vessels/details/${lc.vesselImoNumber}`} target="_blank" rel="noopener noreferrer" title={lc.shipmentMode === 'Air' ? 'Track Flight' : 'Track Vessel'}>
-                                      {lc.shipmentMode === 'Air' ? <Plane className="mr-1.5 h-3.5 w-3.5" /> : <Ship className="mr-1.5 h-3.5 w-3.5" />}
-                                      {lc.shipmentMode === 'Air' ? 'Air' : 'Vessel'}
-                                    </a>
-                                  </Button>
                                   <Button variant="outline" size="sm" onClick={() => handleOpenLink(lc.finalLcUrl)} disabled={!lc.finalLcUrl} title={lc.termsOfPay === 'T/T In Advance' ? 'View Final T/T Document' : 'View Final L/C Document'} className="h-7">
                                     {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
                                   </Button>

@@ -3,10 +3,10 @@
 "use client";
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument, ShipmentTerms } from '@/types';
+import type { LCEntryDocument, Currency, TrackingCourier, LCStatus, ShipmentMode, PartialShipmentAllowed, CertificateOfOriginCountry, TermsOfPay, ApplicantOption, SupplierDocument, ShipmentTerms, PartialShipmentShippingInfo } from '@/types';
 import { termsOfPayOptions, shipmentModeOptions, currencyOptions, trackingCourierOptions, lcStatusOptions, partialShipmentAllowedOptions, certificateOfOriginCountries, lcEntrySchema, toNumberOrUndefined, shipmentTermsOptions } from '@/types';
 import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
 import Swal from 'sweetalert2';
@@ -72,8 +72,8 @@ const defaultFormValues: LCEditFormValues = {
   trackingNumber: "",
   etd: undefined,
   eta: undefined,
-  shipmentMode: undefined,
-  shipmentTerms: shipmentTermsOptions[0],
+  shipmentMode: [],
+  shipmentTerms: [],
   vesselOrFlightName: '',
   vesselImoNumber: '',
   flightNumber: '',
@@ -120,6 +120,7 @@ const defaultFormValues: LCEditFormValues = {
   firstShipmentNote: '',
   secondShipmentNote: '',
   thirdShipmentNote: '',
+  partialShippingInfo: [],
 };
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
@@ -148,6 +149,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
 
   const { control, setValue, watch, getValues, reset, formState: { isDirty } } = form;
   useUnsavedChangesWarning(isDirty, isSubmitting);
+
+  const { fields: partialShippingFields, append: appendPartialShipping, remove: removePartialShipping } = useFieldArray({
+    control,
+    name: "partialShippingInfo"
+  });
 
   React.useEffect(() => {
     const fetchDropdownData = async () => {
@@ -267,7 +273,16 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         trackingNumber: initialData.trackingNumber ?? defaultFormValues.trackingNumber,
         etd: initialData.etd && isValid(parseISO(initialData.etd)) ? parseISO(initialData.etd) : defaultFormValues.etd,
         eta: initialData.eta && isValid(parseISO(initialData.eta)) ? parseISO(initialData.eta) : defaultFormValues.eta,
-        shipmentMode: initialData.shipmentMode ?? defaultFormValues.shipmentMode,
+        shipmentTerms: Array.isArray(initialData.shipmentTerms)
+          ? initialData.shipmentTerms
+          : initialData.shipmentTerms
+            ? [initialData.shipmentTerms as any]
+            : defaultFormValues.shipmentTerms,
+        shipmentMode: Array.isArray(initialData.shipmentMode)
+          ? initialData.shipmentMode
+          : initialData.shipmentMode
+            ? [initialData.shipmentMode as any]
+            : defaultFormValues.shipmentMode,
         vesselOrFlightName: initialData.vesselOrFlightName ?? defaultFormValues.vesselOrFlightName,
         vesselImoNumber: initialData.vesselImoNumber ?? defaultFormValues.vesselImoNumber,
         flightNumber: initialData.flightNumber ?? defaultFormValues.flightNumber,
@@ -277,6 +292,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
         firstShipmentNote: initialData.firstShipmentNote ?? defaultFormValues.firstShipmentNote,
         secondShipmentNote: initialData.secondShipmentNote ?? defaultFormValues.secondShipmentNote,
         thirdShipmentNote: initialData.thirdShipmentNote ?? defaultFormValues.thirdShipmentNote,
+        partialShippingInfo: (initialData.partialShippingInfo || []).map(item => ({
+          ...item,
+          shipmentMode: Array.isArray(item.shipmentMode) ? item.shipmentMode : (item.shipmentMode ? [item.shipmentMode] : []),
+          etd: item.etd && isValid(parseISO(item.etd)) ? parseISO(item.etd) : undefined,
+          eta: item.eta && isValid(parseISO(item.eta)) ? parseISO(item.eta) : undefined,
+        })) as any,
       };
       reset(valuesToSet);
     }
@@ -304,13 +325,13 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const watchedStatus = watch("status");
   const isDeferredPayment = watchedTermsOfPay && watchedTermsOfPay.startsWith("Deferred");
 
-  const shipmentModeValue = getValues("shipmentMode");
+  const watchedShipmentMode = watch("shipmentMode") || [];
   let viaLabel = "Vessel/Flight/Courier Name";
-  if (shipmentModeValue === "Sea") {
+  if (watchedShipmentMode.includes("Sea")) {
     viaLabel = "Vessel Name";
-  } else if (shipmentModeValue === "Air") {
+  } else if (watchedShipmentMode.includes("Air")) {
     viaLabel = "Flight Name";
-  } else if (shipmentModeValue === "By Courier") {
+  } else if (watchedShipmentMode.includes("By Courier")) {
     viaLabel = "Courier Name";
   }
 
@@ -322,6 +343,10 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   }, [watchedTermsOfPay, setValue]);
 
   const watchedPartialShipmentAllowed = watch("partialShipmentAllowed");
+  const watchedIsFirstShipment = watch("isFirstShipment");
+  const watchedIsSecondShipment = watch("isSecondShipment");
+  const watchedIsThirdShipment = watch("isThirdShipment");
+  const watchedPartialShippingInfo = watch("partialShippingInfo") || [];
 
   const partialFieldsToWatch = [
     "firstPartialQty", "secondPartialQty", "thirdPartialQty",
@@ -516,6 +541,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       firstShipmentNote: finalData.firstShipmentNote,
       secondShipmentNote: finalData.secondShipmentNote,
       thirdShipmentNote: finalData.thirdShipmentNote,
+      partialShippingInfo: (finalData.partialShippingInfo || []).map(item => ({
+        ...item,
+        etd: item.etd ? format(new Date(item.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+        eta: item.eta ? format(new Date(item.eta), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
+      })),
       year: extractedYear,
       updatedAt: serverTimestamp(),
     };
@@ -554,9 +584,9 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   }
 
-  const handleTrackDocument = () => {
-    const courier = getValues("trackingCourier");
-    const number = getValues("trackingNumber");
+  const handleTrackDocument = (directCourier?: string, directNumber?: string) => {
+    const courier = directCourier || getValues("trackingCourier");
+    const number = directNumber || getValues("trackingNumber");
 
     if (!courier || String(courier).trim() === "" || !number || String(number).trim() === "") {
       Swal.fire({
@@ -587,8 +617,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     }
   };
 
-  const handleTrackVessel = () => {
-    const imoNumber = getValues("vesselImoNumber");
+  const handleTrackVessel = (directImo?: string) => {
+    const imoNumber = directImo || getValues("vesselImoNumber");
     if (!imoNumber || String(imoNumber).trim() === "") {
       Swal.fire({
         title: "IMO Number Missing",
@@ -601,8 +631,8 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const handleTrackFlight = () => {
-    const flightNum = getValues("flightNumber");
+  const handleTrackFlight = (directFlight?: string) => {
+    const flightNum = directFlight || getValues("flightNumber");
     if (!flightNum || String(flightNum).trim() === "") {
       Swal.fire("Info", "Please enter a flight number to track.", "info");
       return;
@@ -967,23 +997,36 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           <FormField
             control={form.control}
             name="shipmentTerms"
-            render={({ field }) => (
+            render={() => (
               <FormItem className="space-y-3">
                 <FormLabel>Shipment Terms*</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="flex flex-wrap items-center gap-x-4 gap-y-2"
-                  >
-                    {shipmentTermsOptions.map((option) => (
-                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                        <FormControl><RadioGroupItem value={option} /></FormControl>
-                        <FormLabel className="font-normal text-sm">{option}</FormLabel>
-                      </FormItem>
-                    ))}
-                  </RadioGroup>
-                </FormControl>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  {shipmentTermsOptions.map((option) => (
+                    <FormField
+                      key={option}
+                      control={form.control}
+                      name="shipmentTerms"
+                      render={({ field }) => (
+                        <FormItem key={option} className="flex items-center space-x-2 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(option)}
+                              onCheckedChange={(checked) => {
+                                const current = field.value || [];
+                                if (checked) {
+                                  field.onChange([...current, option]);
+                                } else {
+                                  field.onChange(current.filter((v) => v !== option));
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal text-sm">{option}</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -1209,168 +1252,415 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           <Ship className="mr-2 h-5 w-5 text-primary" />
           Shipping Information
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-          <FormField
-            control={control}
-            name="shipmentMode"
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>Shipment Mode*</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                  >
-                    {shipmentModeOptions.map((option) => (
-                      <FormItem key={option} className="flex items-center space-x-2 space-y-0">
-                        <FormControl><RadioGroupItem value={option} /></FormControl>
-                        <FormLabel className="font-normal text-sm">
-                          {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
-                          {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
-                          {option === 'By Courier' && <FileText className="mr-1 h-4 w-4 inline-block" />}
-                          {option}
-                        </FormLabel>
-                      </FormItem>
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="vesselOrFlightName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{viaLabel}</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder={getValues("shipmentMode") ? `Enter ${viaLabel}` : "Enter name"}
-                    {...field}
-                    disabled={!getValues("shipmentMode")}
-                    value={field.value ?? ''}
-                  />
-                </FormControl>
-                {!getValues("shipmentMode") && <FormDescription>Select shipment mode first.</FormDescription>}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        {getValues("shipmentMode") === 'Sea' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
-            <FormField
-              control={control}
-              name="vesselImoNumber"
-              render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Vessel IMO Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleTrackVessel}
-              disabled={!watch("vesselImoNumber") || isSubmitting}
-              className="md:col-span-1"
-              title="Track Vessel via IMO Number"
-            >
-              <Search className="mr-2 h-4 w-4" />
-              Track Vessel
-            </Button>
-          </div>
-        )}
-        {getValues("shipmentMode") === 'Air' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
-            <FormField
-              control={control}
-              name="flightNumber"
-              render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Flight Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter Flight Number (e.g., EK582)" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleTrackFlight}
-              disabled={!watch("flightNumber") || isSubmitting}
-              className="md:col-span-1"
-              title="Track Flight on FlightRadar24"
-            >
-              <Search className="mr-2 h-4 w-4" />
-              Track Flight
-            </Button>
-          </div>
-        )}
-
-        <div className="mt-6">
-          <h4 className="text-base font-medium text-foreground flex items-center mb-2">
-            <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
-            <FormField
-              control={control}
-              name="trackingCourier"
-              render={({ field }) => (
-                <FormItem className="md:col-span-1 space-y-3">
-                  <FormLabel>Courier By</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value ?? ""}
-                      className="flex flex-wrap items-center gap-x-6 gap-y-2"
-                    >
-                      {trackingCourierOptions.map((courier) => (
-                        <FormItem key={courier} className="flex items-center space-x-2 space-y-0">
-                          <FormControl><RadioGroupItem value={courier} /></FormControl>
-                          <FormLabel className="font-normal text-sm">{courier}</FormLabel>
-                        </FormItem>
+        {watchedPartialShipmentAllowed !== "Yes" ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+              <FormField
+                control={control}
+                name="shipmentMode"
+                render={() => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Shipment Mode*</FormLabel>
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                      {shipmentModeOptions.map((option) => (
+                        <FormField
+                          key={option}
+                          control={control}
+                          name="shipmentMode"
+                          render={({ field: modeField }) => {
+                            const checked = modeField.value?.includes(option);
+                            return (
+                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(checked) => {
+                                      const current = modeField.value || [];
+                                      return checked
+                                        ? modeField.onChange([...current, option])
+                                        : modeField.onChange(current.filter((value) => value !== option));
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal text-sm cursor-pointer">
+                                  {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
+                                  {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
+                                  {option === 'By Courier' && <FileText className="mr-1 h-4 w-4 inline-block" />}
+                                  {option}
+                                </FormLabel>
+                              </FormItem>
+                            );
+                          }}
+                        />
                       ))}
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={control}
-              name="trackingNumber"
-              render={({ field }) => (
-                <FormItem className="md:col-span-1">
-                  <FormLabel>Tracking Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter tracking number" {...field} value={field.value ?? ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleTrackDocument}
-              disabled={!watch("trackingNumber") || !watch("trackingCourier") || isSubmitting}
-              className="md:col-span-1 mt-4 md:mt-0"
-              title="Track Original Document"
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Track
-            </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name="vesselOrFlightName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{viaLabel}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={watchedShipmentMode.length > 0 ? `Enter ${viaLabel}` : "Enter name"}
+                        {...field}
+                        disabled={watchedShipmentMode.length === 0}
+                        value={field.value ?? ''}
+                      />
+                    </FormControl>
+                    {watchedShipmentMode.length === 0 && <FormDescription>Select shipment mode first.</FormDescription>}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            {watchedShipmentMode.includes('Sea') && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+                <FormField
+                  control={control}
+                  name="vesselImoNumber"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Vessel IMO Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Vessel IMO Number" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => handleTrackVessel()}
+                  disabled={!watch("vesselImoNumber") || isSubmitting}
+                  className="md:col-span-1"
+                  title="Track Vessel via IMO Number"
+                >
+                  <Search className="mr-2 h-4 w-4" />
+                  Track Vessel
+                </Button>
+              </div>
+            )}
+            {watchedShipmentMode.includes('Air') && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end mt-4">
+                <FormField
+                  control={control}
+                  name="flightNumber"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Flight Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter Flight Number (e.g., EK582)" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => handleTrackFlight()}
+                  disabled={!watch("flightNumber") || isSubmitting}
+                  className="md:col-span-1"
+                  title="Track Flight on FlightRadar24"
+                >
+                  <Search className="mr-2 h-4 w-4" />
+                  Track Flight
+                </Button>
+              </div>
+            )}
+
+            <div className="mt-6">
+              <h4 className="text-base font-medium text-foreground flex items-center mb-2">
+                <PackageCheck className="mr-2 h-5 w-5 text-muted-foreground" /> Original Document Tracking
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 items-end">
+                <FormField
+                  control={control}
+                  name="trackingCourier"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1 space-y-3">
+                      <FormLabel>Courier By</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value ?? ""}
+                          className="flex flex-wrap items-center gap-x-6 gap-y-2"
+                        >
+                          {trackingCourierOptions.map((courier) => (
+                            <FormItem key={courier} className="flex items-center space-x-2 space-y-0">
+                              <FormControl><RadioGroupItem value={courier} /></FormControl>
+                              <FormLabel className="font-normal text-sm">{courier}</FormLabel>
+                            </FormItem>
+                          ))}
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="trackingNumber"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-1">
+                      <FormLabel>Tracking Number</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter tracking number" {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => handleTrackDocument()}
+                  disabled={!watch("trackingNumber") || !watch("trackingCourier") || isSubmitting}
+                  className="md:col-span-1 mt-4 md:mt-0"
+                  title="Track Original Document"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Track
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            {[1, 2, 3].map((idx) => {
+              const isEnabled = idx === 1 ? watchedIsFirstShipment : idx === 2 ? watchedIsSecondShipment : watchedIsThirdShipment;
+              if (!isEnabled) return null;
+
+              const label = idx === 1 ? "1st Shipment" : idx === 2 ? "2nd Shipment" : "3rd Shipment";
+              const shipmentFields = partialShippingFields.map((f, i) => ({ ...f, originalIndex: i })).filter(f => f.shipmentIndex === idx);
+
+              return (
+                <div key={idx} className="border rounded-xl p-6 bg-muted/30 shadow-sm space-y-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+                    <h4 className="font-bold text-lg flex items-center text-primary italic underline-offset-4 decoration-primary/30">
+                      <Box className="mr-2 h-5 w-5" /> {label} Shipping Details
+                    </h4>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-primary text-primary hover:bg-primary/10 font-semibold"
+                      onClick={() => appendPartialShipping({
+                        shipmentIndex: idx as any,
+                        vesselOrFlightName: '',
+                        trackingCourier: '',
+                        trackingNumber: '',
+                        shipmentMode: []
+                      })}
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Vessel/Tracking
+                    </Button>
+                  </div>
+
+                  <div className="space-y-8 mt-4">
+                    {shipmentFields.map((field) => {
+                      const rowShipmentMode = watchedPartialShippingInfo[field.originalIndex]?.shipmentMode || [];
+                      return (
+                        <div key={field.id} className="relative p-6 border rounded-lg bg-background/80 shadow-inner grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-top-2 duration-300">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute -top-3 -right-3 h-7 w-7 rounded-full bg-rose-500 text-white shadow-md hover:bg-rose-600 transition-colors z-10"
+                            onClick={() => removePartialShipping(field.originalIndex)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+
+                          <FormField
+                            control={control}
+                            name={`partialShippingInfo.${field.originalIndex}.shipmentMode`}
+                            render={() => (
+                              <FormItem className="space-y-3 col-span-full border-b pb-4">
+                                <FormLabel>Shipment Mode*</FormLabel>
+                                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                                  {shipmentModeOptions.map((option) => (
+                                    <FormField
+                                      key={option}
+                                      control={control}
+                                      name={`partialShippingInfo.${field.originalIndex}.shipmentMode`}
+                                      render={({ field: modeField }) => {
+                                        const checked = modeField.value?.includes(option);
+                                        return (
+                                          <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                            <FormControl>
+                                              <Checkbox
+                                                checked={checked}
+                                                onCheckedChange={(checked) => {
+                                                  const current = modeField.value || [];
+                                                  return checked
+                                                    ? modeField.onChange([...current, option])
+                                                    : modeField.onChange(current.filter((value) => value !== option));
+                                                }}
+                                              />
+                                            </FormControl>
+                                            <FormLabel className="font-normal text-sm cursor-pointer">
+                                              {option === 'Sea' && <Ship className="mr-1 h-4 w-4 inline-block" />}
+                                              {option === 'Air' && <Plane className="mr-1 h-4 w-4 inline-block" />}
+                                              {option === 'By Courier' && <FileText className="mr-1 h-4 w-4 inline-block" />}
+                                              {option}
+                                            </FormLabel>
+                                          </FormItem>
+                                        );
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={control}
+                            name={`partialShippingInfo.${field.originalIndex}.vesselOrFlightName`}
+                            render={({ field: nameField }) => (
+                              <FormItem>
+                                <FormLabel>Vessel/Flight Name</FormLabel>
+                                <FormControl><Input placeholder="Enter name" {...nameField} value={nameField.value ?? ''} /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={control}
+                            name={`partialShippingInfo.${field.originalIndex}.vesselImoNumber`}
+                            render={({ field: imoField }) => (
+                              <FormItem>
+                                <FormLabel>Vessel IMO / Flight #</FormLabel>
+                                <div className="flex gap-2">
+                                  <FormControl>
+                                    <Input placeholder="Enter IMO or Flight #" {...imoField} value={imoField.value ?? ''} />
+                                  </FormControl>
+                                  {rowShipmentMode.includes('Sea') && (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="shrink-0 h-10 w-10 border-primary text-primary hover:bg-primary hover:text-white transition-colors"
+                                      onClick={() => handleTrackVessel(imoField.value)}
+                                      title="Track Vessel"
+                                    >
+                                      <Ship className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  {rowShipmentMode.includes('Air') && (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      className="shrink-0 h-10 w-10 border-sky-500 text-sky-500 hover:bg-sky-500 hover:text-white transition-colors"
+                                      onClick={() => handleTrackFlight(imoField.value)}
+                                      title="Track Flight"
+                                    >
+                                      <Plane className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={control}
+                            name={`partialShippingInfo.${field.originalIndex}.trackingCourier`}
+                            render={({ field: courierField }) => (
+                              <FormItem className="space-y-1">
+                                <FormLabel>Courier By</FormLabel>
+                                <FormControl>
+                                  <RadioGroup
+                                    onValueChange={courierField.onChange}
+                                    value={courierField.value ?? ""}
+                                    className="flex items-center gap-x-4 h-10"
+                                  >
+                                    {trackingCourierOptions.map((courier) => (
+                                      <div key={courier} className="flex items-center space-x-1">
+                                        <RadioGroupItem value={courier} id={`courier-${field.id}-${courier}`} />
+                                        <label htmlFor={`courier-${field.id}-${courier}`} className="text-xs font-medium leading-none cursor-pointer">{courier}</label>
+                                      </div>
+                                    ))}
+                                  </RadioGroup>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={control}
+                            name={`partialShippingInfo.${field.originalIndex}.trackingNumber`}
+                            render={({ field: trackingField }) => (
+                              <FormItem>
+                                <FormLabel>Tracking Number</FormLabel>
+                                <div className="flex gap-2">
+                                  <FormControl>
+                                    <Input placeholder="Tracking #" {...trackingField} value={trackingField.value ?? ''} />
+                                  </FormControl>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="shrink-0 h-10 w-10 border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-colors"
+                                    onClick={() => handleTrackDocument(watch(`partialShippingInfo.${field.originalIndex}.trackingCourier`), trackingField.value)}
+                                    title="Track Document"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={control}
+                            name={`partialShippingInfo.${field.originalIndex}.etd`}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-col">
+                                <FormLabel>ETD</FormLabel>
+                                <DatePickerField field={field} placeholder="Select ETD" />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={control}
+                            name={`partialShippingInfo.${field.originalIndex}.eta`}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-col">
+                                <FormLabel>ETA</FormLabel>
+                                <DatePickerField field={field} placeholder="Select ETA" />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      );
+                    })}
+                    {shipmentFields.length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-10 border border-dashed rounded-lg bg-muted/10">
+                        <Ship className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                        <p className="text-sm text-muted-foreground italic">No shipping details added for this shipment index.</p>
+                        <Button type="button" variant="link" onClick={() => appendPartialShipping({ shipmentIndex: idx as any, vesselOrFlightName: '', trackingCourier: '', trackingNumber: '', shipmentMode: [] })}>
+                          Add Details Now
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mt-4">
           <FormField
@@ -1459,30 +1749,32 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <FormField
-            control={control}
-            name="etd"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>ETD (Estimated Time of Departure)</FormLabel>
-                <DatePickerField field={field} placeholder="Select date" />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name="eta"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>ETA (Estimated Time of Arrival)</FormLabel>
-                <DatePickerField field={field} placeholder="Select date" />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        {watchedPartialShipmentAllowed !== "Yes" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <FormField
+              control={control}
+              name="etd"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>ETD (Estimated Time of Departure)</FormLabel>
+                  <DatePickerField field={field} placeholder="Select date" />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name="eta"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>ETA (Estimated Time of Arrival)</FormLabel>
+                  <DatePickerField field={field} placeholder="Select date" />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
         <Separator />
 
         {/* Section: Consignee Bank Details */}

@@ -39,6 +39,18 @@ export const freightChargeOptions = ["Freight Included", "Freight Excluded"] as 
 export type FreightChargeOption = typeof freightChargeOptions[number];
 export const shipmentTermsOptions = ["CFR CHATTOGRAM", "CPT DHAKA", "FOB", "EXW"] as const;
 export type ShipmentTerms = typeof shipmentTermsOptions[number];
+
+export interface PartialShipmentShippingInfo {
+  shipmentIndex: 1 | 2 | 3;
+  vesselOrFlightName?: string;
+  vesselImoNumber?: string;
+  flightNumber?: string;
+  trackingCourier?: string;
+  trackingNumber?: string;
+  etd?: string;
+  eta?: string;
+  shipmentMode?: ShipmentMode[];
+}
 // --- END Types ---
 
 export const toNumberOrUndefined = (val: unknown): number | undefined => {
@@ -99,8 +111,9 @@ export interface LCEntry {
   trackingNumber?: string;
   etd?: Date | null | undefined;
   eta?: Date | null | undefined;
-  shipmentMode?: ShipmentMode;
-  shipmentTerms?: ShipmentTerms;
+  shipmentMode?: ShipmentMode[];
+  shipmentTerms?: ShipmentTerms[];
+  partialShippingInfo?: PartialShipmentShippingInfo[];
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
   flightNumber?: string;
@@ -191,8 +204,19 @@ export const lcEntrySchema = z.object({
   trackingNumber: z.string().optional(),
   etd: z.date().optional().nullable(),
   eta: z.date().optional().nullable(),
-  shipmentMode: z.enum(shipmentModeOptions).optional(),
-  shipmentTerms: z.enum(shipmentTermsOptions).optional(),
+  shipmentMode: z.array(z.enum(shipmentModeOptions)).optional().default([]),
+  shipmentTerms: z.array(z.enum(shipmentTermsOptions)).optional().default([]),
+  partialShippingInfo: z.array(z.object({
+    shipmentIndex: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    vesselOrFlightName: z.string().optional(),
+    vesselImoNumber: z.string().optional(),
+    flightNumber: z.string().optional(),
+    trackingCourier: z.string().optional(),
+    trackingNumber: z.string().optional(),
+    etd: z.date().optional().nullable(),
+    eta: z.date().optional().nullable(),
+    shipmentMode: z.array(z.enum(shipmentModeOptions)).optional().default([]),
+  })).optional().default([]),
   vesselOrFlightName: z.string().optional(),
   vesselImoNumber: z.string().optional(),
   flightNumber: z.string().optional(),
@@ -311,8 +335,9 @@ export interface LCEntryDocument {
   trackingNumber?: string;
   etd?: string; // ISO string
   eta?: string; // ISO string
-  shipmentMode?: ShipmentMode;
-  shipmentTerms?: ShipmentTerms;
+  shipmentMode?: ShipmentMode[];
+  shipmentTerms?: ShipmentTerms[];
+  partialShippingInfo?: PartialShipmentShippingInfo[];
   vesselOrFlightName?: string;
   vesselImoNumber?: string;
   flightNumber?: string;

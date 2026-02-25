@@ -87,14 +87,17 @@ const formatDisplayDate = (dateString?: string) => {
     }
 };
 
-const getShipmentTermLabel = (term?: string) => {
+const getShipmentTermLabel = (term?: string | string[]) => {
     if (!term) return null;
-    const t = term.toUpperCase();
+    const firstTerm = Array.isArray(term) ? term[0] : term;
+    if (typeof firstTerm !== 'string') return null;
+
+    const t = firstTerm.toUpperCase();
     if (t.includes("CFR")) return "CFR";
     if (t.includes("CPT")) return "CPT";
     if (t.includes("FOB")) return "FOB";
     if (t.includes("EXW")) return "EXW";
-    return term; // Fallback to original if no match
+    return firstTerm; // Fallback to original if no match
 };
 
 const countryColors = [
@@ -957,121 +960,139 @@ export default function MobileTotalLCPage() {
 
                                         {/* Bottom Action Bar - Dynamic & Scrollable */}
                                         <div className="flex gap-2 relative z-10 overflow-x-auto scrollbar-hide bg-slate-50/50 -mx-5 px-5 py-3 border-t border-slate-100 items-center">
-                                            {/* CFR / Shipment Terms */}
-                                            {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <div className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform">
-                                                            {lc.shipmentMode === 'Air' ? <Plane className="h-3.5 w-3.5 text-slate-400" /> : <Ship className="h-3.5 w-3.5 text-slate-400" />}
-                                                            {getShipmentTermLabel(lc.shipmentTerms)}
+                                            {lc.partialShippingInfo && lc.partialShippingInfo.length > 0 ? (
+                                                lc.partialShippingInfo.map((shipInfo, sIdx) => {
+                                                    const shipMode = shipInfo.shipmentMode || [];
+                                                    return (
+                                                        <div key={sIdx} className="flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-xl shadow-md min-w-fit shrink-0">
+                                                            <div className="bg-blue-600/10 text-blue-600 px-1.5 py-0.5 rounded-lg text-[9px] font-black border border-blue-600/20 mr-0.5">S{shipInfo.shipmentIndex}</div>
+
+                                                            {/* ETD/ETA */}
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <div className="bg-slate-50 border border-slate-100 text-slate-500 px-2 py-1.5 rounded-lg text-[9px] font-bold whitespace-nowrap flex items-center gap-1 active:scale-95 transition-transform cursor-pointer">
+                                                                        <CalendarClock className="h-3 w-3 text-slate-400" /> ETD/ETA
+                                                                    </div>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-auto p-2" side="top" align="start">
+                                                                    <div className="space-y-1 text-[10px]">
+                                                                        <div className="flex justify-between gap-4">
+                                                                            <span className="text-slate-500 font-semibold uppercase">ETD:</span>
+                                                                            <span className="font-bold text-slate-800">{formatDisplayDate(shipInfo.etd)}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between gap-4">
+                                                                            <span className="text-slate-500 font-semibold uppercase">ETA:</span>
+                                                                            <span className="font-bold text-slate-800">{formatDisplayDate(shipInfo.eta)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </PopoverContent>
+                                                            </Popover>
+
+                                                            {/* Doc Tracking */}
+                                                            {shipInfo.trackingCourier && shipInfo.trackingNumber && (
+                                                                <a
+                                                                    href={shipInfo.trackingCourier === "DHL" ? `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(shipInfo.trackingNumber || '').trim())}&submit=1` : shipInfo.trackingCourier === "FedEx" ? `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(shipInfo.trackingNumber || '').trim())}` : `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(shipInfo.trackingNumber || '').trim())}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="bg-slate-50 border border-slate-100 text-slate-500 px-2 py-1.5 rounded-lg text-[9px] font-bold whitespace-nowrap flex items-center gap-1 active:scale-95 transition-transform"
+                                                                >
+                                                                    <Search className="h-3 w-3 text-slate-400" /> {shipInfo.trackingCourier}
+                                                                </a>
+                                                            )}
+
+                                                            {/* Vessel/Flight Tracking */}
+                                                            {(shipInfo.vesselImoNumber || shipInfo.flightNumber) && (
+                                                                <a
+                                                                    href={shipMode.includes('Air') && shipInfo.flightNumber ? `https://www.flightradar24.com/data/flights/${shipInfo.flightNumber}` : `https://www.marinetraffic.com/en/ais/details/ships/imo:${shipInfo.vesselImoNumber}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="bg-slate-50 border border-slate-100 text-slate-500 px-2 py-1.5 rounded-lg text-[9px] font-bold whitespace-nowrap flex items-center gap-1 active:scale-95 transition-transform"
+                                                                >
+                                                                    {shipMode.includes('Air') ? <Plane className="h-3 w-3 text-slate-400" /> : <Ship className="h-3 w-3 text-slate-400" />}
+                                                                    {shipMode.includes('Air') ? 'Flight' : 'Vessel'}
+                                                                </a>
+                                                            )}
                                                         </div>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="top">Shipment Terms: {lc.shipmentTerms}</TooltipContent>
-                                                </Tooltip>
+                                                    );
+                                                })
+                                            ) : (
+                                                <>
+                                                    {/* CFR / Shipment Terms */}
+                                                    {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <div className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform">
+                                                                    {lc.shipmentMode === 'Air' ? <Plane className="h-3.5 w-3.5 text-slate-400" /> : <Ship className="h-3.5 w-3.5 text-slate-400" />}
+                                                                    {getShipmentTermLabel(lc.shipmentTerms)}
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top">Shipment Terms: {lc.shipmentTerms}</TooltipContent>
+                                                        </Tooltip>
+                                                    )}
+
+                                                    {/* ETD/ETA - Popover */}
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <div className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform cursor-pointer">
+                                                                <CalendarClock className="h-3.5 w-3.5 text-slate-400" /> ETD/ETA
+                                                            </div>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-3" side="top" align="start">
+                                                            <div className="space-y-2 text-xs">
+                                                                <div className="flex justify-between gap-4">
+                                                                    <span className="text-slate-500 font-semibold uppercase">ETD:</span>
+                                                                    <span className="font-bold text-slate-800">{formatDisplayDate(lc.etd)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between gap-4">
+                                                                    <span className="text-slate-500 font-semibold uppercase">ETA:</span>
+                                                                    <span className="font-bold text-slate-800">{formatDisplayDate(lc.eta)}</span>
+                                                                </div>
+                                                            </div>
+                                                        </PopoverContent>
+                                                    </Popover>
+
+                                                    {/* DHL/FedEx Tracker (Dynamic) */}
+                                                    {lc.trackingCourier && lc.trackingNumber && (
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <a
+                                                                    href={lc.trackingCourier === "DHL" ? `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(lc.trackingNumber || '').trim())}&submit=1` : lc.trackingCourier === "FedEx" ? `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(lc.trackingNumber || '').trim())}` : `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(lc.trackingNumber || '').trim())}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform"
+                                                                >
+                                                                    <Search className="h-3.5 w-3.5 text-slate-400" /> {lc.trackingCourier}
+                                                                </a>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top">Track Documents</TooltipContent>
+                                                        </Tooltip>
+                                                    )}
+
+                                                    {/* Vessel/Air Tracker (Dynamic) */}
+                                                    {(lc.vesselImoNumber || lc.flightNumber) && (
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <a
+                                                                    href={lc.shipmentMode === 'Air' && lc.flightNumber ? `https://www.flightradar24.com/data/flights/${lc.flightNumber}` : `https://www.marinetraffic.com/en/ais/details/ships/imo:${lc.vesselImoNumber}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform"
+                                                                >
+                                                                    {lc.shipmentMode === 'Air' ? <Plane className="h-3.5 w-3.5 text-slate-400" /> : <Ship className="h-3.5 w-3.5 text-slate-400" />}
+                                                                    {lc.shipmentMode === 'Air' ? 'Flight' : 'Vessel'}
+                                                                </a>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top">Track {lc.shipmentMode === 'Air' ? 'Flight' : 'Vessel'}</TooltipContent>
+                                                        </Tooltip>
+                                                    )}
+                                                </>
                                             )}
 
-                                            {/* ETD/ETA - Popover */}
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <div className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform cursor-pointer">
-                                                        <CalendarClock className="h-3.5 w-3.5 text-slate-400" /> ETD/ETA
-                                                    </div>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-3" side="top" align="start">
-                                                    <div className="space-y-2 text-xs">
-                                                        <div className="flex justify-between gap-4">
-                                                            <span className="text-slate-500 font-semibold uppercase">ETD:</span>
-                                                            <span className="font-bold text-slate-800">{formatDisplayDate(lc.etd)}</span>
-                                                        </div>
-                                                        <div className="flex justify-between gap-4">
-                                                            <span className="text-slate-500 font-semibold uppercase">ETA:</span>
-                                                            <span className="font-bold text-slate-800">{formatDisplayDate(lc.eta)}</span>
-                                                        </div>
-                                                    </div>
-                                                </PopoverContent>
-                                            </Popover>
-
-                                            {/* Maturity - Popover (Dynamic) */}
-                                            {lc.termsOfPay?.startsWith("Deferred") && (
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <div className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform cursor-pointer">
-                                                            <Landmark className="h-3.5 w-3.5 text-slate-400" /> Maturity
-                                                        </div>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-3" side="top">
-                                                        <div className="text-xs">
-                                                            <span className="text-slate-500 font-semibold uppercase block mb-1">Maturity Date:</span>
-                                                            <span className="font-bold text-slate-800">{lc.paymentMaturityDate || "Not Specified"}</span>
-                                                        </div>
-                                                    </PopoverContent>
-                                                </Popover>
-                                            )}
-
-                                            {/* DHL/FedEx Tracker (Dynamic) */}
-                                            {lc.trackingCourier && lc.trackingNumber && (
+                                            {/* Shipping Document (Dynamic) */}
+                                            {lc.shippingDocumentUrl && (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <a
-                                                            href={lc.trackingCourier === "DHL" ? `https://www.dhl.com/bd-en/home/tracking.html?tracking-id=${encodeURIComponent(String(lc.trackingNumber || '').trim())}&submit=1` : lc.trackingCourier === "FedEx" ? `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(String(lc.trackingNumber || '').trim())}` : `https://www.ups.com/track?track=yes&trackNums=${encodeURIComponent(String(lc.trackingNumber || '').trim())}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform"
-                                                        >
-                                                            <Search className="h-3.5 w-3.5 text-slate-400" /> {lc.trackingCourier}
-                                                        </a>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="top">Track Documents</TooltipContent>
-                                                </Tooltip>
-                                            )}
-
-                                            {/* Vessel/Air Tracker (Dynamic) */}
-                                            {(lc.vesselImoNumber || lc.flightNumber) && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <a
-                                                            href={lc.shipmentMode === 'Air' && lc.flightNumber ? `https://www.flightradar24.com/data/flights/${lc.flightNumber}` : `https://www.marinetraffic.com/en/ais/details/ships/imo:${lc.vesselImoNumber}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform"
-                                                        >
-                                                            {lc.shipmentMode === 'Air' ? <Plane className="h-3.5 w-3.5 text-slate-400" /> : <Ship className="h-3.5 w-3.5 text-slate-400" />}
-                                                            {lc.shipmentMode === 'Air' ? 'Air' : 'Vessel'}
-                                                        </a>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="top">Track {lc.shipmentMode === 'Air' ? 'Flight' : 'Vessel'}</TooltipContent>
-                                                </Tooltip>
-                                            )}
-
-                                            {/* L/C or T/T Document (Dynamic) */}
-                                            {lc.finalLcUrl && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <a href={lc.finalLcUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center min-w-[50px]">
-                                                            {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}
-                                                        </a>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="top">View Final {lc.termsOfPay === 'T/T In Advance' ? 'T/T' : 'L/C'}</TooltipContent>
-                                                </Tooltip>
-                                            )}
-
-                                            {/* PI Document (Dynamic) */}
-                                            {lc.finalPIUrl && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <a href={lc.finalPIUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center">
-                                                            PI
-                                                        </a>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="top">View Proforma Invoice</TooltipContent>
-                                                </Tooltip>
-                                            )}
-
-                                            {/* DOC Document (Dynamic) */}
-                                            {lc.shippingDocumentsUrl && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <a href={lc.shippingDocumentsUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center">
+                                                        <a href={lc.shippingDocumentUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center">
                                                             DOC
                                                         </a>
                                                     </TooltipTrigger>
@@ -1176,7 +1197,7 @@ export default function MobileTotalLCPage() {
                         )}
                     </div>
                 </div>
-            </div>
+            </div >
         </TooltipProvider >
     );
 }
