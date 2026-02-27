@@ -1,4 +1,3 @@
-
 /* eslint-disable no-console */
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';

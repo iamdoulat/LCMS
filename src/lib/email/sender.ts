@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Note: In Next.js App Router, we should use Admin SDK for server-side mostly, but if we reuse the client config it might work if rules allow. 
 // However, securely reading secrets like passwords should be done with Admin SDK if possible to bypass rules, OR we ensure rules allow the automated system.
 // Since we are creating a utility that might run in API route, we can use the same firebase access if authenticated or if rules allow. 

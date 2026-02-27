@@ -17,14 +17,16 @@ export async function POST(request: Request) {
             message: message
         });
 
-        if (result.success) {
-            return NextResponse.json({ success: true, results: result.results });
-        } else {
-            return NextResponse.json({ success: false, error: result.error }, { status: 500 });
-        }
+        return NextResponse.json({
+            success: true,
+            ...(result as any)
+        });
 
     } catch (error: any) {
         console.error("WhatsApp API Error:", error);
-        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({
+            success: false,
+            error: error.message || 'Internal Server Error'
+        }, { status: 500 });
     }
 }

@@ -1,4 +1,5 @@
 
+/* eslint-disable no-console */
 import { NextRequest, NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase/admin';
 import { getUsageForGateway } from '@/lib/whatsapp/usage';
