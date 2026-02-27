@@ -277,6 +277,11 @@ export default function MobileLoginPage() {
 
                 banData.count += 1;
 
+                let errorMessage = err.message || "Invalid credentials";
+                if (err.code === 'auth/invalid-credential') {
+                    errorMessage = "User name or password might be wrong.";
+                }
+
                 if (banData.count >= 5) {
                     banData.lockUntil = Date.now() + 10 * 60 * 1000; // 10 minutes
                     setBanTimeRemaining(10 * 60);
@@ -289,7 +294,7 @@ export default function MobileLoginPage() {
                         confirmButtonColor: '#0a1e60'
                     });
                 } else {
-                    const msg = `${err.message || "Invalid credentials"} (${5 - banData.count} attempts left)`;
+                    const msg = `${errorMessage} (${5 - banData.count} attempts left)`;
                     setErrorMsg(msg);
                     Swal.fire({
                         icon: 'error',
@@ -302,10 +307,13 @@ export default function MobileLoginPage() {
                 localStorage.setItem('mobile_login_ban_data', JSON.stringify(banData));
             } catch (e) {
                 console.error("Error updating ban data", e);
+                const errorMessage = err.code === 'auth/invalid-credential'
+                    ? "User name or password might be wrong."
+                    : (err.message || "Invalid credentials");
                 Swal.fire({
                     icon: 'error',
                     title: 'Login Failed',
-                    text: err.message || "Invalid credentials",
+                    text: errorMessage,
                     confirmButtonColor: '#0a1e60'
                 });
             }
