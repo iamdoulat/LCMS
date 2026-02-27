@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { WhatsAppTemplate } from '@/types/whatsapp-settings';
+import { WhatsAppTemplate, WhatsAppGatewayConfig } from '@/types/whatsapp-settings';
 import { logActivity } from '@/lib/logger';
 import { getCompanyName } from '@/lib/settings/company';
 
@@ -127,29 +127,102 @@ export async function sendWhatsApp({ to, templateSlug, data, message }: SendWhat
         const recipients = Array.isArray(to) ? to : [to];
         const results = [];
 
-        // Fetch Active Gateway
-        let gateway = null;
+        // Fetch Active Gateway with Sequential Rotation
+        let gateway: WhatsAppGatewayConfig | null = null;
+
         if (typeof window === 'undefined') {
             const { admin } = await import('@/lib/firebase/admin');
-            const snap = await admin.firestore().collection('whatsapp_gateways').where('isActive', '==', true).limit(1).get();
-            if (!snap.empty) gateway = snap.docs[0].data();
+            const { getUsageForGateway } = await import('@/lib/whatsapp/usage');
+
+            const snap = await admin.firestore().collection('whatsapp_gateways').get();
+            const allConfigs = snap.docs
+                .map(d => ({ ...d.data(), id: d.id } as WhatsAppGatewayConfig))
+                .filter(c => !c.isDisabled) // Skip permanently disabled ones
+                .sort((a, b) => (a.id || '').localeCompare(b.id || '')); // Sort by ID for predictable sequence
+
+            if (allConfigs.length === 0) {
+                throw new Error("No available WhatsApp gateway found. Please ensure at least one service is enabled and configured.");
+            }
+
+            // Find the currently active config among the non-disabled ones
+            let activeConfig = allConfigs.find(c => c.isActive);
+
+            // Fallback: if none is marked active, pick the first one
+            if (!activeConfig) {
+                activeConfig = allConfigs[0];
+            }
+
+            const usage = await getUsageForGateway(activeConfig);
+            const limit = activeConfig.dailyUsageLimit || 0;
+
+            // Trigger rotation if limits are reached
+            if (limit > 0 && usage >= limit) {
+                console.log(`[WA] Active gateway ${activeConfig.name} reached limit (${usage}/${limit}). Rotating sequentially...`);
+
+                const currentIndex = allConfigs.findIndex(c => c.id === activeConfig!.id);
+                let selectedConfig: WhatsAppGatewayConfig | null = null;
+
+                // 1. Try to find the next available gateway UNDER its daily limit
+                for (let i = 1; i < allConfigs.length; i++) {
+                    const nextIndex = (currentIndex + i) % allConfigs.length;
+                    const candidate = allConfigs[nextIndex];
+
+                    const candidateUsage = await getUsageForGateway(candidate);
+                    const candidateLimit = candidate.dailyUsageLimit || 0;
+
+                    if (candidateLimit === 0 || candidateUsage < candidateLimit) {
+                        selectedConfig = candidate;
+                        break;
+                    }
+                }
+
+                // 2. Load Balancing Fallback: If ALL are over limit, move to next anyway
+                if (!selectedConfig && allConfigs.length > 1) {
+                    const nextIndex = (currentIndex + 1) % allConfigs.length;
+                    selectedConfig = allConfigs[nextIndex];
+                }
+
+                if (selectedConfig && selectedConfig.id !== activeConfig.id) {
+                    console.log(`[WA] Auto-rotating sequentially to ${selectedConfig.name}`);
+
+                    const batch = admin.firestore().batch();
+                    batch.update(admin.firestore().collection('whatsapp_gateways').doc(activeConfig.id!), {
+                        isActive: false, shifted_at: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                    batch.update(admin.firestore().collection('whatsapp_gateways').doc(selectedConfig.id!), {
+                        isActive: true, shifted_at: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                    await batch.commit();
+
+                    await logActivity({
+                        type: 'whatsapp',
+                        action: 'whatsapp_rotation',
+                        status: 'success',
+                        message: `WhatsApp Gateway rotated from ${activeConfig.name} to ${selectedConfig.name} (Load Balancing)`,
+                        details: {
+                            fromId: activeConfig.id,
+                            toId: selectedConfig.id,
+                            fromUsage: usage,
+                            fromLimit: limit
+                        }
+                    });
+
+                    gateway = selectedConfig;
+                } else {
+                    gateway = activeConfig;
+                }
+            } else {
+                gateway = activeConfig;
+            }
         } else {
+            // Client-side: fallback to simple fetch
             const q = query(collection(firestore, 'whatsapp_gateways'), where('isActive', '==', true));
             const snap = await getDocs(q);
-            if (!snap.empty) gateway = snap.docs[0].data();
+            if (!snap.empty) gateway = snap.docs[0].data() as WhatsAppGatewayConfig;
         }
 
         if (!gateway) {
-            const errorMsg = "No active WhatsApp gateway found.";
-            console.error(errorMsg);
-            await logActivity({
-                type: 'whatsapp',
-                action: 'send_whatsapp',
-                status: 'failed',
-                message: errorMsg,
-                details: { recipients },
-            });
-            return { success: false, error: "No active gateway" };
+            throw new Error("No active WhatsApp gateway available.");
         }
 
         for (const phone of recipients) {
@@ -193,6 +266,7 @@ export async function sendWhatsApp({ to, templateSlug, data, message }: SendWhat
                         details: {
                             template: templateSlug || 'custom',
                             gateway: gateway.accountUniqueId,
+                            gatewayId: gateway.id,
                             apiResult: result
                         }
                     });
@@ -207,7 +281,12 @@ export async function sendWhatsApp({ to, templateSlug, data, message }: SendWhat
                         status: 'failed',
                         message: `Failed to send to ${phone}: ${result.message || 'Provider error'}`,
                         recipient: phone,
-                        details: { error: result.message, apiResult: result, template: templateSlug }
+                        details: {
+                            error: result.message,
+                            apiResult: result,
+                            template: templateSlug,
+                            gatewayId: gateway.id
+                        }
                     });
                 }
 

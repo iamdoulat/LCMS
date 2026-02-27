@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Edit, Check, Eye, EyeOff, MessageSquare, Smartphone } from 'lucide-react';
+import { Plus, Trash2, Edit, Check, Eye, EyeOff, MessageSquare, Smartphone, Power, PowerOff } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
 import Swal from 'sweetalert2';
 import {
     Dialog,
@@ -29,6 +31,8 @@ export default function WhatsAppSettingsPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [currentId, setCurrentId] = useState<string | null>(null);
     const [showSecret, setShowSecret] = useState(false);
+    const [usages, setUsages] = useState<Record<string, number>>({});
+    const [loadingUsages, setLoadingUsages] = useState<Record<string, boolean>>({});
 
     // Test Message State
     const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
@@ -41,6 +45,8 @@ export default function WhatsAppSettingsPage() {
         apiSecret: '',
         accountUniqueId: '',
         isActive: false,
+        dailyUsageLimit: 0,
+        isDisabled: false,
     });
 
     useEffect(() => {
@@ -57,11 +63,31 @@ export default function WhatsAppSettingsPage() {
             })) as WhatsAppGatewayConfig[];
             setConfigs(data);
             setLoading(false);
+
+            // Initial fetch for usages
+            data.forEach(config => {
+                if (config.id) fetchUsage(config.id);
+            });
         }, (error) => {
             console.error("Firestore Snapshot Error:", error);
             Swal.fire('Error', 'Failed to load gateways: ' + error.message, 'error');
             setLoading(false);
         });
+
+        const fetchUsage = async (gatewayId: string) => {
+            setLoadingUsages(prev => ({ ...prev, [gatewayId]: true }));
+            try {
+                const response = await fetch(`/api/settings/whatsapp/usage?id=${gatewayId}`, { cache: 'no-store' });
+                if (response.ok) {
+                    const data = await response.json();
+                    setUsages(prev => ({ ...prev, [gatewayId]: data.count }));
+                }
+            } catch (error) {
+                console.error("Error fetching usage:", error);
+            } finally {
+                setLoadingUsages(prev => ({ ...prev, [gatewayId]: false }));
+            }
+        };
 
         return () => unsubscribe();
     }, []);
@@ -76,6 +102,8 @@ export default function WhatsAppSettingsPage() {
             apiSecret: '',
             accountUniqueId: '',
             isActive: false,
+            dailyUsageLimit: 0,
+            isDisabled: false,
         });
         setIsEditing(false);
         setCurrentId(null);
@@ -124,6 +152,12 @@ export default function WhatsAppSettingsPage() {
             });
 
             // Set selected to active
+            const targetConfig = configs.find(c => c.id === id);
+            if (targetConfig?.isDisabled) {
+                Swal.fire('Error', 'Cannot activate a disabled gateway. Please enable it first.', 'error');
+                return;
+            }
+
             const targetRef = doc(firestore, 'whatsapp_gateways', id);
             batch.update(targetRef, { isActive: true });
 
@@ -292,6 +326,31 @@ export default function WhatsAppSettingsPage() {
                                     </div>
                                 </div>
 
+                                <div className="grid w-full items-center gap-1.5 pt-2">
+                                    <Label htmlFor="dailyUsageLimit">Daily Usage Limit (Messages per Day)</Label>
+                                    <Input
+                                        id="dailyUsageLimit"
+                                        type="number"
+                                        placeholder="0 for unlimited"
+                                        value={formData.dailyUsageLimit || 0}
+                                        onChange={(e) => handleInputChange('dailyUsageLimit', parseInt(e.target.value))}
+                                    />
+                                </div>
+
+                                <div className="flex items-center justify-between space-x-2 pt-2 border-t mt-4">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="isDisabled" className="text-base">Disable Gateway</Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Permanently stop this gateway from being used or automatically activated.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="isDisabled"
+                                        checked={formData.isDisabled || false}
+                                        onCheckedChange={(checked) => handleInputChange('isDisabled', checked)}
+                                    />
+                                </div>
+
                                 <DialogFooter>
                                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                                     <Button type="submit">Save Gateway</Button>
@@ -319,10 +378,15 @@ export default function WhatsAppSettingsPage() {
                 ) : (
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {configs.map((config) => (
-                            <Card key={config.id} className={`relative overflow-hidden transition-all ${config.isActive ? 'border-primary ring-1 ring-primary shadow-md' : 'border-border/60 hover:border-border'}`}>
-                                {config.isActive && (
-                                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-medium rounded-bl-lg">
-                                        Active
+                            <Card key={config.id} className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg border-2 ${config.isActive ? 'border-primary shadow-primary/10' : 'border-border'} ${config.isDisabled ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                                {config.isActive && !config.isDisabled && (
+                                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-bold rounded-bl-lg flex items-center gap-1 animate-in fade-in slide-in-from-top-2 duration-500">
+                                        <Check className="h-3 w-3" /> Active
+                                    </div>
+                                )}
+                                {config.isDisabled && (
+                                    <div className="absolute top-0 right-0 bg-destructive text-destructive-foreground px-3 py-1 text-xs font-bold rounded-bl-lg flex items-center gap-1">
+                                        <PowerOff className="h-3 w-3" /> Disabled
                                     </div>
                                 )}
                                 <CardHeader className="pb-3">
@@ -331,6 +395,9 @@ export default function WhatsAppSettingsPage() {
                                         {config.name}
                                     </CardTitle>
                                     <CardDescription>ID: {config.accountUniqueId}</CardDescription>
+                                    <CardDescription className="flex items-center gap-1 mt-1 text-xs font-mono opacity-50 text-[10px]">
+                                        Related ID: {config.id}
+                                    </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-2 text-sm text-muted-foreground mb-6">
@@ -340,10 +407,41 @@ export default function WhatsAppSettingsPage() {
                                         </div>
                                     </div>
 
+                                    <div className="space-y-2 mb-6">
+                                        <div className="flex justify-between items-center text-xs mb-1">
+                                            <span className="text-muted-foreground flex items-center gap-1">
+                                                Daily Usage: {loadingUsages[config.id!] ? <Loader2 className="h-3 w-3 animate-spin" /> : <b>{usages[config.id!] || 0} / {config.dailyUsageLimit || '∞'}</b>}
+                                            </span>
+                                            {config.dailyUsageLimit ? (
+                                                <span className={`${(usages[config.id!] || 0) >= config.dailyUsageLimit ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
+                                                    {Math.round(((usages[config.id!] || 0) / config.dailyUsageLimit) * 100)}%
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                        {config.dailyUsageLimit ? (
+                                            <Progress
+                                                value={Math.min(((usages[config.id!] || 0) / config.dailyUsageLimit) * 100, 100)}
+                                                className={`h-2 ${((usages[config.id!] || 0) >= config.dailyUsageLimit) ? 'bg-destructive/20 [&>div]:bg-destructive' : ''}`}
+                                            />
+                                        ) : (
+                                            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                                                <div className="h-full bg-primary/20 w-full animate-pulse"></div>
+                                            </div>
+                                        )}
+                                        <p className="text-[10px] text-muted-foreground text-center mt-1 italic">
+                                            Counts messages sent within the current 24h period
+                                        </p>
+                                    </div>
+
                                     <div className="flex gap-2">
-                                        {!config.isActive && (
+                                        {!config.isActive && !config.isDisabled && (
                                             <Button variant="outline" size="sm" className="flex-1" onClick={() => handleSetActive(config.id!)}>
                                                 <Check className="mr-2 h-4 w-4" /> Set Active
+                                            </Button>
+                                        )}
+                                        {config.isDisabled && (
+                                            <Button variant="outline" size="sm" className="flex-1 opacity-50 cursor-not-allowed" disabled>
+                                                <PowerOff className="mr-2 h-4 w-4" /> Disabled
                                             </Button>
                                         )}
                                         <Button variant="ghost" size="icon" onClick={() => handleEdit(config)}>

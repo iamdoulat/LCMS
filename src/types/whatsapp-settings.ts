@@ -4,6 +4,8 @@ export interface WhatsAppGatewayConfig {
     apiSecret: string;
     accountUniqueId: string;
     isActive: boolean;
+    dailyUsageLimit?: number;
+    isDisabled?: boolean;
     createdAt?: any;
     updatedAt?: any;
 }
