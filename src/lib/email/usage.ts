@@ -63,14 +63,21 @@ export async function getUsageForConfig(config: SmtpConfiguration): Promise<numb
             // Allow both 'email' type and 'send_email' action
             if (data.type !== 'email' && data.action !== 'send_email') return false;
 
-            // Match by ID primarily
-            if (data.relatedId === configId || details.configId === configId) return true;
+            // 1. Strict ID Match (Primary)
+            // Match by top-level relatedId or nested configId
+            const logConfigId = data.relatedId || details.configId;
+            if (logConfigId) {
+                return logConfigId === configId;
+            }
 
-            // Fallback for older/missing ID logs
+            // 2. Fallback for Legacy Logs (only if NO ID is found in the log)
             if (config.serviceProvider === 'resend_api') {
                 return details.provider === 'resend_api';
             } else if (config.serviceProvider === 'smtp') {
-                return details.provider === 'smtp' && (details.host === config.host || details.host?.includes(config.host));
+                // Only match host if both provide it and no ID was present to disambiguate
+                return details.provider === 'smtp' &&
+                    details.host &&
+                    (details.host === config.host || details.host.includes(config.host));
             }
             return false;
         }).length;
