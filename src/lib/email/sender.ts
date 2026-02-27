@@ -52,13 +52,92 @@ const getSmtpConfig = async () => {
                 throw new Error("Firebase Admin SDK not initialized. Check server logs for credential issues.");
             }
 
-            const snapshot = await admin.firestore().collection('smtp_settings').where('isActive', '==', true).get();
-            if (!snapshot.empty) {
-                const doc = snapshot.docs[0];
-                return { ...doc.data(), id: doc.id } as SmtpConfiguration;
-            } else {
-                throw new Error("No active email configuration found. Please go to Settings > SMTP Settings and ensure one service is marked as 'Active'.");
+            const snapshot = await admin.firestore().collection('smtp_settings').get();
+            const allConfigs = snapshot.docs
+                .map(d => ({ ...d.data(), id: d.id } as SmtpConfiguration))
+                .filter(c => !c.isDisabled) // Skip permanently disabled ones
+                .sort((a, b) => (a.id || '').localeCompare(b.id || '')); // Sort by ID for predictable sequence
+
+            if (allConfigs.length === 0) {
+                throw new Error("No available SMTP configuration found. Please ensure at least one service is enabled and configured.");
             }
+
+            // Find the currently active config among the non-disabled ones
+            let activeConfig = allConfigs.find(c => c.isActive);
+
+            // Fallback: if none is marked active, pick the first one from our sorted list
+            if (!activeConfig) {
+                activeConfig = allConfigs[0];
+            }
+
+            const { getUsageForConfig } = await import('@/lib/email/usage');
+            const usage = await getUsageForConfig(activeConfig);
+            const limit = activeConfig.dailyUsageLimit || 0;
+
+            // Trigger rotation if limits are reached
+            if (limit > 0 && usage >= limit) {
+                console.log(`[SMTP] Active config ${activeConfig.name} reached limit (${usage}/${limit}). Rotating sequentially...`);
+
+                const currentIndex = allConfigs.findIndex(c => c.id === activeConfig!.id);
+                let selectedConfig: SmtpConfiguration | null = null;
+
+                // 1. Try to find the next available service UNDER its daily limit
+                for (let i = 1; i < allConfigs.length; i++) {
+                    const nextIndex = (currentIndex + i) % allConfigs.length;
+                    const candidate = allConfigs[nextIndex];
+
+                    const candidateUsage = await getUsageForConfig(candidate);
+                    const candidateLimit = candidate.dailyUsageLimit || 0;
+
+                    if (candidateLimit === 0 || candidateUsage < candidateLimit) {
+                        selectedConfig = candidate;
+                        break;
+                    }
+                }
+
+                // 2. Load Balancing Fallback: If ALL services are over limit, 
+                // move to the very next one in the sequence anyway to balance the load.
+                if (!selectedConfig && allConfigs.length > 1) {
+                    const nextIndex = (currentIndex + 1) % allConfigs.length;
+                    selectedConfig = allConfigs[nextIndex];
+                    console.log(`[SMTP] All services are over limit. Balancing load by moving to next in sequence: ${selectedConfig.name}`);
+                }
+
+                // If we found a different configuration to switch to
+                if (selectedConfig && selectedConfig.id !== activeConfig.id) {
+                    console.log(`[SMTP] Auto-rotating sequentially to ${selectedConfig.name} (${selectedConfig.id})`);
+
+                    const batch = admin.firestore().batch();
+                    // Mark current as inactive
+                    batch.update(admin.firestore().collection('smtp_settings').doc(activeConfig.id!), {
+                        isActive: false,
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                    // Mark next as active
+                    batch.update(admin.firestore().collection('smtp_settings').doc(selectedConfig.id!), {
+                        isActive: true,
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                    await batch.commit();
+
+                    await logActivity({
+                        type: 'email',
+                        action: 'smtp_rotation',
+                        status: 'success',
+                        message: `SMTP sequentially rotated from ${activeConfig.name} to ${selectedConfig.name} (Load Balancing)`,
+                        details: {
+                            fromConfigId: activeConfig.id,
+                            toConfigId: selectedConfig.id,
+                            fromUsage: usage,
+                            fromLimit: limit
+                        }
+                    });
+
+                    return selectedConfig;
+                }
+            }
+
+            return activeConfig;
 
         } catch (e: any) {
             console.error("getSmtpConfig: Error:", e);
@@ -211,8 +290,10 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
                         template: templateSlug || 'custom',
                         provider: 'resend_api',
                         messageId: res?.id,
-                        subject
-                    }
+                        subject,
+                        configId: config.id
+                    },
+                    relatedId: config.id
                 });
 
                 return { success: true, messageId: res?.id };
@@ -267,8 +348,10 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
                         provider: 'smtp',
                         messageId: info.messageId,
                         subject,
-                        host: config.host
-                    }
+                        host: config.host,
+                        configId: config.id
+                    },
+                    relatedId: config.id
                 });
 
                 return { success: true, messageId: info.messageId };

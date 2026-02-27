@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Edit, Check, Eye, EyeOff, Mail, Server } from 'lucide-react';
+import { Plus, Trash2, Edit, Check, Eye, EyeOff, Mail, Server, Power, PowerOff } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import Swal from 'sweetalert2';
 import {
     Dialog,
@@ -44,6 +45,10 @@ export default function SmtpSettingsPage() {
     const [testEmail, setTestEmail] = useState('');
     const [sendingTest, setSendingTest] = useState(false);
 
+    // Usage State
+    const [usages, setUsages] = useState<Record<string, number>>({});
+    const [loadingUsages, setLoadingUsages] = useState<Record<string, boolean>>({});
+
     // Form State
     const [formData, setFormData] = useState<Partial<SmtpConfiguration>>({
         name: '',
@@ -56,6 +61,8 @@ export default function SmtpSettingsPage() {
         fromName: '',
         resendApiKey: '',
         isActive: false,
+        dailyUsageLimit: 0,
+        isDisabled: false,
     });
 
     useEffect(() => {
@@ -67,10 +74,30 @@ export default function SmtpSettingsPage() {
             })) as SmtpConfiguration[];
             setConfigs(data);
             setLoading(false);
+
+            // Initial fetch for usages
+            data.forEach(config => {
+                if (config.id) fetchUsage(config.id);
+            });
         });
 
         return () => unsubscribe();
     }, []);
+
+    const fetchUsage = async (configId: string) => {
+        setLoadingUsages(prev => ({ ...prev, [configId]: true }));
+        try {
+            const response = await fetch(`/api/settings/smtp/usage?id=${configId}`, { cache: 'no-store' });
+            if (response.ok) {
+                const data = await response.json();
+                setUsages(prev => ({ ...prev, [configId]: data.count }));
+            }
+        } catch (error) {
+            console.error("Error fetching usage:", error);
+        } finally {
+            setLoadingUsages(prev => ({ ...prev, [configId]: false }));
+        }
+    };
 
     useEffect(() => {
         getCompanyName().then(setCompanyName);
@@ -92,6 +119,8 @@ export default function SmtpSettingsPage() {
             fromName: '',
             resendApiKey: '',
             isActive: false,
+            dailyUsageLimit: 0,
+            isDisabled: false,
         });
         setIsEditing(false);
         setCurrentId(null);
@@ -141,6 +170,11 @@ export default function SmtpSettingsPage() {
 
             // Set selected to active
             const targetRef = doc(firestore, 'smtp_settings', id);
+            const targetConfig = configs.find(c => c.id === id);
+            if (targetConfig?.isDisabled) {
+                Swal.fire('Error', 'Cannot activate a disabled service. Please enable it first.', 'error');
+                return;
+            }
             batch.update(targetRef, { isActive: true });
 
             await batch.commit();
@@ -236,7 +270,7 @@ export default function SmtpSettingsPage() {
     return (
         <div className="max-w-none mx-[10px] md:mx-[25px] mt-[10px] md:mt-0 mb-[50px] md:mb-0 py-8 px-0">
             <div className="flex justify-between items-center">
-                <div>
+                <div className="pb-[10px]">
                     <h1 className="text-3xl font-bold tracking-tight">SMTP Settings</h1>
                     <p className="text-muted-foreground">Manage your email sending services. Select one as active.</p>
                 </div>
@@ -413,6 +447,34 @@ export default function SmtpSettingsPage() {
                                     </div>
                                 )}
 
+                                <div className="grid w-full items-center gap-1.5">
+                                    <Label htmlFor="dailyUsageLimit">Daily Usage Limit (Emails per Day)</Label>
+                                    <Input
+                                        id="dailyUsageLimit"
+                                        type="number"
+                                        placeholder="0 for unlimited"
+                                        value={formData.dailyUsageLimit || 0}
+                                        onChange={(e) => handleInputChange('dailyUsageLimit', parseInt(e.target.value))}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Set to 0 or leave empty for no limit.
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center justify-between space-x-2 pt-2 border-t mt-4">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="isDisabled" className="text-base">Disable Service</Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Permanently stop this service from being used or automatically activated.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="isDisabled"
+                                        checked={formData.isDisabled || false}
+                                        onCheckedChange={(checked) => handleInputChange('isDisabled', checked)}
+                                    />
+                                </div>
+
                                 <DialogFooter>
                                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                                     <Button type="submit">Save Configuration</Button>
@@ -439,10 +501,15 @@ export default function SmtpSettingsPage() {
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {configs.map((config) => (
-                        <Card key={config.id} className={`relative overflow-hidden transition-all ${config.isActive ? 'border-primary ring-1 ring-primary shadow-md' : 'border-border/60 hover:border-border'}`}>
-                            {config.isActive && (
-                                <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-medium rounded-bl-lg">
-                                    Active
+                        <Card key={config.id} className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg border-2 ${config.isActive ? 'border-primary shadow-primary/10' : 'border-border'} ${config.isDisabled ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                            {config.isActive && !config.isDisabled && (
+                                <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 text-xs font-bold rounded-bl-lg flex items-center gap-1 animate-in fade-in slide-in-from-top-2 duration-500">
+                                    <Check className="h-3 w-3" /> Active
+                                </div>
+                            )}
+                            {config.isDisabled && (
+                                <div className="absolute top-0 right-0 bg-destructive text-destructive-foreground px-3 py-1 text-xs font-bold rounded-bl-lg flex items-center gap-1">
+                                    <PowerOff className="h-3 w-3" /> Disabled
                                 </div>
                             )}
                             <CardHeader className="pb-3">
@@ -472,6 +539,10 @@ export default function SmtpSettingsPage() {
                                             <span className="font-medium text-foreground">••••••••</span>
                                         </div>
                                     )}
+                                    <div className="flex justify-between pt-1 opacity-60">
+                                        <span>Related ID:</span>
+                                        <span className="font-mono text-[10px] select-all">{config.id}</span>
+                                    </div>
                                 </div>
 
                                 <div className="flex gap-2">
@@ -486,6 +557,45 @@ export default function SmtpSettingsPage() {
                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDelete(config.id!, config.name)}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
+                                </div>
+
+                                <div className="mt-4 pt-4 border-t border-border/40">
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-between h-auto py-2 px-3 text-xs font-semibold hover:bg-primary/5 group"
+                                        onClick={() => fetchUsage(config.id!)}
+                                        disabled={loadingUsages[config.id!]}
+                                    >
+                                        <span className="text-muted-foreground group-hover:text-foreground transition-colors">Daily Usage:</span>
+                                        <div className="flex items-center gap-2">
+                                            {loadingUsages[config.id!] ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : (
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <Badge variant="secondary" className="px-1.5 py-0 min-w-[20px] justify-center bg-primary/10 text-primary border-primary/20">
+                                                        {usages[config.id!] ?? 0}
+                                                        {config.dailyUsageLimit ? ` / ${config.dailyUsageLimit}` : ''}
+                                                    </Badge>
+                                                    {config.dailyUsageLimit && config.dailyUsageLimit > 0 && (
+                                                        <div className="w-20 h-1 bg-muted rounded-full overflow-hidden">
+                                                            <div
+                                                                className={`h-full transition-all ${((usages[config.id!] || 0) / config.dailyUsageLimit) > 0.9 ? 'bg-destructive' :
+                                                                    ((usages[config.id!] || 0) / config.dailyUsageLimit) > 0.7 ? 'bg-orange-500' : 'bg-primary'
+                                                                    }`}
+                                                                style={{ width: `${Math.min(((usages[config.id!] || 0) / config.dailyUsageLimit) * 100, 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                            <div className="p-1 rounded-sm group-hover:bg-primary/10 transition-colors text-muted-foreground group-hover:text-primary">
+                                                <Mail className="h-3 w-3" />
+                                            </div>
+                                        </div>
+                                    </Button>
+                                    <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
+                                        Counts emails sent within the current 24h period
+                                    </p>
                                 </div>
                             </CardContent>
                         </Card>

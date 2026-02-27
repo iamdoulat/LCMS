@@ -11,6 +11,8 @@ export interface SmtpConfiguration {
     fromName?: string;
     resendApiKey?: string;
     isActive: boolean;
+    dailyUsageLimit?: number;
+    isDisabled?: boolean;
     createdAt?: any; // Firestore Timestamp
     updatedAt?: any; // Firestore Timestamp
 }
