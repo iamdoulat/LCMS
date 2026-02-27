@@ -300,19 +300,23 @@ export default function LoginPage() {
       localStorage.removeItem('login_ban_data');
       // Success is handled by onAuthStateChanged, which will redirect
     } catch (err: any) {
-      // Handle failure: increment ban count
       try {
         const banDataStr = localStorage.getItem('login_ban_data');
         let banData = banDataStr ? JSON.parse(banDataStr) : { count: 0, lockUntil: null };
 
         banData.count += 1;
 
+        let errorMessage = err.message || "Login failed.";
+        if (err.code === 'auth/invalid-credential') {
+          errorMessage = "User name or password might be wrong.";
+        }
+
         if (banData.count >= 5) {
           banData.lockUntil = Date.now() + 10 * 60 * 1000; // 10 minutes
           setBanTimeRemaining(10 * 60);
           setError(`Too many failed attempts. You have been blocked for 10 minutes.`);
         } else {
-          setError(`${err.message || "Login failed."} (${5 - banData.count} attempts left)`);
+          setError(`${errorMessage} (${5 - banData.count} attempts left)`);
         }
 
         localStorage.setItem('login_ban_data', JSON.stringify(banData));
