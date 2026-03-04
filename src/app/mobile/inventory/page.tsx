@@ -7,19 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, ChevronLeft, ArrowLeft, Package, MapPin, Loader2, ImageIcon, ScanLine, Filter, X, Clock, Building2, MoreVertical, Eye, EyeOff, Warehouse, RefreshCw, Edit, Plus } from 'lucide-react';
+import { Search, ChevronLeft, ArrowLeft, Package, MapPin, Loader2, ImageIcon, ScanLine, Filter, X, Clock, Building2, MoreVertical, Eye, EyeOff, Warehouse, RefreshCw, Edit, Plus, AlertTriangle, DollarSign, BarChart3, Box } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { collection, query, orderBy, getDocs, limit, startAfter } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, limit, startAfter, onSnapshot } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
 import type { ItemDocument } from '@/types';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { InventoryStatCard } from '@/components/mobile/InventoryStatCard';
 
 export default function MobileInventoryPage() {
     const router = useRouter();
@@ -33,6 +34,12 @@ export default function MobileInventoryPage() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
+    const [stats, setStats] = useState({
+        totalProducts: 0,
+        stockValue: 0,
+        lowStock: 0,
+        outOfStock: 0
+    });
 
     const [showFilters, setShowFilters] = useState(false);
     const [filters, setFilters] = useState({
@@ -55,42 +62,65 @@ export default function MobileInventoryPage() {
     };
 
     useEffect(() => {
-        const fetchItems = async () => {
-            setIsLoading(true);
-            try {
-                const itemsRef = collection(firestore, 'items');
-                const q = query(itemsRef, orderBy('createdAt', 'desc'));
-                const snapshot = await getDocs(q);
+        setIsLoading(true);
+        const itemsRef = collection(firestore, 'items');
+        const q = query(itemsRef, orderBy('createdAt', 'desc'));
 
-                const fetchedItems = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                } as ItemDocument));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetchedItems = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as ItemDocument));
 
-                setItems(fetchedItems);
+            setItems(fetchedItems);
 
-                // Calculate counts
-                const counts = {
-                    'All Items': fetchedItems.length,
-                    'Low Stock': fetchedItems.filter(item => {
-                        if (!item.manageStock) return false;
-                        const current = item.currentQuantity || 0;
-                        const warning = item.warningQuantity || 0;
-                        return current <= warning;
-                    }).length,
-                    'Managed': fetchedItems.filter(item => item.manageStock === true).length
-                };
-                setTabCounts(counts);
-            } catch (error) {
-                console.error("Error fetching items:", error);
-            } finally {
-                setIsLoading(false);
-                setIsRefreshing(false);
-            }
-        };
+            // Calculate counts and stats
+            let totalVal = 0;
+            let lowCount = 0;
+            let outCount = 0;
+            let managedCount = 0;
 
-        fetchItems();
-    }, [isRefreshing]);
+            fetchedItems.forEach(item => {
+                if (item.manageStock) {
+                    managedCount++;
+                    const current = item.currentQuantity || 0;
+                    const warning = item.warningQuantity || 0;
+
+                    if (current === 0) {
+                        outCount++;
+                    } else if (current <= warning) {
+                        lowCount++;
+                    }
+
+                    if (item.purchasePrice) {
+                        totalVal += (item.purchasePrice * current);
+                    }
+                }
+            });
+
+            setStats({
+                totalProducts: fetchedItems.length,
+                stockValue: totalVal,
+                lowStock: lowCount,
+                outOfStock: outCount
+            });
+
+            setTabCounts({
+                'All Items': fetchedItems.length,
+                'Low Stock': lowCount,
+                'Managed': managedCount
+            });
+
+            setIsLoading(false);
+            setIsRefreshing(false);
+        }, (error) => {
+            console.error("Error fetching items:", error);
+            setIsLoading(false);
+            setIsRefreshing(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const handleRefresh = () => {
         setIsRefreshing(true);
@@ -210,6 +240,38 @@ export default function MobileInventoryPage() {
 
             {/* Main Content with Rounded Top */}
             <div className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col">
+                {/* Stats Grid */}
+                <div className="px-4 pt-6 grid grid-cols-2 gap-3">
+                    <InventoryStatCard
+                        title="Total Products"
+                        value={stats.totalProducts}
+                        icon={Package}
+                        gradient="bg-gradient-to-br from-blue-500 to-blue-700"
+                        loading={isLoading}
+                    />
+                    <InventoryStatCard
+                        title="Stock Value"
+                        value={`BDT ${stats.stockValue.toLocaleString()}`}
+                        icon={DollarSign}
+                        gradient="bg-gradient-to-br from-emerald-400 to-emerald-600"
+                        loading={isLoading}
+                    />
+                    <InventoryStatCard
+                        title="Low Stock"
+                        value={stats.lowStock}
+                        icon={AlertTriangle}
+                        gradient="bg-gradient-to-br from-violet-500 to-indigo-600"
+                        loading={isLoading}
+                    />
+                    <InventoryStatCard
+                        title="Out of Stock"
+                        value={stats.outOfStock}
+                        icon={BarChart3}
+                        gradient="bg-gradient-to-br from-orange-500 to-red-600"
+                        loading={isLoading}
+                    />
+                </div>
+
                 {/* Tabs */}
                 <div className="px-4 pt-4 pb-3 bg-slate-50 sticky top-0 z-10">
                     <div className="flex gap-2 overflow-x-auto pt-2 pb-1 scrollbar-hide">
