@@ -108,272 +108,13 @@ const countryColors = [
     { bg: 'bg-sky-50', border: 'border-sky-100', text: 'text-sky-600', shadow: 'shadow-sky-100' },
 ];
 
-export default function MobileTotalLCPage() {
-    const router = useRouter();
-    const { userRole } = useAuth();
-    const [lcs, setLcs] = useState<LCEntryDocument[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState<string>('Shipment Pending');
-    const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
-    const [isRefreshing, setIsRefreshing] = useState(false);
-
-    // Advanced Filter State
-    const [filterApplicant, setFilterApplicant] = useState<string>('All');
-    const [filterBeneficiary, setFilterBeneficiary] = useState<string>('All');
-    const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
-    const [filterTerms, setFilterTerms] = useState<string>('All');
-    const [sortBy, setSortBy] = useState<string>('Issue Date');
-    const canEdit = useMemo(() => userRole?.some(role => ['Super Admin', 'Admin', 'Commercial'].includes(role)), [userRole]);
-
-    // Pagination State
-    const lastDocRef = useRef<QueryDocumentSnapshot | null>(null);
-    const [hasMore, setHasMore] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
-
-    const getEffectiveYear = useCallback((lc: any) => {
-        if (lc.year) return Number(lc.year);
-        if (lc.lcIssueDate) return new Date(lc.lcIssueDate).getFullYear();
-        const dateRef = lc.updatedAt || lc.createdAt;
-        if (dateRef) {
-            const date = (dateRef as any).toDate ? (dateRef as any).toDate() : new Date(dateRef);
-            return date.getFullYear();
-        }
-        return new Date().getFullYear();
-    }, []);
-    // Temporarily breaking the function
-    const calculatedStatusCounts = useMemo(() => {
-        const counts: Record<string, number> = {
-            'All': 0, 'Draft': 0, 'Transmitted': 0, 'Shipment Pending': 0, 'Payment Pending': 0, 'Payment Done': 0, 'Shipment Done': 0
-        };
-
-
-        // We filter the raw fetched LCs by the "global" context filters (Year, Applicant, Beneficiary, Terms)
-        // to get accurate counts for the current context. Search is excluded to keep tab totals useful.
-        const contextFilteredLcs = lcs.filter(lc => {
-            const lcYear = getEffectiveYear(lc);
-            const matchesYear = filterYear === 'All' || lcYear === Number(filterYear);
-            const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
-            const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
-            const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
-            return matchesYear && matchesApplicant && matchesBeneficiary && matchesTerms;
-        });
-
-        counts['All'] = contextFilteredLcs.length;
-
-        contextFilteredLcs.forEach(lc => {
-            const statusArray = Array.isArray(lc.status) ? lc.status : [lc.status];
-            statusArray.forEach((s: any) => {
-                if (s && counts[s] !== undefined) {
-                    counts[s]++;
-                }
-            });
-        });
-
-        return counts;
-    }, [lcs, filterYear, filterApplicant, filterBeneficiary, filterTerms]);
-
-    const fetchLCs = useCallback(async (isManual = false, isLoadMore = false) => {
-        if (isLoadMore) setLoadingMore(true);
-        else if (isManual) setIsRefreshing(true);
-        else setIsLoading(true);
-
-        try {
-            const constraints: any[] = [
-                collection(firestore, "lc_entries")
-            ];
-
-            // Apply year filter server-side for accurate stats
-            if (filterYear !== 'All') {
-                constraints.push(where("year", "==", Number(filterYear)));
-            } else {
-                // Only use orderBy when NOT filtering by year, or ensure index exists.
-                // Web dashboard doesn't use orderBy with where("year"), so we match that to avoid index requirement.
-                constraints.push(orderBy("createdAt", "desc"));
-            }
-
-            // Increased limit to ENSURE we get more data for the selected year/context
-            const fetchLimit = filterYear === 'All' ? 100 : 1000;
-            constraints.push(limit(fetchLimit));
-
-            if (isLoadMore && lastDocRef.current) {
-                constraints.push(startAfter(lastDocRef.current));
-            }
-
-            const lcQuery = query(constraints[0], ...constraints.slice(1));
-            const snapshot = await getDocs(lcQuery);
-
-            const fetchedLcs = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...(doc.data() as any)
-            } as LCEntryDocument));
-
-            if (isLoadMore) {
-                setLcs(prev => [...prev, ...fetchedLcs]);
-            } else {
-                setLcs(fetchedLcs);
-            }
-
-            const lastVisible = snapshot.docs[snapshot.docs.length - 1];
-            lastDocRef.current = (lastVisible as QueryDocumentSnapshot) || null;
-            setHasMore(snapshot.docs.length === fetchLimit);
-
-        } catch (error: any) {
-            console.error("Error fetching LCs:", error);
-            // Handle index error gracefully
-            if (error?.message?.includes("index")) {
-                console.warn("Firestore Index required for this query. Falling back to client-side filter.");
-                // Fallback: fetch recent records without year constraint if index is missing
-                // This allows the page to still function while index is being created
-                try {
-                    const fallbackQuery = query(collection(firestore, "lc_entries"), orderBy("createdAt", "desc"), limit(200));
-                    const fallbackSnapshot = await getDocs(fallbackQuery);
-                    const fallbackLcs = fallbackSnapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...(doc.data() as any)
-                    } as LCEntryDocument));
-                    setLcs(fallbackLcs);
-                } catch (fallbackError) {
-                    console.error("Fallback fetch failed:", fallbackError);
-                }
-            }
-        } finally {
-            if (isLoadMore) setLoadingMore(false);
-            else if (isManual) setTimeout(() => setIsRefreshing(false), 600);
-            else setIsLoading(false);
-        }
-    }, [filterYear]);
-
-
-    // Note: Dependencies are empty because lastDoc is now a Ref
-
-    useEffect(() => {
-        const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Commercial', 'Viewer'].includes(role));
-        if (!isLoading && !canView && userRole !== null) {
-            router.push('/mobile/dashboard');
-            return;
-        }
-
-        fetchLCs();
-    }, [userRole, router, fetchLCs]);
-
-    const toggleCardExpansion = (id: string) => {
-        setExpandedCards(prev => ({
-            ...prev,
-            [id]: !prev[id]
-        }));
-    };
-
-    const handleRefresh = () => {
-        fetchLCs(true);
-    };
-
-    const filteredLcs = useMemo(() => {
-        return lcs.filter(lc => {
-            const matchesSearch =
-                (lc.documentaryCreditNumber?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (lc.applicantName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (lc.beneficiaryName?.toLowerCase().includes(searchTerm.toLowerCase()));
-
-            const lcYear = getEffectiveYear(lc);
-
-            const matchesStatus = filterStatus === 'All' || (Array.isArray(lc.status) ? (lc.status as any[]).includes(filterStatus) : (lc.status as any) === filterStatus);
-            const matchesYear = filterYear === 'All' || lcYear === Number(filterYear);
-            const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
-            const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
-            const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
-
-            return matchesSearch && matchesStatus && matchesYear && matchesApplicant && matchesBeneficiary && matchesTerms;
-        }).sort((a, b) => {
-            if (sortBy === 'Amount') {
-                return Number(b.amount || 0) - Number(a.amount || 0);
-            }
-            if (sortBy === 'LC Number') {
-                return (a.documentaryCreditNumber || '').localeCompare(b.documentaryCreditNumber || '');
-            }
-            // Default to Issue Date (createdAt) - stable Timestamp handling
-            const dateA = a.createdAt && (a.createdAt as any).toDate ? (a.createdAt as any).toDate() : new Date(a.createdAt || 0);
-            const dateB = b.createdAt && (b.createdAt as any).toDate ? (b.createdAt as any).toDate() : new Date(b.createdAt || 0);
-            return dateB.getTime() - dateA.getTime();
-        });
-    }, [lcs, searchTerm, sortBy, filterStatus, filterYear, filterApplicant, filterBeneficiary, filterTerms]);
-
-    const applicants = useMemo(() => Array.from(new Set(lcs.map(lc => lc.applicantName).filter(Boolean))), [lcs]);
-    const beneficiaries = useMemo(() => Array.from(new Set(lcs.map(lc => lc.beneficiaryName).filter(Boolean))), [lcs]);
-    const years = useMemo(() => Array.from({ length: 2030 - 2015 + 1 }, (_, i) => (2030 - i).toString()), []);
-
-    const yearStats = useMemo(() => {
-        const yearToFilter = filterYear === 'All' ? null : Number(filterYear);
-        const currentDate = new Date();
-        const currentSystemYear = currentDate.getFullYear();
-        const currentMonth = currentDate.getMonth(); // 0-indexed
-
-        // 1. Filter raw LCs by year for base dataset
-        const yearLcs = lcs.filter(lc => {
-            const lcYear = getEffectiveYear(lc);
-            return yearToFilter === null || lcYear === yearToFilter;
-        });
-
-        // 2. Filter for "Valid for Stats" exactly like web dashboard
-        // k:\nextsew\src\app\dashboard\page.tsx:267
-        const validLcEntriesForStats = yearLcs.filter(lc =>
-            typeof lc.amount === 'number' && !isNaN(lc.amount) &&
-            lc.lcIssueDate && isValid(parseISO(lc.lcIssueDate))
-        );
-
-        // 3. Calculate statistics based on valid entries
-        const totalValue = validLcEntriesForStats.reduce((sum, lc) => sum + (Number(lc.amount) || 0), 0);
-        const uniqueBeneficiaries = new Set(validLcEntriesForStats.map(lc => lc.beneficiaryId).filter(id => !!id && id.trim() !== '')).size;
-        const uniqueApplicants = new Set(validLcEntriesForStats.map(lc => lc.applicantId).filter(id => !!id && id.trim() !== '')).size;
-
-        // Match web's "this month" behavior (only for current system year)
-        let monthlyQty = 0;
-        if (yearToFilter === currentSystemYear || yearToFilter === null) {
-            monthlyQty = validLcEntriesForStats.filter(lc => {
-                const issueDate = parseISO(lc.lcIssueDate as string);
-                return isValid(issueDate) && issueDate.getMonth() === currentMonth && issueDate.getFullYear() === currentSystemYear;
-            }).length;
-        }
-
-        // Linked PIs: Mobile currently follows a simpler logic but we'll stick to 
-        // LCs having a proformaInvoiceNumber for now as fetching the whole PI collection 
-        // on mobile might be too heavy. However, to match the "exactly same" requirement, 
-        // we'll adjust the filtering/count if needed. 
-        // Actually, the web says 1 because it's counting DOCS in pi collection. 
-        // I'll keep the mobile count for now but label it better if it's confusing.
-        // Wait, the user said "fix it", implying the numbers being different is the problem.
-        // I'll stick to counting how many valid LCs have a proformaInvoiceNumber field.
-        const linkedPIs = validLcEntriesForStats.filter(lc => lc.proformaInvoiceNumber).length;
-
-        return {
-            totalOpened: validLcEntriesForStats.length,
-            totalValue,
-            activeBeneficiaries: uniqueBeneficiaries,
-            activeApplicants: uniqueApplicants,
-            linkedPIs,
-            monthlyQty: monthlyQty,
-            monthName: format(currentDate, 'MMMM'),
-            displayYear: filterYear === 'All' ? 'ALL' : filterYear
-        };
-    }, [lcs, filterYear]);
-
-    const containerVariants: any = {
-        hidden: { opacity: 0 },
-        show: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1,
-                delayChildren: 0.2
-            }
-        }
-    };
-
-    const itemVariants: any = {
+const MiniStatCard = ({ title, value, icon: Icon, gradient, description, delay = 0 }: any) => {
+    const itemVariants = {
         hidden: { opacity: 0, y: 20 },
         show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100, damping: 15 } }
     };
 
-    const MiniStatCard = ({ title, value, icon: Icon, gradient, description, delay = 0 }: any) => (
+    return (
         <motion.div
             variants={itemVariants}
             whileTap={{ scale: 0.98 }}
@@ -412,6 +153,256 @@ export default function MobileTotalLCPage() {
             </div>
         </motion.div>
     );
+};
+
+const LCCardSkeleton = () => (
+    <Card className="p-4 rounded-3xl border border-slate-100 shadow-sm bg-white mb-4">
+        <div className="flex justify-between items-start mb-4">
+            <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-6 w-40" />
+            </div>
+            <Skeleton className="h-10 w-10 rounded-full" />
+        </div>
+        <div className="space-y-3">
+            <div className="flex justify-between">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-32" />
+            </div>
+            <div className="flex gap-2">
+                <Skeleton className="h-6 w-24 rounded-full" />
+                <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
+        </div>
+    </Card>
+);
+
+export default function MobileTotalLCPage() {
+    const router = useRouter();
+    const { userRole } = useAuth();
+    const [lcs, setLcs] = useState<LCEntryDocument[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterStatus, setFilterStatus] = useState<string>('Shipment Pending');
+    const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Advanced Filter State
+    const [filterApplicant, setFilterApplicant] = useState<string>('All');
+    const [filterBeneficiary, setFilterBeneficiary] = useState<string>('All');
+    const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
+    const [filterTerms, setFilterTerms] = useState<string>('All');
+    const [sortBy, setSortBy] = useState<string>('Issue Date');
+    const canEdit = useMemo(() => userRole?.some(role => ['Super Admin', 'Admin', 'Commercial'].includes(role)), [userRole]);
+
+    // Pagination State
+    const lastDocRef = useRef<QueryDocumentSnapshot | null>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    const getEffectiveYear = useCallback((lc: any) => {
+        if (lc.year) return Number(lc.year);
+        if (lc.lcIssueDate) return new Date(lc.lcIssueDate).getFullYear();
+        const dateRef = lc.updatedAt || lc.createdAt;
+        if (dateRef) {
+            const date = (dateRef as any).toDate ? (dateRef as any).toDate() : new Date(dateRef);
+            return date.getFullYear();
+        }
+        return new Date().getFullYear();
+    }, []);
+
+    const calculatedStatusCounts = useMemo(() => {
+        const counts: Record<string, number> = {
+            'All': 0, 'Draft': 0, 'Transmitted': 0, 'Shipment Pending': 0, 'Payment Pending': 0, 'Payment Done': 0, 'Shipment Done': 0
+        };
+
+        const contextFilteredLcs = lcs.filter(lc => {
+            const lcYear = getEffectiveYear(lc);
+            const matchesYear = filterYear === 'All' || lcYear === Number(filterYear);
+            const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
+            const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
+            const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
+            return matchesYear && matchesApplicant && matchesBeneficiary && matchesTerms;
+        });
+
+        counts['All'] = contextFilteredLcs.length;
+
+        contextFilteredLcs.forEach(lc => {
+            const statusArray = Array.isArray(lc.status) ? lc.status : [lc.status];
+            statusArray.forEach((s: any) => {
+                if (s && counts[s] !== undefined) {
+                    counts[s]++;
+                }
+            });
+        });
+
+        return counts;
+    }, [lcs, filterYear, filterApplicant, filterBeneficiary, filterTerms, getEffectiveYear]);
+
+    const fetchLCs = useCallback(async (isManual = false, isLoadMore = false) => {
+        if (isLoadMore) setLoadingMore(true);
+        else if (isManual) setIsRefreshing(true);
+        else setIsLoading(true);
+
+        try {
+            const constraints: any[] = [
+                collection(firestore, "lc_entries")
+            ];
+
+            if (filterYear !== 'All') {
+                constraints.push(where("year", "==", Number(filterYear)));
+            } else {
+                constraints.push(orderBy("createdAt", "desc"));
+            }
+
+            const fetchLimit = filterYear === 'All' ? 100 : 1000;
+            constraints.push(limit(fetchLimit));
+
+            if (isLoadMore && lastDocRef.current) {
+                constraints.push(startAfter(lastDocRef.current));
+            }
+
+            const lcQuery = query(constraints[0], ...constraints.slice(1));
+            const snapshot = await getDocs(lcQuery);
+
+            const fetchedLcs = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...(doc.data() as any)
+            } as LCEntryDocument));
+
+            if (isLoadMore) {
+                setLcs(prev => [...prev, ...fetchedLcs]);
+            } else {
+                setLcs(fetchedLcs);
+            }
+
+            const lastVisible = snapshot.docs[snapshot.docs.length - 1];
+            lastDocRef.current = (lastVisible as QueryDocumentSnapshot) || null;
+            setHasMore(snapshot.docs.length === fetchLimit);
+
+        } catch (error: any) {
+            console.error("Error fetching LCs:", error);
+            if (error?.message?.includes("index")) {
+                console.warn("Firestore Index required for this query. Falling back to client-side filter.");
+                try {
+                    const fallbackQuery = query(collection(firestore, "lc_entries"), orderBy("createdAt", "desc"), limit(200));
+                    const fallbackSnapshot = await getDocs(fallbackQuery);
+                    const fallbackLcs = fallbackSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...(doc.data() as any)
+                    } as LCEntryDocument));
+                    setLcs(fallbackLcs);
+                } catch (fallbackError) {
+                    console.error("Fallback fetch failed:", fallbackError);
+                }
+            }
+        } finally {
+            if (isLoadMore) setLoadingMore(false);
+            else if (isManual) setTimeout(() => setIsRefreshing(false), 600);
+            else setIsLoading(false);
+        }
+    }, [filterYear]);
+
+    // Data fetching effect
+    useEffect(() => {
+        if (userRole) {
+            fetchLCs();
+        }
+    }, [userRole, fetchLCs]);
+
+    // Redirection effect
+    useEffect(() => {
+        const canView = userRole?.some(role => ['Super Admin', 'Admin', 'Commercial', 'Viewer'].includes(role));
+        if (!isLoading && !canView && userRole !== null) {
+            router.push('/mobile/dashboard');
+        }
+    }, [userRole, router, isLoading]);
+
+    const toggleCardExpansion = (id: string) => {
+        setExpandedCards(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
+
+    const handleRefresh = () => {
+        fetchLCs(true);
+    };
+
+    const filteredLcs = useMemo(() => {
+        return lcs.filter(lc => {
+            const matchesSearch =
+                (lc.documentaryCreditNumber?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (lc.applicantName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (lc.beneficiaryName?.toLowerCase().includes(searchTerm.toLowerCase()));
+
+            const lcYear = getEffectiveYear(lc);
+
+            const matchesStatus = filterStatus === 'All' || (Array.isArray(lc.status) ? (lc.status as any[]).includes(filterStatus) : (lc.status as any) === filterStatus);
+            const matchesYear = filterYear === 'All' || lcYear === Number(filterYear);
+            const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
+            const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
+            const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
+
+            return matchesSearch && matchesStatus && matchesYear && matchesApplicant && matchesBeneficiary && matchesTerms;
+        }).sort((a, b) => {
+            if (sortBy === 'Amount') {
+                return Number(b.amount || 0) - Number(a.amount || 0);
+            }
+            if (sortBy === 'LC Number') {
+                return (a.documentaryCreditNumber || '').localeCompare(b.documentaryCreditNumber || '');
+            }
+            const dateA = a.createdAt && (a.createdAt as any).toDate ? (a.createdAt as any).toDate() : new Date(a.createdAt || 0);
+            const dateB = b.createdAt && (b.createdAt as any).toDate ? (b.createdAt as any).toDate() : new Date(b.createdAt || 0);
+            return dateB.getTime() - dateA.getTime();
+        });
+    }, [lcs, searchTerm, sortBy, filterStatus, filterYear, filterApplicant, filterBeneficiary, filterTerms, getEffectiveYear]);
+
+    const applicants = useMemo(() => Array.from(new Set(lcs.map(lc => lc.applicantName).filter(Boolean))), [lcs]);
+    const beneficiaries = useMemo(() => Array.from(new Set(lcs.map(lc => lc.beneficiaryName).filter(Boolean))), [lcs]);
+    const years = useMemo(() => Array.from({ length: 2030 - 2015 + 1 }, (_, i) => (2030 - i).toString()), []);
+
+    const yearStats = useMemo(() => {
+        const yearToFilter = filterYear === 'All' ? null : Number(filterYear);
+        const currentDate = new Date();
+        const currentSystemYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth();
+
+        const yearLcs = lcs.filter(lc => {
+            const lcYear = getEffectiveYear(lc);
+            return yearToFilter === null || lcYear === yearToFilter;
+        });
+
+        const validLcEntriesForStats = yearLcs.filter(lc =>
+            typeof lc.amount === 'number' && !isNaN(lc.amount) &&
+            lc.lcIssueDate && isValid(parseISO(lc.lcIssueDate))
+        );
+
+        const totalValue = validLcEntriesForStats.reduce((sum, lc) => sum + (Number(lc.amount) || 0), 0);
+        const uniqueBeneficiaries = new Set(validLcEntriesForStats.map(lc => lc.beneficiaryId).filter(id => !!id && id.trim() !== '')).size;
+        const uniqueApplicants = new Set(validLcEntriesForStats.map(lc => lc.applicantId).filter(id => !!id && id.trim() !== '')).size;
+
+        let monthlyQty = 0;
+        if (yearToFilter === currentSystemYear || yearToFilter === null) {
+            monthlyQty = validLcEntriesForStats.filter(lc => {
+                const issueDate = parseISO(lc.lcIssueDate as string);
+                return isValid(issueDate) && issueDate.getMonth() === currentMonth && issueDate.getFullYear() === currentSystemYear;
+            }).length;
+        }
+
+        const linkedPIs = validLcEntriesForStats.filter(lc => lc.proformaInvoiceNumber).length;
+
+        return {
+            totalOpened: validLcEntriesForStats.length,
+            totalValue,
+            activeBeneficiaries: uniqueBeneficiaries,
+            activeApplicants: uniqueApplicants,
+            linkedPIs,
+            monthlyQty: monthlyQty,
+            monthName: format(currentDate, 'MMMM'),
+            displayYear: filterYear === 'All' ? 'ALL' : filterYear
+        };
+    }, [lcs, filterYear, getEffectiveYear]);
 
     const clearFilters = () => {
         setSearchTerm('');
@@ -423,27 +414,21 @@ export default function MobileTotalLCPage() {
         setSortBy('Issue Date');
     };
 
-    const LCCardSkeleton = () => (
-        <Card className="p-4 rounded-3xl border border-slate-100 shadow-sm bg-white mb-4">
-            <div className="flex justify-between items-start mb-4">
-                <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-6 w-40" />
-                </div>
-                <Skeleton className="h-10 w-10 rounded-full" />
-            </div>
-            <div className="space-y-3">
-                <div className="flex justify-between">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-4 w-32" />
-                </div>
-                <div className="flex gap-2">
-                    <Skeleton className="h-6 w-24 rounded-full" />
-                    <Skeleton className="h-6 w-24 rounded-full" />
-                </div>
-            </div>
-        </Card>
-    );
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.2
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100, damping: 15 } }
+    };
 
     return (
         <TooltipProvider>
@@ -974,6 +959,43 @@ export default function MobileTotalLCPage() {
 
                                         {/* Bottom Action Bar - Dynamic & Scrollable */}
                                         <div className="flex gap-2 relative z-10 overflow-x-auto scrollbar-hide bg-slate-50/50 -mx-5 px-5 py-3 border-t border-slate-100 items-center">
+                                            {/* Final L/C Document (Dynamic) */}
+                                            {lc.finalLcUrl && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <a href={lc.finalLcUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center cursor-pointer">
+                                                            L/C
+                                                        </a>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top">View Final L/C</TooltipContent>
+                                                </Tooltip>
+                                            )}
+
+                                            {/* Final PI Document (Dynamic) */}
+                                            {lc.finalPIUrl && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <a href={lc.finalPIUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center cursor-pointer">
+                                                            PI
+                                                        </a>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top">View Final PI</TooltipContent>
+                                                </Tooltip>
+                                            )}
+
+                                            {/* CFR / Shipment Terms */}
+                                            {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform">
+                                                            {lc.shipmentMode?.includes('Air') ? <Plane className="h-3.5 w-3.5 text-slate-400" /> : <Ship className="h-3.5 w-3.5 text-slate-400" />}
+                                                            {getShipmentTermLabel(lc.shipmentTerms)}
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top">Shipment Terms: {Array.isArray(lc.shipmentTerms) ? lc.shipmentTerms.join(', ') : lc.shipmentTerms}</TooltipContent>
+                                                </Tooltip>
+                                            )}
+
                                             {lc.partialShippingInfo && lc.partialShippingInfo.length > 0 ? (
                                                 lc.partialShippingInfo.map((shipInfo, sIdx) => {
                                                     const shipMode = shipInfo.shipmentMode || [];
@@ -1031,19 +1053,6 @@ export default function MobileTotalLCPage() {
                                                 })
                                             ) : (
                                                 <>
-                                                    {/* CFR / Shipment Terms */}
-                                                    {lc.shipmentTerms && getShipmentTermLabel(lc.shipmentTerms) && (
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <div className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform">
-                                                                    {lc.shipmentMode?.includes('Air') ? <Plane className="h-3.5 w-3.5 text-slate-400" /> : <Ship className="h-3.5 w-3.5 text-slate-400" />}
-                                                                    {getShipmentTermLabel(lc.shipmentTerms)}
-                                                                </div>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="top">Shipment Terms: {Array.isArray(lc.shipmentTerms) ? lc.shipmentTerms.join(', ') : lc.shipmentTerms}</TooltipContent>
-                                                        </Tooltip>
-                                                    )}
-
                                                     {/* ETD/ETA - Popover */}
                                                     <Popover>
                                                         <PopoverTrigger asChild>
@@ -1106,7 +1115,7 @@ export default function MobileTotalLCPage() {
                                             {lc.shippingDocumentsUrl && (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <a href={lc.shippingDocumentsUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center">
+                                                        <a href={lc.shippingDocumentsUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center cursor-pointer">
                                                             DOC
                                                         </a>
                                                     </TooltipTrigger>
@@ -1118,7 +1127,7 @@ export default function MobileTotalLCPage() {
                                             {lc.packingListUrl && (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <a href={lc.packingListUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center">
+                                                        <a href={lc.packingListUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center cursor-pointer">
                                                             PL
                                                         </a>
                                                     </TooltipTrigger>
@@ -1130,7 +1139,7 @@ export default function MobileTotalLCPage() {
                                             {lc.purchaseOrderUrl && (
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <a href={lc.purchaseOrderUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center">
+                                                        <a href={lc.purchaseOrderUrl} target="_blank" rel="noopener noreferrer" className="bg-white border border-slate-200 text-slate-500 px-3 py-2 rounded-xl text-[10px] font-bold whitespace-nowrap uppercase shadow-sm active:scale-95 transition-transform text-center cursor-pointer">
                                                             OCS/PO
                                                         </a>
                                                     </TooltipTrigger>
@@ -1200,7 +1209,6 @@ export default function MobileTotalLCPage() {
                                         "Load More"
                                     )}
                                 </button>
-
                             </div>
                         )}
 
@@ -1211,7 +1219,7 @@ export default function MobileTotalLCPage() {
                         )}
                     </div>
                 </div>
-            </div >
-        </TooltipProvider >
+            </div>
+        </TooltipProvider>
     );
 }
