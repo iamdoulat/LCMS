@@ -4,12 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import Swal from 'sweetalert2';
+import { useToast } from '@/hooks/use-toast';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -43,7 +44,8 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function ClaimCategoryModal({ open, onOpenChange, initialData, onSuccess }: ClaimCategoryModalProps) {
+export function ClaimCategoryModal({ open, onOpenChange, initialData, onSuccess }: ClaimCategoryModalProps): React.JSX.Element {
+    const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<FormValues>({
@@ -82,21 +84,31 @@ export function ClaimCategoryModal({ open, onOpenChange, initialData, onSuccess 
             if (initialData) {
                 // Update
                 await updateDoc(doc(firestore, 'claim_categories', initialData.id), categoryData);
-                Swal.fire("Success", "Category updated successfully", "success");
+                toast({
+                    title: "Success",
+                    description: "Category updated successfully",
+                });
             } else {
                 // Create
                 await addDoc(collection(firestore, 'claim_categories'), {
                     ...categoryData,
                     createdAt: serverTimestamp(),
                 });
-                Swal.fire("Success", "Category added successfully", "success");
+                toast({
+                    title: "Success",
+                    description: "Category added successfully",
+                });
             }
 
             onSuccess();
             onOpenChange(false);
         } catch (error) {
             console.error("Error saving category", error);
-            Swal.fire("Error", "Failed to save category", "error");
+            toast({
+                title: "Error",
+                description: "Failed to save category",
+                variant: "destructive"
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -107,6 +119,9 @@ export function ClaimCategoryModal({ open, onOpenChange, initialData, onSuccess 
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>{initialData ? 'Update Claim Category' : 'Add Claim Category'}</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {initialData ? 'Update the details of this claim category.' : 'Add a new category for claims.'}
+                    </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>

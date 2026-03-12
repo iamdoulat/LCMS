@@ -31,11 +31,13 @@ import {
 import { generateClaimPDF } from '@/components/reports/hr/ClaimReportPDF';
 import { collection, onSnapshot, query, orderBy, deleteDoc, doc, getDoc, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import Swal from 'sweetalert2';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { useToast } from '@/hooks/use-toast';
 import type { HRClaim, HRClaimStatus, ClaimCategory, CompanyProfile, Employee } from '@/types';
 import { hrClaimStatusOptions } from '@/types';
 
 export default function ClaimManagementPage() {
+    const { toast } = useToast();
     const [claims, setClaims] = useState<HRClaim[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -44,6 +46,21 @@ export default function ClaimManagementPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState<string | null>(null);
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+
+    // Confirmation Dialog State
+    const [confirmDelete, setConfirmDelete] = useState<{
+        open: boolean;
+        type: 'claim' | 'category';
+        id: string;
+        title: string;
+        description: string;
+    }>({
+        open: false,
+        type: 'claim',
+        id: '',
+        title: '',
+        description: ''
+    });
 
     // Fetch Company Profile
     React.useEffect(() => {
@@ -88,71 +105,48 @@ export default function ClaimManagementPage() {
         return () => unsubscribe();
     }, []);
 
-    const handleDeleteClaim = async (id: string, claimNo: string) => {
-        Swal.fire({
+    const handleDeleteClaim = (id: string, claimNo: string) => {
+        setConfirmDelete({
+            open: true,
+            type: 'claim',
+            id,
             title: 'Are you sure?',
-            text: `You are about to delete claim ${claimNo}. This action cannot be undone!`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it!'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await deleteDoc(doc(firestore, 'hr_claims', id));
-                    Swal.fire({
-                        title: 'Deleted!',
-                        text: 'Claim has been deleted.',
-                        icon: 'success',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                } catch (error) {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Failed to delete claim.',
-                        icon: 'error',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                }
-            }
-        })
+            description: `You are about to delete claim ${claimNo}. This action cannot be undone!`
+        });
     };
 
-    const handleDeleteCategory = async (id: string) => {
-        Swal.fire({
+    const handleDeleteCategory = (id: string, name: string) => {
+        setConfirmDelete({
+            open: true,
+            type: 'category',
+            id,
             title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    await deleteDoc(doc(firestore, 'claim_categories', id));
-                    Swal.fire({
-                        title: 'Deleted!',
-                        text: 'Category has been deleted.',
-                        icon: 'success',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                } catch (error) {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Failed to delete category.',
-                        icon: 'error',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                }
-            }
-        })
+            description: `You are about to delete category "${name}". You won't be able to revert this!`
+        });
     };
+
+    const handleConfirmDelete = async () => {
+        const { id, type } = confirmDelete;
+        try {
+            const collectionName = type === 'claim' ? 'hr_claims' : 'claim_categories';
+            await deleteDoc(doc(firestore, collectionName, id));
+            
+            toast({
+                title: "Deleted!",
+                description: `${type === 'claim' ? 'Claim' : 'Category'} has been deleted successfully.`,
+            });
+        } catch (error) {
+            console.error(`Error deleting ${type}:`, error);
+            toast({
+                title: "Error!",
+                description: `Failed to delete ${type}.`,
+                variant: "destructive"
+            });
+        } finally {
+            setConfirmDelete(prev => ({ ...prev, open: false }));
+        }
+    };
+
 
     const filteredCategories = categories.filter(c => c.name.toLowerCase().includes(categorySearch.toLowerCase()));
 
@@ -360,8 +354,7 @@ export default function ClaimManagementPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>Action</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem onSelect={(e) => {
-                                                                e.preventDefault();
+                                                            <DropdownMenuItem onSelect={() => {
                                                                 setEditingClaim(claim);
                                                                 setTimeout(() => setIsEditModalOpen(true), 100);
                                                             }}>
@@ -412,16 +405,14 @@ export default function ClaimManagementPage() {
                 </Card>
 
                 {/* Edit Modal (Hidden Trigger) */}
-                {isEditModalOpen && (
-                    <AddClaimModal
-                        open={isEditModalOpen}
-                        setOpen={setIsEditModalOpen}
-                        editingClaim={editingClaim || undefined}
-                        onSuccess={() => {
-                            setEditingClaim(null);
-                        }}
-                    />
-                )}
+                <AddClaimModal
+                    open={isEditModalOpen}
+                    setOpen={setIsEditModalOpen}
+                    editingClaim={editingClaim || undefined}
+                    onSuccess={() => {
+                        setEditingClaim(null);
+                    }}
+                />
             </div>
 
             {/* Claim Categories Section */}
@@ -490,7 +481,7 @@ export default function ClaimManagementPage() {
                                                             variant="ghost"
                                                             size="icon"
                                                             className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                            onClick={() => handleDeleteCategory(cat.id)}
+                                                            onClick={() => handleDeleteCategory(cat.id, cat.name)}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
@@ -516,6 +507,15 @@ export default function ClaimManagementPage() {
                 onSuccess={() => {
                     // Real-time listener handles refresh
                 }}
+            />
+
+            <ConfirmDialog
+                isOpen={confirmDelete.open}
+                onOpenChange={(open) => setConfirmDelete(prev => ({ ...prev, open }))}
+                title={confirmDelete.title}
+                description={confirmDelete.description}
+                onConfirm={handleConfirmDelete}
+                variant="destructive"
             />
         </div>
     );

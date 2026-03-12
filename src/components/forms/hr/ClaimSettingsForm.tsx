@@ -19,7 +19,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
-import Swal from 'sweetalert2';
+import { useToast } from '@/hooks/use-toast';
 import { Loader2, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -32,6 +32,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function ClaimSettingsForm() {
+    const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -77,16 +78,17 @@ export function ClaimSettingsForm() {
                 updatedAt: serverTimestamp(),
             }, { merge: true });
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Saved',
-                text: 'Claim settings updated successfully',
-                timer: 1500,
-                showConfirmButton: false
+            toast({
+                title: "Saved",
+                description: "Claim settings updated successfully",
             });
         } catch (error) {
             console.error("Error saving settings:", error);
-            Swal.fire("Error", "Failed to update settings", "error");
+            toast({
+                title: "Error",
+                description: "Failed to update settings",
+                variant: "destructive"
+            });
         } finally {
             setIsSaving(false);
         }

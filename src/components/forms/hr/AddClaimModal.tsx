@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import Swal from 'sweetalert2';
+import { useToast } from '@/hooks/use-toast';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, updateDoc, doc } from 'firebase/firestore';
 import { uploadFile } from '@/lib/storage/storage';
@@ -14,6 +14,7 @@ import { sendPushNotification } from '@/lib/notifications';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -99,7 +100,7 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
     const [isUploading, setIsUploading] = useState(false);
     const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
 
-    // Forms
+    const { toast } = useToast();
     const form = useForm<ClaimFormValues>({
         resolver: zodResolver(claimFormSchema),
         defaultValues: {
@@ -281,13 +282,9 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
             if (editingDetailId) {
                 setDetails(prev => prev.map(d => d.id === editingDetailId ? detailData : d));
                 setEditingDetailId(null);
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Detail Updated',
-                    toast: true,
-                    position: 'top-end',
-                    timer: 2000,
-                    showConfirmButton: false
+                toast({
+                    title: "Detail Updated",
+                    description: "Claim detail has been updated successfully.",
                 });
             } else {
                 setDetails(prev => [...prev, detailData]);
@@ -307,12 +304,10 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
         } catch (error) {
             console.error("Error adding/updating detail", error);
             setIsUploading(false);
-            Swal.fire({
+            toast({
                 title: "Error",
-                text: "Failed to save claim detail",
-                icon: "error",
-                timer: 3000,
-                showConfirmButton: false
+                description: "Failed to save claim detail",
+                variant: "destructive"
             });
         }
     };
@@ -321,12 +316,10 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
 
     const onSubmit = async (data: ClaimFormValues) => {
         if (details.length === 0) {
-            Swal.fire({
+            toast({
                 title: "Warning",
-                text: "Please add at least one claim detail.",
-                icon: "warning",
-                timer: 3000,
-                showConfirmButton: false
+                description: "Please add at least one claim detail.",
+                variant: "destructive"
             });
             return;
         }
@@ -374,24 +367,18 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                     });
                 }
 
-                Swal.fire({
+                toast({
                     title: "Success",
-                    text: "Claim updated successfully!",
-                    icon: "success",
-                    timer: 3000,
-                    showConfirmButton: false
+                    description: "Claim updated successfully!",
                 });
             } else {
                 await addDoc(collection(firestore, 'hr_claims'), {
                     ...claimData,
                     createdAt: serverTimestamp(),
                 });
-                Swal.fire({
+                toast({
                     title: "Success",
-                    text: "Claim added successfully!",
-                    icon: "success",
-                    timer: 3000,
-                    showConfirmButton: false
+                    description: "Claim added successfully!",
                 });
             }
 
@@ -402,7 +389,11 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
 
         } catch (error) {
             console.error("Error saving claim", error);
-            Swal.fire("Error", "Failed to save claim.", "error");
+            toast({
+                title: "Error",
+                description: "Failed to save claim.",
+                variant: "destructive"
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -418,6 +409,9 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
                 <DialogHeader>
                     <DialogTitle>{editingClaim ? 'Edit Claim' : 'New Claim'}</DialogTitle>
+                    <DialogDescription className="sr-only">
+                        {editingClaim ? 'Edit the details of the selected claim.' : 'Fill in the information to create a new claim.'}
+                    </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>
@@ -679,14 +673,10 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                                     <Button
                                         type="button"
                                         onClick={detailForm.handleSubmit(handleAddDetail, () => {
-                                            Swal.fire({
-                                                icon: 'error',
-                                                title: 'Validation Error',
-                                                text: 'Please fill all required fields in Claim Details correctly.',
-                                                toast: true,
-                                                position: 'top-end',
-                                                timer: 3000,
-                                                showConfirmButton: false
+                                            toast({
+                                                title: "Validation Error",
+                                                description: "Please fill all required fields in Claim Details correctly.",
+                                                variant: "destructive"
                                             });
                                         })}
                                         disabled={isUploading}
@@ -780,14 +770,10 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                                     const errors = form.formState.errors;
                                     if (Object.keys(errors).length > 0) {
                                         const errorFields = Object.keys(errors).map(key => key).join(", ");
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'Check Required Fields',
-                                            text: `Please check the following fields: ${errorFields}`,
-                                            toast: true,
-                                            position: 'top-end',
-                                            timer: 4000,
-                                            showConfirmButton: false
+                                        toast({
+                                            title: "Check Required Fields",
+                                            description: `Please check the following fields: ${errorFields}`,
+                                            variant: "destructive"
                                         });
                                     }
                                 }}

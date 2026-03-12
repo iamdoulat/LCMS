@@ -13,7 +13,8 @@ import { HRClaim, Employee } from '@/types';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import Swal from 'sweetalert2';
+import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import {
     Sheet,
     SheetContent,
@@ -21,11 +22,19 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { generateClaimPDF } from '@/components/reports/hr/ClaimReportPDF';
 
 export default function ClaimListPage() {
     const router = useRouter();
-    const { user, companyName, address, invoiceLogoUrl, companyLogoUrl } = useAuth();
+    const { user, companyName, address, invoiceLogoUrl, companyLogoUrl, userRole } = useAuth();
+    const { toast } = useToast();
     const { supervisedEmployeeIds, isSupervisor } = useSupervisorCheck(user?.email);
     const [activeTab, setActiveTab] = useState<'My Claims' | 'Claim Requests'>('My Claims');
     const [claims, setClaims] = useState<HRClaim[]>([]);
@@ -33,7 +42,10 @@ export default function ClaimListPage() {
     const [statusFilter, setStatusFilter] = useState<string>('All');
     const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
     const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
-    const [displayLimit, setDisplayLimit] = useState(12);
+    const [displayLimit, setDisplayLimit] = useState(10);
+    const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string; claimNo: string }>({ open: false, id: '', claimNo: '' });
+    const [confirmReject, setConfirmReject] = useState<{ open: boolean; id: string; claimNo: string }>({ open: false, id: '', claimNo: '' });
+    const [rejectionReason, setRejectionReason] = useState('');
 
     const filteredClaims = React.useMemo(() => {
         let result = claims;
@@ -67,6 +79,8 @@ export default function ClaimListPage() {
     React.useEffect(() => {
         if (!user) return;
 
+        const isAdmin = userRole?.some(role => ["Super Admin", "Admin", "HR"].includes(role));
+
         let q;
         if (activeTab === 'My Claims') {
             q = query(
@@ -75,22 +89,45 @@ export default function ClaimListPage() {
             );
         } else {
             // "Claim Requests" tab for supervisors
-            if (supervisedEmployeeIds.length === 0) {
-                setClaims([]);
-                setLoading(false);
-                return;
+            if (isAdmin) {
+                // Admins see everyone
+                q = query(
+                    collection(firestore, 'hr_claims'),
+                    orderBy('createdAt', 'desc'),
+                    limit(50) // Initial broad fetch
+                );
+            } else {
+                if (supervisedEmployeeIds.length === 0) {
+                    setClaims([]);
+                    setLoading(false);
+                    return;
+                }
+
+                if (supervisedEmployeeIds.length > 30) {
+                    // Firestore "in" limit is 30. If more, we fetch all and filter in memory, 
+                    // or for simplicity here, fetch recent claims and filter.
+                    q = query(
+                        collection(firestore, 'hr_claims'),
+                        orderBy('createdAt', 'desc'),
+                        limit(100)
+                    );
+                } else {
+                    q = query(
+                        collection(firestore, 'hr_claims'),
+                        where('employeeId', 'in', supervisedEmployeeIds)
+                    );
+                }
             }
-            // Firestore "in" query limited to 10/30 IDs usually, but let's assume team size is small or use chunks if needed.
-            // For now, simple "in" query.
-            q = query(
-                collection(firestore, 'hr_claims'),
-                where('employeeId', 'in', supervisedEmployeeIds)
-            );
         }
 
         setLoading(true);
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HRClaim));
+            let items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HRClaim));
+
+            if (activeTab === 'Claim Requests' && !isAdmin && supervisedEmployeeIds.length > 30) {
+                items = items.filter(item => supervisedEmployeeIds.includes(item.employeeId));
+            }
+
             items.sort((a, b) => {
                 const dateA = a.createdAt?.seconds || 0;
                 const dateB = b.createdAt?.seconds || 0;
@@ -98,10 +135,18 @@ export default function ClaimListPage() {
             });
             setClaims(items);
             setLoading(false);
+        }, (error) => {
+            console.error("Error fetching claims:", error);
+            toast({
+                title: "Error",
+                description: "Failed to load claims. Please try again.",
+                variant: "destructive"
+            });
+            setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [user, activeTab, supervisedEmployeeIds]);
+    }, [user, activeTab, supervisedEmployeeIds, userRole, toast]);
 
     // Swipe Handling
     const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -184,33 +229,9 @@ export default function ClaimListPage() {
                         </Sheet>
                         <button
                             onClick={() => {
-                                // For now, simple date filter logic or show a prompt
-                                // In a real app, use a proper Mobile Date Range Picker
-                                Swal.fire({
-                                    title: 'Filter by Date',
-                                    html: `
-                                        <div class="flex flex-col gap-3">
-                                            <input type="date" id="from-date" class="swal2-input m-0 w-full" placeholder="From Date">
-                                            <input type="date" id="to-date" class="swal2-input m-0 w-full" placeholder="To Date">
-                                        </div>
-                                    `,
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Apply Filter',
-                                    confirmButtonColor: '#2563eb',
-                                    preConfirm: () => {
-                                        const from = (document.getElementById('from-date') as HTMLInputElement).value;
-                                        const to = (document.getElementById('to-date') as HTMLInputElement).value;
-                                        return { from, to };
-                                    }
-                                }).then((result) => {
-                                    if (result.isConfirmed) {
-                                        const { from, to } = result.value;
-                                        if (from && to) {
-                                            setDateRange({ from: new Date(from), to: new Date(to) });
-                                        } else {
-                                            setDateRange({ from: null, to: null });
-                                        }
-                                    }
+                                toast({
+                                    title: "Date Filter",
+                                    description: "Please use the dashboard for advanced date filtering.",
                                 });
                             }}
                             className="p-2 text-white hover:bg-white/10 rounded-full transition-colors relative shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
@@ -276,7 +297,7 @@ export default function ClaimListPage() {
 
 
                 {/* Main Content */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 pb-[120px] overscroll-contain">
+                <div className="flex-1 overflow-y-auto px-5 py-4 pb-[160px] overscroll-contain">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400">
                             <Loader2 className="h-8 w-8 animate-spin mb-2" />
@@ -313,33 +334,36 @@ export default function ClaimListPage() {
                                                     <button
                                                         onClick={async (e) => {
                                                             e.stopPropagation();
-                                                            Swal.fire({
-                                                                title: 'Preparing PDF...',
-                                                                text: 'Please wait while we generate your report.',
-                                                                allowOutsideClick: false,
-                                                                didOpen: () => {
-                                                                    Swal.showLoading();
+                                                                toast({
+                                                                    title: "PDF",
+                                                                    description: "Preparing PDF Report...",
+                                                                });
+
+                                                                try {
+                                                                    const companyProfile = {
+                                                                        companyName: companyName || '',
+                                                                        address: address || '',
+                                                                        companyLogoUrl: companyLogoUrl || '',
+                                                                        invoiceLogoUrl: invoiceLogoUrl || ''
+                                                                    };
+
+                                                                    // Fetch full employee data for better report
+                                                                    const empSnap = await getDoc(doc(firestore, 'employees', claim.employeeId));
+                                                                    const employee = empSnap.exists() ? empSnap.data() as Employee : undefined;
+
+                                                                    await generateClaimPDF(claim, employee, companyProfile, true);
+                                                                    toast({
+                                                                        title: "Success",
+                                                                        description: "PDF Report generated.",
+                                                                    });
+                                                                } catch (err) {
+                                                                    console.error("PDF download failed", err);
+                                                                    toast({
+                                                                        title: "Error",
+                                                                        description: "Failed to generate PDF report",
+                                                                        variant: "destructive"
+                                                                    });
                                                                 }
-                                                            });
-
-                                                            try {
-                                                                const companyProfile = {
-                                                                    companyName: companyName || '',
-                                                                    address: address || '',
-                                                                    companyLogoUrl: companyLogoUrl || '',
-                                                                    invoiceLogoUrl: invoiceLogoUrl || ''
-                                                                };
-
-                                                                // Fetch full employee data for better report
-                                                                const empSnap = await getDoc(doc(firestore, 'employees', claim.employeeId));
-                                                                const employee = empSnap.exists() ? empSnap.data() as Employee : undefined;
-
-                                                                await generateClaimPDF(claim, employee, companyProfile, true);
-                                                                Swal.close();
-                                                            } catch (err) {
-                                                                console.error("PDF download failed", err);
-                                                                Swal.fire('Error', 'Failed to generate PDF report', 'error');
-                                                            }
                                                         }}
                                                         className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-all border border-blue-100/50 shadow-sm flex items-center gap-1"
                                                         title="Download Double Page PDF"
@@ -417,32 +441,10 @@ export default function ClaimListPage() {
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => {
-                                                    Swal.fire({
-                                                        title: 'Approve Claim?',
-                                                        text: `Approve claim ${claim.claimNo} for BDT ${claim.claimAmount}?`,
-                                                        icon: 'question',
-                                                        showCancelButton: true,
-                                                        confirmButtonText: 'Yes, Approve',
-                                                        confirmButtonColor: '#059669',
-                                                        cancelButtonColor: '#ef4444'
-                                                    }).then(async (result) => {
-                                                        if (result.isConfirmed) {
-                                                            try {
-                                                                await updateDoc(doc(firestore, 'hr_claims', claim.id), {
-                                                                    status: 'Approved',
-                                                                    updatedAt: Timestamp.now(),
-                                                                    approvedAmount: claim.claimAmount // Default to full amount
-                                                                });
-                                                                Swal.fire({
-                                                                    title: 'Approved!',
-                                                                    icon: 'success',
-                                                                    timer: 2000,
-                                                                    showConfirmButton: false
-                                                                });
-                                                            } catch (err) {
-                                                                Swal.fire('Error', 'Failed to update claim status', 'error');
-                                                            }
-                                                        }
+                                                    setConfirmDelete({
+                                                        open: true,
+                                                        id: claim.id,
+                                                        claimNo: claim.claimNo
                                                     });
                                                 }}
                                                 className="flex-1 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 rounded-xl h-10 font-bold"
@@ -454,41 +456,12 @@ export default function ClaimListPage() {
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => {
-                                                    Swal.fire({
-                                                        title: 'Reject Claim?',
-                                                        text: `Reject claim ${claim.claimNo}?`,
-                                                        icon: 'warning',
-                                                        input: 'textarea',
-                                                        inputPlaceholder: 'Reason for rejection...',
-                                                        showCancelButton: true,
-                                                        confirmButtonText: 'Yes, Reject',
-                                                        confirmButtonColor: '#ef4444',
-                                                        preConfirm: (reason) => {
-                                                            if (!reason) {
-                                                                Swal.showValidationMessage('Please provide a reason');
-                                                                return false;
-                                                            }
-                                                            return reason;
-                                                        }
-                                                    }).then(async (result) => {
-                                                        if (result.isConfirmed) {
-                                                            try {
-                                                                await updateDoc(doc(firestore, 'hr_claims', claim.id), {
-                                                                    status: 'Rejected',
-                                                                    updatedAt: Timestamp.now(),
-                                                                    rejectionReason: result.value
-                                                                });
-                                                                Swal.fire({
-                                                                    title: 'Rejected!',
-                                                                    icon: 'info',
-                                                                    timer: 2000,
-                                                                    showConfirmButton: false
-                                                                });
-                                                            } catch (err) {
-                                                                Swal.fire('Error', 'Failed to reject claim', 'error');
-                                                            }
-                                                        }
+                                                    setConfirmReject({
+                                                        open: true,
+                                                        id: claim.id,
+                                                        claimNo: claim.claimNo
                                                     });
+                                                    setRejectionReason('');
                                                 }}
                                                 className="flex-1 bg-red-50 border-red-200 text-red-700 hover:bg-red-100 rounded-xl h-10 font-bold"
                                             >
@@ -502,9 +475,9 @@ export default function ClaimListPage() {
 
                             {/* Load More Button */}
                             {filteredClaims.length > displayLimit && (
-                                <div className="pt-2 pb-6 flex justify-center">
+                                <div className="pt-2 pb-12 flex justify-center">
                                     <Button
-                                        onClick={() => setDisplayLimit(prev => prev + 12)}
+                                        onClick={() => setDisplayLimit(prev => prev + 10)}
                                         className="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold rounded-2xl px-10 h-12 shadow-sm"
                                     >
                                         Load More
@@ -514,6 +487,95 @@ export default function ClaimListPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Confirm Dialog */}
+                <ConfirmDialog
+                    isOpen={confirmDelete.open}
+                    onOpenChange={(open) => setConfirmDelete(prev => ({ ...prev, open }))}
+                    title="Approve Claim?"
+                    description={`Are you sure you want to approve claim ${confirmDelete.claimNo}?`}
+                    onConfirm={async () => {
+                        try {
+                            await updateDoc(doc(firestore, 'hr_claims', confirmDelete.id), {
+                                status: 'Approved',
+                                updatedAt: Timestamp.now(),
+                                approvedAmount: claims.find(c => c.id === confirmDelete.id)?.claimAmount || 0
+                            });
+                            toast({
+                                title: "Approved!",
+                                description: "Claim has been approved successfully.",
+                            });
+                        } catch (err) {
+                            toast({
+                                title: "Error",
+                                description: "Failed to update claim status",
+                                variant: "destructive"
+                            });
+                        }
+                    }}
+                />
+
+                {/* Reject Dialog */}
+                <Dialog open={confirmReject.open} onOpenChange={(open) => setConfirmReject(prev => ({ ...prev, open }))}>
+                    <DialogContent className="sm:max-w-md bg-white rounded-3xl mx-4">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl font-bold">Reject Claim</DialogTitle>
+                            <DialogDescription>
+                                Please provide a reason for rejecting claim {confirmReject.claimNo}.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <textarea
+                                className="w-full h-32 p-3 text-sm border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                                placeholder="Reason for rejection..."
+                                value={rejectionReason}
+                                onChange={(e) => setRejectionReason(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1 rounded-2xl h-12 font-bold"
+                                onClick={() => setConfirmReject(prev => ({ ...prev, open: false }))}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                className="flex-1 rounded-2xl h-12 font-bold bg-red-600 hover:bg-red-700 text-white"
+                                onClick={async () => {
+                                    if (!rejectionReason.trim()) {
+                                        toast({
+                                            title: "Error",
+                                            description: "Please provide a reason for rejection.",
+                                            variant: "destructive"
+                                        });
+                                        return;
+                                    }
+                                    try {
+                                        await updateDoc(doc(firestore, 'hr_claims', confirmReject.id), {
+                                            status: 'Rejected',
+                                            updatedAt: Timestamp.now(),
+                                            rejectionReason: rejectionReason
+                                        });
+                                        setConfirmReject(prev => ({ ...prev, open: false }));
+                                        toast({
+                                            title: "Rejected",
+                                            description: "Claim has been rejected.",
+                                        });
+                                    } catch (err) {
+                                        toast({
+                                            title: "Error",
+                                            description: "Failed to reject claim",
+                                            variant: "destructive"
+                                        });
+                                    }
+                                }}
+                            >
+                                Reject
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
 
                 {/* Floating Action Button */}
                 {activeTab === 'My Claims' && (
