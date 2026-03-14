@@ -47,6 +47,11 @@ const Header = ({ companyProfile }: { companyProfile?: CompanyProfile }) => (
 
 // Compact Layout (for Double Report) - Matches uploaded_image_0
 const CompactTemplate = ({ claim, employee, companyProfile, title }: { claim: HRClaim, employee?: Employee, companyProfile?: CompanyProfile, title: string }) => {
+    const allDescriptions = [
+        claim.description,
+        ...(claim.details || []).map(d => d.description)
+    ].filter(Boolean).filter(d => d && d.trim().length > 0).join(', ');
+
     return (
         <div className="bg-white p-6 border-b-2 border-dashed last:border-0 relative" style={{ width: '210mm', minHeight: '148.5mm' }}>
             <div className="absolute top-2 right-6 text-[9px] text-gray-400 italic">{title}</div>
@@ -89,7 +94,7 @@ const CompactTemplate = ({ claim, employee, companyProfile, title }: { claim: HR
                     </tr>
                     <tr>
                         <td className="border border-gray-300 p-1 font-bold bg-gray-50">Description</td>
-                        <td className="border border-gray-300 p-1">{claim.description || '-'}</td>
+                        <td className="border border-gray-300 p-1">{allDescriptions || '-'}</td>
                     </tr>
                     <tr>
                         <td className="border border-gray-300 p-1 font-bold bg-gray-50">Claim Date</td>
@@ -116,8 +121,12 @@ const CompactTemplate = ({ claim, employee, companyProfile, title }: { claim: HR
                         <td className="border border-gray-300 p-1">{claim.advancedAmount?.toFixed(2) || '0.00'}</td>
                     </tr>
                     <tr>
+                        <td className="border border-gray-300 p-1 font-bold text-primary bg-primary/5">Remaining Amount</td>
+                        <td className="border border-gray-300 p-1 font-bold text-primary">{claim.remainingAmount?.toFixed(2) || '0.00'}</td>
+                    </tr>
+                    <tr>
                         <td className="border border-gray-300 p-1 font-bold bg-gray-50">Approved By</td>
-                        <td className="border border-gray-300 p-1">-</td>
+                        <td className="border border-gray-300 p-1">{claim.approvedByName || '-'}</td>
                     </tr>
                 </tbody>
             </table>
@@ -135,8 +144,12 @@ const CompactTemplate = ({ claim, employee, companyProfile, title }: { claim: HR
     );
 }
 
-// Comprehensive Layout (for Single Report) - Matches uploaded_image_1
 const ComprehensiveTemplate = ({ claim, employee, companyProfile }: { claim: HRClaim, employee?: Employee, companyProfile?: CompanyProfile }) => {
+    const allDescriptions = [
+        claim.description,
+        ...(claim.details || []).map(d => d.description)
+    ].filter(Boolean).filter(d => d && d.trim().length > 0).join(', ');
+
     return (
         <div className="bg-white p-6" style={{ width: '148mm', minHeight: '210mm' }}>
             <Header companyProfile={companyProfile} />
@@ -173,7 +186,7 @@ const ComprehensiveTemplate = ({ claim, employee, companyProfile }: { claim: HRC
                         <td className="border border-gray-300 p-1 font-bold bg-gray-50">Claim Amount</td>
                         <td className="border border-gray-300 p-1">{claim.claimAmount?.toFixed(2)}</td>
                         <td className="border border-gray-300 p-1 font-bold bg-gray-50">Description</td>
-                        <td className="border border-gray-300 p-1">{claim.description || '-'}</td>
+                        <td className="border border-gray-300 p-1">{allDescriptions || '-'}</td>
                     </tr>
                 </tbody>
             </table>
@@ -216,6 +229,7 @@ const ComprehensiveTemplate = ({ claim, employee, companyProfile }: { claim: HRC
                         <tr><td className="border border-gray-300 p-0.5 font-bold bg-gray-50">Sanctioned</td><td className="border border-gray-300 p-0.5 text-right">{claim.sanctionedAmount?.toFixed(2) || '0.00'}</td></tr>
                         <tr><td className="border border-gray-300 p-0.5 font-bold bg-gray-50">Advance</td><td className="border border-gray-300 p-0.5 text-right text-orange-600">{claim.advancedAmount?.toFixed(2) || '0.00'}</td></tr>
                         <tr className="bg-primary/5"><td className="border border-gray-300 p-1 font-bold text-primary">Remaining</td><td className="border border-gray-300 p-1 text-right font-bold text-primary">{claim.remainingAmount?.toFixed(2) || '0.00'}</td></tr>
+                        <tr><td className="border border-gray-300 p-0.5 font-bold bg-gray-50">Approved By</td><td className="border border-gray-300 p-0.5 text-right">{claim.approvedByName || '-'}</td></tr>
                     </tbody>
                 </table>
             </div>

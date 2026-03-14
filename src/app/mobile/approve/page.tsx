@@ -732,7 +732,7 @@ export default function ApproveApplicationsPage() {
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-bold text-[#0a1e60]">YOU</span>
                                         <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-[8px] h-4 py-0 px-1.5 font-bold uppercase">
-                                            Under Processing
+                                            Pending
                                         </Badge>
                                     </div>
                                     <p className="text-[9px] text-slate-400">Your direct supervisor decision is required</p>
@@ -837,7 +837,7 @@ export default function ApproveApplicationsPage() {
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-bold text-[#0a1e60]">YOU</span>
                                         <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-[8px] h-4 py-0 px-1.5 font-bold uppercase">
-                                            Under Processing
+                                            Pending
                                         </Badge>
                                     </div>
                                     <p className="text-[9px] text-slate-400">Your supervisor decision is required</p>

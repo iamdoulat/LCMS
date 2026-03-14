@@ -331,7 +331,7 @@ export default function ClaimManagementPage() {
                                                 <TableCell className="text-right">{claim.advancedAmount || 0}</TableCell>
                                                 <TableCell className="text-right font-semibold">{claim.claimAmount || 0}</TableCell>
                                                 <TableCell className="text-right text-green-600 font-semibold">{claim.approvedAmount || 0}</TableCell>
-                                                <TableCell className="text-right text-red-600">{claim.remainingAmount || 0}</TableCell>
+                                                <TableCell className="text-right text-red-600">{(claim.approvedAmount || 0) - (claim.sanctionedAmount || 0)}</TableCell>
                                                 <TableCell className="text-right text-purple-600">{claim.sanctionedAmount || 0}</TableCell>
                                                 <TableCell className="text-center">
                                                     <Badge className={cn(

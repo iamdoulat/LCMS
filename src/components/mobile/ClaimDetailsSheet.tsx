@@ -16,15 +16,33 @@ interface ClaimDetailsSheetProps {
     onClose: () => void;
     onSave: (detail: ClaimDetail) => void;
     category: { id: string, name: string } | null;
+    initialData?: ClaimDetail | null;
 }
 
-export function ClaimDetailsSheet({ isOpen, onClose, onSave, category }: ClaimDetailsSheetProps) {
-    const [amount, setAmount] = useState<number>(0);
+export function ClaimDetailsSheet({ isOpen, onClose, onSave, category, initialData }: ClaimDetailsSheetProps) {
+    const [amount, setAmount] = useState<number | string>('');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [description, setDescription] = useState('');
     const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+
+    React.useEffect(() => {
+        if (isOpen && initialData) {
+            setAmount(initialData.amount);
+            setFromDate(initialData.fromDate);
+            setToDate(initialData.toDate);
+            setDescription(initialData.description || '');
+            // We don't populate attachmentFile here since it's a File object, 
+            // but the URL remains in initialData.attachmentUrl
+        } else if (isOpen && !initialData) {
+            setAmount('');
+            setFromDate('');
+            setToDate('');
+            setDescription('');
+            setAttachmentFile(null);
+        }
+    }, [isOpen, initialData]);
 
     if (!isOpen) return null;
 
@@ -53,7 +71,7 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category }: ClaimDe
                         <Input
                             type="number"
                             value={amount}
-                            onChange={(e) => setAmount(Number(e.target.value))}
+                            onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
                             className="h-12 bg-white border-slate-200 rounded-xl text-lg font-bold text-slate-800 focus-visible:ring-blue-500"
                         />
                     </div>
@@ -139,20 +157,20 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category }: ClaimDe
                                 }
 
                                 onSave({
-                                    id: crypto.randomUUID(),
+                                    id: initialData?.id || crypto.randomUUID(),
                                     categoryId: category.id,
                                     categoryName: category.name,
-                                    amount: amount,
+                                    amount: Number(amount) || 0,
                                     fromDate: fromDate,
                                     toDate: toDate,
                                     description: description,
-                                    attachmentUrl: downloadUrl
+                                    attachmentUrl: downloadUrl || initialData?.attachmentUrl || ''
                                 });
 
                                 // Show Toast
                                 Swal.fire({
-                                    title: "Added!",
-                                    text: "Item added to claim list.",
+                                    title: initialData ? "Updated!" : "Added!",
+                                    text: initialData ? "Item updated." : "Item added to claim list.",
                                     icon: "success",
                                     toast: true,
                                     position: 'top-end',
@@ -162,7 +180,7 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category }: ClaimDe
                                 });
 
                                 // Reset and close
-                                setAmount(0);
+                                setAmount('');
                                 setFromDate('');
                                 setToDate('');
                                 setDescription('');
@@ -186,7 +204,7 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category }: ClaimDe
                         disabled={isUploading || !amount || !fromDate || !toDate}
                         className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-200"
                     >
-                        {isUploading ? <Loader2 className="animate-spin h-5 w-5" /> : "Add Item"}
+                        {isUploading ? <Loader2 className="animate-spin h-5 w-5" /> : initialData ? "Update Item" : "Add Item"}
                     </Button>
                 </div>
             </DialogContent>

@@ -238,6 +238,19 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
         }
     }, [selectedCategoryId, categories, detailForm]);
 
+    // Auto-fill approvedAmount when status becomes 'Approved'
+    const currentStatus = form.watch('status');
+    useEffect(() => {
+        if (currentStatus === 'Approved' && details.length > 0) {
+            setDetails(prev => prev.map(detail => {
+                if (!detail.approvedAmount || detail.approvedAmount === 0) {
+                    return { ...detail, approvedAmount: detail.amount };
+                }
+                return detail;
+            }));
+        }
+    }, [currentStatus]);
+
     const handleEditDetail = (detail: ClaimDetail) => {
         setEditingDetailId(detail.id);
         detailForm.reset({
@@ -347,7 +360,7 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                 approvedAmount: details.reduce((sum, d) => sum + (d.approvedAmount || 0), 0),
                 sanctionedAmount: data.sanctionedAmount || 0,
                 claimAmount: calculateTotal(),
-                remainingAmount: calculateTotal() - details.reduce((sum, d) => sum + (d.approvedAmount || 0), 0),
+                remainingAmount: details.reduce((sum, d) => sum + (d.approvedAmount || 0), 0) - (data.sanctionedAmount || 0),
                 claimCategories: Array.from(new Set(details.map(d => d.categoryName || 'Unknown'))),
                 categoryName: details.length > 0 ? details[0].categoryName : '',
                 details: details,
