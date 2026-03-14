@@ -10,6 +10,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, deleteDoc, Timestamp, limit, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { HRClaim, Employee } from '@/types';
+import { sendPushNotification } from '@/lib/notifications';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -698,6 +699,18 @@ export default function ClaimListPage() {
                                 approvedAmount: claims.find(c => c.id === confirmApprove.id)?.claimAmount || 0,
                                 approvedByName: user?.displayName || 'Unknown'
                             });
+
+                            // Send Push Notification
+                            const claim = claims.find(c => c.id === confirmApprove.id);
+                            if (claim) {
+                                sendPushNotification({
+                                    title: "Claim Approved",
+                                    body: `Your claim ${claim.claimNo} has been approved.`,
+                                    userIds: [claim.employeeId],
+                                    url: '/mobile/claim'
+                                });
+                            }
+
                             toast({
                                 title: "Approved!",
                                 description: "Claim has been approved successfully.",
@@ -783,6 +796,18 @@ export default function ClaimListPage() {
                                             updatedAt: Timestamp.now(),
                                             rejectionReason: rejectionReason
                                         });
+
+                                        // Send Push Notification
+                                        const claim = claims.find(c => c.id === confirmReject.id);
+                                        if (claim) {
+                                            sendPushNotification({
+                                                title: "Claim Rejected",
+                                                body: `Your claim ${claim.claimNo} has been rejected by supervisor.`,
+                                                userIds: [claim.employeeId],
+                                                url: '/mobile/claim'
+                                            });
+                                        }
+
                                         setConfirmReject(prev => ({ ...prev, open: false }));
                                         toast({
                                             title: "Rejected",

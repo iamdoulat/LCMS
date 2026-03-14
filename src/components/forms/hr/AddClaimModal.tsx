@@ -376,7 +376,7 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                         title: `Claim ${data.status}`,
                         body: `Your claim ${claimNo} has been ${data.status.toLowerCase()}.`,
                         userIds: [data.employeeId],
-                        url: '/mobile/dashboard' // Adjust as needed
+                        url: '/mobile/claim' // Adjusted to specific claim page
                     });
                 }
 

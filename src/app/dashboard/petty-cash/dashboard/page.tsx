@@ -4,11 +4,11 @@
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon, ListChecks, Package } from 'lucide-react';
+import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon, ListChecks, Package, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
-import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument, SaleStatus, ItemDocument } from '@/types';
+import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument, SaleStatus, ItemDocument, HRClaim } from '@/types';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid, getMonth } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,14 @@ interface PettyCashStats {
     thisMonthUnpaidInvoices: number;
     totalStockItems: number;
     thisMonthItemsSold: number;
+    thisYearClaimed: number;
+    thisMonthClaimed: number;
+    thisYearApproved: number;
+    thisMonthApproved: number;
+    thisYearDisbursed: number;
+    thisMonthDisbursed: number;
+    thisYearDue: number;
+    thisMonthDue: number;
 }
 
 interface PieChartDataItem {
@@ -138,6 +146,14 @@ export default function PettyCashDashboardPage() {
         thisMonthUnpaidInvoices: 0,
         totalStockItems: 0,
         thisMonthItemsSold: 0,
+        thisYearClaimed: 0,
+        thisMonthClaimed: 0,
+        thisYearApproved: 0,
+        thisMonthApproved: 0,
+        thisYearDisbursed: 0,
+        thisMonthDisbursed: 0,
+        thisYearDue: 0,
+        thisMonthDue: 0,
     });
     const [transactions, setTransactions] = React.useState<PettyCashTransactionDocument[]>([]);
 
@@ -248,6 +264,65 @@ export default function PettyCashDashboardPage() {
         fetchSalesAndItemStats();
 
         return () => unsubAccounts();
+    }, []);
+
+    React.useEffect(() => {
+        const claimsQuery = query(collection(firestore, "hr_claims"));
+        const unsubClaims = onSnapshot(claimsQuery, (snapshot) => {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+
+            let yearClaimed = 0;
+            let monthClaimed = 0;
+            let yearApproved = 0;
+            let monthApproved = 0;
+            let yearDisbursed = 0;
+            let monthDisbursed = 0;
+            let yearDue = 0;
+            let monthDue = 0;
+
+            snapshot.forEach(docSnap => {
+                const data = docSnap.data() as HRClaim;
+                if (!data.claimDate) return;
+
+                const claimDate = new Date(data.claimDate);
+                if (!isValid(claimDate)) return;
+
+                const claimYear = claimDate.getFullYear();
+                const claimMonth = claimDate.getMonth();
+
+                if (claimYear === currentYear) {
+                    yearClaimed += data.claimAmount || 0;
+                    yearApproved += data.approvedAmount || 0;
+                    yearDisbursed += data.sanctionedAmount || 0;
+                    yearDue += (data.approvedAmount || 0) - (data.sanctionedAmount || 0);
+
+                    if (claimMonth === currentMonth) {
+                        monthClaimed += data.claimAmount || 0;
+                        monthApproved += data.approvedAmount || 0;
+                        monthDisbursed += data.sanctionedAmount || 0;
+                        monthDue += (data.approvedAmount || 0) - (data.sanctionedAmount || 0);
+                    }
+                }
+            });
+
+            setStats(prev => ({
+                ...prev,
+                thisYearClaimed: yearClaimed,
+                thisMonthClaimed: monthClaimed,
+                thisYearApproved: yearApproved,
+                thisMonthApproved: monthApproved,
+                thisYearDisbursed: yearDisbursed,
+                thisMonthDisbursed: monthDisbursed,
+                thisYearDue: yearDue,
+                thisMonthDue: monthDue,
+            }));
+        }, (error) => {
+            console.error("Error fetching claims for stats:", error);
+        });
+
+        return () => unsubClaims();
     }, []);
 
     React.useEffect(() => {
@@ -482,6 +557,38 @@ export default function PettyCashDashboardPage() {
                         description={`${stats.thisMonthItemsSold} items sold this month`}
                         className="bg-purple-500"
                         valueClassName="text-3xl"
+                    />
+                    <StatCard
+                        title="Total Claimed Amount (Year)"
+                        value={formatCurrency(stats.thisYearClaimed)}
+                        icon={<TrendingUp />}
+                        description={`This Month: ${formatCurrency(stats.thisMonthClaimed)}`}
+                        className="bg-yellow-600"
+                        valueClassName="text-2xl"
+                    />
+                    <StatCard
+                        title="Total Approved Amount (Year)"
+                        value={formatCurrency(stats.thisYearApproved)}
+                        icon={<CheckCircle2 className="h-6 w-6" />}
+                        description={`This Month: ${formatCurrency(stats.thisMonthApproved)}`}
+                        className="bg-emerald-600"
+                        valueClassName="text-2xl"
+                    />
+                    <StatCard
+                        title="Total Disbursed Amount (Year)"
+                        value={formatCurrency(stats.thisYearDisbursed)}
+                        icon={<Banknote />}
+                        description={`This Month: ${formatCurrency(stats.thisMonthDisbursed)}`}
+                        className="bg-indigo-600"
+                        valueClassName="text-2xl"
+                    />
+                    <StatCard
+                        title="Total Due Amount (Year)"
+                        value={formatCurrency(stats.thisYearDue)}
+                        icon={<AlertTriangle className="h-6 w-6" />}
+                        description={`This Month: ${formatCurrency(stats.thisMonthDue)}`}
+                        className="bg-red-600"
+                        valueClassName="text-2xl"
                     />
                 </CardContent>
             </Card>

@@ -694,7 +694,7 @@ export default function HrmDashboardPage() {
                             icon={<Wallet />}
                             description="Total claimed this month"
                             className="bg-blue-600"
-                            footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/hr/claim')}>Manage</Button>}
+                            footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/inventory/claim')}>Manage</Button>}
                         />
                         <StatCard
                             title="Monthly Disburse Amount"
@@ -702,7 +702,7 @@ export default function HrmDashboardPage() {
                             icon={<CreditCard />}
                             description="Total disbursed this month"
                             className="bg-emerald-600"
-                            footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/hr/claim')}>View Claims</Button>}
+                            footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/inventory/claim')}>View Claims</Button>}
                         />
                     </div>
 
