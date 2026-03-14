@@ -11,6 +11,7 @@ import { uploadFile } from '@/lib/storage/storage';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { sendPushNotification } from '@/lib/notifications';
+import { sendClaimStatusNotifications } from '@/lib/notifications/claims';
 import {
     Dialog,
     DialogContent,
@@ -370,14 +371,17 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
             if (editingClaim) {
                 await updateDoc(doc(firestore, 'hr_claims', editingClaim.id), claimData);
 
-                // Push Notification if status changed
                 if (data.status !== editingClaim.status) {
                     sendPushNotification({
                         title: `Claim ${data.status}`,
                         body: `Your claim ${claimNo} has been ${data.status.toLowerCase()}.`,
                         userIds: [data.employeeId],
-                        url: '/mobile/claim' // Adjusted to specific claim page
+                        url: '/mobile/claim' 
                     });
+
+                    if (data.status === 'Approved' || data.status === 'Disbursed') {
+                        sendClaimStatusNotifications({ ...claimData, id: editingClaim.id } as any as HRClaim);
+                    }
                 }
 
                 toast({
@@ -385,10 +389,15 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                     description: "Claim updated successfully!",
                 });
             } else {
-                await addDoc(collection(firestore, 'hr_claims'), {
+                const docRef = await addDoc(collection(firestore, 'hr_claims'), {
                     ...claimData,
                     createdAt: serverTimestamp(),
                 });
+
+                if (data.status === 'Approved' || data.status === 'Disbursed') {
+                    sendClaimStatusNotifications({ ...claimData, id: docRef.id } as any as HRClaim);
+                }
+
                 toast({
                     title: "Success",
                     description: "Claim added successfully!",

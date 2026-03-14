@@ -11,6 +11,7 @@ import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, deleteDo
 import { firestore } from '@/lib/firebase/config';
 import { HRClaim, Employee } from '@/types';
 import { sendPushNotification } from '@/lib/notifications';
+import { sendClaimStatusNotifications } from '@/lib/notifications/claims';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -709,6 +710,7 @@ export default function ClaimListPage() {
                                     userIds: [claim.employeeId],
                                     url: '/mobile/claim'
                                 });
+                                sendClaimStatusNotifications(claim);
                             }
 
                             toast({

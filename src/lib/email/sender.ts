@@ -12,10 +12,6 @@ import { SmtpConfiguration, EmailTemplate } from '@/types/email-settings';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
-// Import email libraries directly (no dynamic import needed)
-import nodemailer from 'nodemailer';
-import { Resend } from 'resend';
-
 // Import logging utility
 import { logActivity } from '@/lib/logger';
 import { getCompanyName } from '@/lib/settings/company';
@@ -261,6 +257,8 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
         if (config.serviceProvider === 'resend_api') {
             const apiKey = config.resendApiKey || process.env.RESEND_API_KEY;
             if (!apiKey) throw new Error('Resend API Key missing in both Firestore and environment variables');
+            
+            const { Resend } = await import('resend');
             const resend = new Resend(apiKey);
 
             try {
@@ -315,6 +313,7 @@ export async function sendEmail({ to, templateSlug, subject: overrideSubject, bo
         } else {
             // SMTP with Nodemailer
             try {
+                const nodemailer = await import('nodemailer');
                 const transporter = nodemailer.createTransport({
                     host: config.host,
                     port: config.port,
