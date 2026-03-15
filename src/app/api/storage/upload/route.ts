@@ -94,8 +94,12 @@ export async function POST(req: NextRequest) {
             publicUrl = `${config.publicUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
         } else if (config.provider === 'r2') {
             // R2 doesn't have a standard public URL format without a custom domain or public bucket URL
-            publicUrl = path; // Return path as fallback
-            console.warn('[UPLOAD API] R2 upload successful but no publicUrl configured');
+            // However, we can use the account-specific R2 dev domain if we had it, 
+            // but usually users have a custom domain.
+            // As a last resort, returning the path is only useful if the client knows the base URL.
+            // Let's at least log this clearly.
+            publicUrl = path; 
+            console.warn('[UPLOAD API] R2 upload successful but no publicUrl configured. Returning path only.');
         } else {
             // Default S3 public URL format
             publicUrl = `https://${config.bucketName}.s3.${config.region}.amazonaws.com/${path.replace(/^\//, '')}`;

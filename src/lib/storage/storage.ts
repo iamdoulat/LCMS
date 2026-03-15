@@ -98,9 +98,14 @@ export async function uploadFile(file: File, path: string): Promise<string> {
     // Default to Firebase if no config or firebase is explicitly active
     if (!config || config.provider === 'firebase') {
         console.log(`[STORAGE] Uploading to Firebase: ${path}`);
-        const storageRef = ref(firebaseStorage, path);
-        await uploadBytes(storageRef, file);
-        return await getDownloadURL(storageRef);
+        try {
+            const storageRef = ref(firebaseStorage, path);
+            await uploadBytes(storageRef, file);
+            return await getDownloadURL(storageRef);
+        } catch (fbError: any) {
+            console.error(`[STORAGE] Firebase Upload Failed:`, fbError);
+            throw new Error(`Firebase storage failed: ${fbError.message}. Ensure Cloudflare R2 is configured if Firebase is not intended.`);
+        }
     }
 
     console.log(`[STORAGE] Uploading to ${config.provider.toUpperCase()}: ${path} (Config: ${config.name})`);
