@@ -25,6 +25,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useRealtimeData, useRealtimeDoc } from '@/hooks/useRealtimeData';
 import { dataScoper } from '@/lib/data/dataScoper';
 import { parseTimeToMinutes } from '@/lib/firebase/utils';
+import { hasActiveCheckIn } from '@/lib/firebase/checkInOut';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
@@ -836,30 +837,16 @@ export default function MobileDashboardPage() {
                                         // Validation: Check for pending Check-In
                                         const canonicalId = currentEmployeeId || user?.uid;
                                         if (canonicalId) {
-                                            try {
-                                                // Determine if there is a pending check-in (latest record is 'Check In')
-                                                const q = query(
-                                                    collection(firestore, 'multiple_check_inout'),
-                                                    where('employeeId', '==', canonicalId),
-                                                    orderBy('timestamp', 'desc'),
-                                                    limit(1)
-                                                );
-                                                const snapshot = await getDocs(q);
-                                                if (!snapshot.empty) {
-                                                    const latest = snapshot.docs[0].data();
-                                                    if (latest.type === 'Check In') {
-                                                        Swal.fire({
-                                                            title: "Action Restricted",
-                                                            text: "Please check out from Check In tab first.",
-                                                            icon: "error",
-                                                            timer: 3000,
-                                                            showConfirmButton: false
-                                                        });
-                                                        return;
-                                                    }
-                                                }
-                                            } catch (error) {
-                                                console.error("Error checking pending check-ins:", error);
+                                            const isActiveVisit = await hasActiveCheckIn(canonicalId);
+                                            if (isActiveVisit) {
+                                                Swal.fire({
+                                                    title: "Action Restricted",
+                                                    text: "Please check out from Check In tab first.",
+                                                    icon: "error",
+                                                    timer: 3000,
+                                                    showConfirmButton: false
+                                                });
+                                                return;
                                             }
                                         }
 

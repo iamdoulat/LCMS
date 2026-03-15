@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { reverseGeocode } from '@/lib/firebase/checkInOut';
+import { reverseGeocode, hasActiveCheckIn } from '@/lib/firebase/checkInOut';
 import { determineAttendanceFlag } from '@/lib/firebase/utils';
 import { getActivePolicyForDate } from '@/lib/attendance';
 import type { AttendancePolicyDocument, EmployeeDocument, DailyAttendancePolicy } from '@/types';
@@ -443,6 +443,12 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
 
                 if (attendanceDoc.data().outTime) {
                     throw new Error('You have already checked out for today');
+                }
+
+                // Cross-system Validation: Check for active visits
+                const isActiveVisit = await hasActiveCheckIn(canonicalId);
+                if (isActiveVisit) {
+                    throw new Error('Please check out from Check In tab first.');
                 }
 
                 // Update attendance record with check-out

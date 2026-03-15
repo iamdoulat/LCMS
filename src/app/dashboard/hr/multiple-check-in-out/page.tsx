@@ -34,7 +34,7 @@ interface GroupedVisit {
     checkIn: MultipleCheckInOutRecord;
     checkOut: MultipleCheckInOutRecord | null;
     duration: number | null; // in milliseconds
-    exceedsEightHours: boolean;
+    exceedsMaxHours: boolean;
     companyColor: string;
 }
 
@@ -213,7 +213,7 @@ export default function MultipleCheckInOutPage() {
             const checkIns = allRecords.filter(r => r.type === 'Check In');
             const checkOuts = allRecords.filter(r => r.type === 'Check Out');
             const now = new Date().getTime();
-            const maxHoursInMs = (multiCheckConfig?.maxHourLimitOfCheckOut || 8) * 60 * 60 * 1000;
+            const maxHoursInMs = (multiCheckConfig?.maxHourLimitOfCheckOut || 12) * 60 * 60 * 1000;
 
             for (const checkIn of checkIns) {
                 // Check if there's already a checkout for this check-in
@@ -240,11 +240,12 @@ export default function MultipleCheckInOutPage() {
                             'Check Out',
                             checkIn.location, // Use same location as check-in
                             '', // No image for auto-checkout
-                            `Auto check-out: Visit exceeded ${multiCheckConfig?.maxHourLimitOfCheckOut || 8} hours. Automatically checked out at ${format(autoCheckoutTime, 'hh:mm a')}`,
+                            `Auto check-out: Visit exceeded ${multiCheckConfig?.maxHourLimitOfCheckOut || 12} hours. Automatically checked out at ${format(autoCheckoutTime, 'hh:mm a')}`,
                             {
                                 status: 'Approved',
                                 approvalStatus: 'Approved'
-                            }
+                            },
+                            autoCheckoutTime.toISOString()
                         );
 
 
@@ -319,7 +320,7 @@ export default function MultipleCheckInOutPage() {
 
     // Group records into visits
     const groupedVisits = useMemo(() => {
-        const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 8;
+        const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 12;
         const maxHoursInMs = maxHours * 60 * 60 * 1000;
         const visits: GroupedVisit[] = [];
         const checkIns = records.filter(r => r.type === 'Check In');
@@ -335,17 +336,17 @@ export default function MultipleCheckInOutPage() {
             );
 
             let duration: number | null = null;
-            let exceedsEightHours = false;
+            let exceedsMaxHours = false;
 
             if (matchingCheckOut) {
                 duration = new Date(matchingCheckOut.timestamp).getTime() - new Date(checkIn.timestamp).getTime();
-                exceedsEightHours = duration > maxHoursInMs; // Check against configured max hours
+                exceedsMaxHours = duration > maxHoursInMs; // Check against configured max hours
             } else {
                 // No checkout yet - check if it's been more than max hours since check-in
                 const now = new Date().getTime();
                 const checkInTime = new Date(checkIn.timestamp).getTime();
                 const timeSinceCheckIn = now - checkInTime;
-                exceedsEightHours = timeSinceCheckIn > maxHoursInMs;
+                exceedsMaxHours = timeSinceCheckIn > maxHoursInMs;
             }
 
             visits.push({
@@ -355,7 +356,7 @@ export default function MultipleCheckInOutPage() {
                 checkIn,
                 checkOut: matchingCheckOut || null,
                 duration,
-                exceedsEightHours,
+                exceedsMaxHours,
                 companyColor: getCompanyColor(checkIn.companyName),
             });
         });
@@ -497,10 +498,10 @@ export default function MultipleCheckInOutPage() {
                                                             <span className="font-semibold">{formatDuration(visit.duration)}</span>
                                                         </div>
                                                     )}
-                                                    {visit.exceedsEightHours && (
+                                                    {visit.exceedsMaxHours && (
                                                         <Badge variant="destructive" className="mt-2">
                                                             <AlertCircle className="h-3 w-3 mr-1" />
-                                                            Exceeded 8 Hours
+                                                            Exceeded {multiCheckConfig?.maxHourLimitOfCheckOut || 12} Hours
                                                         </Badge>
                                                     )}
                                                 </div>

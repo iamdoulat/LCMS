@@ -1,6 +1,6 @@
 // Firebase helper functions for Multiple Check In/Out
 
-import { collection, addDoc, getDocs, query, where, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, Timestamp, limit } from 'firebase/firestore';
 import { firestore } from './config';
 import { uploadFile } from '../storage/storage';
 import type { MultipleCheckInOutRecord, CheckInOutType, MultipleCheckInOutLocation } from '@/types/checkInOut';
@@ -146,7 +146,8 @@ export const createCheckInOutRecord = async (
         approvalStatus?: 'Approved' | 'Pending' | 'Rejected';
         distanceFromBranch?: number;
         isInsideGeofence?: boolean;
-    }
+    },
+    customTimestamp?: string
 ): Promise<string> => {
     const now = Timestamp.now();
     const record: Omit<MultipleCheckInOutRecord, 'id'> = {
@@ -154,7 +155,7 @@ export const createCheckInOutRecord = async (
         employeeName,
         companyName,
         type,
-        timestamp: new Date().toISOString(),
+        timestamp: customTimestamp || new Date().toISOString(),
         location,
         imageURL,
         remarks,
@@ -226,5 +227,28 @@ export const updateCheckInOutStatus = async (
     } catch (error) {
         console.error('Error updating check-in/out status:', error);
         throw error;
+    }
+};
+
+/**
+ * Check if the latest record for an employee is a 'Check In'.
+ * This is used for cross-system validation (e.g., blocking attendance out-time).
+ */
+export const hasActiveCheckIn = async (employeeId: string): Promise<boolean> => {
+    try {
+        const q = query(
+            collection(firestore, 'multiple_check_inout'),
+            where('employeeId', '==', employeeId),
+            orderBy('timestamp', 'desc'),
+            limit(1)
+        );
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) return false;
+        
+        const latest = snapshot.docs[0].data();
+        return latest.type === 'Check In';
+    } catch (error) {
+        console.error('Error checking for active check-in:', error);
+        return false;
     }
 };

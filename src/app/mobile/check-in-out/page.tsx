@@ -690,12 +690,16 @@ export default function MobileCheckInOutPage() {
                 const isUserRecord = visit.employeeId === currentUserEmployeeId;
                 const isDone = !!visit.checkOut;
 
-                // Auto check-out logic: if more than configured max hours passed since check-in
+                // Auto check-out logic: if more than configured max hours passed since check-in OR if check-out remarks indicate auto-checkout
                 const checkInTime = new Date(visit.checkIn.timestamp).getTime();
                 const now = new Date().getTime();
                 const diffHours = (now - checkInTime) / (1000 * 60 * 60);
                 const maxHours = multiCheckConfig?.maxHourLimitOfCheckOut || 12;
-                const isAutoDone = !isDone && diffHours > maxHours && (multiCheckConfig?.isMaxHourLimitEnabled ?? true);
+
+                // Detect if it's already auto-checked out from remarks
+                const isSystemAutoCheckout = visit.checkOut?.remarks?.toLowerCase().includes('auto check-out');
+
+                const isAutoDone = isSystemAutoCheckout || (!isDone && diffHours > maxHours && (multiCheckConfig?.isMaxHourLimitEnabled ?? true));
 
                 if (activeTab === 'Check Ins') {
                     // Show only User's pending visits that are NOT older than 12 hours
@@ -804,9 +808,8 @@ export default function MobileCheckInOutPage() {
                                     const hours = Math.floor(diff / 3600000);
                                     const minutes = Math.floor((diff % 3600000) / 60000);
                                     duration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-                                } else if (isAutoDone && multiCheckConfig && multiCheckConfig.isMaxHourLimitEnabled) {
-                                    // For auto-done cases, calculate duration as the configured max hours limit
-                                    // Only if the feature is enabled
+                                } else if (isAutoDone && multiCheckConfig && (multiCheckConfig.isMaxHourLimitEnabled ?? true)) {
+                                    // For displayed auto-done cases (not yet saved as record), calculate duration as max hours
                                     const maxHours = multiCheckConfig.maxHourLimitOfCheckOut || 12;
                                     const maxDurationMs = maxHours * 60 * 60 * 1000;
                                     const hours = Math.floor(maxDurationMs / 3600000);
