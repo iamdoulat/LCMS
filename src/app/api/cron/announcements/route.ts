@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { sendEmail } from '@/lib/email/sender';
 import { sendServerPushNotification } from '@/lib/services/notification-service';
 import { getCompanyName } from '@/lib/settings/company';
+import moment from 'moment-timezone';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,8 +54,8 @@ export async function GET(request: Request) {
                 })).filter(emp => emp.email || emp.phone);
 
                 if (employees.length > 0) {
-                    const formattedFromDate = format(new Date(holiday.fromDate), 'PPPP');
-                    const formattedToDate = holiday.toDate ? format(new Date(holiday.toDate), 'PPPP') : formattedFromDate;
+                    const formattedFromDate = moment.tz(holiday.fromDate, 'Asia/Dhaka').format('dddd, MMMM D, YYYY');
+                    const formattedToDate = holiday.toDate ? moment.tz(holiday.toDate, 'Asia/Dhaka').format('dddd, MMMM D, YYYY') : formattedFromDate;
 
                     for (const employee of employees) {
                         // Email

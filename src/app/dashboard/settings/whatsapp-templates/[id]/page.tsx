@@ -308,6 +308,8 @@ export default function EditWhatsAppTemplatePage() {
                                             .replace(/{{designation}}/g, 'Manager')
                                             .replace(/{{company_name}}/g, companyName)
                                             .replace(/{{password}}/g, '(hidden)')
+                                            .replace(/{{holiday_start_date}}/g, 'Friday, May 1, 2026')
+                                            .replace(/{{holiday_end_date}}/g, 'Saturday, May 2, 2026')
                                         }
                                         <div className="text-[10px] text-right mt-2 opacity-60">
                                             {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

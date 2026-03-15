@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
 import { format } from 'date-fns';
+import moment from 'moment-timezone';
 
 export async function POST(request: Request) {
     try {
@@ -43,10 +44,12 @@ export async function POST(request: Request) {
         }
 
         // 3. Prepare dates for notification
-        const formattedFromDate = holidayData.fromDate;
+        const formattedFromDate = moment.tz(holidayData.originalFromDate || holidayData.fromDate, 'Asia/Dhaka').format('dddd, MMMM D, YYYY');
 
         // If toDate is missing, use fromDate as fallback to avoid "N/A"
-        let formattedToDate = holidayData.toDate || formattedFromDate;
+        let formattedToDate = (holidayData.originalToDate || holidayData.toDate) 
+            ? moment.tz(holidayData.originalToDate || holidayData.toDate, 'Asia/Dhaka').format('dddd, MMMM D, YYYY') 
+            : formattedFromDate;
 
         // Dynamically import to avoid top-level issues if any
         const { sendWhatsApp } = await import('@/lib/whatsapp/sender');

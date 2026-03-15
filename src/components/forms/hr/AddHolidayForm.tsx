@@ -92,7 +92,9 @@ export function AddHolidayForm({ onFormSubmit }: AddHolidayFormProps) {
             holidayData: {
               title: data.name,
               fromDate: format(data.fromDate, 'PPPP'),
+              originalFromDate: format(data.fromDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
               toDate: data.toDate ? format(data.toDate, 'PPPP') : undefined,
+              originalToDate: data.toDate ? format(data.toDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
               type: data.type,
               description: data.message || '',
               forceSend: forceImmediate

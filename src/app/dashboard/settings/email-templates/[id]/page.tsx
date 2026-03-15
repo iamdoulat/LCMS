@@ -317,6 +317,8 @@ export default function EditEmailTemplatePage() {
                                                 .replace(/{{out_time}}/g, '06:00 PM')
                                                 .replace(/{{reconciliation_in_time}}/g, '09:05 AM')
                                                 .replace(/{{reconciliation_out_time}}/g, '05:55 PM')
+                                                .replace(/{{holiday_start_date}}/g, 'Friday, May 1, 2026')
+                                                .replace(/{{holiday_end_date}}/g, 'Saturday, May 2, 2026')
                                         }} />
                                     </div>
                                 </DialogContent>
