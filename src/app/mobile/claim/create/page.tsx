@@ -304,14 +304,18 @@ function CreateClaimContent() {
                             />
                         </div>
 
-                        {(source !== 'requests' && (userRole?.some(r => ["Super Admin", "Admin", "HR"].includes(r)))) && (
+                        {(source === 'requests' || supervisorComments) && (
                             <div className="space-y-2">
                                 <Label className="text-xs font-semibold text-amber-700">Supervisor Comments</Label>
                                 <Textarea
                                     value={supervisorComments}
                                     onChange={(e) => setSupervisorComments(e.target.value)}
-                                    placeholder="Add supervisor comments..."
-                                    className="min-h-[80px] bg-amber-50/30 rounded-xl border-amber-100 p-4 text-sm font-semibold text-slate-700 placeholder:text-slate-400 resize-none focus:ring-amber-500"
+                                    placeholder={source === 'requests' ? "Add supervisor comments..." : "No supervisor comments yet."}
+                                    readOnly={source !== 'requests'}
+                                    className={cn(
+                                        "min-h-[80px] bg-amber-50/30 rounded-xl border-amber-100 p-4 text-sm font-semibold text-slate-700 placeholder:text-slate-400 resize-none focus:ring-amber-500",
+                                        source !== 'requests' && "bg-slate-50/50 border-slate-100"
+                                    )}
                                 />
                             </div>
                         )}

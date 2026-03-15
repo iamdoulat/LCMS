@@ -157,6 +157,7 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category, initialDa
                                 }
 
                                 onSave({
+                                    ...initialData,
                                     id: initialData?.id || crypto.randomUUID(),
                                     categoryId: category.id,
                                     categoryName: category.name,

@@ -85,7 +85,7 @@ export default function ClaimListPage() {
     React.useEffect(() => {
         if (!user) return;
 
-        const isAdmin = userRole?.some(role => ["Super Admin", "Admin", "HR"].includes(role));
+        const isAdmin = userRole?.some(role => ["Super Admin", "Admin", "HR", "Supervisor"].includes(role));
 
         let q;
         if (activeTab === 'My Claims') {
