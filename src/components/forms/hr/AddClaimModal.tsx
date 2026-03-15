@@ -82,6 +82,7 @@ const claimFormSchema = z.object({
     // Added editable fields
     sanctionedAmount: z.coerce.number().optional(),
     branch: z.string().optional(),
+    employeeCode: z.string().optional(),
 });
 
 type ClaimFormValues = z.infer<typeof claimFormSchema>;
@@ -124,6 +125,7 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                 status: editingClaim.status,
                 sanctionedAmount: editingClaim.sanctionedAmount || 0,
                 branch: editingClaim.branch || '',
+                employeeCode: editingClaim.employeeCode || '',
             });
 
             // First check if details exist in the document object
