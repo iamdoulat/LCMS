@@ -127,10 +127,7 @@ function CreateClaimContent() {
 
         setIsSubmitting(true);
         try {
-            const empCode = employeeData?.employeeCode || '0000';
-
             const claimData: any = {
-                branch: employeeData?.branch || '',
                 claimDate,
                 advancedDate: advanceDate || null,
                 advancedAmount: Number(advanceAmount) || 0,
@@ -147,16 +144,23 @@ function CreateClaimContent() {
 
             // Save supervisor name if there are approved items
             if (calculateApprovedTotal() > 0 && source === 'requests') {
-                claimData.approvedByName = user?.displayName || 'Supervisor';
+                claimData.approvedByName = user?.displayName || user?.email || 'Supervisor';
             }
 
             if (!editingId) {
+                // New Claim: Use current user's (employee) data
+                const empCode = employeeData?.employeeCode || '0000';
                 claimData.userId = user.uid;
                 claimData.employeeId = user.uid;
-                claimData.employeeName = employeeData?.fullName || user.displayName || 'Unknown';
+                claimData.employeeName = employeeData?.fullName || user.displayName || user?.email || 'Unknown';
                 claimData.employeeCode = empCode;
+                claimData.branch = employeeData?.branch || '';
                 claimData.status = 'Claimed';
                 claimData.createdAt = serverTimestamp();
+                
+                // Generate Claim No only for new claims
+                const randomNum = Math.floor(1000 + Math.random() * 9000);
+                claimData.claimNo = `CLM-${empCode}/${randomNum}`;
             } else if (source !== 'requests') {
                 // If an employee updates their own claim, reset status to Claimed for re-approval
                 claimData.status = 'Claimed';
@@ -171,10 +175,6 @@ function CreateClaimContent() {
                 const claimRef = doc(firestore, 'hr_claims', editingId);
                 await updateDoc(claimRef, finalData);
             } else {
-                // Generate Claim No only for new claims
-                const randomNum = Math.floor(1000 + Math.random() * 9000);
-                finalData.claimNo = `CLM-${empCode}/${randomNum}`;
-                finalData.createdAt = serverTimestamp();
                 await addDoc(collection(firestore, 'hr_claims'), finalData);
             }
 

@@ -342,16 +342,16 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
         try {
             // Generate Claim No if not editing
             const selectedEmp = employees.find(e => e.id === data.employeeId);
-            const empCode = selectedEmp?.employeeCode || '0000';
+            const empCode = selectedEmp?.employeeCode || data.employeeCode || editingClaim?.employeeCode || '0000';
             const randomNum = Math.floor(1000 + Math.random() * 9000); // 4 digit number
             const claimNo = editingClaim?.claimNo || `CLM-${empCode}/${randomNum}`;
 
             const claimData = {
                 userId: data.employeeId,
                 employeeId: data.employeeId,
-                employeeName: employees.find(e => e.id === data.employeeId)?.name || 'Unknown',
-                employeeCode: employees.find(e => e.id === data.employeeId)?.employeeCode || editingClaim?.employeeCode || '',
-                branch: data.branch || employees.find(e => e.id === data.employeeId)?.branch || editingClaim?.branch || '',
+                employeeName: selectedEmp?.name || editingClaim?.employeeName || data.employeeName || 'Unknown',
+                employeeCode: empCode,
+                branch: data.branch || selectedEmp?.branch || editingClaim?.branch || '',
                 claimNo,
                 claimDate: data.claimDate,
                 advancedDate: data.advancedDate || null,

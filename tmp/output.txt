@@ -1,0 +1,66 @@
+--- START DIAGNOSTIC ---
+Email Templates:
+ - Slug: [attendance_in_time] Active: true
+ - Slug: [holiday_announcement] Active: undefined
+ - Slug: [admin_new_visit_application] Active: undefined
+ - Slug: [attendance_out_time] Active: true
+ - Slug: [employee_advance_salary_approved] Active: undefined
+ - Slug: [employee_visit_application_rejected] Active: undefined
+ - Slug: [attendance_check_in] Active: true
+ - Slug: [account_creation_details] Active: undefined
+ - Slug: [attendance_check_out] Active: true
+ - Slug: [employee_monthly_payslip_summary] Active: false
+ - Slug: [employee_visit_application_approved] Active: undefined
+ - Slug: [employee_monthly_attendance_report] Active: undefined
+ - Slug: [admin:_incoming_attendance_reconciliation_application] Active: false
+ - Slug: [employee_advance_salary_rejected] Active: undefined
+ - Slug: [claim-approved] Active: true
+ - Slug: [claim-disbursed] Active: true
+ - Slug: [employee_leave_application_rejected] Active: false
+ - Slug: [admin_new_advance_salary_request] Active: undefined
+ - Slug: [your_attendance_reconciliation_application_approved] Active: false
+ - Slug: [admin_new_leave_application] Active: false
+ - Slug: [employee_leave_application_approved] Active: false
+ - Slug: [notice_announcement] Active: true
+ - Slug: [employee_birthday_wish] Active: true
+ - Slug: [your_attendance_reconciliation_application_rejected] Active: false
+ - Slug: [task_assigned] Active: true
+ - Slug: [task_update] Active: true
+WhatsApp Templates:
+ - Slug: [your_attendance_reconciliation_application_rejected] Active: false
+ - Slug: [admin:_incoming_attendance_reconciliation_application] Active: false
+ - Slug: [admin_new_advance_salary_request] Active: undefined
+ - Slug: [attendance_in_time] Active: true
+ - Slug: [attendance_out_time] Active: true
+ - Slug: [holiday_announcement] Active: undefined
+ - Slug: [attendance_check_in] Active: true
+ - Slug: [admin_new_visit_application] Active: undefined
+ - Slug: [admin_new_leave_application] Active: undefined
+ - Slug: [account_creation_details] Active: undefined
+ - Slug: [employee_leave_application_rejected] Active: undefined
+ - Slug: [employee_birthday_wish] Active: true
+ - Slug: [attendance_check_out] Active: true
+ - Slug: [employee_monthly_payslip_summary] Active: false
+ - Slug: [employee_visit_application_approved] Active: undefined
+ - Slug: [employee_monthly_attendance_report] Active: undefined
+ - Slug: [employee_advance_salary_rejected] Active: undefined
+ - Slug: [claim-approved-whatsapp] Active: true
+ - Slug: [claim-disbursed-whatsapp] Active: true
+ - Slug: [employee_visit_application_rejected] Active: undefined
+ - Slug: [task_assigned] Active: true
+ - Slug: [task_update] Active: true
+ - Slug: [your_attendance_reconciliation_application_approved] Active: false
+ - Slug: [employee_leave_application_approved] Active: undefined
+ - Slug: [employee_advance_salary_approved] Active: undefined
+
+Recent Activity Logs:
+
+Recent Claims:
+ - No: CLM-001/5340 | Name: [Mohammad Doulat] | Status: Disbursed | ID: tVKdr6GErtx9metbvanN
+ - No: CLM-001/7665 | Name: [Mohammad Doulat] | Status: Disbursed | ID: KYwYD3jUfTw2fYs5lPhv
+ - No: CLM-001/9565 | Name: [Mohammad Doulat] | Status: Approved | ID: YaOXPCbfAL3LT3R6NQEU
+ - No: CLM-001/9145 | Name: [MD Shimul Hasan] | Status: Approval by Supervisor | ID: O19a9fgnRX8z3CfG7dNq
+ - No: CLM-001/6615 | Name: [Mohammad Doulat] | Status: Approved | ID: rpMoN6h8mfkoMKqQxoXo
+ - No: CLM-001/4385 | Name: [Mohammad Doulat] | Status: Approved | ID: gyAYaJnd8zTCUpts5BMD
+ - No: CLM-001/6523 | Name: [Mohammad Doulat] | Status: Approved by supervisor | ID: w8WNqqCGfihFGPUVrgRf
+--- END DIAGNOSTIC ---

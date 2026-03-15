@@ -27,9 +27,11 @@ export async function sendClaimStatusNotificationsInternal(claim: HRClaim) {
             emailSlug = 'claim-disbursed';
             waSlug = 'claim-disbursed-whatsapp';
         } else {
-            // No notifications for other statuses currently
+            console.log(`sendClaimStatusNotificationsInternal: No notification logic for status "${status}"`, claim.id);
             return;
         }
+
+        console.log(`sendClaimStatusNotificationsInternal: Processing ${status} notification for ${claim.claimNo}`, { emailSlug, waSlug });
 
         // 1. Fetch Employee Details
         const empDoc = await getDoc(doc(firestore, 'employees', claim.employeeId));
@@ -41,6 +43,8 @@ export async function sendClaimStatusNotificationsInternal(claim: HRClaim) {
         const employee = empDoc.data() as Employee;
         const email = employee.email;
         const phone = employee.phone;
+
+        console.log(`sendClaimStatusNotificationsInternal: Found employee ${employee.fullName}`, { email, phone });
 
         if (!email && !phone) {
             console.warn('sendClaimStatusNotificationsInternal: Employee has no email or phone', claim.employeeId);
@@ -62,26 +66,30 @@ export async function sendClaimStatusNotificationsInternal(claim: HRClaim) {
         // 2. Send Email
         if (email) {
             try {
+                console.log(`sendClaimStatusNotificationsInternal: Sending email to ${email} via template ${emailSlug}`);
                 await sendEmail({
                     to: email,
                     templateSlug: emailSlug,
                     data: templateData
                 });
+                console.log(`sendClaimStatusNotificationsInternal: Email sent successfully to ${email}`);
             } catch (emailErr) {
-                console.error(`Failed to send claim ${status.toLowerCase()} email:`, emailErr);
+                console.error(`Failed to send claim ${status.toLowerCase()} email to ${email}:`, emailErr);
             }
         }
 
         // 3. Send WhatsApp
         if (phone) {
             try {
+                console.log(`sendClaimStatusNotificationsInternal: Sending WhatsApp to ${phone} via template ${waSlug}`);
                 await sendWhatsApp({
                     to: phone,
                     templateSlug: waSlug,
                     data: templateData
                 });
+                console.log(`sendClaimStatusNotificationsInternal: WhatsApp sent successfully to ${phone}`);
             } catch (waErr) {
-                console.error(`Failed to send claim ${status.toLowerCase()} WhatsApp:`, waErr);
+                console.error(`Failed to send claim ${status.toLowerCase()} WhatsApp to ${phone}:`, waErr);
             }
         }
 

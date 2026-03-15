@@ -179,13 +179,16 @@ export default function ClaimListPage() {
             claimsToApprove.forEach(async (claim) => {
                 autoApprovalProcessed.current.add(claim.id);
                 try {
+                    const updatedStatus: HRClaimStatus = 'Approval by Supervisor';
+                    const approvedBy = user?.displayName || user?.email || 'System';
+                    
                     await updateDoc(doc(firestore, 'hr_claims', claim.id), {
-                        status: 'Approval by Supervisor',
+                        status: updatedStatus,
                         approvedAmount: claim.claimAmount,
-                        approvedByName: user?.displayName || 'System',
+                        approvedByName: approvedBy,
                         updatedAt: Timestamp.now()
                     });
-                    console.log(`Claim ${claim.claimNo} auto-approved after 15 minutes.`);
+                    console.log(`Claim ${claim.claimNo} auto-approved (moved to ${updatedStatus}).`);
                 } catch (err) {
                     autoApprovalProcessed.current.delete(claim.id);
                     console.error(`Failed to auto-approve claim ${claim.id}:`, err);
@@ -213,10 +216,13 @@ export default function ClaimListPage() {
                     setTimeLeft('00:00');
                     // Automatically trigger the status update if we hit zero while viewing
                     if (claim.status === 'Claimed') {
+                        const updatedStatus: HRClaimStatus = 'Approval by Supervisor';
+                        const approvedBy = user?.displayName || user?.email || 'System';
+                        
                         updateDoc(doc(firestore, 'hr_claims', claim.id), {
-                            status: 'Approval by Supervisor',
+                            status: updatedStatus,
                             approvedAmount: claim.claimAmount,
-                            approvedByName: user?.displayName || 'System',
+                            approvedByName: approvedBy,
                             updatedAt: Timestamp.now()
                         }).catch(err => console.error("Auto-approval error:", err));
                     }
@@ -694,29 +700,40 @@ export default function ClaimListPage() {
                     description={`Are you sure you want to approve claim ${confirmApprove.claimNo}?`}
                     onConfirm={async () => {
                         try {
+                            const claimToApprove = claims.find(c => c.id === confirmApprove.id);
+                            if (!claimToApprove) return;
+
+                            const approvedBy = user?.displayName || user?.email || 'Supervisor';
+                            const updatedStatus: HRClaimStatus = 'Approved';
+                            const approvedAmount = claimToApprove.claimAmount;
+
                             await updateDoc(doc(firestore, 'hr_claims', confirmApprove.id), {
-                                status: 'Approved',
-                                updatedAt: Timestamp.now(),
-                                approvedAmount: claims.find(c => c.id === confirmApprove.id)?.claimAmount || 0,
-                                approvedByName: user?.displayName || 'Unknown'
+                                status: updatedStatus,
+                                approvedAmount: approvedAmount,
+                                approvedByName: approvedBy,
+                                updatedAt: Timestamp.now()
                             });
+
+                            // Create a temporary updated claim object to pass to notifications
+                            // to avoid waiting for state refresh (onSnapshot)
+                            const updatedClaim: HRClaim = {
+                                ...claimToApprove,
+                                status: updatedStatus,
+                                approvedAmount: approvedAmount,
+                                approvedByName: approvedBy,
+                                updatedAt: Timestamp.now()
+                            };
 
                             // Send Push Notification
-                            const claim = claims.find(c => c.id === confirmApprove.id);
-                            if (claim) {
-                                sendPushNotification({
-                                    title: "Claim Approved",
-                                    body: `Your claim ${claim.claimNo} has been approved.`,
-                                    userIds: [claim.employeeId],
-                                    url: '/mobile/claim'
-                                });
-                                sendClaimStatusNotifications(claim);
-                            }
-
-                            toast({
-                                title: "Approved!",
-                                description: "Claim has been approved successfully.",
+                            sendPushNotification({
+                                title: "Claim Approved",
+                                body: `Your claim ${updatedClaim.claimNo} has been approved.`,
+                                userIds: [updatedClaim.employeeId],
+                                url: '/mobile/claim'
                             });
+                            
+                            // Send Email/WhatsApp Notifications
+                            sendClaimStatusNotifications(updatedClaim);
                         } catch (err) {
                             toast({
                                 title: "Error",
