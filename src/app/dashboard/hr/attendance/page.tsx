@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { determineAttendanceFlag } from '@/lib/firebase/utils';
 import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDocs } from 'firebase/firestore';
+import { hasActiveCheckIn } from '@/lib/firebase/checkInOut';
 import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, UserDocumentForAdmin, AttendancePolicyDocument, DailyAttendancePolicy } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
@@ -304,6 +305,20 @@ const AttendanceDayRow = ({
             Swal.fire("Not Authenticated", "You must be logged in to save attendance.", "error");
             return;
         }
+
+        // Cross-system Validation: Check for active visits if Out Time is provided
+        if ((data.flag === 'P' || data.flag === 'D') && data.outTime) {
+            const isActiveVisit = await hasActiveCheckIn(employee.id);
+            if (isActiveVisit) {
+                Swal.fire({
+                    title: "Restricted",
+                    text: "This employee has an active visit running. Please complete the visit Check-Out first.",
+                    icon: "warning"
+                });
+                return;
+            }
+        }
+
         setIsSubmitting(true);
 
         const formattedDate = format(date, 'yyyy-MM-dd');

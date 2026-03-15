@@ -10,6 +10,7 @@ import { collection, doc, serverTimestamp, setDoc, getDocs, query, orderBy } fro
 import type { AttendanceFormValues, EmployeeDocument } from '@/types';
 import { AttendanceFormSchema, attendanceFlagOptions } from '@/types';
 import { format, differenceInMinutes, parse, isValid } from 'date-fns';
+import { hasActiveCheckIn } from '@/lib/firebase/checkInOut';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -123,6 +124,19 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
     if (!data.employeeId || data.employeeId === PLACEHOLDER_EMPLOYEE_VALUE) {
       Swal.fire("Validation Error", "Please select an employee.", "error");
       return;
+    }
+
+    // Cross-system Validation: Check for active visits if Out Time is enabled
+    if (data.enableOutTime && data.outTime) {
+      const isActiveVisit = await hasActiveCheckIn(data.employeeId);
+      if (isActiveVisit) {
+        Swal.fire({
+          title: "Restricted",
+          text: "This employee has an active visit running. Please complete the visit Check-Out first.",
+          icon: "warning"
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);

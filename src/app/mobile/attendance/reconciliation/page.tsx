@@ -8,6 +8,7 @@ import { createReconciliationRequest } from '@/lib/firebase/reconciliation';
 import { format, isValid, parseISO } from 'date-fns';
 import { Calendar, Clock, ArrowLeft, Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { hasActiveCheckIn } from '@/lib/firebase/checkInOut';
 import Swal from 'sweetalert2';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,6 +158,19 @@ function ReconciliationForm() {
         if ((activeTab === 'out' || activeTab === 'both') && !outTimeRemarks) {
             Swal.fire("Validation Error", "Out Time Remarks are required.", "warning");
             return;
+        }
+
+        // Cross-system Validation: Check for active visits if Out Time is being requested
+        if (activeTab === 'out' || activeTab === 'both') {
+            const isActiveVisit = await hasActiveCheckIn(currentEmployeeId);
+            if (isActiveVisit) {
+                Swal.fire({
+                    title: "Restricted",
+                    text: "Please check out from Check In tab first.",
+                    icon: "warning"
+                });
+                return;
+            }
         }
 
         // Add validation for negative work time
