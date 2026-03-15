@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { uploadFile } from '@/lib/storage/storage';
 import { compressImage } from '@/lib/utils/image-compression';
-import { Loader2, X, Calendar, UploadCloud } from 'lucide-react';
+import { Loader2, X, Calendar, UploadCloud, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -116,7 +116,21 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category, initialDa
 
                     {/* Upload File */}
                     <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-800">Upload File</Label>
+                        <div className="flex items-center justify-between">
+                            <Label className="text-xs font-bold text-slate-800">Upload File</Label>
+                            {initialData?.attachmentUrl && (
+                                <Button
+                                    type="button"
+                                    variant="link"
+                                    size="sm"
+                                    onClick={() => window.open(initialData.attachmentUrl, '_blank')}
+                                    className="text-blue-600 text-[10px] font-bold h-auto p-0 flex items-center gap-1"
+                                >
+                                    <Eye className="h-3 w-3" />
+                                    View Current Attachment
+                                </Button>
+                            )}
+                        </div>
                         <div className="relative">
                             <Input
                                 type="file"

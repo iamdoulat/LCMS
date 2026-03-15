@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, ChevronDown, HandCoins, RotateCcw, Plus, Trash2, Loader2, Edit2, Check, X, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronDown, HandCoins, RotateCcw, Plus, Trash2, Loader2, Edit2, Check, X, MessageSquare, Eye } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -371,6 +371,17 @@ function CreateClaimContent() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
+                                                {detail.attachmentUrl && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => window.open(detail.attachmentUrl, '_blank')}
+                                                        className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 h-8 w-8 rounded-full"
+                                                        title="View Attachment"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
