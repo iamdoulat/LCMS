@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { uploadFile } from '@/lib/storage/storage';
+import { compressImage } from '@/lib/utils/image-compression';
 import { Loader2, X, Calendar, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -153,7 +154,19 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category, initialDa
                                 let downloadUrl = '';
                                 if (attachmentFile) {
                                     const path = `claim-attachments/${Date.now()}_${attachmentFile.name}`;
-                                    downloadUrl = await uploadFile(attachmentFile, path);
+                                    
+                                    // Compress image "regulation make low"
+                                    let fileToUpload: File | Blob = attachmentFile;
+                                    if (attachmentFile.type.startsWith('image/')) {
+                                        try {
+                                            fileToUpload = await compressImage(attachmentFile, 1200, 1200, 0.6);
+                                            console.log(`[COMPRESSION] Original: ${attachmentFile.size} bytes, Compressed: ${fileToUpload.size} bytes`);
+                                        } catch (compErr) {
+                                            console.error("[COMPRESSION] Failed, using original:", compErr);
+                                        }
+                                    }
+                                    
+                                    downloadUrl = await uploadFile(fileToUpload as File, path);
                                 }
 
                                 onSave({
