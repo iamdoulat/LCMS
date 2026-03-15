@@ -9,7 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, deleteDoc, Timestamp, limit, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
-import { HRClaim, Employee } from '@/types';
+import { HRClaim, Employee, HRClaimStatus } from '@/types';
 import { sendPushNotification } from '@/lib/notifications';
 import { sendClaimStatusNotifications } from '@/lib/notifications/claims';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
