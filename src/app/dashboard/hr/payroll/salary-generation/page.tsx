@@ -264,7 +264,12 @@ export default function SalaryGenerationPage() {
                 const daysInterval = eachDayOfInterval({ start: startDate, end: endDate });
 
                 daysInterval.forEach(day => {
-                    const attendance = attendanceRecs.find(a => a.employeeId === employee.id && format(new Date(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+                    const attendance = attendanceRecs.find(a => {
+                        if (a.employeeId !== employee.id || !a.date) return false;
+                        const d = new Date(a.date);
+                        if (isNaN(d.getTime())) return false;
+                        return format(d, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
+                    });
 
                     const activePolicy = getActivePolicyForDate(employee, day, attendancePolicies);
                     const currentDayName = format(day, 'EEEE');
@@ -317,7 +322,12 @@ export default function SalaryGenerationPage() {
                 let totalMonthlyOTMinutes = 0;
                 if (data.includeOverTime) {
                     daysInterval.forEach(day => {
-                        const attendance = attendanceRecs.find(a => a.employeeId === employee.id && format(new Date(a.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+                        const attendance = attendanceRecs.find(a => {
+                            if (a.employeeId !== employee.id || !a.date) return false;
+                            const d = new Date(a.date);
+                            if (isNaN(d.getTime())) return false;
+                            return format(d, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd');
+                        });
 
                         // Respect ignoreOtAndDeduction flag from record or policy
                         const activePolicy = getActivePolicyForDate(employee, day, attendancePolicies);

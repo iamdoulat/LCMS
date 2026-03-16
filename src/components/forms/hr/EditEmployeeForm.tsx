@@ -139,21 +139,33 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
     // This effect runs only on the client-side after initial render.
     // It safely sets dates, preventing hydration mismatches.
     const currentValues = form.getValues();
-    const effectiveDate = employee.jobBaseEffectiveDate ? new Date(employee.jobBaseEffectiveDate) : undefined;
-    const structureDate = employee.salaryStructure?.structureDate ? new Date(employee.salaryStructure.structureDate) : undefined;
 
-    if (currentValues.jobBaseEffectiveDate === undefined && currentValues.salaryStructure?.structureDate === undefined) {
+    const safeDate = (val: any) => {
+      if (!val) return undefined;
+      const d = new Date(val);
+      return !isNaN(d.getTime()) ? d : undefined;
+    };
+
+    const dob = safeDate(employee.dateOfBirth);
+    const joined = safeDate(employee.joinedDate);
+    const jobStatusDate = safeDate(employee.jobStatusEffectiveDate);
+    const jobBaseDate = safeDate(employee.jobBaseEffectiveDate);
+    const structureDate = safeDate(employee.salaryStructure?.structureDate);
+
+    // Only reset if we haven't initialized these fields yet to avoid infinite loops or overwriting user input
+    // We check if values are currently undefined (as set in defaultValues)
+    if (currentValues.dateOfBirth === undefined) {
       form.reset({
         ...currentValues,
-        dateOfBirth: employee.dateOfBirth ? new Date(employee.dateOfBirth) : undefined,
-        joinedDate: employee.joinedDate ? new Date(employee.joinedDate) : undefined,
-        jobStatusEffectiveDate: employee.jobStatusEffectiveDate ? new Date(employee.jobStatusEffectiveDate) : undefined,
-        jobBaseEffectiveDate: effectiveDate,
+        dateOfBirth: dob,
+        joinedDate: joined,
+        jobStatusEffectiveDate: jobStatusDate,
+        jobBaseEffectiveDate: jobBaseDate,
         salaryStructure: {
           ...currentValues.salaryStructure,
           structureDate: structureDate,
         }
-      });
+      } as any);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employee]);

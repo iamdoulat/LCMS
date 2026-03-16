@@ -1,4 +1,4 @@
-import { format, setHours, setMinutes, getHours, getMinutes } from "date-fns";
+import { format, setHours, setMinutes, getHours, getMinutes, isValid } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export function DatePickerField({
             disabled={disabled}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {field?.value ? (
+            {field?.value && isValid(new Date(field.value)) ? (
               format(new Date(field.value), showTimeSelect ? "PPP p" : "PPP")
             ) : (
               <span>{placeholder || "Pick a date"}</span>
@@ -68,7 +68,7 @@ export function DatePickerField({
         >
           <Calendar
             mode="single"
-            selected={field?.value ? new Date(field.value) : undefined}
+            selected={field?.value && isValid(new Date(field.value)) ? new Date(field.value) : undefined}
             onSelect={(date) => {
               if (date) {
                 if (showTimeSelect && field?.value) {
@@ -89,9 +89,9 @@ export function DatePickerField({
             captionLayout="dropdown-buttons"
             fromYear={1940}
             toYear={2040}
-            defaultMonth={field?.value ? new Date(field.value) : undefined}
+            defaultMonth={field?.value && isValid(new Date(field.value)) ? new Date(field.value) : undefined}
           />
-          {showTimeSelect && field?.value && (
+          {showTimeSelect && field?.value && isValid(new Date(field.value)) && (
             <TimePickerContent
               value={new Date(field.value)}
               onChange={(newDate) => field?.onChange(newDate)}
