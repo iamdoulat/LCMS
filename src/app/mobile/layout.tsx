@@ -184,12 +184,16 @@ function MobileLayoutContent({ children }: { children: React.ReactNode }) {
     );
 }
 
+import { FirestoreSuspensionProvider } from '@/context/FirestoreSuspensionContext';
+
 export default function MobileLayout({ children }: { children: React.ReactNode }) {
     return (
-        <MobileSidebarProvider>
-            <BreakTimeProvider>
-                <MobileLayoutContent>{children}</MobileLayoutContent>
-            </BreakTimeProvider>
-        </MobileSidebarProvider>
+        <FirestoreSuspensionProvider>
+            <MobileSidebarProvider>
+                <BreakTimeProvider>
+                    <MobileLayoutContent>{children}</MobileLayoutContent>
+                </BreakTimeProvider>
+            </MobileSidebarProvider>
+        </FirestoreSuspensionProvider>
     );
 }

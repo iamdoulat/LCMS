@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { reverseGeocode, hasActiveCheckIn } from '@/lib/firebase/checkInOut';
 import { determineAttendanceFlag } from '@/lib/firebase/utils';
 import { getActivePolicyForDate } from '@/lib/attendance';
-import type { AttendancePolicyDocument, EmployeeDocument, DailyAttendancePolicy } from '@/types';
+import type { AttendancePolicyDocument, EmployeeDocument, DailyAttendancePolicy, MultipleCheckInOutConfiguration } from '@/types';
 
 interface MobileAttendanceModalProps {
     isOpen: boolean;
@@ -445,10 +445,26 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     throw new Error('You have already checked out for today');
                 }
 
-                // Cross-system Validation: Check for active visits
-                const isActiveVisit = await hasActiveCheckIn(canonicalId);
-                if (isActiveVisit) {
-                    throw new Error('Please check out from Check In tab first.');
+                // Cross-system Validation: Check for active visits if restricted in settings
+                try {
+                    console.log(`[ClockOut Restriction] Checking active visits for ID: ${canonicalId}`);
+                    const configSnap = await getDoc(doc(firestore, 'hrm_settings', 'multi_check_in_out'));
+                    const config = configSnap.data() as MultipleCheckInOutConfiguration;
+                    
+                    if (config?.isClockOutRestrictedIfActiveCheckIn) {
+                        const isActiveVisit = await hasActiveCheckIn(canonicalId);
+                        console.log(`[ClockOut Restriction] Is check-out restricted: ${config?.isClockOutRestrictedIfActiveCheckIn}, Active visit found: ${isActiveVisit}`);
+                        if (isActiveVisit) {
+                            throw new Error('Please check out from Check In tab first.');
+                        }
+                    }
+                } catch (err: any) {
+                    if (err.message === 'Please check out from Check In tab first.') throw err;
+                    console.error("Error checking multi-check config:", err);
+                    // Re-throw if it's a Firestore error that prevents certain validation
+                    if (err.code === 'failed-precondition' || err.code === 'permission-denied') {
+                        throw new Error(`Validation Error: ${err.message}`);
+                    }
                 }
 
                 // Update attendance record with check-out

@@ -6,8 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
-import { collection, doc, serverTimestamp, setDoc, getDocs, query, orderBy } from 'firebase/firestore';
-import type { AttendanceFormValues, EmployeeDocument } from '@/types';
+import { collection, doc, serverTimestamp, setDoc, getDocs, query, orderBy, getDoc } from 'firebase/firestore';
+import type { AttendanceFormValues, EmployeeDocument, MultipleCheckInOutConfiguration } from '@/types';
 import { AttendanceFormSchema, attendanceFlagOptions } from '@/types';
 import { format, differenceInMinutes, parse, isValid } from 'date-fns';
 import { hasActiveCheckIn } from '@/lib/firebase/checkInOut';
@@ -128,14 +128,29 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
 
     // Cross-system Validation: Check for active visits if Out Time is enabled
     if (data.enableOutTime && data.outTime) {
-      const isActiveVisit = await hasActiveCheckIn(data.employeeId);
-      if (isActiveVisit) {
-        Swal.fire({
-          title: "Restricted",
-          text: "This employee has an active visit running. Please complete the visit Check-Out first.",
-          icon: "warning"
-        });
-        return;
+      // Fetch setting from HR config
+      try {
+        const configSnap = await getDoc(doc(firestore, 'hrm_settings', 'multi_check_in_out'));
+        const config = configSnap.data() as MultipleCheckInOutConfiguration;
+
+        if (config?.isClockOutRestrictedIfActiveCheckIn) {
+          const isActiveVisit = await hasActiveCheckIn(data.employeeId);
+          if (isActiveVisit) {
+            Swal.fire({
+              title: "Restricted",
+              text: "This employee has an active visit running. Please complete the visit Check-Out first.",
+              icon: "warning"
+            });
+            return;
+          }
+        }
+      } catch (error: any) {
+        console.error("Error checking multi-check config:", error);
+        // Handle specific critical errors
+        if (error.code === 'failed-precondition') {
+          Swal.fire("Validation Error", "System could not verify active visits due to missing index.", "error");
+          return;
+        }
       }
     }
 

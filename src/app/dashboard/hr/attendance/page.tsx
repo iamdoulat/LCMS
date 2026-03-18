@@ -1,16 +1,15 @@
-
 "use client";
 
-import * as React from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Swal from 'sweetalert2';
 import { firestore } from '@/lib/firebase/config';
 import { determineAttendanceFlag } from '@/lib/firebase/utils';
-import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp, writeBatch, getDocs, getDoc } from 'firebase/firestore';
 import { hasActiveCheckIn } from '@/lib/firebase/checkInOut';
-import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, UserDocumentForAdmin, AttendancePolicyDocument, DailyAttendancePolicy } from '@/types';
+import type { EmployeeDocument, BranchDocument, UnitDocument, DepartmentDocument, AttendanceDocument, AttendanceFlag, HolidayDocument, LeaveApplicationDocument, VisitApplicationDocument, UserDocumentForAdmin, AttendancePolicyDocument, DailyAttendancePolicy, MultipleCheckInOutConfiguration } from '@/types';
 import { attendanceFlagOptions } from '@/types';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { cn } from '@/lib/utils';
@@ -306,16 +305,24 @@ const AttendanceDayRow = ({
             return;
         }
 
-        // Cross-system Validation: Check for active visits if Out Time is provided
+        // Cross-system Validation: Check for active visits if Out Time is provided and restricted in settings
         if ((data.flag === 'P' || data.flag === 'D') && data.outTime) {
-            const isActiveVisit = await hasActiveCheckIn(employee.id);
-            if (isActiveVisit) {
-                Swal.fire({
-                    title: "Restricted",
-                    text: "This employee has an active visit running. Please complete the visit Check-Out first.",
-                    icon: "warning"
-                });
-                return;
+            try {
+                const configSnap = await getDoc(doc(firestore, 'hrm_settings', 'multi_check_in_out'));
+                const config = configSnap.data() as MultipleCheckInOutConfiguration;
+                if (config?.isClockOutRestrictedIfActiveCheckIn) {
+                    const isActiveVisit = await hasActiveCheckIn(employee.id);
+                    if (isActiveVisit) {
+                        Swal.fire({
+                            title: "Restricted",
+                            text: "This employee has an active visit running. Please complete the visit Check-Out first.",
+                            icon: "warning"
+                        });
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.error("Error checking multi-check config:", err);
             }
         }
 
@@ -871,14 +878,22 @@ export default function DailyAttendancePage() {
     };
 
 
-    const refetchAttendance = React.useCallback(async () => {
-        setIsLoadingAttendance(true);
+    const attendanceUnsubscribeRef = useRef<(() => void) | null>(null);
+    const isInitialMount = useRef(true);
+
+    const refetchAttendance = useCallback(() => {
+        if (attendanceUnsubscribeRef.current) {
+            attendanceUnsubscribeRef.current();
+            attendanceUnsubscribeRef.current = null;
+        }
+
         if (!dateRange?.from) {
             setAllAttendance([]);
             setIsLoadingAttendance(false);
             return;
         }
 
+        setIsLoadingAttendance(true);
         const fromDateStr = format(startOfDay(dateRange.from), "yyyy-MM-dd'T'00:00:00.000xxx");
         const toDateStr = format(endOfDay(dateRange.to || dateRange.from), "yyyy-MM-dd'T'23:59:59.999xxx");
 
@@ -894,17 +909,23 @@ export default function DailyAttendancePage() {
             setIsLoadingAttendance(false);
         }, (error) => {
             console.error("Error fetching attendance:", error);
-            Swal.fire("Error", "Could not fetch attendance data in real-time.", "error");
+            // Handle specific Firestore errors gracefully
+            if (error.code !== 'cancelled') {
+                Swal.fire("Error", "Could not fetch attendance data in real-time.", "error");
+            }
             setIsLoadingAttendance(false);
         });
 
-        return unsubscribe;
+        attendanceUnsubscribeRef.current = unsubscribe;
     }, [dateRange]);
 
-    React.useEffect(() => {
-        const unsubscribePromise = refetchAttendance();
+    useEffect(() => {
+        refetchAttendance();
         return () => {
-            unsubscribePromise.then(unsub => unsub && unsub());
+            if (attendanceUnsubscribeRef.current) {
+                attendanceUnsubscribeRef.current();
+                attendanceUnsubscribeRef.current = null;
+            }
         };
     }, [refetchAttendance]);
 

@@ -23,6 +23,7 @@ import { useMemo } from 'react';
 import Image from 'next/image';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRealtimeData, useRealtimeDoc } from '@/hooks/useRealtimeData';
+import { useFirestoreSuspension } from '@/context/FirestoreSuspensionContext';
 import { dataScoper } from '@/lib/data/dataScoper';
 import { parseTimeToMinutes } from '@/lib/firebase/utils';
 import { hasActiveCheckIn } from '@/lib/firebase/checkInOut';
@@ -186,14 +187,23 @@ export default function MobileDashboardPage() {
         disbursedAmount: 0
     });
 
-    // Real-time Data Subscriptions using the new architecture - refreshKey triggers re-fetch
-    const attendanceQuery = useMemo(() => dataScoper.getAttendanceQuery(permissions, scoperContext), [permissions, scoperContext, refreshKey]);
-    const leaveQuery = useMemo(() => dataScoper.getLeaveQuery(permissions, scoperContext), [permissions, scoperContext, refreshKey]);
-    const visitQuery = useMemo(() => dataScoper.getVisitQuery(permissions, scoperContext), [permissions, scoperContext, refreshKey]);
+    const { setSuspended } = useFirestoreSuspension();
 
-    const { data: attendanceData, loading: attendanceLoading } = useRealtimeData<any[]>(attendanceQuery);
-    const { data: leaveData, loading: leaveLoading } = useRealtimeData<any[]>(leaveQuery);
-    const { data: visitData, loading: visitLoading } = useRealtimeData<any[]>(visitQuery);
+    // Toggle Firestore suspension when modal is open
+    useEffect(() => {
+        setSuspended(isAttendanceModalOpen);
+        // Ensure we resume when leaving the page
+        return () => setSuspended(false);
+    }, [isAttendanceModalOpen, setSuspended]);
+
+    // Real-time Data Subscriptions using the new architecture - queries are stable and don't need refreshKey
+    const attendanceQuery = useMemo(() => dataScoper.getAttendanceQuery(permissions, scoperContext), [permissions, scoperContext]);
+    const leaveQuery = useMemo(() => dataScoper.getLeaveQuery(permissions, scoperContext), [permissions, scoperContext]);
+    const visitQuery = useMemo(() => dataScoper.getVisitQuery(permissions, scoperContext), [permissions, scoperContext]);
+
+    const { data: attendanceData, loading: attendanceLoading } = useRealtimeData<any[]>(attendanceQuery, { enabled: true });
+    const { data: leaveData, loading: leaveLoading } = useRealtimeData<any[]>(leaveQuery, { enabled: true });
+    const { data: visitData, loading: visitLoading } = useRealtimeData<any[]>(visitQuery, { enabled: true });
 
     // Today's attendance listener using new hook
     const todayDocRef = useMemo(() => {
@@ -203,11 +213,11 @@ export default function MobileDashboardPage() {
         return doc(firestore, 'attendance', `${canonicalId}_${dateKey}`);
     }, [user?.uid, currentEmployeeId]);
 
-    const { data: todayAttendanceData, loading: todayLoading } = useRealtimeDoc<any>(todayDocRef);
+    const { data: todayAttendanceData, loading: todayLoading } = useRealtimeDoc<any>(todayDocRef, { enabled: true });
 
     // Role-based notice listener
-    const noticeQuery = useMemo(() => query(collection(firestore, 'site_settings'), where('isEnabled', '==', true)), [refreshKey]);
-    const { data: rawNoticeData, loading: noticesLoading } = useRealtimeData<any[]>(noticeQuery);
+    const noticeQuery = useMemo(() => query(collection(firestore, 'site_settings'), where('isEnabled', '==', true)), []);
+    const { data: rawNoticeData, loading: noticesLoading } = useRealtimeData<any[]>(noticeQuery, { enabled: true });
 
     // Claim stats current month
     const claimQuery = useMemo(() => {
@@ -219,8 +229,8 @@ export default function MobileDashboardPage() {
             where('employeeId', 'in', Array.from(new Set(ids))),
             where('claimDate', '>=', startOfMonth(new Date()).toISOString())
         );
-    }, [user?.uid, currentEmployeeId, refreshKey]);
-    const { data: claimData, loading: claimLoading } = useRealtimeData<any[]>(claimQuery);
+    }, [user?.uid, currentEmployeeId]);
+    const { data: claimData, loading: claimLoading } = useRealtimeData<any[]>(claimQuery, { enabled: true });
 
     useEffect(() => {
         if (rawNoticeData) {

@@ -173,6 +173,32 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
             return;
           }
 
+          // Check for terminated employee status
+          const empQuery = query(
+            collection(firestore, 'employees'),
+            where('email', '==', userProfileData.email),
+            limit(1)
+          );
+          const empSnapshot = await getDocs(empQuery);
+
+          if (!empSnapshot.empty) {
+            const empData = empSnapshot.docs[0].data() as Employee;
+            if (empData.status === 'Terminated' || (empData.jobStatus as string) === 'Terminated') {
+              await firebaseSignOut(auth);
+              setUser(null);
+              setFirestoreUser(null);
+              setUserRole(null);
+              Swal.fire({
+                title: "Access Denied",
+                text: "Your Employee Status terminated. Pls contact with HR Admin.",
+                icon: "error",
+              });
+              const isMobilePath = typeof window !== 'undefined' && window.location.pathname.startsWith('/mobile');
+              router.push(isMobilePath ? '/mobile/login' : '/login');
+              return;
+            }
+          }
+
           // Check if email has changed and sync to Firestore
           const authEmail = currentUser.email?.toLowerCase();
           const firestoreEmail = userProfileData.email?.toLowerCase();

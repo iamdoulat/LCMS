@@ -8,7 +8,7 @@ import {
     limit,
     Timestamp
 } from 'firebase/firestore';
-import { startOfMonth, subDays } from 'date-fns';
+import { startOfMonth, subDays, startOfDay } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
 import { Permissions } from '@/hooks/usePermissions';
 
@@ -30,7 +30,7 @@ export const dataScoper = {
         // Remove duplicates
         const selfIds = Array.from(new Set(ids));
 
-        const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+        const thirtyDaysAgo = subDays(startOfDay(new Date()), 30).toISOString();
 
         if (permissions.canViewAllAttendance) {
             return query(

@@ -70,7 +70,6 @@ export default function MobileCheckInOutPage() {
     const showSupervisionTab = isSuperAdminOrAdmin || explicitSubordinates.length > 0;
 
     const [supervisionRecords, setSupervisionRecords] = useState<MultipleCheckInOutRecord[]>([]);
-    const [filteredSupervisionRecords, setFilteredSupervisionRecords] = useState<MultipleCheckInOutRecord[]>([]);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filterEmployeeName, setFilterEmployeeName] = useState('');
     const [filterFromDate, setFilterFromDate] = useState(format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
@@ -122,7 +121,8 @@ export default function MobileCheckInOutPage() {
         if (!user) return;
 
         let unsubscribe: (() => void) | null = null;
-
+        let active = true;
+ 
         const setupPersonalRecords = async () => {
             try {
                 // Determine canonical ID (matching MobileCheckInOutModal logic)
@@ -132,13 +132,16 @@ export default function MobileCheckInOutPage() {
                 const empDocRef = doc(firestore, 'employees', user.uid);
                 const empDocSnap = await getDoc(empDocRef);
 
+                if (!active) return;
+
                 if (empDocSnap.exists()) {
                     setEmployeeProfile({ id: empDocSnap.id, ...empDocSnap.data() } as EmployeeDocument);
-                    canonicalId = empDocSnap.id; // Update canonicalId if found by UID
+                    canonicalId = empDocSnap.id; 
                 } else if (user.email) {
                     // Try to find by email
                     const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
                     const snap = await getDocs(q);
+                    if (!active) return;
                     if (!snap.empty) {
                         const empSnap = snap.docs[0];
                         canonicalId = empSnap.id;
@@ -146,7 +149,10 @@ export default function MobileCheckInOutPage() {
                     }
                 }
 
+                if (!active) return;
                 setCurrentUserEmployeeId(canonicalId);
+
+                if (!canonicalId) return;
 
                 // Fetch Today's Attendance to check if user has clocked in
                 let todayAttendanceData = null;
@@ -155,23 +161,28 @@ export default function MobileCheckInOutPage() {
                     const dateKey = format(today, 'yyyy-MM-dd');
                     const attDocRef = doc(firestore, 'attendance', `${canonicalId}_${dateKey}`);
                     const attDocSnap = await getDoc(attDocRef);
-                    if (attDocSnap.exists()) {
+                    if (attDocSnap.exists() && active) {
                         todayAttendanceData = attDocSnap.data();
                     }
                 } catch (e) {
                     console.error("Error fetching today's attendance:", e);
                 }
-                setTodayAttendance(todayAttendanceData);
+                if (active) setTodayAttendance(todayAttendanceData);
 
+                if (!active) return;
 
                 // Fetch Holidays
                 try {
                     const holidaysSnap = await getDocs(collection(firestore, 'holidays'));
-                    const holidaysData = holidaysSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as HolidayDocument));
-                    setHolidays(holidaysData);
+                    if (active) {
+                        const holidaysData = holidaysSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as HolidayDocument));
+                        setHolidays(holidaysData);
+                    }
                 } catch (error) {
                     console.error("Error fetching holidays:", error);
                 }
+
+                if (!active) return;
 
                 // Fetch Approved Leaves for this employee
                 if (canonicalId) {
@@ -182,12 +193,16 @@ export default function MobileCheckInOutPage() {
                             where('status', '==', 'Approved')
                         );
                         const leavesSnap = await getDocs(leavesQuery);
-                        const leavesData = leavesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
-                        setLeaves(leavesData);
+                        if (active) {
+                            const leavesData = leavesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
+                            setLeaves(leavesData);
+                        }
                     } catch (error) {
                         console.error("Error fetching leaves:", error);
                     }
                 }
+
+                if (!active) return;
 
                 // Setup listener using canonicalId
                 const qValues = query(
@@ -196,6 +211,7 @@ export default function MobileCheckInOutPage() {
                 );
 
                 unsubscribe = onSnapshot(qValues, (snapshot) => {
+                    if (!active) return;
                     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
                     // Sort client-side by timestamp desc
                     data.sort((a, b) => {
@@ -210,17 +226,24 @@ export default function MobileCheckInOutPage() {
                         setLastRecord(null);
                     }
                     setIsLoading(false);
+                }, (err) => {
+                    console.error("Personal records listener error:", err);
+                    if (active) setIsLoading(false);
                 });
             } catch (err) {
                 console.error("Error setting up personal records listener:", err);
-                setIsLoading(false);
+                if (active) setIsLoading(false);
             }
         };
 
         setupPersonalRecords();
 
         return () => {
-            if (unsubscribe) unsubscribe();
+            active = false;
+            if (unsubscribe) {
+                unsubscribe();
+                unsubscribe = null;
+            }
         };
     }, [user]);
 
@@ -258,14 +281,6 @@ export default function MobileCheckInOutPage() {
 
                 allSupRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
                 setSupervisionRecords(allSupRecords);
-
-                // Client-side filtering for employee name (since 'in' query is already used)
-                let filtered = [...allSupRecords];
-                if (filterEmployeeName) {
-                    const lowerName = filterEmployeeName.toLowerCase();
-                    filtered = filtered.filter(r => r.employeeName?.toLowerCase().includes(lowerName));
-                }
-                setFilteredSupervisionRecords(filtered);
             } catch (err) {
                 console.error("Error fetching supervision records:", err);
             } finally {
@@ -274,7 +289,7 @@ export default function MobileCheckInOutPage() {
         };
 
         fetchSupervisionData();
-    }, [isSupervisor, effectiveSupervisedEmployeeIds, activeTab, refreshTrigger, filterFromDate, filterToDate]);
+    }, [isSupervisor, effectiveSupervisedEmployeeIds.length, activeTab, refreshTrigger, filterFromDate, filterToDate]);
 
     // Fetch Privileged Role Check-Ins
     useEffect(() => {
@@ -319,7 +334,7 @@ export default function MobileCheckInOutPage() {
                 let allPrivRecords: MultipleCheckInOutRecord[] = [];
                 for (const chunk of chunks) {
                     const q = query(
-                        collection(firestore, 'multiple_check_in_out'),
+                        collection(firestore, 'multiple_check_inout'),
                         where('employeeId', 'in', chunk)
                     );
                     const snap = await getDocs(q);
@@ -675,12 +690,35 @@ export default function MobileCheckInOutPage() {
     // Memoized record processing
     const filteredGroupedRecords = React.useMemo(() => {
         const uniqueRecordsMap = new Map();
-        [...records, ...privilegedRoleRecords, ...filteredSupervisionRecords].forEach(r => {
+        
+        // Apply date filters consistently even to personal records if in Supervision tab
+        let pool = [...records, ...privilegedRoleRecords, ...supervisionRecords];
+
+        pool.forEach(r => {
             if (!uniqueRecordsMap.has(r.id)) {
                 uniqueRecordsMap.set(r.id, r);
             }
         });
-        const uniqueRecords = Array.from(uniqueRecordsMap.values());
+        let uniqueRecords = Array.from(uniqueRecordsMap.values()) as MultipleCheckInOutRecord[];
+
+        // Apply employee name/ID filter (Code support)
+        if (filterEmployeeName) {
+            const lowerFilter = filterEmployeeName.toLowerCase();
+            uniqueRecords = uniqueRecords.filter(r => 
+                r.employeeName?.toLowerCase().includes(lowerFilter) || 
+                r.employeeId?.toLowerCase().includes(lowerFilter)
+            );
+        }
+
+        // Apply date filters consistently to all records in the pool
+        if (filterFromDate) {
+            const from = startOfDay(new Date(filterFromDate)).getTime();
+            uniqueRecords = uniqueRecords.filter(r => new Date(r.timestamp).getTime() >= from);
+        }
+        if (filterToDate) {
+            const to = endOfDay(new Date(filterToDate)).getTime();
+            uniqueRecords = uniqueRecords.filter(r => new Date(r.timestamp).getTime() <= to);
+        }
 
         const grouped = groupRecordsByDate(uniqueRecords);
 
@@ -709,12 +747,12 @@ export default function MobileCheckInOutPage() {
                     // Show User's completed visits OR visits that are auto-done (maxHours+)
                     return (isDone || isAutoDone) && isUserRecord;
                 }
-                // Supervision tab shows everything
+                // Supervision tab shows everything in the filtered set
                 return true;
             });
             return { ...group, visits: filteredVisits };
         }).filter(group => group.visits.length > 0);
-    }, [records, privilegedRoleRecords, supervisionRecords, activeTab, currentUserEmployeeId]);
+    }, [records, privilegedRoleRecords, supervisionRecords, activeTab, currentUserEmployeeId, filterEmployeeName, filterFromDate, filterToDate, multiCheckConfig]);
 
     // Fetch missing profiles for avatars
     useEffect(() => {

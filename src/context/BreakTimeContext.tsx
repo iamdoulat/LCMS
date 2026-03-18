@@ -3,7 +3,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useRealtimeData } from '@/hooks/useRealtimeData';
 import { BreakTimeRecord } from '@/types/breakTime';
 import { MobileBreakTimeModal } from '@/components/mobile/MobileBreakTimeModal';
 
@@ -61,31 +62,25 @@ export function BreakTimeProvider({ children }: { children: React.ReactNode }) {
         resolveId();
     }, [user?.email, user?.uid]);
 
-    // Real-time listener for active break
-    useEffect(() => {
-        if (!employeeId) return;
-
-        const q = query(
+    const { data: breakData, loading: breakLoading } = useRealtimeData<BreakTimeRecord[]>(
+        employeeId ? query(
             collection(firestore, 'break_time'),
             where('employeeId', '==', employeeId),
             where('onBreak', '==', true)
-        );
+        ) : null
+    );
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            if (!snapshot.empty) {
-                const doc = snapshot.docs[0];
-                setActiveBreakRecord({ id: doc.id, ...doc.data() } as BreakTimeRecord);
-                setIsOnBreak(true);
-                // Force modal open if on break
-                setIsModalOpen(true);
-            } else {
-                setActiveBreakRecord(null);
-                setIsOnBreak(false);
-            }
-        });
-
-        return () => unsubscribe();
-    }, [employeeId]);
+    useEffect(() => {
+        if (breakData && breakData.length > 0) {
+            const record = breakData[0];
+            setActiveBreakRecord(record);
+            setIsOnBreak(true);
+            setIsModalOpen(true);
+        } else if (!breakLoading) {
+            setActiveBreakRecord(null);
+            setIsOnBreak(false);
+        }
+    }, [breakData, breakLoading]);
 
     const openBreakModal = () => setIsModalOpen(true);
     const closeBreakModal = () => {

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import type { EmployeeDocument, LeaveGroupDocument, LeaveApplicationDocument } from '@/types';
 import { cn } from '@/lib/utils';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 
 interface EmployeeLeaveBalance {
     employee: EmployeeDocument;
@@ -24,7 +25,7 @@ interface EmployeeLeaveBalance {
 export default function SubOrdinateLeaveBalancePage() {
     const router = useRouter();
     const { user } = useAuth();
-    const { supervisedEmployeeIds, explicitSubordinateIds } = useSupervisorCheck(user?.email);
+    const { supervisedEmployeeIds, explicitSubordinateIds, isLoading: isSupervisorCheckLoading } = useSupervisorCheck(user?.email);
 
     // Import dynamically to avoid build issues if not already
     const searchParams = useSearchParams();
@@ -32,121 +33,111 @@ export default function SubOrdinateLeaveBalancePage() {
     const isTeamView = view === 'team';
 
     // Use explicit (direct) subordinates for 'team' view, otherwise all accessible subordinates
-    // For Admins: explicit = direct reports, supervised = everyone
-    // For Managers: explicit & supervised are usually similar (subordinates), but we use the appropriate list
     const targetEmployeeIds = isTeamView ? explicitSubordinateIds : supervisedEmployeeIds;
 
     const [loading, setLoading] = useState(true);
-    const [employeeBalances, setEmployeeBalances] = useState<EmployeeLeaveBalance[]>([]);
+    const [employees, setEmployees] = useState<EmployeeDocument[]>([]);
+    const [leaveGroups, setLeaveGroups] = useState<LeaveGroupDocument[]>([]);
+    const [leaveAppsMap, setLeaveAppsMap] = useState<Record<number, LeaveApplicationDocument[]>>({});
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
+    // 1. Fetch Static Data (Employees and Leave Groups)
     useEffect(() => {
-        const fetchLeaveBalances = async () => {
-            if (!targetEmployeeIds.length) {
-                // Only stop loading if we checked and found no IDs. 
-                // But useSupervisorCheck has an 'isLoading' field we should ideally use.
-                // For now, if array is empty, we just wait or show empty?
-                // The hook starts with empty arrays. We need to know if hook is done loading.
-                // We'll rely on the array length check for now, assuming hook returns eventually.
-                // To be safe, adding a check if hook provided IDs or if we timed out could be better,
-                // but let's stick to the filtered ID list for now.
-                setLoading(false);
-                return;
-            }
+        if (isSupervisorCheckLoading) return;
+        if (!targetEmployeeIds.length) {
+            setEmployees([]);
+            setLoading(false);
+            return;
+        }
 
+        const fetchStaticData = async () => {
             setLoading(true);
             try {
-                // Fetch employees from target list
-                const employeesPromises = targetEmployeeIds.map(async (empId) => {
-                    const empDoc = await getDocs(
-                        query(collection(firestore, 'employees'), where('__name__', '==', empId))
-                    );
-                    if (!empDoc.empty) {
-                        return { id: empDoc.docs[0].id, ...empDoc.docs[0].data() } as EmployeeDocument;
-                    }
-                    return null;
-                });
+                // Fetch employees in chunks of 10
+                const allEmployees: EmployeeDocument[] = [];
+                const empChunks = [];
+                for (let i = 0; i < targetEmployeeIds.length; i += 10) {
+                    empChunks.push(targetEmployeeIds.slice(i, i + 10));
+                }
 
-                const employees = (await Promise.all(employeesPromises)).filter(Boolean) as EmployeeDocument[];
+                for (const chunk of empChunks) {
+                    const qEmp = query(collection(firestore, 'employees'), where('__name__', 'in', chunk));
+                    const snap = await getDocs(qEmp);
+                    snap.docs.forEach(doc => allEmployees.push({ id: doc.id, ...doc.data() } as EmployeeDocument));
+                }
+                setEmployees(allEmployees);
 
                 // Fetch leave groups
-                const leaveGroupsSnapshot = await getDocs(
-                    collection(firestore, 'hrm_settings/leave_groups/items')
-                );
-                const leaveGroups = leaveGroupsSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as LeaveGroupDocument[];
-
-                // Fetch all leave applications for target employees
-                // Firestore 'in' has limit of 10. If explicitSubordinateIds > 10, this will fail.
-                // We should chunk it or just fetch by individual queries if list is small, 
-                // or fetch by supervisorId if possible (but we are filtering explicitly now).
-                // Safest to batch strictly or just fetch all active leaves and filter in memory if not too huge?
-                // Given the code currently slices to 10: .slice(0, 10), we will keep that limitation or expand it.
-                // For "My Team" it might be > 10. 
-                // Let's rely on the existing logic structure but use targetEmployeeIds.
-
-                const leaveAppsSnapshot = await getDocs(
-                    query(
-                        collection(firestore, 'leave_applications'),
-                        where('employeeId', 'in', targetEmployeeIds.slice(0, 10))
-                    )
-                );
-                const leaveApplications = leaveAppsSnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as LeaveApplicationDocument[];
-
-                // Calculate balances (same logic)
-                const balances: EmployeeLeaveBalance[] = employees.map(employee => {
-                    const leaveGroup = leaveGroups.find(lg => lg.id === employee.leaveGroupId);
-
-                    if (!leaveGroup) {
-                        return {
-                            employee,
-                            leaveBalances: []
-                        };
-                    }
-
-                    const leaveBalances = leaveGroup.policies.map(policy => {
-                        const takenDays = leaveApplications
-                            .filter(app =>
-                                app.employeeId === employee.id &&
-                                app.leaveType === policy.leaveTypeName &&
-                                app.status === 'Approved'
-                            )
-                            .reduce((sum, app) => {
-                                const from = new Date(app.fromDate);
-                                const to = new Date(app.toDate);
-                                const days = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                                return sum + days;
-                            }, 0);
-
-                        return {
-                            leaveType: policy.leaveTypeName,
-                            totalDays: policy.allowedBalance,
-                            takenDays,
-                            remainingDays: policy.allowedBalance - takenDays
-                        };
-                    });
-
-                    return {
-                        employee,
-                        leaveBalances
-                    };
-                });
-
-                setEmployeeBalances(balances);
+                const leaveGroupsSnapshot = await getDocs(collection(firestore, 'hrm_settings/leave_groups/items'));
+                const groups = leaveGroupsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveGroupDocument));
+                setLeaveGroups(groups);
             } catch (error) {
-                console.error("Error fetching leave balances:", error);
-            } finally {
-                setLoading(false);
+                console.error("Error fetching static leave data:", error);
             }
         };
 
-        fetchLeaveBalances();
-    }, [targetEmployeeIds]);
+        fetchStaticData();
+    }, [targetEmployeeIds, isSupervisorCheckLoading]);
+
+    // 2. Setup Real-time Listeners for Leave Applications
+    useEffect(() => {
+        if (isSupervisorCheckLoading || !targetEmployeeIds.length) return;
+
+        const unsubs: (() => void)[] = [];
+        const appChunks = [];
+        for (let i = 0; i < targetEmployeeIds.length; i += 10) {
+            appChunks.push(targetEmployeeIds.slice(i, i + 10));
+        }
+
+        appChunks.forEach((chunk, index) => {
+            const q = query(collection(firestore, 'leave_applications'), where('employeeId', 'in', chunk));
+            const unsub = onSnapshot(q, (snapshot) => {
+                const chunkApps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
+                setLeaveAppsMap(prev => ({ ...prev, [index]: chunkApps }));
+                setLoading(false);
+            }, (error) => {
+                console.error(`Error in leave apps listener (chunk ${index}):`, error);
+            });
+            unsubs.push(unsub);
+        });
+
+        return () => unsubs.forEach(u => u());
+    }, [targetEmployeeIds, isSupervisorCheckLoading]);
+
+    // 3. Compute Employee Balances
+    const employeeBalances = useMemo(() => {
+        const allLeaveApps = Object.values(leaveAppsMap).flat();
+        
+        return employees.map(employee => {
+            const leaveGroup = leaveGroups.find(lg => lg.id === employee.leaveGroupId);
+
+            if (!leaveGroup) {
+                return { employee, leaveBalances: [] };
+            }
+
+            const leaveBalances = leaveGroup.policies.map(policy => {
+                const takenDays = allLeaveApps
+                    .filter(app =>
+                        app.employeeId === employee.id &&
+                        app.leaveType === policy.leaveTypeName &&
+                        app.status === 'Approved'
+                    )
+                    .reduce((sum, app) => {
+                        const days = differenceInCalendarDays(parseISO(app.toDate), parseISO(app.fromDate)) + 1;
+                        return sum + days;
+                    }, 0);
+
+                return {
+                    leaveType: policy.leaveTypeName,
+                    totalDays: policy.allowedBalance,
+                    takenDays,
+                    remainingDays: Math.max(0, policy.allowedBalance - takenDays)
+                };
+            });
+
+            return { employee, leaveBalances };
+        });
+    }, [employees, leaveGroups, leaveAppsMap]);
 
     const toggleExpanded = (employeeId: string) => {
         setExpandedIds(prev => {

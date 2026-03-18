@@ -231,24 +231,46 @@ export const updateCheckInOutStatus = async (
 };
 
 /**
- * Check if the latest record for an employee is a 'Check In'.
- * This is used for cross-system validation (e.g., blocking attendance out-time).
+ * Check if the employee has any active (un-closed) check-in records.
+ * This handles multiple check-ins if allowed by the configuration.
  */
 export const hasActiveCheckIn = async (employeeId: string): Promise<boolean> => {
     try {
+        // Fetch last 10 records for this employee to see if any are still "active"
         const q = query(
             collection(firestore, 'multiple_check_inout'),
             where('employeeId', '==', employeeId),
             orderBy('timestamp', 'desc'),
-            limit(1)
+            limit(10)
         );
         const snapshot = await getDocs(q);
         if (snapshot.empty) return false;
         
-        const latest = snapshot.docs[0].data();
-        return latest.type === 'Check In';
+        const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
+        const now = new Date().getTime();
+        const maxHours = 12; // Standard expiry window
+
+        // Look for any "Check In" that doesn't have a newer "Check Out" for the same company
+        const activeCheckIn = records.find(r => {
+            if (r.type !== 'Check In') return false;
+            
+            const hasMatchingCheckOut = records.some(out => 
+                out.type === 'Check Out' && 
+                out.companyName === r.companyName && 
+                new Date(out.timestamp).getTime() > new Date(r.timestamp).getTime()
+            );
+
+            // Check if it's within the auto-done/expiry window (e.g. 12 hours)
+            const checkInTime = new Date(r.timestamp).getTime();
+            const isExpired = (now - checkInTime) > (maxHours * 60 * 60 * 1000);
+
+            return !hasMatchingCheckOut && !isExpired;
+        });
+
+        return !!activeCheckIn;
     } catch (error) {
-        console.error('Error checking for active check-in:', error);
-        return false;
+        console.error('Error in hasActiveCheckIn:', error);
+        // Throw the error so the calling component can decide how to handle it
+        throw error;
     }
 };

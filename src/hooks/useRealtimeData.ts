@@ -27,6 +27,8 @@ interface RealtimeDocOptions<T> {
     enabled?: boolean;
 }
 
+import { useFirestoreSuspension } from '@/context/FirestoreSuspensionContext';
+
 export function useRealtimeData<T>(
     query: Query<DocumentData> | null,
     options: RealtimeDataOptions<T> = {}
@@ -36,36 +38,54 @@ export function useRealtimeData<T>(
     const [error, setError] = useState<Error | null>(null);
 
     const { transform, onData, onError, enabled = true } = options;
+    const { isSuspended } = useFirestoreSuspension();
 
     useEffect(() => {
-        if (!query || !enabled) {
+        if (!query || !enabled || isSuspended) {
             setLoading(false);
             return;
         }
 
         setLoading(true);
-        const unsubscribe = onSnapshot(
-            query,
-            (snapshot) => {
-                const transformedData = transform
-                    ? transform(snapshot)
-                    : snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as unknown as T;
+        let unsubscribe: (() => void) | null = null;
+        
+        try {
+            unsubscribe = onSnapshot(
+                query,
+                (snapshot) => {
+                    const transformedData = transform
+                        ? transform(snapshot)
+                        : snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as unknown as T;
 
-                setData(transformedData);
-                onData?.(transformedData);
-                setLoading(false);
-                setError(null);
-            },
-            (err) => {
-                console.error("Firestore Realtime Error:", err);
-                setError(err as Error);
-                onError?.(err as Error);
-                setLoading(false);
+                    setData(transformedData);
+                    onData?.(transformedData);
+                    setLoading(false);
+                    setError(null);
+                },
+                (err) => {
+                    console.error("Firestore Realtime Error:", err);
+                    setError(err as Error);
+                    onError?.(err as Error);
+                    setLoading(false);
+                }
+            );
+        } catch (err) {
+            console.error("Error setting up onSnapshot:", err);
+            setError(err as Error);
+            setLoading(false);
+        }
+
+        return () => {
+            if (unsubscribe) {
+                try {
+                    unsubscribe();
+                } catch (e) {
+                    // This handles the internal assertion ca9 in version 11.x
+                    console.warn("Firestore unsubscribe cleanup warning:", e);
+                }
             }
-        );
-
-        return () => unsubscribe();
-    }, [query, enabled]);
+        };
+    }, [query, enabled, isSuspended]);
 
     return { data, loading, error };
 }
@@ -79,38 +99,55 @@ export function useRealtimeDoc<T>(
     const [error, setError] = useState<Error | null>(null);
 
     const { transform, onData, onError, enabled = true } = options;
+    const { isSuspended } = useFirestoreSuspension();
 
     useEffect(() => {
-        if (!docRef || !enabled) {
+        if (!docRef || !enabled || isSuspended) {
             setLoading(false);
             return;
         }
 
         setLoading(true);
-        const unsubscribe = onSnapshot(
-            docRef,
-            (snapshot) => {
-                const transformedData = transform
-                    ? transform(snapshot)
-                    : (snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } as unknown as T : null);
+        let unsubscribe: (() => void) | null = null;
 
-                setData(transformedData);
-                if (transformedData !== null) {
-                    onData?.(transformedData as T);
+        try {
+            unsubscribe = onSnapshot(
+                docRef,
+                (snapshot) => {
+                    const transformedData = transform
+                        ? transform(snapshot)
+                        : (snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } as unknown as T : null);
+
+                    setData(transformedData);
+                    if (transformedData !== null) {
+                        onData?.(transformedData as T);
+                    }
+                    setLoading(false);
+                    setError(null);
+                },
+                (err) => {
+                    console.error("Firestore Realtime Doc Error:", err);
+                    setError(err as Error);
+                    onError?.(err as Error);
+                    setLoading(false);
                 }
-                setLoading(false);
-                setError(null);
-            },
-            (err) => {
-                console.error("Firestore Realtime Doc Error:", err);
-                setError(err as Error);
-                onError?.(err as Error);
-                setLoading(false);
-            }
-        );
+            );
+        } catch (err) {
+            console.error("Error setting up doc onSnapshot:", err);
+            setError(err as Error);
+            setLoading(false);
+        }
 
-        return () => unsubscribe();
-    }, [docRef, enabled]);
+        return () => {
+            if (unsubscribe) {
+                try {
+                    unsubscribe();
+                } catch (e) {
+                    console.warn("Firestore doc unsubscribe cleanup warning:", e);
+                }
+            }
+        };
+    }, [docRef, enabled, isSuspended]);
 
     return { data, loading, error };
 }

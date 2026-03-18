@@ -2319,6 +2319,7 @@ export const MultipleCheckInOutSchema = z.object({
   isMultipleCheckInAllowedWithoutCheckOut: z.boolean().default(false),
   isMaxHourLimitEnabled: z.boolean().default(true),
   maxHourLimitOfCheckOut: z.number().int().min(1).default(12),
+  isClockOutRestrictedIfActiveCheckIn: z.boolean().default(false),
 });
 
 export type MultipleCheckInOutConfiguration = z.infer<typeof MultipleCheckInOutSchema>;

@@ -1,8 +1,7 @@
-import { doc, getDoc } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase/config';
+import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
 import { sendWhatsApp } from '@/lib/whatsapp/sender';
-import type { HRClaim, Employee } from '@/types';
+import type { HRClaim } from '@/types';
 
 /**
  * Internal function that executes the actual notification logic.
@@ -11,6 +10,8 @@ import type { HRClaim, Employee } from '@/types';
  */
 export async function sendClaimStatusNotificationsInternal(claim: HRClaim) {
     try {
+        const db = admin.firestore();
+        
         if (!claim.employeeId) {
             console.error('sendClaimStatusNotificationsInternal: No employeeId found in claim', claim.id);
             return;
@@ -33,18 +34,18 @@ export async function sendClaimStatusNotificationsInternal(claim: HRClaim) {
 
         console.log(`sendClaimStatusNotificationsInternal: Processing ${status} notification for ${claim.claimNo}`, { emailSlug, waSlug });
 
-        // 1. Fetch Employee Details
-        const empDoc = await getDoc(doc(firestore, 'employees', claim.employeeId));
-        if (!empDoc.exists()) {
-            console.error('sendClaimStatusNotificationsInternal: Employee not found', claim.employeeId);
+        // 1. Fetch Employee Details from 'employees' collection (following other templates pattern)
+        const empDoc = await db.collection('employees').doc(claim.employeeId).get();
+        if (!empDoc.exists) {
+            console.error('sendClaimStatusNotificationsInternal: Employee not found in employees collection', claim.employeeId);
             return;
         }
 
-        const employee = empDoc.data() as Employee;
-        const email = employee.email;
-        const phone = employee.phone;
+        const employee = empDoc.data();
+        const email = employee?.email;
+        const phone = employee?.phone;
 
-        console.log(`sendClaimStatusNotificationsInternal: Found employee ${employee.fullName}`, { email, phone });
+        console.log(`sendClaimStatusNotificationsInternal: Found employee ${employee?.fullName || employee?.name}`, { email, phone });
 
         if (!email && !phone) {
             console.warn('sendClaimStatusNotificationsInternal: Employee has no email or phone', claim.employeeId);
@@ -56,7 +57,7 @@ export async function sendClaimStatusNotificationsInternal(claim: HRClaim) {
         const dueAmt = totalAmt - approvedAmt;
         
         const templateData = {
-            EmployeeName: employee.fullName || 'Employee',
+            EmployeeName: employee?.fullName || employee?.name || 'Employee',
             claimNo: claim.claimNo,
             Amount: approvedAmt.toLocaleString(), // Primarily show approved amount as the main "Amount"
             ApprovedAmount: approvedAmt.toLocaleString(),

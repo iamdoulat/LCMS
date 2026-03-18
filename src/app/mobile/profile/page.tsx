@@ -279,7 +279,7 @@ export default function MobileProfilePage() {
             { label: 'Employee Code', value: employee.employeeCode, icon: FileBadge },
             { label: 'Joining Date', value: formatReadableDate(employee.joinedDate), icon: Calendar },
             { label: 'Designation', value: employee.designation, icon: Briefcase },
-            { label: 'Job Status', value: employee.jobStatus || 'Active', icon: Briefcase },
+            { label: 'Job Status', value: employee.status === 'Terminated' ? 'Terminated' : (employee.jobStatus || 'Active'), icon: Briefcase },
             { label: 'Branch', value: employee.branch || 'Not Defined', icon: Building2 },
             { label: 'Department', value: employee.department || 'Not Defined', icon: Network },
             { label: 'Direct Supervisor', value: supervisorName || 'Not Assigned', icon: UserCheck },

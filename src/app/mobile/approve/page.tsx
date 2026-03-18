@@ -134,9 +134,9 @@ export default function ApproveApplicationsPage() {
             // 1. Leave Applications
             const leaveChunks: string[][] = isPrivileged ? [[]] : [];
             if (!isPrivileged) {
-                // Chunk supervised IDs
-                for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 30) {
-                    leaveChunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 30));
+                // Chunk supervised IDs - Firestore 'in' limit is 10
+                for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 10) {
+                    leaveChunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 10));
                 }
             }
 
@@ -214,8 +214,8 @@ export default function ApproveApplicationsPage() {
             // 2. Visit Applications
             const visitChunks: string[][] = isPrivileged ? [[]] : [];
             if (!isPrivileged) {
-                for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 30) {
-                    visitChunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 30));
+                for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 10) {
+                    visitChunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 10));
                 }
             }
 

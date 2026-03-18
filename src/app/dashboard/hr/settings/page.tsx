@@ -197,6 +197,7 @@ export default function HrmSettingsPage() {
         isMultipleCheckInAllowedWithoutCheckOut: false,
         isMaxHourLimitEnabled: true,
         maxHourLimitOfCheckOut: 12,
+        isClockOutRestrictedIfActiveCheckIn: false,
     });
     const [isSavingMultiCheck, setIsSavingMultiCheck] = React.useState(false);
 
@@ -503,6 +504,18 @@ export default function HrmSettingsPage() {
                                         />
                                         <Label htmlFor="isMultipleCheckInAllowedWithoutCheckOut" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
                                             Is multiple check in allowed without providing check out
+                                        </Label>
+                                    </div>
+
+                                    <div className="flex items-center space-x-3 pt-2">
+                                        <Checkbox
+                                            id="isClockOutRestrictedIfActiveCheckIn"
+                                            checked={multiCheckConfig.isClockOutRestrictedIfActiveCheckIn}
+                                            onCheckedChange={(checked) => setMultiCheckConfig(prev => ({ ...prev, isClockOutRestrictedIfActiveCheckIn: !!checked }))}
+                                            disabled={isReadOnly}
+                                        />
+                                        <Label htmlFor="isClockOutRestrictedIfActiveCheckIn" className="text-sm font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-red-600">
+                                            Unable Clock Out if active Check In on Multiple Check In/Out
                                         </Label>
                                     </div>
                                 </div>
