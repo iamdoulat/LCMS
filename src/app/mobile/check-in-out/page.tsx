@@ -125,90 +125,63 @@ export default function MobileCheckInOutPage() {
  
         const setupPersonalRecords = async () => {
             try {
-                // Determine canonical ID (matching MobileCheckInOutModal logic)
-                let canonicalId = user.uid;
-
-                // Try to find employee doc by UID
-                const empDocRef = doc(firestore, 'employees', user.uid);
-                const empDocSnap = await getDoc(empDocRef);
-
-                if (!active) return;
-
-                if (empDocSnap.exists()) {
-                    setEmployeeProfile({ id: empDocSnap.id, ...empDocSnap.data() } as EmployeeDocument);
-                    canonicalId = empDocSnap.id; 
-                } else if (user.email) {
-                    // Try to find by email
-                    const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
-                    const snap = await getDocs(q);
-                    if (!active) return;
-                    if (!snap.empty) {
-                        const empSnap = snap.docs[0];
-                        canonicalId = empSnap.id;
-                        setEmployeeProfile({ id: empSnap.id, ...empSnap.data() } as EmployeeDocument);
-                    }
+                // Load supportive data from cache first for instant UI
+                const cacheKeySupportive = `checkInOutSupportive_${user.email}`;
+                const cachedSupportive = localStorage.getItem(cacheKeySupportive);
+                if (cachedSupportive) {
+                    try {
+                        const parsed = JSON.parse(cachedSupportive);
+                        if (parsed.holidays) setHolidays(parsed.holidays);
+                        if (parsed.leaves) setLeaves(parsed.leaves);
+                        if (parsed.profile) setEmployeeProfile(parsed.profile);
+                    } catch (e) { console.error("Cache parse error", e); }
                 }
+
+                // Parallelize canonical ID discovery and basic supportive data
+                const fetchCanonicalId = async () => {
+                    const empDocRef = doc(firestore, 'employees', user.uid);
+                    const empDocSnap = await getDoc(empDocRef);
+                    if (empDocSnap.exists()) return empDocSnap.id;
+                    if (user.email) {
+                        const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
+                        const snap = await getDocs(q);
+                        if (!snap.empty) return snap.docs[0].id;
+                    }
+                    return user.uid;
+                };
+
+                const [canonicalId, holidaysSnap] = await Promise.all([
+                    fetchCanonicalId(),
+                    getDocs(collection(firestore, 'holidays'))
+                ]);
 
                 if (!active) return;
                 setCurrentUserEmployeeId(canonicalId);
 
-                if (!canonicalId) return;
-
-                // Fetch Today's Attendance to check if user has clocked in
-                let todayAttendanceData = null;
-                try {
-                    const today = new Date();
-                    const dateKey = format(today, 'yyyy-MM-dd');
-                    const attDocRef = doc(firestore, 'attendance', `${canonicalId}_${dateKey}`);
-                    const attDocSnap = await getDoc(attDocRef);
-                    if (attDocSnap.exists() && active) {
-                        todayAttendanceData = attDocSnap.data();
-                    }
-                } catch (e) {
-                    console.error("Error fetching today's attendance:", e);
-                }
-                if (active) setTodayAttendance(todayAttendanceData);
+                // Now fetch remaining data dependent on canonicalId in parallel
+                const [empSnap, attSnap, leavesSnap] = await Promise.all([
+                    getDoc(doc(firestore, 'employees', canonicalId)),
+                    getDoc(doc(firestore, 'attendance', `${canonicalId}_${format(new Date(), 'yyyy-MM-dd')}`)),
+                    getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', canonicalId), where('status', '==', 'Approved')))
+                ]);
 
                 if (!active) return;
 
-                // Fetch Holidays
-                try {
-                    const holidaysSnap = await getDocs(collection(firestore, 'holidays'));
-                    if (active) {
-                        const holidaysData = holidaysSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as HolidayDocument));
-                        setHolidays(holidaysData);
-                    }
-                } catch (error) {
-                    console.error("Error fetching holidays:", error);
-                }
+                const profile = empSnap.exists() ? { id: empSnap.id, ...empSnap.data() } as EmployeeDocument : null;
+                const attData = attSnap.exists() ? attSnap.data() : null;
+                const hData = holidaysSnap.docs.map(d => ({ id: d.id, ...d.data() } as HolidayDocument));
+                const lData = leavesSnap.docs.map(d => ({ id: d.id, ...d.data() } as LeaveApplicationDocument));
 
-                if (!active) return;
+                setEmployeeProfile(profile);
+                setTodayAttendance(attData);
+                setHolidays(hData);
+                setLeaves(lData);
 
-                // Fetch Approved Leaves for this employee
-                if (canonicalId) {
-                    try {
-                        const leavesQuery = query(
-                            collection(firestore, 'leave_applications'),
-                            where('employeeId', '==', canonicalId),
-                            where('status', '==', 'Approved')
-                        );
-                        const leavesSnap = await getDocs(leavesQuery);
-                        if (active) {
-                            const leavesData = leavesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
-                            setLeaves(leavesData);
-                        }
-                    } catch (error) {
-                        console.error("Error fetching leaves:", error);
-                    }
-                }
-
-                if (!active) return;
+                // Update cache
+                localStorage.setItem(cacheKeySupportive, JSON.stringify({ holidays: hData, leaves: lData, profile }));
 
                 // Setup listener using canonicalId
-                const qValues = query(
-                    collection(firestore, 'multiple_check_inout'),
-                    where('employeeId', '==', canonicalId)
-                );
+                const qValues = query(collection(firestore, 'multiple_check_inout'), where('employeeId', '==', canonicalId));
 
                 unsubscribe = onSnapshot(qValues, (snapshot) => {
                     if (!active) return;
@@ -252,35 +225,36 @@ export default function MobileCheckInOutPage() {
         const fetchSupervisionData = async () => {
             if (!isSupervisor || effectiveSupervisedEmployeeIds.length === 0 || activeTab !== 'Supervision') return;
 
+            // Load from cache first
+            const cacheKey = `supervisionRecords_${user?.email}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try { setSupervisionRecords(JSON.parse(cached)); } catch (e) { }
+            }
+
             try {
                 const chunks: string[][] = [];
                 for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 10) {
                     chunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 10));
                 }
 
-                let allSupRecords: MultipleCheckInOutRecord[] = [];
-                for (const chunk of chunks) {
-                    let q = query(
-                        collection(firestore, 'multiple_check_inout'),
-                        where('employeeId', 'in', chunk)
-                    );
+                const allSupRecords: MultipleCheckInOutRecord[] = [];
+                const from = filterFromDate ? startOfDay(new Date(filterFromDate)).toISOString() : null;
+                const to = filterToDate ? endOfDay(new Date(filterToDate)).toISOString() : null;
 
-                    // Apply date filters to the query if present
-                    if (filterFromDate) {
-                        const from = startOfDay(new Date(filterFromDate)).toISOString();
-                        q = query(q, where('timestamp', '>=', from));
-                    }
-                    if (filterToDate) {
-                        const to = endOfDay(new Date(filterToDate)).toISOString();
-                        q = query(q, where('timestamp', '<=', to));
-                    }
-
-                    const snap = await getDocs(q);
-                    snap.docs.forEach(doc => allSupRecords.push({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
-                }
+                await Promise.all(chunks.map(async (chunk) => {
+                    try {
+                        let q = query(collection(firestore, 'multiple_check_inout'), where('employeeId', 'in', chunk));
+                        if (from) q = query(q, where('timestamp', '>=', from));
+                        if (to) q = query(q, where('timestamp', '<=', to));
+                        const snap = await getDocs(q);
+                        snap.docs.forEach(doc => allSupRecords.push({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
+                    } catch (err) { console.error("Error fetching chunk:", err); }
+                }));
 
                 allSupRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
                 setSupervisionRecords(allSupRecords);
+                localStorage.setItem(cacheKey, JSON.stringify(allSupRecords.slice(0, 100)));
             } catch (err) {
                 console.error("Error fetching supervision records:", err);
             } finally {
@@ -296,53 +270,47 @@ export default function MobileCheckInOutPage() {
         const fetchPrivilegedRoleCheckIns = async () => {
             if (!user?.email || activeTab !== 'Check Ins') return;
 
+            const privilegedRoles = ['Super Admin', 'Admin', 'HR', 'Commercial', 'Service', 'DemoManager', 'Supervisor'];
+            const hasPrivilegedRole = userRole?.some(role => privilegedRoles.includes(role));
+            if (!hasPrivilegedRole) {
+                setPrivilegedRoleRecords([]);
+                return;
+            }
+
+            // Load from cache first
+            const cacheKey = `privilegedRecords_${user?.email}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try { setPrivilegedRoleRecords(JSON.parse(cached)); } catch (e) { }
+            }
+
             try {
-                // Check if current user has privileged role
-                const privilegedRoles = ['Super Admin', 'Admin', 'HR', 'Commercial', 'Service', 'DemoManager', 'Supervisor'];
-                const hasPrivilegedRole = userRole?.some(role => privilegedRoles.includes(role));
-
-                if (!hasPrivilegedRole) {
-                    setPrivilegedRoleRecords([]);
-                    return;
-                }
-
-                // Optimized fetch: Only get users with privileged roles
-                const usersQuery = query(
-                    collection(firestore, 'users'),
-                    where('role', 'array-contains-any', privilegedRoles)
-                );
+                const usersQuery = query(collection(firestore, 'users'), where('role', 'array-contains-any', privilegedRoles));
                 const usersSnap = await getDocs(usersQuery);
 
-                const privilegedUserIds: string[] = [];
-                usersSnap.docs.forEach(doc => {
-                    if (doc.id !== user.uid) {
-                        privilegedUserIds.push(doc.id);
-                    }
-                });
-
+                const privilegedUserIds: string[] = usersSnap.docs.map(doc => doc.id).filter(id => id !== user.uid);
                 if (privilegedUserIds.length === 0) {
                     setPrivilegedRoleRecords([]);
                     return;
                 }
 
-                // Fetch check-ins from privileged users in chunks
                 const chunks: string[][] = [];
                 for (let i = 0; i < privilegedUserIds.length; i += 10) {
                     chunks.push(privilegedUserIds.slice(i, i + 10));
                 }
 
                 let allPrivRecords: MultipleCheckInOutRecord[] = [];
-                for (const chunk of chunks) {
-                    const q = query(
-                        collection(firestore, 'multiple_check_inout'),
-                        where('employeeId', 'in', chunk)
-                    );
-                    const snap = await getDocs(q);
-                    snap.docs.forEach(doc => allPrivRecords.push({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
-                }
+                await Promise.all(chunks.map(async (chunk) => {
+                    try {
+                        const q = query(collection(firestore, 'multiple_check_inout'), where('employeeId', 'in', chunk));
+                        const snap = await getDocs(q);
+                        snap.docs.forEach(doc => allPrivRecords.push({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
+                    } catch (err) { console.error("Error fetching chunk:", err); }
+                }));
 
                 allPrivRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
                 setPrivilegedRoleRecords(allPrivRecords);
+                localStorage.setItem(cacheKey, JSON.stringify(allPrivRecords.slice(0, 100)));
             } catch (err) {
                 console.error("Error fetching privileged role records:", err);
             } finally {
@@ -780,13 +748,15 @@ export default function MobileCheckInOutPage() {
                 }
 
                 const newProfiles: { [id: string]: any } = {};
-                for (const chunk of chunks) {
-                    const q = query(collection(firestore, 'employees'), where('__name__', 'in', chunk));
-                    const snap = await getDocs(q);
-                    snap.docs.forEach(doc => {
-                        newProfiles[doc.id] = { id: doc.id, ...doc.data() };
-                    });
-                }
+                await Promise.all(chunks.map(async (chunk) => {
+                    try {
+                        const q = query(collection(firestore, 'employees'), where('__name__', 'in', chunk));
+                        const snap = await getDocs(q);
+                        snap.docs.forEach(doc => {
+                            newProfiles[doc.id] = { id: doc.id, ...doc.data() };
+                        });
+                    } catch (err) { console.error("Error fetching chunk:", err); }
+                }));
 
                 if (Object.keys(newProfiles).length > 0) {
                     setExtraProfiles(prev => ({ ...prev, ...newProfiles }));

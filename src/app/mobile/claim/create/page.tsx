@@ -47,9 +47,19 @@ function CreateClaimContent() {
 
             try {
                 // 1. Fetch Categories
-                const catsRef = collection(firestore, 'claim_categories');
-                const catsSnap = await getDocs(query(catsRef, orderBy('name')));
-                setCategories(catsSnap.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
+                try {
+                    const catsRef = collection(firestore, 'claim_categories');
+                    // Fetch all categories; we'll sort them in memory to avoid index requirements
+                    const catsSnap = await getDocs(catsRef);
+                    const catList = catsSnap.docs.map(doc => ({ 
+                        id: doc.id, 
+                        name: doc.data().name || 'Unnamed Category' 
+                    })).sort((a, b) => a.name.localeCompare(b.name));
+                    
+                    setCategories(catList);
+                } catch (catError) {
+                    console.error("Error fetching categories:", catError);
+                }
 
                 // 2. Fetch Employee Data for Code and Branch
                 let finalEmpData: any = null;

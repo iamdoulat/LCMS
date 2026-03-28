@@ -37,7 +37,7 @@ export default function MyAttendancePage() {
     // We need employeeId to query attendance. 
     // Usually useSupervisorCheck gives supervisor info, but also returns currentEmployeeId if found via email.
     // Alternatively query 'employees' by email.
-    const { currentEmployeeId } = useSupervisorCheck(user?.email);
+    const { currentEmployeeId, isLoading: isSupervisorLoading } = useSupervisorCheck(user?.email);
 
     const [activeTab, setActiveTab] = useState<'attendance' | 'break'>('attendance');
     const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
@@ -47,6 +47,7 @@ export default function MyAttendancePage() {
     const [visits, setVisits] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [daysToLoad, setDaysToLoad] = useState(15);
+    const [refreshing, setRefreshing] = useState(false);
     const router = useRouter();
 
     // Filter State
@@ -200,38 +201,39 @@ export default function MyAttendancePage() {
 
     const fetchSupportiveData = async () => {
         if (!currentEmployeeId) return;
+
+        // Load from cache first for instant UI
+        const cacheKey = `supportiveData_${currentEmployeeId}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                setHolidays(parsed.holidays || []);
+                setLeaves(parsed.leaves || []);
+                setVisits(parsed.visits || []);
+            } catch (e) { console.error("Cache error", e); }
+        }
+
         try {
-            // Fetch holidays
-            const holidaysSnapshot = await getDocs(collection(firestore, 'holidays'));
-            setHolidays(holidaysSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const [holidaysSnapshot, leavesSnapshot, visitsSnapshot] = await Promise.all([
+                getDocs(collection(firestore, 'holidays')),
+                getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', currentEmployeeId), where('status', '==', 'Approved'))),
+                getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', '==', currentEmployeeId), where('status', '==', 'Approved')))
+            ]);
 
-            // Fetch approved leaves
-            const leavesQ = query(
-                collection(firestore, 'leave_applications'),
-                where('employeeId', '==', currentEmployeeId),
-                where('status', '==', 'Approved')
-            );
-            const leavesSnapshot = await getDocs(leavesQ);
-            setLeaves(leavesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const hData = holidaysSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const lData = leavesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const vData = visitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Fetch approved visits
-            const visitsQ = query(
-                collection(firestore, 'visit_applications'),
-                where('employeeId', '==', currentEmployeeId),
-                where('status', '==', 'Approved')
-            );
-            const visitsSnapshot = await getDocs(visitsQ);
-            setVisits(visitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setHolidays(hData);
+            setLeaves(lData);
+            setVisits(vData);
+
+            localStorage.setItem(cacheKey, JSON.stringify({ holidays: hData, leaves: lData, visits: vData }));
         } catch (error) {
             console.error("Error fetching supportive data:", error);
         }
     };
-
-    useEffect(() => {
-        if (currentEmployeeId) {
-            fetchSupportiveData();
-        }
-    }, [currentEmployeeId]);
 
     const fetchBreaks = async () => {
         const queryIds = Array.from(new Set([currentEmployeeId, user?.uid].filter((id): id is string => !!id)));
@@ -308,16 +310,22 @@ export default function MyAttendancePage() {
     };
 
     useEffect(() => {
-        // Trigger fetch as soon as we have at least one identifier (user.uid or employeeId)
+        if (isSupervisorLoading) return;
         if (user?.uid || currentEmployeeId) {
-            if (activeTab === 'attendance') fetchAttendance();
-            else fetchBreaks();
+            // Concurrent fetch of everything
+            setLoading(true);
+            Promise.all([
+                fetchSupportiveData(),
+                activeTab === 'attendance' ? fetchAttendance() : fetchBreaks()
+            ]).finally(() => setLoading(false));
         }
-    }, [user?.uid, currentEmployeeId, activeTab, filters, holidays.length, leaves.length, visits.length, daysToLoad]);
+    }, [user?.uid, currentEmployeeId, activeTab, filters, isSupervisorLoading, daysToLoad]);
 
     const refreshData = async () => {
         if (currentEmployeeId) {
+            setRefreshing(true);
             await Promise.all([fetchAttendance(), fetchBreaks(), fetchSupportiveData()]);
+            setRefreshing(false);
         }
     };
 

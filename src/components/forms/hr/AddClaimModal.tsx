@@ -204,8 +204,12 @@ export function AddClaimModal({ trigger, onSuccess, editingClaim, open: external
                 // Fetch Categories (For everyone)
                 try {
                     const catsRef = collection(firestore, 'claim_categories');
-                    const catsSnap = await getDocs(query(catsRef, orderBy('name')));
-                    const catList = catsSnap.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+                    const catsSnap = await getDocs(catsRef);
+                    const catList = catsSnap.docs.map(doc => ({ 
+                        id: doc.id, 
+                        name: doc.data().name || 'Unnamed Category' 
+                    })).sort((a, b) => a.name.localeCompare(b.name));
+                    
                     setCategories(catList);
                 } catch (error) {
                     console.error("Error fetching categories:", error);

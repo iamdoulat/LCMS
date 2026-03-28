@@ -239,38 +239,29 @@ export default function RemoteAttendanceApprovalPage() {
                 chunks.push(allTeamIds.slice(i, i + 10));
             }
 
-            for (const chunk of chunks) {
-                try {
-                    // Fetch attendance by date range (past 30 days default) to capture all relevant records
-                    // and filter for Remote/Pending in memory.
-                    // This creates a standard requirement for "EmployeeId + Date" index, which is common.
-                    const startDate = dateRange?.from || subDays(new Date(), 30);
-                    const startDateStr = format(startDate, "yyyy-MM-dd'T'00:00:00");
+            const startDateStr = format(startDate, "yyyy-MM-dd'T'00:00:00");
 
+            await Promise.all(chunks.map(async (chunk) => {
+                try {
                     const qAttendance = query(
                         collection(firestore, 'attendance'),
                         where('employeeId', 'in', chunk),
                         where('date', '>=', startDateStr)
                     );
-
                     const qMultiple = query(
                         collection(firestore, 'multiple_check_inout'),
                         where('employeeId', 'in', chunk)
-                        // Note: multiple_check_inout might not have 'date' field in ISO string same as attendance
-                        // We filter these in memory or could add timestamp filter if indexed
                     );
-
                     const [snapAttendance, snapMultiple] = await Promise.all([
                         getDocs(qAttendance),
                         getDocs(qMultiple)
                     ]);
-
                     processDaily(snapAttendance.docs);
                     processMultiple(snapMultiple);
                 } catch (err) {
-                    console.error("Error fetching attendance for chunk:", err);
+                    console.error("Error fetching chunk:", err);
                 }
-            }
+            }));
 
             // Filter by date range and sort
             const filteredRecords = fetchedRecords.filter((r) => {
@@ -308,23 +299,27 @@ export default function RemoteAttendanceApprovalPage() {
     };
 
     useEffect(() => {
-        const fetchPolicies = async () => {
-            try {
-                const snapshot = await getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'));
-                const policyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendancePolicyDocument));
-                setAllPolicies(policyData);
-            } catch (error) {
-                console.error("Error fetching policies:", error);
-            }
-        };
-        fetchPolicies();
-    }, []);
+        const fetchInitialData = async () => {
+            if (isSupervisorLoading) return;
+            
+            const fetchPolicies = async () => {
+                try {
+                    const cached = localStorage.getItem('attendancePolicies');
+                    if (cached) setAllPolicies(JSON.parse(cached));
 
-    useEffect(() => {
-        setVisibleCount(50); // Reset count on filter change
-        if (!isSupervisorLoading) {
-            fetchRemoteAttendance();
-        }
+                    const snapshot = await getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'));
+                    const policyData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendancePolicyDocument));
+                    setAllPolicies(policyData);
+                    localStorage.setItem('attendancePolicies', JSON.stringify(policyData));
+                } catch (error) {
+                    console.error("Error fetching policies:", error);
+                }
+            };
+
+            setVisibleCount(50);
+            await Promise.all([fetchPolicies(), fetchRemoteAttendance()]);
+        };
+        fetchInitialData();
     }, [user, isSupervisor, effectiveSupervisedEmployees, dateRange, statusFilter, typeFilter, selectedEmployeeId, isSupervisorLoading]);
 
     const containerRef = usePullToRefresh(fetchRemoteAttendance);
