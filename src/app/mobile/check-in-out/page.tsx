@@ -71,7 +71,7 @@ export default function MobileCheckInOutPage() {
     const [supervisionRecords, setSupervisionRecords] = useState<MultipleCheckInOutRecord[]>([]);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filterEmployeeName, setFilterEmployeeName] = useState('');
-    const [filterFromDate, setFilterFromDate] = useState(format(subWeeks(new Date(), 1), 'yyyy-MM-dd'));
+    const [filterFromDate, setFilterFromDate] = useState(format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
     const [filterToDate, setFilterToDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [selectedRecordForAction, setSelectedRecordForAction] = useState<MultipleCheckInOutRecord | null>(null);
 
@@ -96,6 +96,7 @@ export default function MobileCheckInOutPage() {
 
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isSupervisionLoading, setIsSupervisionLoading] = useState(false);
     const [pullDistance, setPullDistance] = useState(0);
     const [touchStartY, setTouchStartY] = useState<number | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -229,60 +230,80 @@ export default function MobileCheckInOutPage() {
     // Fetch Supervision Records
     useEffect(() => {
         const fetchSupervisionData = async () => {
-            if (!isSupervisor || effectiveSupervisedEmployeeIds.length === 0 || activeTab !== 'Supervision') return;
+            if (!isSupervisor || activeTab !== 'Supervision') return;
+            // If it's a regular supervisor but they have no IDs yet, wait
+            if (!isSuperAdminOrAdmin && effectiveSupervisedEmployeeIds.length === 0) return;
+
+            setIsSupervisionLoading(true);
 
             // Load from cache first
             const cacheKey = `supervisionRecords_${user?.email}`;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                try { setSupervisionRecords(JSON.parse(cached)); } catch (e) { }
+            if (refreshTrigger === 0) {
+                const cached = localStorage.getItem(cacheKey);
+                if (cached) {
+                    try { setSupervisionRecords(JSON.parse(cached)); } catch (e) { }
+                }
             }
 
             try {
-                const chunks: string[][] = [];
-                for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 10) {
-                    chunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 10));
-                }
-
                 const from = filterFromDate ? startOfDay(new Date(filterFromDate)).toISOString() : null;
                 const to = filterToDate ? endOfDay(new Date(filterToDate)).toISOString() : null;
 
-                // Use a local accumulator and update state incrementally
-                let accumulatedRecords: MultipleCheckInOutRecord[] = [];
-                
-                await Promise.all(chunks.map(async (chunk) => {
-                    try {
-                        let q = query(collection(firestore, 'multiple_check_inout'), where('employeeId', 'in', chunk));
-                        if (from) q = query(q, where('timestamp', '>=', from));
-                        if (to) q = query(q, where('timestamp', '<=', to));
-                        
-                        const snap = await getDocs(q);
-                        const chunkRecords = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
-                        
-                        // Functional update for incremental UI updates
-                        setSupervisionRecords(prev => {
-                            const combined = [...prev, ...chunkRecords];
-                            // Remove duplicates if any (just in case) and sort
-                            const unique = Array.from(new Map(combined.map(r => [r.id, r])).values());
-                            return unique.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                        });
+                if (isSuperAdminOrAdmin) {
+                    // Optimized query for admins: Get all records in range without chunking individual IDs
+                    let q = query(collection(firestore, 'multiple_check_inout'));
+                    if (from) q = query(q, where('timestamp', '>=', from));
+                    if (to) q = query(q, where('timestamp', '<=', to));
+                    
+                    const snap = await getDocs(q);
+                    const allRecords = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
+                    const sorted = allRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                    setSupervisionRecords(sorted);
+                    localStorage.setItem(cacheKey, JSON.stringify(sorted.slice(0, 100)));
+                } else {
+                    // Chunked logic for specific direct subordinates (non-admin supervisors)
+                    const chunks: string[][] = [];
+                    for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 10) {
+                        chunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 10));
+                    }
 
-                        accumulatedRecords = [...accumulatedRecords, ...chunkRecords];
-                    } catch (err) { console.error("Error fetching chunk:", err); }
-                }));
+                    // Reset when triggered by a full refresh or filter change
+                    setSupervisionRecords([]);
+                    let accumulatedRecords: MultipleCheckInOutRecord[] = [];
+                    
+                    await Promise.all(chunks.map(async (chunk) => {
+                        try {
+                            let q = query(collection(firestore, 'multiple_check_inout'), where('employeeId', 'in', chunk));
+                            if (from) q = query(q, where('timestamp', '>=', from));
+                            if (to) q = query(q, where('timestamp', '<=', to));
+                            
+                            const snap = await getDocs(q);
+                            const chunkRecords = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
+                            
+                            setSupervisionRecords(prev => {
+                                const combined = [...prev, ...chunkRecords];
+                                const unique = Array.from(new Map(combined.map(r => [r.id, r])).values());
+                                return unique.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                            });
 
-                // Update cache with final sorted results
-                const finalSorted = accumulatedRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                localStorage.setItem(cacheKey, JSON.stringify(finalSorted.slice(0, 100)));
+                            accumulatedRecords = [...accumulatedRecords, ...chunkRecords];
+                        } catch (err) { console.error("Error fetching chunk:", err); }
+                    }));
+
+                    const finalSorted = accumulatedRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                    localStorage.setItem(cacheKey, JSON.stringify(finalSorted.slice(0, 100)));
+                }
             } catch (err) {
                 console.error("Error fetching supervision records:", err);
             } finally {
+                setIsSupervisionLoading(false);
                 setIsRefreshing(false);
+                setIsLoading(false); // Also unset primary loading
             }
         };
 
         fetchSupervisionData();
-    }, [isSupervisor, effectiveSupervisedEmployeeIds.length, activeTab, refreshTrigger, filterFromDate, filterToDate, user?.email]);
+    }, [isSupervisor, isSuperAdminOrAdmin, effectiveSupervisedEmployeeIds.length, activeTab, refreshTrigger, filterFromDate, filterToDate, user?.email]);
 
     // Fetch Privileged Role Check-Ins
     useEffect(() => {
@@ -802,11 +823,11 @@ export default function MobileCheckInOutPage() {
     }, [filteredGroupedRecords, effectiveSupervisedEmployees, user?.email]);
 
     const renderContent = () => {
-        if (isLoading) {
+        if (isLoading || (activeTab === 'Supervision' && isSupervisionLoading && supervisionRecords.length === 0)) {
             return (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400">
                     <Loader2 className="h-8 w-8 animate-spin mb-2" />
-                    <p>Loading records...</p>
+                    <p>Loading {activeTab === 'Supervision' ? 'team' : 'your'} records...</p>
                 </div>
             );
         }
