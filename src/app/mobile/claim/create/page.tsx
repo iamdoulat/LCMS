@@ -45,27 +45,34 @@ function CreateClaimContent() {
         const fetchData = async () => {
             if (!user?.uid) return;
 
-            try {
-                // 1. Fetch Categories
+            // Load categories from cache first for instant UI
+            const cacheKey = 'claim_categories_cache';
+            const cachedCats = localStorage.getItem(cacheKey);
+            if (cachedCats) {
                 try {
-                    const catsRef = collection(firestore, 'claim_categories');
-                    // Fetch all categories; we'll sort them in memory to avoid index requirements
-                    const catsSnap = await getDocs(catsRef);
-                    const catList = catsSnap.docs.map(doc => ({ 
-                        id: doc.id, 
-                        name: doc.data().name || 'Unnamed Category' 
-                    })).sort((a, b) => a.name.localeCompare(b.name));
-                    
-                    setCategories(catList);
-                } catch (catError) {
-                    console.error("Error fetching categories:", catError);
-                }
+                    setCategories(JSON.parse(cachedCats));
+                } catch (e) { }
+            }
 
-                // 2. Fetch Employee Data for Code and Branch
+            try {
+                // Parallelize categories and employee data fetches
+                const [catsSnap, empSnap, userSnap] = await Promise.all([
+                    getDocs(collection(firestore, 'claim_categories')),
+                    getDoc(doc(firestore, 'employees', user.uid)),
+                    getDoc(doc(firestore, 'users', user.uid))
+                ]);
+
+                // 1. Process Categories
+                const catList = catsSnap.docs.map(doc => ({
+                    id: doc.id,
+                    name: doc.data().name || 'Unnamed Category'
+                })).sort((a, b) => a.name.localeCompare(b.name));
+                
+                setCategories(catList);
+                localStorage.setItem(cacheKey, JSON.stringify(catList));
+
+                // 2. Process Employee/User Data
                 let finalEmpData: any = null;
-                const empRef = doc(firestore, 'employees', user.uid);
-                const empSnap = await getDoc(empRef);
-
                 if (empSnap.exists()) {
                     finalEmpData = { ...empSnap.data() };
                 } else {
@@ -76,15 +83,11 @@ function CreateClaimContent() {
                     }
                 }
 
-                // Always check users collection for supplemental data like branch if missing
-                const userRef = doc(firestore, 'users', user.uid);
-                const userSnap = await getDoc(userRef);
                 if (userSnap.exists()) {
                     const userData = userSnap.data();
                     finalEmpData = {
                         ...userData,
                         ...finalEmpData,
-                        // Ensure we take branch from users if missing in employees
                         branch: finalEmpData?.branch || userData.branch || '',
                         employeeCode: finalEmpData?.employeeCode || userData.employeeCode || ''
                     };
@@ -94,12 +97,11 @@ function CreateClaimContent() {
                     setEmployeeData(finalEmpData as Employee);
                 }
 
-                // 3. Fetch Claim if Editing
+                // 3. Fetch Claim if Editing (This stays somewhat sequential if it depends on data above, but here it doesn't)
                 if (editingId) {
                     const claimSnap = await getDoc(doc(firestore, 'hr_claims', editingId));
                     if (claimSnap.exists()) {
                         const data = claimSnap.data() as HRClaim;
-                        // Determine if user can edit
                         const canEditAsEmployee = data.status === 'Claimed' && !source;
                         const canEditAsSupervisor = source === 'requests' && ['Claimed', 'Approval by Supervisor'].includes(data.status);
 
@@ -124,7 +126,7 @@ function CreateClaimContent() {
             }
         };
         fetchData();
-    }, [user?.uid, editingId, user?.email]);
+    }, [user?.uid, editingId, user?.email, source]);
 
     const calculateRequestedTotal = () => details.reduce((sum, item) => sum + item.amount, 0);
     const calculateApprovedTotal = () => details.reduce((sum, item) => sum + (item.status === 'Approved' ? item.amount : 0), 0);

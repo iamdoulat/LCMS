@@ -7,7 +7,7 @@ import { Plus, ArrowLeft, Filter, Loader2, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, isFriday, isSameDay, parse, isAfter, isBefore, isValid, subMonths, subWeeks } from 'date-fns';
 import { MobileCheckInOutModal } from '@/components/mobile/MobileCheckInOutModal';
 import type { MultipleCheckInOutConfiguration } from '@/types';
 import { type MultipleCheckInOutRecord } from '@/types/checkInOut';
@@ -18,7 +18,6 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar as CalendarIcon, X, Search, MapPin, ArrowRight, RefreshCw } from 'lucide-react';
-import { startOfDay, endOfDay, isFriday, isSameDay, parse, isAfter, isBefore, isValid, subMonths } from 'date-fns';
 import { DynamicStorageImage } from '@/components/ui/DynamicStorageImage';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
@@ -72,7 +71,7 @@ export default function MobileCheckInOutPage() {
     const [supervisionRecords, setSupervisionRecords] = useState<MultipleCheckInOutRecord[]>([]);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filterEmployeeName, setFilterEmployeeName] = useState('');
-    const [filterFromDate, setFilterFromDate] = useState(format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
+    const [filterFromDate, setFilterFromDate] = useState(format(subWeeks(new Date(), 1), 'yyyy-MM-dd'));
     const [filterToDate, setFilterToDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [selectedRecordForAction, setSelectedRecordForAction] = useState<MultipleCheckInOutRecord | null>(null);
 
@@ -106,15 +105,22 @@ export default function MobileCheckInOutPage() {
         setRefreshTrigger(prev => prev + 1);
     };
 
-    // Fetch multiple check in/out configuration
+    // Fetch multiple check in/out configuration and load profile cache
     useEffect(() => {
         const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'multi_check_in_out'), (docSnap) => {
             if (docSnap.exists()) {
                 setMultiCheckConfig(docSnap.data() as MultipleCheckInOutConfiguration);
             }
         });
+
+        const cacheKeyExtra = `extraProfiles_${user?.email}`;
+        const cachedExtra = localStorage.getItem(cacheKeyExtra);
+        if (cachedExtra) {
+            try { setExtraProfiles(JSON.parse(cachedExtra)); } catch (e) { }
+        }
+
         return () => unsub();
-    }, []);
+    }, [user?.email]);
 
     // Fetch Records
     useEffect(() => {
@@ -238,23 +244,36 @@ export default function MobileCheckInOutPage() {
                     chunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 10));
                 }
 
-                const allSupRecords: MultipleCheckInOutRecord[] = [];
                 const from = filterFromDate ? startOfDay(new Date(filterFromDate)).toISOString() : null;
                 const to = filterToDate ? endOfDay(new Date(filterToDate)).toISOString() : null;
 
+                // Use a local accumulator and update state incrementally
+                let accumulatedRecords: MultipleCheckInOutRecord[] = [];
+                
                 await Promise.all(chunks.map(async (chunk) => {
                     try {
                         let q = query(collection(firestore, 'multiple_check_inout'), where('employeeId', 'in', chunk));
                         if (from) q = query(q, where('timestamp', '>=', from));
                         if (to) q = query(q, where('timestamp', '<=', to));
+                        
                         const snap = await getDocs(q);
-                        snap.docs.forEach(doc => allSupRecords.push({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
+                        const chunkRecords = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
+                        
+                        // Functional update for incremental UI updates
+                        setSupervisionRecords(prev => {
+                            const combined = [...prev, ...chunkRecords];
+                            // Remove duplicates if any (just in case) and sort
+                            const unique = Array.from(new Map(combined.map(r => [r.id, r])).values());
+                            return unique.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                        });
+
+                        accumulatedRecords = [...accumulatedRecords, ...chunkRecords];
                     } catch (err) { console.error("Error fetching chunk:", err); }
                 }));
 
-                allSupRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                setSupervisionRecords(allSupRecords);
-                localStorage.setItem(cacheKey, JSON.stringify(allSupRecords.slice(0, 100)));
+                // Update cache with final sorted results
+                const finalSorted = accumulatedRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                localStorage.setItem(cacheKey, JSON.stringify(finalSorted.slice(0, 100)));
             } catch (err) {
                 console.error("Error fetching supervision records:", err);
             } finally {
@@ -263,7 +282,7 @@ export default function MobileCheckInOutPage() {
         };
 
         fetchSupervisionData();
-    }, [isSupervisor, effectiveSupervisedEmployeeIds.length, activeTab, refreshTrigger, filterFromDate, filterToDate]);
+    }, [isSupervisor, effectiveSupervisedEmployeeIds.length, activeTab, refreshTrigger, filterFromDate, filterToDate, user?.email]);
 
     // Fetch Privileged Role Check-Ins
     useEffect(() => {
@@ -299,18 +318,25 @@ export default function MobileCheckInOutPage() {
                     chunks.push(privilegedUserIds.slice(i, i + 10));
                 }
 
-                let allPrivRecords: MultipleCheckInOutRecord[] = [];
+                let accumulatedRecords: MultipleCheckInOutRecord[] = [];
                 await Promise.all(chunks.map(async (chunk) => {
                     try {
                         const q = query(collection(firestore, 'multiple_check_inout'), where('employeeId', 'in', chunk));
                         const snap = await getDocs(q);
-                        snap.docs.forEach(doc => allPrivRecords.push({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
+                        const chunkRecords = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
+                        
+                        setPrivilegedRoleRecords(prev => {
+                            const combined = [...prev, ...chunkRecords];
+                            const unique = Array.from(new Map(combined.map(r => [r.id, r])).values());
+                            return unique.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                        });
+
+                        accumulatedRecords = [...accumulatedRecords, ...chunkRecords];
                     } catch (err) { console.error("Error fetching chunk:", err); }
                 }));
 
-                allPrivRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                setPrivilegedRoleRecords(allPrivRecords);
-                localStorage.setItem(cacheKey, JSON.stringify(allPrivRecords.slice(0, 100)));
+                const finalSorted = accumulatedRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                localStorage.setItem(cacheKey, JSON.stringify(finalSorted.slice(0, 100)));
             } catch (err) {
                 console.error("Error fetching privileged role records:", err);
             } finally {
@@ -319,7 +345,7 @@ export default function MobileCheckInOutPage() {
         };
 
         fetchPrivilegedRoleCheckIns();
-    }, [user, userRole, activeTab, refreshTrigger]);
+    }, [user?.email, userRole, activeTab, refreshTrigger]);
 
     // Fetch missing profiles for avatars
 
@@ -759,7 +785,11 @@ export default function MobileCheckInOutPage() {
                 }));
 
                 if (Object.keys(newProfiles).length > 0) {
-                    setExtraProfiles(prev => ({ ...prev, ...newProfiles }));
+                    setExtraProfiles(prev => {
+                        const updated = { ...prev, ...newProfiles };
+                        localStorage.setItem(`extraProfiles_${user?.email}`, JSON.stringify(updated));
+                        return updated;
+                    });
                 }
             } catch (err) {
                 console.error("Error fetching missing employee profiles:", err);
@@ -769,7 +799,7 @@ export default function MobileCheckInOutPage() {
         if (filteredGroupedRecords.length > 0) {
             fetchMissingProfiles();
         }
-    }, [filteredGroupedRecords, effectiveSupervisedEmployees]);
+    }, [filteredGroupedRecords, effectiveSupervisedEmployees, user?.email]);
 
     const renderContent = () => {
         if (isLoading) {

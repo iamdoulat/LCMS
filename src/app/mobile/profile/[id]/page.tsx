@@ -95,46 +95,51 @@ export default function MobileEmployeeProfilePage() {
     };
 
     useEffect(() => {
-        async function fetchEmployee() {
+        async function fetchData() {
             if (!employeeId) return;
+
+            // 1. Load from cache first for instant UI
+            const cacheKey = `employeeProfile_${employeeId}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    setEmployee(parsed);
+                    setLoading(false);
+                } catch (e) { }
+            }
+
             try {
+                // 2. Fetch employee
                 const docRef = doc(firestore, 'employees', employeeId);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
                     const empData = { id: docSnap.id, ...docSnap.data() } as Employee;
                     setEmployee(empData);
+                    localStorage.setItem(cacheKey, JSON.stringify(empData));
+
+                    // 3. Fetch supervisor if exists
+                    if (empData.supervisorId) {
+                        const supervisorDocRef = doc(firestore, 'employees', empData.supervisorId);
+                        const supervisorDocSnap = await getDoc(supervisorDocRef);
+                        if (supervisorDocSnap.exists()) {
+                            setSupervisorName(supervisorDocSnap.data()?.fullName || null);
+                        }
+                    }
                 } else {
                     setError("Employee not found");
                 }
             } catch (err) {
                 console.error("Error fetching employee profile:", err);
-                setError("Failed to load profile");
+                if (!employee) setError("Failed to load profile");
             } finally {
                 setLoading(false);
             }
         }
 
-        fetchEmployee();
+        fetchData();
     }, [employeeId]);
-
-    // Separate useEffect for supervisor to prevent blocking main content
-    useEffect(() => {
-        if (!employee?.supervisorId) return;
-
-        async function fetchSupervisor() {
-            try {
-                const supervisorDocRef = doc(firestore, 'employees', employee!.supervisorId!);
-                const supervisorDocSnap = await getDoc(supervisorDocRef);
-                if (supervisorDocSnap.exists()) {
-                    setSupervisorName(supervisorDocSnap.data()?.fullName || null);
-                }
-            } catch (err) {
-                console.error("Error fetching supervisor:", err);
-            }
-        }
-        fetchSupervisor();
-    }, [employee?.supervisorId]);
 
     const handleBack = () => {
         router.back();

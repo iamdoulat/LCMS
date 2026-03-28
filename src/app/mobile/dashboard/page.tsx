@@ -187,6 +187,15 @@ export default function MobileDashboardPage() {
         disbursedAmount: 0
     });
 
+    // Load initial stats from cache
+    useEffect(() => {
+        const cacheKey = `dashboardStats_${user?.email}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            try { setStats(JSON.parse(cached)); } catch (e) { }
+        }
+    }, [user?.email]);
+
     const { setSuspended } = useFirestoreSuspension();
 
     // Toggle Firestore suspension when modal is open
@@ -449,7 +458,14 @@ export default function MobileDashboardPage() {
         if (attendanceData || leaveData || visitData) {
             calculateStats();
         }
-    }, [attendanceData, leaveData, visitData, isSupervisor, explicitSubordinateIds, supervisedEmployeeIds, currentEmployeeId]);
+    }, [attendanceData, leaveData, visitData, isSupervisor, explicitSubordinateIds, supervisedEmployeeIds, currentEmployeeId, user?.email]);
+
+    // Update cache when stats change
+    useEffect(() => {
+        if (user?.email) {
+            localStorage.setItem(`dashboardStats_${user.email}`, JSON.stringify(stats));
+        }
+    }, [stats, user?.email]);
 
     useEffect(() => {
         if (claimData) {
@@ -497,9 +513,14 @@ export default function MobileDashboardPage() {
             return;
         }
 
-        // 2. Check Holidays
         try {
-            const holidaySnap = await getDocs(collection(firestore, 'holidays'));
+            // Parallelize checks
+            const [holidaySnap, empSnap] = await Promise.all([
+                getDocs(collection(firestore, 'holidays')),
+                (user?.email ? getDocs(query(collection(firestore, 'employees'), where('email', '==', user.email))) : Promise.resolve(null))
+            ]);
+
+            // 2. Check Holidays
             const todayHoliday = holidaySnap.docs.find(doc => {
                 const data = doc.data();
                 if (!data.fromDate) return false;
@@ -511,21 +532,19 @@ export default function MobileDashboardPage() {
                 setRestrictionNote("Today is a holiday.");
                 return;
             }
-        } catch (e) {
-            console.error("Error checking holidays:", e);
-        }
 
-        // 3. Check Leaves (Approved)
-        try {
-            if (!user) return;
-            const empQuery = query(collection(firestore, 'employees'), where('email', '==', user.email));
-            const empSnap = await getDocs(empQuery);
-            const ids = [user.uid];
-            if (!empSnap.empty) {
+            // Get Employee IDs for Leave/Visit checks
+            const ids = [user?.uid || ''];
+            if (empSnap && !empSnap.empty) {
                 ids.push(empSnap.docs[0].id);
             }
 
-            const leaveSnap = await getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved')));
+            // 3 & 4. Check Leaves and Visits (Approved)
+            const [leaveSnap, visitSnap] = await Promise.all([
+                getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved'))),
+                getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved')))
+            ]);
+
             const todayLeave = leaveSnap.docs.find(doc => {
                 const data = doc.data();
                 if (!data.fromDate || !data.toDate) return false;
@@ -538,8 +557,6 @@ export default function MobileDashboardPage() {
                 return;
             }
 
-            // 4. Check Visits (Approved)
-            const visitSnap = await getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved')));
             const todayVisit = visitSnap.docs.find(doc => {
                 const data = doc.data();
                 if (!data.fromDate || !data.toDate) return false;
@@ -552,34 +569,38 @@ export default function MobileDashboardPage() {
                 return;
             }
         } catch (e) {
-            console.error("Error checking leaves/visits:", e);
+            console.error("Error checking restrictions:", e);
         }
 
         setRestrictionNote(null);
-    }, [user]);
+    }, [user, currentEmployeeId]);
 
     useEffect(() => {
         const fetchData = async () => {
             if (!user) return;
             try {
-                // Fetch All Policies
-                const policySnap = await getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'));
+                // Parallelize fetching policy items and employee data
+                const [policySnap, empDoc] = await Promise.all([
+                    getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items')),
+                    (async () => {
+                        let docRef = await getDoc(doc(firestore, 'employees', currentEmployeeId || user.uid));
+                        if (!docRef.exists() && user.email) {
+                            const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
+                            const snap = await getDocs(q);
+                            if (!snap.empty) docRef = snap.docs[0];
+                        }
+                        return docRef;
+                    })()
+                ]);
+
                 const policies = policySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendancePolicyDocument));
                 setAllPolicies(policies);
-
-                // Fetch Employee Data
-                let empDoc = await getDoc(doc(firestore, 'employees', currentEmployeeId || user.uid));
-                if (!empDoc.exists() && user.email) {
-                    const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) empDoc = snap.docs[0];
-                }
 
                 if (empDoc.exists()) {
                     setEmployeeData(empDoc.data() as EmployeeDocument);
                 }
             } catch (err) {
-                console.error("Error fetching policy data:", err);
+                console.error("Error fetching policy and employee data:", err);
             }
         };
         fetchData();

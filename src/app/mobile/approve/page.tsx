@@ -115,7 +115,6 @@ export default function ApproveApplicationsPage() {
     }, [filters]);
 
     // Fetch team applications
-    // Fetch team applications
     useEffect(() => {
         // If not supervisor AND not Admin, stop.
         if (!effectiveSupervisedEmployeeIds.length && !isPrivileged) {
@@ -131,34 +130,30 @@ export default function ApproveApplicationsPage() {
 
         // Helper to setup listeners
         const setupListeners = () => {
-            // 1. Leave Applications
+            // Load from cache first for instant UI
+            const cacheKey = `approveApps_${user?.email}`;
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    if (parsed.leave) setLeaveApps(parsed.leave);
+                    if (parsed.visit) setVisitApps(parsed.visit);
+                    if (parsed.employees) setEmployeeMap(parsed.employees);
+                } catch (e) { }
+            }
+
             const leaveChunks: string[][] = isPrivileged ? [[]] : [];
             if (!isPrivileged) {
-                // Chunk supervised IDs - Firestore 'in' limit is 10
                 for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 10) {
                     leaveChunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 10));
                 }
             }
 
-            // We need to manage state merging if multiple chunks
-            // However, with React state updates, we can just maintain a functional update or use a Map ref?
-            // To keep it simple given the UI just shows a list:
-            // We will use a ref to hold the latest docs from each chunk to avoid race conditions/flickering
-            // But since this is inside useEffect, we can't easily share a ref across re-renders if dependencies change 
-            // well, we can, but let's try a simpler approach: 
-            // For non-admins, we likely have 1 chunk ( < 30 employees). 
-            // If > 30, we accept the complexity.
-
-            // Let's use a local variable in useEffect scope to aggregate? 
-            // No, snapshots are async.
-
-            // We will define a Map to store docs by chunk index
             const leaveDocsMap = new Map<string, LeaveApplicationDocument[]>();
             const visitDocsMap = new Map<string, VisitApplicationDocument[]>();
 
             const updateLeaveState = () => {
                 const allDocs = Array.from(leaveDocsMap.values()).flat();
-                // Client-side sort
                 const sortedApps = allDocs.sort((a, b) => {
                     const dateA = a.createdAt?.toDate?.()?.getTime() || 0;
                     const dateB = b.createdAt?.toDate?.()?.getTime() || 0;
@@ -166,43 +161,35 @@ export default function ApproveApplicationsPage() {
                 });
                 setLeaveApps(sortedApps);
                 setLoading(false);
+                // Partial cache update
+                const currentCache = localStorage.getItem(cacheKey);
+                const parsed = currentCache ? JSON.parse(currentCache) : {};
+                localStorage.setItem(cacheKey, JSON.stringify({ ...parsed, leave: sortedApps.slice(0, 50) }));
             };
 
             const updateVisitState = () => {
                 const allDocs = Array.from(visitDocsMap.values()).flat();
-                // Client-side sort
                 const sortedApps = allDocs.sort((a, b) => {
                     const dateA = a.createdAt?.toDate?.()?.getTime() || 0;
                     const dateB = b.createdAt?.toDate?.()?.getTime() || 0;
                     return dateB - dateA;
                 });
                 setVisitApps(sortedApps);
+                // Partial cache update
+                const currentCache = localStorage.getItem(cacheKey);
+                const parsed = currentCache ? JSON.parse(currentCache) : {};
+                localStorage.setItem(cacheKey, JSON.stringify({ ...parsed, visit: sortedApps.slice(0, 50) }));
             };
-
 
             leaveChunks.forEach((chunk, index) => {
                 let qLeave = collection(firestore, 'leave_applications') as any;
                 const targetStatus = filters.status || 'All';
-
-                if (targetStatus !== 'All') {
-                    qLeave = query(qLeave, where('status', '==', targetStatus));
-                }
-
-                if (!isPrivileged && chunk.length > 0) {
-                    qLeave = query(qLeave, where('employeeId', 'in', chunk));
-                }
+                if (targetStatus !== 'All') qLeave = query(qLeave, where('status', '==', targetStatus));
+                if (!isPrivileged && chunk.length > 0) qLeave = query(qLeave, where('employeeId', 'in', chunk));
 
                 const unsub = onSnapshot(qLeave, (snapshot: any) => {
-                    const apps = snapshot.docs
-                        .map((doc: any) => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
-
-                    // For Admins, we still filter by supervised IDs if they are not Super Admin? 
-                    // No, implementation says: if isPrivileged ? true : check IDs.
-                    const filtered = isPrivileged
-                        ? apps // Admins see all (or filtered by query if we added one, but we didn't for admins)
-                        : apps; // We already filtered by query for non-admins
-
-                    leaveDocsMap.set(`chunk_${index}`, filtered);
+                    const apps = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument));
+                    leaveDocsMap.set(`chunk_${index}`, apps);
                     updateLeaveState();
                 }, (error: any) => {
                     console.error("Error fetching leave apps:", error);
@@ -211,7 +198,6 @@ export default function ApproveApplicationsPage() {
                 unsubs.push(unsub);
             });
 
-            // 2. Visit Applications
             const visitChunks: string[][] = isPrivileged ? [[]] : [];
             if (!isPrivileged) {
                 for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 10) {
@@ -222,22 +208,12 @@ export default function ApproveApplicationsPage() {
             visitChunks.forEach((chunk, index) => {
                 let qVisit = collection(firestore, 'visit_applications') as any;
                 const targetStatus = filters.status || 'All';
-
-                if (targetStatus !== 'All') {
-                    qVisit = query(qVisit, where('status', '==', targetStatus));
-                }
-
-                if (!isPrivileged && chunk.length > 0) {
-                    qVisit = query(qVisit, where('employeeId', 'in', chunk));
-                }
+                if (targetStatus !== 'All') qVisit = query(qVisit, where('status', '==', targetStatus));
+                if (!isPrivileged && chunk.length > 0) qVisit = query(qVisit, where('employeeId', 'in', chunk));
 
                 const unsub = onSnapshot(qVisit, (snapshot: any) => {
-                    const apps = snapshot.docs
-                        .map((doc: any) => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument));
-
-                    const filtered = isPrivileged ? apps : apps;
-
-                    visitDocsMap.set(`chunk_${index}`, filtered);
+                    const apps = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument));
+                    visitDocsMap.set(`chunk_${index}`, apps);
                     updateVisitState();
                 }, (error: any) => {
                     console.error("Error fetching visit apps:", error);
@@ -248,22 +224,32 @@ export default function ApproveApplicationsPage() {
 
         setupListeners();
 
-        // Fetch Employee details for the team (Optimized for lazy loading or large lists)
         const fetchEmployees = async () => {
-            const newMap: Record<string, EmployeeDocument> = {};
+            if (effectiveSupervisedEmployeeIds.length === 0) return;
+            const chunks = [];
+            for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += 10) {
+                chunks.push(effectiveSupervisedEmployeeIds.slice(i, i + 10));
+            }
 
-            if (effectiveSupervisedEmployeeIds.length > 0) {
-                const chunkSize = 10;
-                for (let i = 0; i < effectiveSupervisedEmployeeIds.length; i += chunkSize) {
-                    const chunk = effectiveSupervisedEmployeeIds.slice(i, i + chunkSize);
+            const newMap: Record<string, EmployeeDocument> = {};
+            await Promise.all(chunks.map(async (chunk) => {
+                try {
                     const qEmp = query(collection(firestore, 'employees'), where('__name__', 'in', chunk));
                     const snap = await getDocs(qEmp);
                     snap.docs.forEach(doc => {
                         newMap[doc.id] = { id: doc.id, ...doc.data() } as EmployeeDocument;
                     });
-                }
-                setEmployeeMap(prev => ({ ...prev, ...newMap }));
-            }
+                } catch (e) { }
+            }));
+
+            setEmployeeMap(prev => {
+                const updated = { ...prev, ...newMap };
+                const cacheKey = `approveApps_${user?.email}`;
+                const currentCache = localStorage.getItem(cacheKey);
+                const parsed = currentCache ? JSON.parse(currentCache) : {};
+                localStorage.setItem(cacheKey, JSON.stringify({ ...parsed, employees: updated }));
+                return updated;
+            });
         };
 
         fetchEmployees();
@@ -271,9 +257,9 @@ export default function ApproveApplicationsPage() {
         return () => {
             unsubs.forEach(u => u());
         };
-    }, [effectiveSupervisedEmployeeIds, filters.status, isPrivileged]);
+    }, [user?.email, effectiveSupervisedEmployeeIds, filters.status, isPrivileged]);
 
-    // Optimized effect to fetch missing employee details for only visible portion (Crucial for Admin view)
+    // Optimized effect for missing employees
     useEffect(() => {
         const fetchMissingEmployees = async () => {
             const currentTabApps = activeTab === 'leave' ? filteredLeaveApps : filteredVisitApps;
@@ -288,19 +274,18 @@ export default function ApproveApplicationsPage() {
                 chunks.push(missingIds.slice(i, i + 10));
             }
 
-            for (const chunk of chunks) {
+            const newMap: Record<string, EmployeeDocument> = {};
+            await Promise.all(chunks.map(async (chunk) => {
                 try {
                     const q = query(collection(firestore, 'employees'), where('__name__', 'in', chunk));
                     const snap = await getDocs(q);
-                    const newMap: Record<string, EmployeeDocument> = {};
                     snap.docs.forEach(doc => {
                         newMap[doc.id] = { id: doc.id, ...doc.data() } as EmployeeDocument;
                     });
-                    setEmployeeMap(prev => ({ ...prev, ...newMap }));
-                } catch (e) {
-                    console.error("Error fetching missing employees", e);
-                }
-            }
+                } catch (e) { }
+            }));
+
+            setEmployeeMap(prev => ({ ...prev, ...newMap }));
         };
 
         if (filteredLeaveApps.length > 0 || filteredVisitApps.length > 0) {
