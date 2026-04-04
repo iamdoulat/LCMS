@@ -82,6 +82,10 @@ Complete workforce management solution designed for both office and field employ
     *   **Smart Automation**: Automatically calculates working hours and identifies "Late" arrivals based on shift timings.
     *   **Bulk Operations**: Support for bulk attendance uploads via CSV for mass data entry.
     *   **Advanced Filtering**: Deep dive into attendance data with filters for Branch, Unit, Department, Date Range, and Status.
+    *   **Automated Monthly Reporting**: 
+        *   **Timezone Aware**: Reports are generated based on the `Asia/Dhaka` timezone for local precision.
+        *   **Customizable Scheduling**: HR and Admins can configure the exact day and time for monthly report distribution via the settings panel.
+        *   **Job Card Precision**: Enhanced "Job Card" reports that correctly identify **Holidays (H)** and mark reconciled/approved records as **Present (P)**.
  
 *   **Supervisor & Team Features**:
     *   **Supervisor Dashboard**: A mission control center for team leaders to monitor their subordinates' performance and presence.
@@ -107,6 +111,7 @@ Complete workforce management solution designed for both office and field employ
     *   **Dynamic Variables**: Templates support context-aware variables like `{{requested_amount}}`, `{{day_count}}`, and `{{maturity_date}}`.
 *   **Activity Monitoring**:
     *   **Audit Logs**: A full record of system activities (Logins, Notification Sends, Data Changes) with pagination and log clearing capabilities.
+    *   **System Hardening**: Regular security updates, including patched vulnerabilities in core dependencies like `axios` and `genkit` (Vulnerability Remediation 2026).
 
 ### User Permissions & Management
 
