@@ -14,7 +14,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { useBreakTime } from '@/context/BreakTimeContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, getDocs, collection, query, where, onSnapshot, Timestamp, orderBy, limit } from 'firebase/firestore';
-import { format, startOfMonth, endOfMonth, parse, parseISO, differenceInCalendarDays, startOfYear, endOfYear, max, min, isFriday, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parse, parseISO, isValid, differenceInCalendarDays, startOfYear, endOfYear, max, min, isFriday, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { getActivePolicyForDate } from '@/lib/attendance';
 import type { AttendancePolicyDocument, EmployeeDocument, DailyAttendancePolicy } from '@/types';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -100,17 +100,51 @@ export default function MobileDashboardPage() {
     };
     const calculateWorkHours = (inTime?: any, outTime?: any) => {
         if (!inTime || !outTime) return null;
-        if (typeof inTime !== 'string' || typeof outTime !== 'string') return null;
         try {
-            const inFormat = (inTime.includes('AM') || inTime.includes('PM')) ? 'hh:mm a' : 'HH:mm';
-            const outFormat = (outTime.includes('AM') || outTime.includes('PM')) ? 'hh:mm a' : 'HH:mm';
-            const start = parse(inTime, inFormat, new Date());
-            const end = parse(outTime, outFormat, new Date());
-            let diff = end.getTime() - start.getTime();
-            if (diff < 0) diff += 24 * 60 * 60 * 1000;
+            const parseTime = (timeStr: string) => {
+                if (typeof timeStr !== 'string') return null;
+                
+                // 1. Try ISO
+                const isoDate = parseISO(timeStr);
+                if (isValid(isoDate) && !isNaN(isoDate.getTime()) && isoDate.getFullYear() > 2000) {
+                    return isoDate;
+                }
 
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                // 2. Try common formats
+                const formats = ['hh:mm a', 'h:mm a', 'hh:mmA', 'h:mmA', 'HH:mm', 'H:mm'];
+                for (const f of formats) {
+                    try {
+                        const parsed = parse(timeStr, f, new Date());
+                        if (isValid(parsed) && !isNaN(parsed.getTime())) return parsed;
+                    } catch (e) { }
+                }
+                
+                // 3. Last resort - native Date
+                const native = new Date(timeStr);
+                if (isValid(native) && !isNaN(native.getTime())) return native;
+                
+                return null;
+            };
+
+            const start = parseTime(inTime);
+            const end = parseTime(outTime);
+
+            if (!start || !end) return null;
+
+            // Handle cross-day shifts
+            let diff = end.getTime() - start.getTime();
+            
+            // Special handling for non-ISO strings which might lose the date component
+            const isIso = (ts: any) => typeof ts === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(ts.trim());
+            if (!isIso(inTime) || !isIso(outTime)) {
+                if (diff < 0) diff += 24 * 60 * 60 * 1000;
+            }
+
+            const totalMinutes = Math.floor(diff / (1000 * 60));
+            if (totalMinutes <= 0) return '0 hr 0 min';
+
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
 
             let result = '';
             if (hours > 0) result += `${hours} hr${hours > 1 ? 's' : ''} `;
@@ -130,7 +164,15 @@ export default function MobileDashboardPage() {
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
     // isBreakModalOpen state removed
     const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
-    const [todayAttendance, setTodayAttendance] = useState<{ inTime?: string; outTime?: string; flag?: string; approvalStatus?: string; inTimeApprovalStatus?: string; outTimeApprovalStatus?: string } | null>(null);
+    const [todayAttendance, setTodayAttendance] = useState<{
+        inTime?: string;
+        outTime?: string;
+        flag?: string;
+        approvalStatus?: string;
+        inTimeApprovalStatus?: string;
+        outTimeApprovalStatus?: string;
+        workingHours?: string;
+    } | null>(null);
     const { isOnBreak, activeBreakRecord, openBreakModal } = useBreakTime();
     const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
     // Local role for display/legacy check, but we'll prioritize globalUserRole
@@ -248,7 +290,8 @@ export default function MobileDashboardPage() {
                 flag: todayAttendanceData.flag,
                 approvalStatus: todayAttendanceData.approvalStatus,
                 inTimeApprovalStatus: todayAttendanceData.inTimeApprovalStatus,
-                outTimeApprovalStatus: todayAttendanceData.outTimeApprovalStatus
+                outTimeApprovalStatus: todayAttendanceData.outTimeApprovalStatus,
+                workingHours: todayAttendanceData.workingHours || todayAttendanceData.duration // Reconciled records might use duration
             });
         } else {
             setTodayAttendance(null);
@@ -654,6 +697,12 @@ export default function MobileDashboardPage() {
         let interval: NodeJS.Timeout;
 
         const updateWorkedTime = () => {
+            // Priority 1: Use pre-calculated duration from document (common in reconciled records)
+            if (todayAttendance?.workingHours) {
+                setWorkedTime(todayAttendance.workingHours);
+                return;
+            }
+
             if (todayAttendance?.outTime && todayAttendance?.inTime) {
                 // Case 1: Checked Out - Show final duration
                 const duration = calculateWorkHours(todayAttendance.inTime, todayAttendance.outTime);
@@ -705,7 +754,8 @@ export default function MobileDashboardPage() {
                     flag: data.flag,
                     approvalStatus: data.approvalStatus,
                     inTimeApprovalStatus: data.inTimeApprovalStatus,
-                    outTimeApprovalStatus: data.outTimeApprovalStatus
+                    outTimeApprovalStatus: data.outTimeApprovalStatus,
+                    workingHours: data.workingHours || data.duration
                 });
             } else {
                 setTodayAttendance(null);
