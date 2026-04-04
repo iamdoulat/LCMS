@@ -31,6 +31,17 @@ const formatTime = (timeString?: string) => {
     return timeString || '';
 };
 
+// Helper to parse dates safely from Firestore (handles both strings and Timestamps)
+const parseSafeDate = (dateField: any): Date => {
+    if (!dateField) return new Date(NaN);
+    if (typeof dateField === 'object' && typeof dateField.toDate === 'function') {
+        return dateField.toDate();
+    }
+    if (dateField instanceof Date) return dateField;
+    if (typeof dateField === 'string') return parseISO(dateField);
+    return new Date(NaN);
+};
+
 const parse12HourTime = (timeString: string, dateString: string): Date | null => {
     if (!timeString) return null;
 
@@ -69,7 +80,7 @@ const formatDuration = (minutes: number) => {
     return `${isNegative ? '-' : ''}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 };
 
-const ReportContent = ({ data, companyProfile, attendancePolicies, pageBreakArgs }: { data: any, companyProfile: CompanyProfile | null, attendancePolicies: AttendancePolicyDocument[], pageBreakArgs?: any }) => {
+const ReportContent = ({ data, companyProfile, attendancePolicies, pageBreakArgs }: { data: any, companyProfile: CompanyProfile|null, attendancePolicies: AttendancePolicyDocument[], pageBreakArgs?: any }) => {
     const { employee, dateRange, attendance, leaves, holidays, breaks } = data;
     // Handle potential string dates if they haven't been parsed yet (localStorage stores strings)
     // Actually date-fns parseISO handles ISO strings well.
@@ -97,11 +108,22 @@ const ReportContent = ({ data, companyProfile, attendancePolicies, pageBreakArgs
         let actualDutyMinutes = 0;
 
 
-        const attendanceRecord = attendance.find((a: AttendanceDocument) => format(parseISO(a.date), 'yyyy-MM-dd') === formattedDate);
-        const leaveRecord = leaves.find((l: LeaveApplicationDocument) => isWithinInterval(day, { start: parseISO(l.fromDate), end: parseISO(l.toDate) }));
-        const holidayRecord = holidays.find((h: HolidayDocument) => isWithinInterval(day, { start: parseISO(h.fromDate), end: parseISO(h.toDate || h.fromDate) }));
+        const attendanceRecord = attendance.find((a: AttendanceDocument) => format(parseSafeDate(a.date), 'yyyy-MM-dd') === formattedDate);
+        const leaveRecord = leaves.find((l: LeaveApplicationDocument) => isWithinInterval(day, { start: parseSafeDate(l.fromDate), end: parseSafeDate(l.toDate) }));
+        const holidayRecord = holidays.find((h: HolidayDocument) => isWithinInterval(day, { start: parseSafeDate(h.fromDate), end: parseSafeDate(h.toDate || h.fromDate) }));
 
-        if (dayOfWeek === 5) {
+        // Status derivation logic
+        if (attendanceRecord && attendanceRecord.approvalStatus === 'Approved') {
+            status = 'P'; // Reconciled records are marked as present
+            inTime = attendanceRecord.inTime || '';
+            outTime = attendanceRecord.outTime || '';
+            remarks = [attendanceRecord.inTimeRemarks, attendanceRecord.outTimeRemarks].filter(Boolean).join('; ');
+        } else if (attendanceRecord && attendanceRecord.flag !== 'A') {
+            status = attendanceRecord.flag;
+            inTime = attendanceRecord.inTime || '';
+            outTime = attendanceRecord.outTime || '';
+            remarks = [attendanceRecord.inTimeRemarks, attendanceRecord.outTimeRemarks].filter(Boolean).join('; ');
+        } else if (dayOfWeek === 5) { // Hardcoded Friday as weekend
             status = 'W';
             weekendCount++;
         } else if (holidayRecord) {
@@ -111,11 +133,15 @@ const ReportContent = ({ data, companyProfile, attendancePolicies, pageBreakArgs
         } else if (leaveRecord) {
             status = 'L';
             leaveCount++;
-        } else if (attendanceRecord) {
-            status = attendanceRecord.flag;
-            inTime = attendanceRecord.inTime || '';
-            outTime = attendanceRecord.outTime || '';
-            remarks = [attendanceRecord.inTimeRemarks, attendanceRecord.outTimeRemarks].filter(Boolean).join('; ');
+        } else {
+            // Default to Absent or specific attendance record if it's 'A'
+            status = attendanceRecord ? attendanceRecord.flag : 'A';
+            if (status === 'A') absentCount++;
+            if (attendanceRecord) {
+                inTime = attendanceRecord.inTime || '';
+                outTime = attendanceRecord.outTime || '';
+                remarks = [attendanceRecord.inTimeRemarks, attendanceRecord.outTimeRemarks].filter(Boolean).join('; ');
+            }
         }
 
         if (status === 'P' || status === 'D') {
