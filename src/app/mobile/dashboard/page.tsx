@@ -27,6 +27,7 @@ import { useFirestoreSuspension } from '@/context/FirestoreSuspensionContext';
 import { dataScoper } from '@/lib/data/dataScoper';
 import { parseTimeToMinutes } from '@/lib/firebase/utils';
 import { hasActiveCheckIn } from '@/lib/firebase/checkInOut';
+import { formatAttendanceTime } from '@/lib/time';
 
 const allSummaryItems = [
     { id: 'leave', label: 'Leave', subLabel: 'Spent', value: '10.0', icon: LogOut, bgColor: 'bg-red-50', textColor: 'text-red-500' },
@@ -60,18 +61,6 @@ export default function MobileDashboardPage() {
     // Initialize Firebase Cloud Messaging
     useFirebaseMessaging();
 
-    const formatAttendanceTime = (timeStr?: any) => {
-        if (!timeStr) return null;
-        if (typeof timeStr !== 'string') return null;
-        try {
-            // Support both HH:mm and hh:mm a
-            const formatStr = (timeStr.includes('AM') || timeStr.includes('PM')) ? 'hh:mm a' : 'HH:mm';
-            const parsed = parse(timeStr, formatStr, new Date());
-            return format(parsed, 'hh:mm a');
-        } catch (e) {
-            return timeStr;
-        }
-    };
     const getAttendanceStatus = (
         flag?: any,
         approvalStatus?: string,

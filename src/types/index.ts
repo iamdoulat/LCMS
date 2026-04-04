@@ -2308,6 +2308,8 @@ export const AttendanceReconciliationSchema = z.object({
   maxDaysLimit: z.number().int().min(1).default(30),
   maxDateOfCurrentMonth: z.number().int().min(1).max(31).default(2),
   maxMonthlyLimitPerEmployee: z.number().int().min(1).optional(),
+  reportSendingDay: z.number().int().min(1).max(31).default(1),
+  reportSendingTime: z.string().default('10:00'),
 });
 
 export type AttendanceReconciliationConfiguration = z.infer<typeof AttendanceReconciliationSchema>;

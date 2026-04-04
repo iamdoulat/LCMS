@@ -6,6 +6,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit, updateDoc, doc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, subDays, parseISO } from 'date-fns';
+import { formatAttendanceTime } from '@/lib/time';
 import { ChevronLeft, Calendar, Check, X, Loader2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { approveReconciliation, rejectReconciliation } from '@/lib/firebase/reconciliation'; // Assume similar for breaktime or generic
@@ -345,14 +346,7 @@ export default function ReconApprovalPage() {
         }
     };
 
-    const formatTime = (isoString?: string) => {
-        if (!isoString) return '-';
-        try {
-            return format(new Date(isoString), 'hh:mm a');
-        } catch {
-            return isoString;
-        }
-    };
+
 
     const getStatusColor = (status: string) => {
         const s = status?.toLowerCase();
@@ -611,8 +605,8 @@ export default function ReconApprovalPage() {
                                                         <span className="text-[10px] font-bold text-slate-400 w-8">{activeTab === 'attendance' ? 'IN' : 'START'}</span>
                                                         <span className={`text-xs font-bold ${(activeTab === 'attendance' ? (enrichedData[req.id]?.actualInTime || req.actualInTime) : (enrichedData[req.id]?.actualBreakStartTime || req.actualBreakStartTime)) ? 'text-slate-700' : 'text-slate-400 italic'}`}>
                                                             {activeTab === 'attendance'
-                                                                ? (formatTime(enrichedData[req.id]?.actualInTime || req.actualInTime) !== '-' ? formatTime(enrichedData[req.id]?.actualInTime || req.actualInTime) : 'Not marked')
-                                                                : (formatTime(enrichedData[req.id]?.actualBreakStartTime || req.actualBreakStartTime) !== '-' ? formatTime(enrichedData[req.id]?.actualBreakStartTime || req.actualBreakStartTime) : 'Not marked')
+                                                                ? (formatAttendanceTime(enrichedData[req.id]?.actualInTime || req.actualInTime) !== '-' ? formatAttendanceTime(enrichedData[req.id]?.actualInTime || req.actualInTime) : 'Not marked')
+                                                                : (formatAttendanceTime(enrichedData[req.id]?.actualBreakStartTime || req.actualBreakStartTime) !== '-' ? formatAttendanceTime(enrichedData[req.id]?.actualBreakStartTime || req.actualBreakStartTime) : 'Not marked')
                                                             }
                                                         </span>
                                                     </div>
@@ -620,8 +614,8 @@ export default function ReconApprovalPage() {
                                                         <span className="text-[10px] font-bold text-slate-400 w-8">{activeTab === 'attendance' ? 'OUT' : 'END'}</span>
                                                         <span className={`text-xs font-bold ${(activeTab === 'attendance' ? (enrichedData[req.id]?.actualOutTime || req.actualOutTime) : (enrichedData[req.id]?.actualBreakEndTime || req.actualBreakEndTime)) ? 'text-slate-700' : 'text-slate-400 italic'}`}>
                                                             {activeTab === 'attendance'
-                                                                ? (formatTime(enrichedData[req.id]?.actualOutTime || req.actualOutTime) !== '-' ? formatTime(enrichedData[req.id]?.actualOutTime || req.actualOutTime) : 'Not marked')
-                                                                : (formatTime(enrichedData[req.id]?.actualBreakEndTime || req.actualBreakEndTime) !== '-' ? formatTime(enrichedData[req.id]?.actualBreakEndTime || req.actualBreakEndTime) : 'Not marked')
+                                                                ? (formatAttendanceTime(enrichedData[req.id]?.actualOutTime || req.actualOutTime) !== '-' ? formatAttendanceTime(enrichedData[req.id]?.actualOutTime || req.actualOutTime) : 'Not marked')
+                                                                : (formatAttendanceTime(enrichedData[req.id]?.actualBreakEndTime || req.actualBreakEndTime) !== '-' ? formatAttendanceTime(enrichedData[req.id]?.actualBreakEndTime || req.actualBreakEndTime) : 'Not marked')
                                                             }
                                                         </span>
                                                     </div>
@@ -636,8 +630,8 @@ export default function ReconApprovalPage() {
                                                         <span className="text-[10px] font-bold text-blue-400 w-8">{activeTab === 'attendance' ? 'IN' : 'START'}</span>
                                                         <span className="text-xs font-bold text-blue-700">
                                                             {activeTab === 'attendance'
-                                                                ? (req.requestedInTime ? formatTime(req.requestedInTime) : '-')
-                                                                : (req.requestedBreakStartTime ? formatTime(req.requestedBreakStartTime) : '-')
+                                                                ? (req.requestedInTime ? formatAttendanceTime(req.requestedInTime) : '-')
+                                                                : (req.requestedBreakStartTime ? formatAttendanceTime(req.requestedBreakStartTime) : '-')
                                                             }
                                                         </span>
                                                     </div>
@@ -645,8 +639,8 @@ export default function ReconApprovalPage() {
                                                         <span className="text-[10px] font-bold text-blue-400 w-8">{activeTab === 'attendance' ? 'OUT' : 'END'}</span>
                                                         <span className="text-xs font-bold text-blue-700">
                                                             {activeTab === 'attendance'
-                                                                ? (req.requestedOutTime ? formatTime(req.requestedOutTime) : '-')
-                                                                : (req.requestedBreakEndTime ? formatTime(req.requestedBreakEndTime) : '-')
+                                                                ? (req.requestedOutTime ? formatAttendanceTime(req.requestedOutTime) : '-')
+                                                                : (req.requestedBreakEndTime ? formatAttendanceTime(req.requestedBreakEndTime) : '-')
                                                             }
                                                         </span>
                                                     </div>

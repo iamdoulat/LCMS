@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { format, parseISO, startOfDay, subDays, eachDayOfInterval, isWithinInterval, getDay, endOfDay, isValid, isSameDay, parse } from 'date-fns';
+import { formatAttendanceTime } from '@/lib/time';
 import { ArrowLeft, Clock, AlertCircle, Loader2, UserCircle, Calendar, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -131,15 +132,6 @@ export default function SubordinateAttendanceDetailsPage() {
     }, [employeeId, dateRange]);
 
     const containerRef = usePullToRefresh(fetchData);
-
-    const formatTime = (isoString?: string) => {
-        if (!isoString) return '-';
-        try {
-            return format(parseISO(isoString), 'hh:mm a');
-        } catch {
-            return isoString;
-        }
-    };
 
     const formatDate = (dateStr: string) => {
         try {
@@ -321,7 +313,7 @@ export default function SubordinateAttendanceDetailsPage() {
                                                 <Clock className="h-3.5 w-3.5 text-blue-500" />
                                                 <span className="text-[11px] font-bold">
                                                     <span className="text-slate-400 mr-1 text-[9px] uppercase">In</span>
-                                                    {formatTime(record.inTime)}
+                                                    {formatAttendanceTime(record.inTime)}
                                                 </span>
                                             </div>
                                             <div className="w-px h-3 bg-slate-200"></div>
@@ -329,7 +321,7 @@ export default function SubordinateAttendanceDetailsPage() {
                                                 <Clock className="h-3.5 w-3.5 text-indigo-500" />
                                                 <span className="text-[11px] font-bold">
                                                     <span className="text-slate-400 mr-1 text-[9px] uppercase">Out</span>
-                                                    {formatTime(record.outTime)}
+                                                    {formatAttendanceTime(record.outTime)}
                                                 </span>
                                             </div>
                                         </div>
@@ -404,7 +396,7 @@ export default function SubordinateAttendanceDetailsPage() {
                             <div className="space-y-2">
                                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                    Check In Location ({formatTime(selectedLocationRecord.inTime)})
+                                    Check In Location ({formatAttendanceTime(selectedLocationRecord.inTime)})
                                 </h4>
                                 <div className="h-[200px] rounded-xl overflow-hidden shadow-inner border border-slate-200">
                                     <LocationMap
@@ -423,7 +415,7 @@ export default function SubordinateAttendanceDetailsPage() {
                             <div className="space-y-2">
                                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                                    Check Out Location ({formatTime(selectedLocationRecord.outTime)})
+                                    Check Out Location ({formatAttendanceTime(selectedLocationRecord.outTime)})
                                 </h4>
                                 <div className="h-[200px] rounded-xl overflow-hidden shadow-inner border border-slate-200">
                                     <LocationMap

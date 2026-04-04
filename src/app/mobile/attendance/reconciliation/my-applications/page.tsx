@@ -8,6 +8,7 @@ import { collection, query, where, getDocs, orderBy, limit } from 'firebase/fire
 import { firestore } from '@/lib/firebase/config';
 import { format, parseISO, subDays, parse } from 'date-fns';
 import { ChevronLeft, Calendar, Clock, X, Plus, ArrowLeft, Edit2, Trash2, RefreshCw } from 'lucide-react';
+import { formatAttendanceTime } from '@/lib/time';
 import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh';
@@ -197,24 +198,7 @@ export default function MyReconApplicationsPage() {
         }
     };
 
-    const formatTime = (isoString?: string) => {
-        if (!isoString) return '-';
-        try {
-            // Try parsing as ISO string first
-            let date = parseISO(isoString);
 
-            // If parseISO fails, try parsing as formatted time (e.g., "09:00 AM")
-            if (isNaN(date.getTime())) {
-                const baseDate = new Date();
-                date = parse(isoString, 'hh:mm a', baseDate);
-            }
-
-            if (isNaN(date.getTime())) return isoString;
-            return format(date, 'hh:mm a');
-        } catch (e) {
-            return isoString;
-        }
-    };
 
     // For Modal display - date only
     const formatModalDate = (dateStr?: string) => {
@@ -511,13 +495,13 @@ export default function MyReconApplicationsPage() {
                                             {req.requestedInTime && (
                                                 <div className="flex items-center gap-1.5 bg-indigo-50 py-1.5 px-3 rounded-lg">
                                                     <Clock className="w-3 h-3 text-indigo-600" />
-                                                    <span className="text-indigo-600">In: {formatTime(req.requestedInTime)}</span>
+                                                    <span className="text-indigo-600">In: {formatAttendanceTime(req.requestedInTime)}</span>
                                                 </div>
                                             )}
                                             {req.requestedOutTime && (
                                                 <div className="flex items-center gap-1.5 bg-purple-50 py-1.5 px-3 rounded-lg">
                                                     <Clock className="w-3 h-3 text-purple-600" />
-                                                    <span className="text-purple-600">Out: {formatTime(req.requestedOutTime)}</span>
+                                                    <span className="text-purple-600">Out: {formatAttendanceTime(req.requestedOutTime)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -526,13 +510,13 @@ export default function MyReconApplicationsPage() {
                                             {req.requestedBreakStartTime && (
                                                 <div className="flex items-center gap-1.5 bg-yellow-50 py-1.5 px-3 rounded-lg">
                                                     <Clock className="w-3 h-3 text-yellow-600" />
-                                                    <span className="text-yellow-600">Start: {formatTime(req.requestedBreakStartTime)}</span>
+                                                    <span className="text-yellow-600">Start: {formatAttendanceTime(req.requestedBreakStartTime)}</span>
                                                 </div>
                                             )}
                                             {req.requestedBreakEndTime && (
                                                 <div className="flex items-center gap-1.5 bg-orange-50 py-1.5 px-3 rounded-lg">
                                                     <Clock className="w-3 h-3 text-orange-600" />
-                                                    <span className="text-orange-600">End: {formatTime(req.requestedBreakEndTime)}</span>
+                                                    <span className="text-orange-600">End: {formatAttendanceTime(req.requestedBreakEndTime)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -586,11 +570,11 @@ export default function MyReconApplicationsPage() {
                                         <div className="grid grid-cols-3 gap-2 mb-2">
                                             <div className="bg-indigo-50 p-2 rounded-xl">
                                                 <div className="text-[10px] text-indigo-400 font-semibold mb-1">Existing Time</div>
-                                                <div className="text-xs font-bold text-slate-700">{formatTime(selectedRequest.actualInTime)}</div>
+                                                <div className="text-xs font-bold text-slate-700">{formatAttendanceTime(selectedRequest.actualInTime)}</div>
                                             </div>
                                             <div className="bg-indigo-50 p-2 rounded-xl">
                                                 <div className="text-[10px] text-indigo-400 font-semibold mb-1">Recon. Time</div>
-                                                <div className="text-xs font-bold text-slate-700">{formatTime(selectedRequest.requestedInTime)}</div>
+                                                <div className="text-xs font-bold text-slate-700">{formatAttendanceTime(selectedRequest.requestedInTime)}</div>
                                             </div>
                                             <div className="bg-indigo-50 p-2 rounded-xl">
                                                 <div className="text-[10px] text-indigo-400 font-semibold mb-1">Recon. Date</div>
@@ -611,11 +595,11 @@ export default function MyReconApplicationsPage() {
                                         <div className="grid grid-cols-3 gap-2 mb-2">
                                             <div className="bg-purple-50 p-2 rounded-xl">
                                                 <div className="text-[10px] text-purple-400 font-semibold mb-1">Existing Time</div>
-                                                <div className="text-xs font-bold text-slate-700">{formatTime(selectedRequest.actualOutTime)}</div>
+                                                <div className="text-xs font-bold text-slate-700">{formatAttendanceTime(selectedRequest.actualOutTime)}</div>
                                             </div>
                                             <div className="bg-purple-50 p-2 rounded-xl">
                                                 <div className="text-[10px] text-purple-400 font-semibold mb-1">Recon. Time</div>
-                                                <div className="text-xs font-bold text-slate-700">{formatTime(selectedRequest.requestedOutTime)}</div>
+                                                <div className="text-xs font-bold text-slate-700">{formatAttendanceTime(selectedRequest.requestedOutTime)}</div>
                                             </div>
                                             <div className="bg-purple-50 p-2 rounded-xl">
                                                 <div className="text-[10px] text-purple-400 font-semibold mb-1">Recon. Date</div>
@@ -638,11 +622,11 @@ export default function MyReconApplicationsPage() {
                                     <div className="grid grid-cols-2 gap-4 mb-4">
                                         <div className="bg-yellow-50 p-3 rounded-xl">
                                             <div className="text-[10px] text-yellow-600/60 font-semibold mb-1">Requested Start</div>
-                                            <div className="text-sm font-bold text-slate-700">{formatTime(selectedRequest.requestedBreakStartTime)}</div>
+                                            <div className="text-sm font-bold text-slate-700">{formatAttendanceTime(selectedRequest.requestedBreakStartTime)}</div>
                                         </div>
                                         <div className="bg-orange-50 p-3 rounded-xl">
                                             <div className="text-[10px] text-orange-600/60 font-semibold mb-1">Requested End</div>
-                                            <div className="text-sm font-bold text-slate-700">{formatTime(selectedRequest.requestedBreakEndTime)}</div>
+                                            <div className="text-sm font-bold text-slate-700">{formatAttendanceTime(selectedRequest.requestedBreakEndTime)}</div>
                                         </div>
                                     </div>
                                     <div className="bg-slate-50 p-4 rounded-xl">

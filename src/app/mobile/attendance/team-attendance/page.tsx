@@ -7,6 +7,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, startOfDay, endOfDay } from 'date-fns';
+import { formatAttendanceTime } from '@/lib/time';
 import { ChevronLeft, Search, UserCircle, Loader2, ArrowLeft, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
@@ -117,15 +118,6 @@ export default function TeamAttendancePage() {
 
     const containerRef = usePullToRefresh(fetchTeamAttendance);
 
-    const formatTime = (isoString?: string) => {
-        if (!isoString) return 'N/A';
-        try {
-            return format(new Date(isoString), 'hh:mm a');
-        } catch {
-            return isoString;
-        }
-    };
-
     const filteredData = attendanceData.filter(item =>
         item.employeeName.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -204,10 +196,10 @@ export default function TeamAttendancePage() {
                                     <h3 className="font-bold text-slate-800 text-sm mb-2 truncate">{emp.employeeName}</h3>
                                     <div className="flex gap-3 text-xs font-semibold">
                                         <div className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600">
-                                            {formatTime(emp.inTime)}
+                                            {formatAttendanceTime(emp.inTime)}
                                         </div>
                                         <div className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600">
-                                            {formatTime(emp.outTime)}
+                                            {formatAttendanceTime(emp.outTime)}
                                         </div>
                                     </div>
                                 </div>

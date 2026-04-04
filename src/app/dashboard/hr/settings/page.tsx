@@ -164,6 +164,8 @@ export default function HrmSettingsPage() {
         limitType: 'days',
         maxDaysLimit: 30,
         maxDateOfCurrentMonth: 2,
+        reportSendingDay: 1,
+        reportSendingTime: '10:00',
     });
     const { toast } = useToast();
     const [confirmDelete, setConfirmDelete] = React.useState<{
@@ -438,6 +440,40 @@ export default function HrmSettingsPage() {
                                         disabled={isReadOnly}
                                         className="focus:ring-2 focus:ring-primary/20"
                                     />
+                                </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-primary/10 mt-4 space-y-4">
+                                <h4 className="text-sm font-bold text-primary flex items-center gap-2">
+                                    <Smartphone className="h-4 w-4" />
+                                    Monthly Attendance Report Sending Configuration
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2 group">
+                                        <Label className="text-sm font-semibold group-hover:text-primary transition-colors">Report Sending Day of Month</Label>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            max={31}
+                                            value={reconConfig.reportSendingDay || 1}
+                                            onChange={(e) => setReconConfig(prev => ({ ...prev, reportSendingDay: parseInt(e.target.value) || 1 }))}
+                                            placeholder="e.g. 1"
+                                            disabled={isReadOnly}
+                                            className="focus:ring-2 focus:ring-primary/20"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground">Select the day of the month to send the previous month's report (e.g., 5 for the 5th).</p>
+                                    </div>
+                                    <div className="space-y-2 group">
+                                        <Label className="text-sm font-semibold group-hover:text-primary transition-colors">Report Sending Time</Label>
+                                        <Input
+                                            type="time"
+                                            value={reconConfig.reportSendingTime || '10:00'}
+                                            onChange={(e) => setReconConfig(prev => ({ ...prev, reportSendingTime: e.target.value }))}
+                                            disabled={isReadOnly}
+                                            className="focus:ring-2 focus:ring-primary/20"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground">Select the time of day to send the report (Dhaka Time).</p>
+                                    </div>
                                 </div>
                             </div>
 

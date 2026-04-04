@@ -7,6 +7,7 @@ import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, parseISO, startOfDay, endOfDay, parse, eachDayOfInterval, isWithinInterval, subDays, getDay, isToday } from 'date-fns';
+import { formatAttendanceTime } from '@/lib/time';
 import { Edit2, Clock, Coffee, AlertCircle, ArrowLeft, Filter as FilterIcon, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -359,15 +360,6 @@ export default function MyAttendancePage() {
 
     const containerRef = usePullToRefresh(refreshData);
 
-    const formatTime = (isoString?: string) => {
-        if (!isoString) return '-';
-        try {
-            return format(parseISO(isoString), 'hh:mm a');
-        } catch (e) {
-            return isoString; // Fallback
-        }
-    };
-
     const formatDate = (dateStr: string) => {
         try {
             return {
@@ -575,12 +567,12 @@ export default function MyAttendancePage() {
                                                 <div className="flex items-center gap-4 text-slate-600">
                                                     <div className="flex items-center gap-1">
                                                         <Clock className="h-3 w-3 text-blue-500" />
-                                                        <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">IN</span>{formatTime(record.inTime)}</span>
+                                                        <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">IN</span>{formatAttendanceTime(record.inTime)}</span>
                                                     </div>
                                                     <div className="w-px h-3 bg-slate-200"></div>
                                                     <div className="flex items-center gap-1">
                                                         <Clock className="h-3 w-3 text-indigo-500" />
-                                                        <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">OUT</span>{formatTime(record.outTime)}</span>
+                                                        <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">OUT</span>{formatAttendanceTime(record.outTime)}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -628,12 +620,12 @@ export default function MyAttendancePage() {
                                             <div className="flex items-center gap-4 text-slate-600">
                                                 <div className="flex items-center gap-1">
                                                     <Clock className="h-3 w-3 text-indigo-500" />
-                                                    <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">START</span>{formatTime(record.startTime)}</span>
+                                                    <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">START</span>{formatAttendanceTime(record.startTime)}</span>
                                                 </div>
                                                 <div className="w-px h-3 bg-slate-200"></div>
                                                 <div className="flex items-center gap-1">
                                                     <Clock className="h-3 w-3 text-rose-500" />
-                                                    <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">END</span>{formatTime(record.endTime)}</span>
+                                                    <span className="text-[10px] font-bold"><span className="text-slate-400 mr-1">END</span>{formatAttendanceTime(record.endTime)}</span>
                                                 </div>
                                             </div>
                                         </div>
