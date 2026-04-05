@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Loader2, Users, Smartphone, DollarSign } from 'lucide-react';
+import { Settings, PlusCircle, Trash2, Edit, MoreHorizontal, Building, Loader2, Users, Smartphone, DollarSign, Clock, Link as LinkIcon, Zap } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -181,6 +181,42 @@ export default function HrmSettingsPage() {
     });
 
     const [isSavingRecon, setIsSavingRecon] = React.useState(false);
+    const [isSendingReports, setIsSendingReports] = React.useState(false);
+
+    const handleSendReportsNow = async () => {
+        setIsSendingReports(true);
+        try {
+            const res = await fetch('/api/hr/settings/send-reports-now', {
+                method: 'POST',
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast({
+                    title: 'Success',
+                    description: data.message,
+                });
+            } else {
+                toast({
+                    title: 'Error',
+                    description: data.error || data.message || 'Failed to send reports',
+                    variant: 'destructive',
+                });
+            }
+        } catch (err: any) {
+            toast({
+                title: 'Error',
+                description: err.message || 'An error occurred',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSendingReports(false);
+        }
+    };
+
+    const cronUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/cron/monthly-reports` : '';
+    const [sendHour, sendMinute] = (reconConfig.reportSendingTime || '10:00').split(':');
+    const cronExpression = `${parseInt(sendMinute) || 0} ${parseInt(sendHour) || 0} ${reconConfig.reportSendingDay || 1} * *`;
+
 
     useEffect(() => {
         const unsub = onSnapshot(doc(firestore, 'hrm_settings', 'attendance_reconciliation'), (docSnap) => {
@@ -473,6 +509,53 @@ export default function HrmSettingsPage() {
                                             className="focus:ring-2 focus:ring-primary/20"
                                         />
                                         <p className="text-[10px] text-muted-foreground">Select the time of day to send the report (Dhaka Time).</p>
+                                    </div>
+                                </div>
+
+                                {/* External Cron & Manual Trigger Section */}
+                                <div className="mt-4 p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                                <LinkIcon className="h-3 w-3" />
+                                                External Cron Link
+                                            </div>
+                                            <div className="p-2.5 rounded-md bg-background border text-xs font-mono break-all select-all hover:border-primary/50 transition-colors cursor-pointer group flex items-center justify-between" onClick={() => { navigator.clipboard.writeText(cronUrl); toast({ title: 'Copied', description: 'Cron URL copied to clipboard' }); }}>
+                                                {cronUrl}
+                                                <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity text-primary">Click to copy</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                                <Clock className="h-3 w-3" />
+                                                Crontab Expression
+                                            </div>
+                                            <div className="p-2.5 rounded-md bg-background border text-sm font-mono tracking-widest text-primary font-bold hover:border-primary/50 transition-colors cursor-pointer group flex items-center justify-between" onClick={() => { navigator.clipboard.writeText(cronExpression); toast({ title: 'Copied', description: 'Cron expression copied to clipboard' }); }}>
+                                                {cronExpression}
+                                                <span className="text-[10px] font-sans opacity-0 group-hover:opacity-100 transition-opacity text-primary">Click to copy</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-2 border-t border-primary/10">
+                                        <div className="space-y-0.5">
+                                            <p className="text-xs font-bold text-primary">Need to send reports immediately?</p>
+                                            <p className="text-[10px] text-muted-foreground">This will send the previous month's reports to all active employees now.</p>
+                                        </div>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={handleSendReportsNow}
+                                            disabled={isSendingReports || isReadOnly}
+                                            className="bg-primary/10 hover:bg-primary hover:text-white border-primary/30 transition-all gap-2"
+                                        >
+                                            {isSendingReports ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            ) : (
+                                                <Zap className="h-3.5 w-3.5" />
+                                            )}
+                                            {isSendingReports ? 'Sending...' : 'Send Reports Now'}
+                                        </Button>
                                     </div>
                                 </div>
                             </div>

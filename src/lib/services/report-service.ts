@@ -1,6 +1,7 @@
 import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isValid, parseISO } from 'date-fns';
+import moment from 'moment-timezone';
 
 export interface ReportOptions {
     type: 'attendance' | 'payslip';
@@ -37,8 +38,8 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
         const fromDateSimple = format(start, 'yyyy-MM-dd');
         const toDateSimple = format(end, 'yyyy-MM-dd');
 
-        // Fetch attendance, holidays, leaves and company profile in parallel
-        const [attendanceSnap, holidaysSnap, leavesSnap, companySnap] = await Promise.all([
+        // Fetch attendance, holidays, leaves, policies, breaks and company profile in parallel
+        const [attendanceSnap, holidaysSnap, leavesSnap, companySnap, policiesSnap, breaksSnap] = await Promise.all([
             admin.firestore().collection('attendance')
                 .where('date', '>=', fromDateStr)
                 .where('date', '<=', toDateStr)
@@ -49,10 +50,17 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
                 .where('toDate', '>=', fromDateSimple)
                 .get(),
             admin.firestore().collection('financial_settings').doc('main_settings').get(),
+            admin.firestore().collection('hrm_settings/attendance_policies/items').get(),
+            admin.firestore().collection('break_time')
+                .where('date', '>=', fromDateSimple)
+                .where('date', '<=', toDateSimple)
+                .get(),
         ]);
 
         const allHolidays = holidaysSnap.docs.map(d => d.data() as any);
         const allLeaves = leavesSnap.docs.map(d => d.data() as any);
+        const allPolicies = policiesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+        const allBreaks = breaksSnap.docs.map(d => d.data() as any);
         const companyProfile = companySnap.exists ? companySnap.data() as any : null;
 
         // Normalise date keys for attendance records
@@ -76,16 +84,29 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
             return `${neg ? '-' : ''}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
         };
 
-        // Helper – parse "hh:mm AM/PM" into a Date on a given day
-        const parse12 = (t: string, dayStr: string): Date | null => {
+        // Helper – parse "hh:mm AM/PM" into a Date on a given day (using moment for timezone safety)
+        const parse12 = (t: string, dayStr: string): moment.Moment | null => {
             if (!t) return null;
             const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
             if (!m) return null;
             let h = parseInt(m[1]); const min = parseInt(m[2]); const p = m[3].toUpperCase();
             if (p === 'PM' && h !== 12) h += 12; else if (p === 'AM' && h === 12) h = 0;
-            const d = new Date(dayStr);
-            d.setHours(h, min, 0, 0);
-            return d;
+            // Use moment-timezone for Dhaka
+            return moment.tz(`${dayStr} ${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}:00`, 'YYYY-MM-DD HH:mm:ss', 'Asia/Dhaka');
+        };
+
+        // Helper - get active policy (ported from src/lib/attendance.ts)
+        const getActivePolicy = (emp: any, day: Date) => {
+            const history = emp.policyHistory || [];
+            const targetStr = format(day, 'yyyy-MM-dd');
+            if (history.length === 0) {
+                return allPolicies.find((p: any) => p.id === emp.attendancePolicyId) || null;
+            }
+            const sorted = [...history].sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom));
+            const found = sorted.find(h => h.effectiveFrom <= targetStr);
+            if (found) return allPolicies.find((p: any) => p.id === found.policyId) || null;
+            const oldest = sorted[sorted.length - 1];
+            return allPolicies.find((p: any) => p.id === (oldest?.policyId || emp.attendancePolicyId)) || null;
         };
 
         const { jsPDF } = await import('jspdf');
@@ -113,6 +134,8 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
                         let actualDutyMins = 0;
 
                         const rec = empAttendance.find(r => r.dateKey === dayStr);
+                        const empBreaks = allBreaks.filter(b => b.employeeId === emp.id && b.date === dayStr);
+                        
                         const holiday = allHolidays.find(h => {
                             const hs = new Date(h.fromDate); const he = new Date(h.toDate || h.fromDate);
                             return day >= hs && day <= he;
@@ -122,34 +145,54 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
                             return day >= ls && day <= le;
                         });
 
-                        if (dow === 5) {            // Friday = weekend
-                            flag = 'W'; weekendCount++;
+                        // Dynamic Status Logic
+                        if (rec && rec.approvalStatus === 'Approved') {
+                            flag = 'P';
+                        } else if (rec && rec.flag && rec.flag !== 'A') {
+                            flag = rec.flag.toUpperCase();
+                        } else if (dow === 5) { // Friday weekend
+                            flag = 'W';
                         } else if (holiday) {
-                            flag = 'H'; holidayCount++;
-                            // Show holiday name + announcement message in Remarks (matches print page)
+                            flag = 'H';
                             remarks = [holiday.name, holiday.message].filter(Boolean).join(' - ');
                         } else if (leave) {
-                            flag = 'L'; leaveCount++;
+                            flag = 'L';
                         } else if (rec) {
                             flag = (rec.flag || 'A').toUpperCase();
+                        }
+
+                        if (rec) {
                             inTime = rec.inTime || '';
                             outTime = rec.outTime || '';
-                            remarks = [rec.inTimeRemarks, rec.outTimeRemarks].filter(Boolean).join('; ');
+                            remarks = remarks || [rec.inTimeRemarks, rec.outTimeRemarks].filter(Boolean).join('; ');
                         }
 
                         if (flag === 'P' || flag === 'D') {
                             presentCount++;
+                            const activePolicy = getActivePolicy(emp, day);
+                            const dayName = format(day, 'EEEE');
+                            const dailyPolicy = activePolicy?.dailyPolicies?.find((dp: any) => dp.day === dayName);
+                            
                             if (inTime) {
-                                const inDt = parse12(inTime, dayStr);
-                                const threshold = new Date(`${dayStr}T09:10:00`);
-                                if (inDt && inDt > threshold) delayCount++;
+                                const inMt = parse12(inTime, dayStr);
+                                const policyStartTime = dailyPolicy?.startTime || activePolicy?.startTime || '09:00 AM';
+                                const threshold = parse12(policyStartTime, dayStr);
+                                if (inMt && threshold && inMt.isAfter(threshold)) {
+                                    flag = 'D';
+                                    delayCount++;
+                                }
                             }
+
                             if (inTime && outTime) {
-                                const inDt = parse12(inTime, dayStr);
-                                const outDt = parse12(outTime, dayStr);
-                                if (inDt && outDt && outDt > inDt) {
-                                    const total = Math.round((outDt.getTime() - inDt.getTime()) / 60000);
-                                    actualDutyMins = Math.max(0, total - 60); // deduct 1h break
+                                const inMt = parse12(inTime, dayStr);
+                                const outMt = parse12(outTime, dayStr);
+                                if (inMt && outMt && outMt.isAfter(inMt)) {
+                                    const total = Math.round(outMt.diff(inMt, 'minutes'));
+                                    const policyBreak = dailyPolicy?.breakTime ?? activePolicy?.breakTime ?? 60;
+                                    const actualBreak = empBreaks.reduce((sum, b) => sum + (b.durationMinutes || 0), 0);
+                                    const excessBreak = Math.max(0, actualBreak - policyBreak);
+                                    
+                                    actualDutyMins = Math.max(0, total - excessBreak);
                                     totalActualMins += actualDutyMins;
                                 }
                             }
@@ -157,6 +200,12 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
                             visitCount++;
                         } else if (flag === 'A') {
                             absentCount++;
+                        } else if (flag === 'W') {
+                            weekendCount++;
+                        } else if (flag === 'H') {
+                            holidayCount++;
+                        } else if (flag === 'L') {
+                            leaveCount++;
                         }
 
                         const extraLess = actualDutyMins > 0 ? actualDutyMins - expectedDutyHour * 60 : 0;
@@ -167,7 +216,7 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
                             (flag === 'P' || flag === 'D') ? fmtDur(expectedDutyHour * 60) : '-', // Expected Duty
                             inTime || '',                                // In Time
                             outTime || '',                                // Out Time
-                            '00:00',                                      // Break Time (simplified)
+                            fmtDur(empBreaks.reduce((sum, b) => sum + (b.durationMinutes || 0), 0)), // Break Time
                             actualDutyMins > 0 ? fmtDur(actualDutyMins) : '-', // Actual Duty
                             actualDutyMins > 0 ? fmtDur(extraLess) : '-', // Extra/Less
                             remarks,                                      // Remarks
@@ -321,7 +370,8 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
                     let waPromise: Promise<any> = Promise.resolve();
                     if (emp.phone) {
                         const { sendWhatsApp } = await import('@/lib/whatsapp/sender');
-                        const waSummary = `Present:${presentCount} | Absent:${absentCount} | Delay:${delayCount} | Leave:${leaveCount} | Visit:${visitCount}`;
+                        const pad = (n: number) => String(n).padStart(2, '0');
+                        const waSummary = `Present:${pad(presentCount)} | Absent:${pad(absentCount)} | Delay:${pad(delayCount)} | Leave:${pad(leaveCount)} | Visit:${pad(visitCount)} | Weekend:${pad(weekendCount)} | Holiday:${pad(holidayCount)}`;
                         waPromise = sendWhatsApp({
                             to: emp.phone,
                             templateSlug: 'employee_monthly_attendance_report',

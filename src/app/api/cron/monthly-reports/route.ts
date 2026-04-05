@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { format, subMonths } from 'date-fns';
 import { sendMonthlyReports } from '@/lib/services/report-service';
 import { admin } from '@/lib/firebase/admin';
+import moment from 'moment-timezone';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,14 +10,15 @@ export async function GET(request: Request) {
     try {
         // Authenticate Cron Job
         const authHeader = request.headers.get('authorization');
+        const cronSecret = process.env.CRON_SECRET;
 
-        if (!process.env.CRON_SECRET) {
+        if (!cronSecret) {
             console.error("CRON_SECRET is not defined in environment variables.");
             return new NextResponse('Cron Secret Missing', { status: 500 });
         }
 
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            console.warn(`Unauthorized cron attempt from ${request.headers.get('host')}. Auth header: ${authHeader ? 'Present' : 'Missing'}`);
+        if (authHeader !== `Bearer ${cronSecret}`) {
+            console.warn(`Unauthorized cron attempt. Auth header: ${authHeader ? 'Present' : 'Missing'}`);
             return new NextResponse('Unauthorized', { status: 401 });
         }
 
@@ -28,16 +30,12 @@ export async function GET(request: Request) {
         const reportSendingDay = config?.reportSendingDay || 1;
         const reportSendingTime = config?.reportSendingTime || "10:00"; 
 
-        // 2. Get Current Time in Asia/Dhaka (UTC+6)
-        // Using built-in toLocaleString to get reliable Dhaka time string then parsing it
-        const now = new Date();
-        const dhakaTimeStr = now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
-        const dhakaDate = new Date(dhakaTimeStr);
-        
-        const dhakaDay = dhakaDate.getDate();
-        const dhakaHour = dhakaDate.getHours();
-        const dhakaMinute = dhakaDate.getMinutes();
-        const currentMonthYear = format(dhakaDate, 'yyyy-MM'); // e.g. "2026-04"
+        // 2. Get Current Time in Asia/Dhaka using moment-timezone
+        const dhakaNow = moment().tz("Asia/Dhaka");
+        const dhakaDay = dhakaNow.date();
+        const dhakaHour = dhakaNow.hour();
+        const dhakaMinute = dhakaNow.minute();
+        const currentMonthYear = dhakaNow.format('yyyy-MM'); // e.g. "2026-04"
 
         // 3. Check if today is the reporting day
         if (dhakaDay !== reportSendingDay) {
@@ -47,12 +45,12 @@ export async function GET(request: Request) {
             });
         }
 
-        // 4. Time Check (Ensure we reached the target time)
+        // 4. Time Check (Ensure we reached the target hour)
         const [targetHour, targetMinute] = reportSendingTime.split(':').map(Number);
         if (dhakaHour < targetHour || (dhakaHour === targetHour && dhakaMinute < targetMinute)) {
              return NextResponse.json({ 
                 success: false, 
-                message: `Current Dhaka time is ${format(dhakaDate, 'HH:mm')}, but reporting is scheduled for ${reportSendingTime}. Skipping.` 
+                message: `Current Dhaka time is ${dhakaNow.format('HH:mm')}, but reporting is scheduled for ${reportSendingTime}. Skipping.` 
             });
         }
 
@@ -60,13 +58,13 @@ export async function GET(request: Request) {
         if (config?.lastMonthlyReportSent === currentMonthYear) {
              return NextResponse.json({ 
                 success: false, 
-                message: `Monthly reports for sending month ${currentMonthYear} have already been processed. Skipping.` 
+                message: `Monthly reports for month ${currentMonthYear} have already been processed. Skipping.` 
             });
         }
 
         // 6. Determine Report Month (Previous month relative to current Dhaka date)
-        const lastMonth = subMonths(dhakaDate, 1);
-        const monthYear = format(lastMonth, 'yyyy-MM'); // e.g., if today is April, monthYear is March "2026-03"
+        const lastMonthDate = dhakaNow.clone().subtract(1, 'month').toDate();
+        const monthYear = format(lastMonthDate, 'yyyy-MM'); // e.g. "2026-03"
 
         // 7. Trigger the report service
         const result = await sendMonthlyReports({
@@ -87,7 +85,7 @@ export async function GET(request: Request) {
         return NextResponse.json({
             success: true,
             reportMonth: monthYear,
-            dhakaTime: format(dhakaDate, 'yyyy-MM-dd HH:mm'),
+            dhakaTime: dhakaNow.format('YYYY-MM-DD HH:mm'),
             sentCount: result.count
         });
 
