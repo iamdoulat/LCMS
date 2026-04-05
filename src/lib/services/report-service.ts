@@ -137,12 +137,14 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
                         const empBreaks = allBreaks.filter(b => b.employeeId === emp.id && b.date === dayStr);
                         
                         const holiday = allHolidays.find(h => {
-                            const hs = new Date(h.fromDate); const he = new Date(h.toDate || h.fromDate);
-                            return day >= hs && day <= he;
+                            const hs = moment(h.fromDate).format('YYYY-MM-DD');
+                            const he = moment(h.toDate || h.fromDate).format('YYYY-MM-DD');
+                            return dayStr >= hs && dayStr <= he;
                         });
                         const leave = empLeaves.find(l => {
-                            const ls = new Date(l.fromDate); const le = new Date(l.toDate);
-                            return day >= ls && day <= le;
+                            const ls = moment(l.fromDate).format('YYYY-MM-DD');
+                            const le = moment(l.toDate).format('YYYY-MM-DD');
+                            return dayStr >= ls && dayStr <= le;
                         });
 
                         // Dynamic Status Logic
@@ -150,7 +152,7 @@ export async function sendMonthlyReports({ type, monthYear, targetEmail }: Repor
                             flag = 'P';
                         } else if (rec && rec.flag && rec.flag !== 'A') {
                             flag = rec.flag.toUpperCase();
-                        } else if (dow === 5) { // Friday weekend
+                        } else if (dow === 5) { // Friday weekend (Strict priority)
                             flag = 'W';
                         } else if (holiday) {
                             flag = 'H';
