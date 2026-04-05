@@ -29,7 +29,10 @@ export const EmployeeCard = React.memo(({ emp }: EmployeeCardProps) => {
             </div>
 
             <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-[#0a1e60] truncate">{emp.fullName}</h3>
+                <h3 className="font-bold text-[#0a1e60] truncate flex items-center gap-1.5">
+                    {emp.fullName}
+                    {emp.isBirthday && <span className="animate-bounce" title="Happy Birthday!">🎂</span>}
+                </h3>
                 <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">
                         {emp.employeeCode}

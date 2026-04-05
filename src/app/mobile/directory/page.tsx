@@ -21,10 +21,13 @@ import {
 import type { Employee, UserDocumentForAdmin, UserRole } from '@/types';
 import { EmployeeCard } from '@/components/mobile/EmployeeCard';
 import { DirectorySkeleton } from '@/components/mobile/DirectorySkeleton';
+import moment from 'moment-timezone';
+import confetti from 'canvas-confetti';
 
 export default function MobileDirectoryPage() {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
+    const [hasCelebrated, setHasCelebrated] = useState(false);
 
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<Employee[]>(
         query(collection(firestore, 'employees'), orderBy('fullName', 'asc')),
@@ -72,12 +75,58 @@ export default function MobileDirectoryPage() {
                 ...(userRoles || [])
             ]));
 
+            const isBirthday = (() => {
+                if (!emp.dateOfBirth) return false;
+                const today = moment().tz('Asia/Dhaka');
+                const dob = moment(emp.dateOfBirth);
+                return today.date() === dob.date() && today.month() === dob.month();
+            })();
+
             return {
                 ...emp,
-                mergedRoles
+                mergedRoles,
+                isBirthday
             };
         });
     }, [employees, users]);
+
+    React.useEffect(() => {
+        if (!processedEmployees || processedEmployees.length === 0 || hasCelebrated) return;
+
+        // Check if we already celebrated today in this session
+        const todayStr = moment().tz('Asia/Dhaka').format('YYYY-MM-DD');
+        const sessionKey = `birthday_celebration_${todayStr}`;
+        if (sessionStorage.getItem(sessionKey)) {
+            setHasCelebrated(true);
+            return;
+        }
+
+        const anyBirthday = processedEmployees.some(emp => emp.isBirthday);
+        if (anyBirthday) {
+            // Trigger fireworks blast
+            const duration = 3 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1000 };
+
+            const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+            const interval: any = setInterval(function () {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                const particleCount = 50 * (timeLeft / duration);
+                // since particles fall down, start a bit higher than random
+                confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+                confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+            }, 250);
+
+            sessionStorage.setItem(sessionKey, 'true');
+            setHasCelebrated(true);
+        }
+    }, [processedEmployees, hasCelebrated]);
 
     // Use a separate memo for filtered results to prevent re-calculating on every render
     const filteredEmployees = React.useMemo(() => {
