@@ -46,6 +46,9 @@ export default function ClaimManagementPage() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState<string | null>(null);
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [pageSize, setPageSize] = useState(20);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Confirmation Dialog State
     const [confirmDelete, setConfirmDelete] = useState<{
@@ -128,8 +131,16 @@ export default function ClaimManagementPage() {
     const handleConfirmDelete = async () => {
         const { id, type } = confirmDelete;
         try {
-            const collectionName = type === 'claim' ? 'hr_claims' : 'claim_categories';
-            await deleteDoc(doc(firestore, collectionName, id));
+            if (id === 'bulk') {
+                const bulkCollection = type === 'claim' ? 'hr_claims' : 'claim_categories';
+                await Promise.all(selectedIds.map(selectedId => 
+                    deleteDoc(doc(firestore, bulkCollection, selectedId))
+                ));
+                setSelectedIds([]);
+            } else {
+                const collectionName = type === 'claim' ? 'hr_claims' : 'claim_categories';
+                await deleteDoc(doc(firestore, collectionName, id));
+            }
             
             toast({
                 title: "Deleted!",
@@ -145,6 +156,33 @@ export default function ClaimManagementPage() {
         } finally {
             setConfirmDelete(prev => ({ ...prev, open: false }));
         }
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedIds.length === 0) return;
+        setConfirmDelete({
+            open: true,
+            type: 'claim',
+            id: 'bulk',
+            title: 'Are you sure?',
+            description: `You are about to delete ${selectedIds.length} selected claims. This action cannot be undone!`
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === filteredClaims.length) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(filteredClaims.map(c => c.id));
+        }
+    };
+
+    const toggleSelectRow = (id: string) => {
+        setSelectedIds(prev =>
+            prev.includes(id)
+                ? prev.filter(i => i !== id)
+                : [...prev, id]
+        );
     };
 
 
@@ -175,6 +213,13 @@ export default function ClaimManagementPage() {
 
         return matchesSearch && matchesStatus && matchesDate;
     });
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, dateRange, statusFilter, pageSize]);
+
+    const totalPages = Math.ceil(filteredClaims.length / pageSize);
+    const paginatedClaims = filteredClaims.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     return (
         <div className="mx-[20px] py-6 space-y-6">
@@ -255,15 +300,26 @@ export default function ClaimManagementPage() {
                                 </Select>
                             </div>
 
-                            <Button
-                                className="bg-[#2B59FF] hover:bg-[#2B59FF]/90 text-white"
-                                onClick={() => {
-                                    setEditingClaim(null);
-                                    setIsEditModalOpen(true);
-                                }}
-                            >
-                                <Plus className="mr-2 h-4 w-4" /> Add New
-                            </Button>
+                            <div className="flex items-center gap-3">
+                                {selectedIds.length > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                        onClick={handleBulkDelete}
+                                    >
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete ALL
+                                    </Button>
+                                )}
+                                <Button
+                                    className="bg-[#2B59FF] hover:bg-[#2B59FF]/90 text-white"
+                                    onClick={() => {
+                                        setEditingClaim(null);
+                                        setIsEditModalOpen(true);
+                                    }}
+                                >
+                                    <Plus className="mr-2 h-4 w-4" /> Add New
+                                </Button>
+                            </div>
                         </div>
 
                         {/* Table */}
@@ -272,7 +328,12 @@ export default function ClaimManagementPage() {
                                 <TableHeader className="bg-slate-50">
                                     <TableRow>
                                         <TableHead className="w-[40px]">
-                                            <Input type="checkbox" className="h-4 w-4 translate-y-0.5" />
+                                            <Input
+                                                type="checkbox"
+                                                className="h-4 w-4 translate-y-0.5 cursor-pointer"
+                                                checked={filteredClaims.length > 0 && selectedIds.length === filteredClaims.length}
+                                                onChange={toggleSelectAll}
+                                            />
                                         </TableHead>
                                         <TableHead className="font-bold text-slate-700">Claim No.</TableHead>
                                         <TableHead className="font-bold text-slate-700">Employee Name</TableHead>
@@ -300,10 +361,15 @@ export default function ClaimManagementPage() {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredClaims.map((claim) => (
-                                            <TableRow key={claim.id}>
+                                        paginatedClaims.map((claim) => (
+                                            <TableRow key={claim.id} className={cn(selectedIds.includes(claim.id) && "bg-blue-50/50")}>
                                                 <TableCell>
-                                                    <Input type="checkbox" className="h-4 w-4" />
+                                                    <Input
+                                                        type="checkbox"
+                                                        className="h-4 w-4 cursor-pointer"
+                                                        checked={selectedIds.includes(claim.id)}
+                                                        onChange={() => toggleSelectRow(claim.id)}
+                                                    />
                                                 </TableCell>
                                                 <TableCell className="font-medium text-blue-600">{claim.claimNo}</TableCell>
                                                 <TableCell>
@@ -400,6 +466,66 @@ export default function ClaimManagementPage() {
                                     )}
                                 </TableBody>
                             </Table>
+                        </div>
+
+                        {/* Pagination Controls */}
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t">
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <span>Show</span>
+                                <Select value={pageSize.toString()} onValueChange={(val) => setPageSize(Number(val))}>
+                                    <SelectTrigger className="h-8 w-[70px] bg-slate-50 border-slate-200">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[20, 50, 100, 200, 500].map(size => (
+                                            <SelectItem key={size} value={size.toString()}>{size}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <span>entries</span>
+                                <span className="ml-4">
+                                    Showing {filteredClaims.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, filteredClaims.length)} of {filteredClaims.length} entries
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3"
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    Previous
+                                </Button>
+                                <div className="flex items-center gap-1">
+                                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        let pageNum = totalPages <= 5 ? i + 1 : (currentPage <= 3 ? i + 1 : (currentPage >= totalPages - 2 ? totalPages - 4 + i : currentPage - 2 + i));
+                                        if (pageNum < 1 || pageNum > totalPages) return null;
+                                        
+                                        return (
+                                            <Button
+                                                key={pageNum}
+                                                variant={currentPage === pageNum ? "default" : "outline"}
+                                                size="sm"
+                                                className={cn("h-8 w-8 p-0", currentPage === pageNum ? "bg-[#2B59FF] text-white" : "")}
+                                                onClick={() => setCurrentPage(pageNum)}
+                                            >
+                                                {pageNum}
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-3"
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                </Button>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
