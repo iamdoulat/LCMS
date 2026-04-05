@@ -461,7 +461,7 @@ export default function MyAttendancePage() {
                             onClick={refreshData}
                             className={cn(
                                 "p-2 rounded-full transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10 text-white/70 hover:text-white",
-                                loading && "animate-spin text-white"
+                                (loading || refreshing || isSupervisorLoading) && "animate-spin text-white"
                             )}
                         >
                             <RefreshCw className="h-5 w-5" />
