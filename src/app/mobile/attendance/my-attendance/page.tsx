@@ -314,15 +314,19 @@ export default function MyAttendancePage() {
     useEffect(() => {
         if (isSupervisorLoading) return;
         if (user?.uid || currentEmployeeId) {
-            // Concurrent fetch of everything
-            setIsDataUpdating(true);
-            Promise.all([
-                fetchSupportiveData(),
-                activeTab === 'attendance' ? fetchAttendance() : fetchBreaks()
-            ]).finally(() => {
-                // Short timeout to ensure it feels like a distinct "update" phase
-                setTimeout(() => setIsDataUpdating(false), 500);
-            });
+            // Wait 2 seconds before the 2nd spin (frest data refresh) as requested
+            const timer = setTimeout(() => {
+                setIsDataUpdating(true);
+                Promise.all([
+                    fetchSupportiveData(),
+                    activeTab === 'attendance' ? fetchAttendance() : fetchBreaks()
+                ]).finally(() => {
+                    // Short timeout to ensure it feels like a distinct "update" phase
+                    setTimeout(() => setIsDataUpdating(false), 500);
+                });
+            }, 2000);
+            
+            return () => clearTimeout(timer);
         }
     }, [user?.uid, currentEmployeeId, activeTab, filters, isSupervisorLoading, daysToLoad]);
 
