@@ -47,6 +47,7 @@ export default function MyAttendancePage() {
     const [leaves, setLeaves] = useState<any[]>([]);
     const [visits, setVisits] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isDataUpdating, setIsDataUpdating] = useState(false);
     const [daysToLoad, setDaysToLoad] = useState(15);
     const [refreshing, setRefreshing] = useState(false);
     const router = useRouter();
@@ -314,11 +315,14 @@ export default function MyAttendancePage() {
         if (isSupervisorLoading) return;
         if (user?.uid || currentEmployeeId) {
             // Concurrent fetch of everything
-            setLoading(true);
+            setIsDataUpdating(true);
             Promise.all([
                 fetchSupportiveData(),
                 activeTab === 'attendance' ? fetchAttendance() : fetchBreaks()
-            ]).finally(() => setLoading(false));
+            ]).finally(() => {
+                // Short timeout to ensure it feels like a distinct "update" phase
+                setTimeout(() => setIsDataUpdating(false), 500);
+            });
         }
     }, [user?.uid, currentEmployeeId, activeTab, filters, isSupervisorLoading, daysToLoad]);
 
@@ -461,7 +465,7 @@ export default function MyAttendancePage() {
                             onClick={refreshData}
                             className={cn(
                                 "p-2 rounded-full transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] bg-white/10 text-white/70 hover:text-white",
-                                (loading || refreshing || isSupervisorLoading) && "animate-spin text-white"
+                                (loading || isDataUpdating || refreshing) && "animate-spin text-white"
                             )}
                         >
                             <RefreshCw className="h-5 w-5" />
