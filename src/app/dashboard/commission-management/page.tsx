@@ -29,7 +29,8 @@ import {
     MoreHorizontal,
     Eye,
     Edit,
-    Trash2
+    Trash2,
+    Download
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -64,6 +65,40 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { cn } from '@/lib/utils';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+const formatDisplayDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    try {
+        const date = parseISO(dateString);
+        return isValid(date) ? format(date, 'MM/dd/yyyy') : 'Invalid Date';
+    } catch (e) {
+        return 'N/A';
+    }
+};
+
+const formatCurrencyValue = (amount?: number, currencySymbol: string = '$') => {
+    if (typeof amount !== 'number' || isNaN(amount)) return `${currencySymbol} N/A`;
+    return `${currencySymbol} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const getDataUrl = async (url: string): Promise<string> => {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.error("Error fetching image for PDF:", error);
+        return "";
+    }
+};
 
 const ALL_YEARS = "All Years";
 const ALL_MONTHS = "All Months";
@@ -79,10 +114,12 @@ const monthOptions = [
 const statusOptions = [ALL_STATUS, "Pending", "Paid", "Rejected"];
 
 export default function CommissionDashboard() {
+    const { companyName, companyLogoUrl, address, invoiceLogoUrl } = useAuth();
     const [invoices, setInvoices] = useState<ProformaInvoiceDocument[]>([]);
     const [customers, setCustomers] = useState<CustomerDocument[]>([]);
     const [suppliers, setSuppliers] = useState<SupplierDocument[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     // Filters
     const [selectedYear, setSelectedYear] = useState(currentYear.toString());
@@ -169,6 +206,154 @@ export default function CommissionDashboard() {
                 console.error("Error deleting PI:", error);
                 Swal.fire('Error!', 'Failed to delete invoice.', 'error');
             }
+        }
+    };
+
+    const handleDownloadPDF = async (pi: ProformaInvoiceDocument) => {
+        setIsGenerating(true);
+        try {
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 10;
+
+            // Header Section
+            let textX = margin;
+            const logoToUse = invoiceLogoUrl || companyLogoUrl;
+
+            if (logoToUse) {
+                try {
+                    const logoData = await getDataUrl(logoToUse);
+                    if (logoData) {
+                        doc.addImage(logoData, 'PNG', margin, 8, 22, 22);
+                        textX = margin + 26;
+                    }
+                } catch (error) {
+                    console.warn("Could not add logo to PDF:", error);
+                }
+            }
+
+            // Company Info (Left)
+            doc.setFontSize(22);
+            doc.setTextColor(40, 40, 40);
+            doc.text(companyName || 'LCMS', textX, 16);
+
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            if (address) {
+                const splitAddress = doc.splitTextToSize(address, 100);
+                doc.text(splitAddress, textX, 22);
+            }
+
+            // Invoice Label (Right)
+            doc.setFontSize(20);
+            doc.setTextColor(59, 130, 246); // Blue
+            doc.text('COMMISSION INVOICE', pageWidth - margin, 16, { align: 'right' });
+
+            // Divider Line
+            doc.setDrawColor(220, 220, 220);
+            doc.line(margin, 35, pageWidth - margin, 35);
+
+            // Info Section
+            doc.setFontSize(10);
+            doc.setTextColor(40, 40, 40);
+
+            // 1. Customer Name (Left)
+            doc.setFont('helvetica', 'bold');
+            doc.text('Customer Name:', margin, 45);
+            doc.setFont('helvetica', 'normal');
+            doc.text(pi.applicantName || 'N/A', margin, 50);
+
+            // 2. Beneficiary Name (Middle)
+            const middleX = pageWidth / 2 - 20;
+            doc.setFont('helvetica', 'bold');
+            doc.text('Beneficiary Name:', middleX, 45);
+            doc.setFont('helvetica', 'normal');
+            doc.text(pi.beneficiaryName || 'N/A', middleX, 50);
+
+            // 3. Invoice Details (Right)
+            const rightLabelX = pageWidth - 65;
+            const rightValueX = pageWidth - margin;
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('INVOICE NO:', rightLabelX, 45);
+            doc.setFont('helvetica', 'normal');
+            doc.text(pi.piNo || 'N/A', rightValueX, 45, { align: 'right' });
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('DATE:', rightLabelX, 51);
+            doc.setFont('helvetica', 'normal');
+            doc.text(formatDisplayDate(pi.piDate), rightValueX, 51, { align: 'right' });
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('SALES PERSON:', rightLabelX, 57);
+            doc.setFont('helvetica', 'normal');
+            doc.text(pi.salesPersonName || 'N/A', rightValueX, 57, { align: 'right' });
+
+            // Table Section
+            autoTable(doc, {
+                startY: 65,
+                margin: { left: margin, right: margin },
+                head: [['Model No.', 'Qty', 'Unit Price', 'Total Price']],
+                body: pi.lineItems.map(item => [
+                    item.modelNo || 'N/A',
+                    item.qty,
+                    formatCurrencyValue(item.salesPrice),
+                    formatCurrencyValue(item.qty * item.salesPrice)
+                ]),
+                theme: 'striped',
+                headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], halign: 'center' },
+                columnStyles: {
+                    1: { halign: 'center' },
+                    2: { halign: 'right' },
+                    3: { halign: 'right' }
+                },
+                styles: { fontSize: 9 }
+            });
+
+            // Summary Section
+            const finalY = (doc as any).lastAutoTable.finalY + 10;
+            const summaryX = pageWidth - 85;
+            const summaryValueX = pageWidth - margin;
+
+            doc.setFontSize(10);
+            doc.setTextColor(40, 40, 40);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Total Items Qty:', summaryX, finalY);
+            doc.setFont('helvetica', 'normal');
+            doc.text(pi.totalQty.toString(), summaryValueX, finalY, { align: 'right' });
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Basic Total Value:', summaryX, finalY + 6);
+            doc.setFont('helvetica', 'normal');
+            doc.text(formatCurrencyValue(pi.totalSalesPrice), summaryValueX, finalY + 6, { align: 'right' });
+
+            if (pi.totalOVI && pi.totalOVI > 0) {
+                doc.setFont('helvetica', 'bold');
+                doc.text('Over Value (OV):', summaryX, finalY + 12);
+                doc.setFont('helvetica', 'normal');
+                doc.text(formatCurrencyValue(pi.totalOVI), summaryValueX, finalY + 12, { align: 'right' });
+            }
+
+            const grandTotalY = finalY + (pi.totalOVI ? 20 : 14);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(59, 130, 246);
+            doc.text('GRAND TOTAL:', summaryX, grandTotalY);
+            doc.text(formatCurrencyValue(pi.grandTotalSalesPrice), summaryValueX, grandTotalY, { align: 'right' });
+
+            // Footer
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.setFont('helvetica', 'italic');
+            doc.text('This is a computer generated document and does not require a signature.', pageWidth / 2, 285, { align: 'center' });
+
+            doc.save(`PI_${pi.piNo || 'Invoice'}.pdf`);
+        } catch (error) {
+            console.error("Error generating PI PDF:", error);
+            Swal.fire("Error", "Could not generate PDF. Please try again.", "error");
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -599,6 +784,10 @@ export default function CommissionDashboard() {
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                     <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onClick={() => handleDownloadPDF(inv)} className="cursor-pointer" disabled={isGenerating}>
+                                                        <Download className="mr-2 h-4 w-4 text-slate-600" />
+                                                        Download PDF
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem asChild className="cursor-pointer">
                                                         <Link href={`/dashboard/commission-management/edit-pi/${inv.id}`}>
                                                             <Eye className="mr-2 h-4 w-4 text-blue-600" />
