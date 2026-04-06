@@ -33,7 +33,7 @@ const lineItemFormSchema = z.object({
     oviAmount: z.string().optional().refine(
         (val) => val === '' || val === undefined ||
             (!isNaN(parseFloat(val)) && parseFloat(val) >= 0),
-        { message: "OVI must be >= 0 or blank" }
+        { message: "OV must be >= 0 or blank" }
     ),
     netCommissionPercentage: z.string().optional().refine(
         (val) => val === '' || val === undefined ||
@@ -596,7 +596,7 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
                                 <TableHead className="w-[100px]">Qty*</TableHead>
                                 <TableHead className="w-[150px]">Purchase Price*</TableHead>
                                 <TableHead className="w-[150px]">Sales Price*</TableHead>
-                                <TableHead className="w-[100px]">Sales with OVI</TableHead>
+                                <TableHead className="w-[100px]">Sales with OV</TableHead>
                                 <TableHead className="w-[120px]">Net Com.%</TableHead>
                                 <TableHead className="w-[80px] text-right">Action</TableHead>
                             </TableRow>
@@ -667,7 +667,7 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
                                             name={`lineItems.${index}.oviAmount`}
                                             render={({ field }) => (
                                                 <>
-                                                    <Input type="text" placeholder="OVI" {...field} value={field.value ?? ''} className="h-9" />
+                                                    <Input type="text" placeholder="OV" {...field} value={field.value ?? ''} className="h-9" />
                                                     <FormMessage className="text-xs mt-1">{form.formState.errors.lineItems?.[index]?.oviAmount?.message}</FormMessage>
                                                 </>
                                             )}
@@ -779,7 +779,7 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
                                 <span className="font-bold text-foreground">{totalExtraNetCommission.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                             <div className="flex justify-between items-center pt-2 border-t">
-                                <span className="text-muted-foreground font-medium">Comm. (%) (No OVI):</span>
+                                <span className="text-muted-foreground font-medium">Comm. (%) (No OV):</span>
                                 <span className="font-bold text-emerald-600 text-lg">{totalCommissionPercentage.toFixed(2)}%</span>
                             </div>
                         </div>
@@ -809,22 +809,22 @@ export function AddCommissionInvoiceForm({ defaultDate }: AddCommissionInvoiceFo
                     {/* Column 3: OVI Special Card */}
                     <div className="relative space-y-3 p-5 border-2 rounded-xl shadow-md lg:shadow-xl bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 border-indigo-200 dark:border-indigo-800">
                         <div className="absolute -top-3 right-6 bg-rose-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg transform hover:scale-110 transition-transform cursor-default ring-4 ring-background">
-                            OVI
+                            OV
                         </div>
                         <h5 className="font-bold text-indigo-600 flex items-center gap-2 mb-4 border-b border-indigo-100 dark:border-indigo-900 pb-2">
                             <TrendingUp className="h-4 w-4" /> Over Value Analysis
                         </h5>
                         <div className="space-y-3 text-sm">
                             <div className="flex justify-between items-center">
-                                <span className="text-indigo-900/60 dark:text-indigo-300 font-medium">Total OVI Amount:</span>
+                                <span className="text-indigo-900/60 dark:text-indigo-300 font-medium">Total OV Amount:</span>
                                 <span className="font-bold text-indigo-700 dark:text-indigo-400">{totalOVI.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                             <div className="flex flex-col mt-4 p-4 bg-indigo-600 text-white rounded-lg shadow-inner">
-                                <span className="text-indigo-100 text-[10px] font-bold uppercase tracking-widest">Grand Total Sales (With OVI)</span>
+                                <span className="text-indigo-100 text-[10px] font-bold uppercase tracking-widest">Grand Total Sales (With OV)</span>
                                 <span className="text-2xl font-black tracking-tight">${grandTotalSalesWithOvi.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                             <div className="flex flex-col mt-2 p-4 bg-indigo-700 text-white rounded-lg shadow-inner">
-                                <span className="text-indigo-100 text-[10px] font-bold uppercase tracking-widest">Grand Total Comm. with Ovi</span>
+                                <span className="text-indigo-100 text-[10px] font-bold uppercase tracking-widest">Grand Total Comm. with OV</span>
                                 <span className="text-2xl font-black tracking-tight">${grandTotalCommissionWithOvi.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                         </div>

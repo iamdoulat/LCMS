@@ -325,7 +325,7 @@ export default function CommissionDashboard() {
                     description="Based on Total Purchase"
                 />
                 <StatCard
-                    title="Total OVI Value"
+                    title="Total OV Value"
                     value={formatCurrency(stats.totalOviAmount)}
                     icon={<ArrowUpRight className="h-5 w-5" />}
                     className="bg-gradient-to-br from-teal-500 to-teal-600"
@@ -340,7 +340,7 @@ export default function CommissionDashboard() {
                     valueClassName="text-2xl"
                 />
                 <StatCard
-                    title="Grand Total Sales (With OVI)"
+                    title="Grand Total Sales (With OV)"
                     value={formatCurrency(stats.grandTotalSalesWithOvi)}
                     icon={<TrendingUp className="h-5 w-5" />}
                     className="bg-gradient-to-br from-blue-800 to-blue-900 md:col-span-2 xl:col-span-1"
@@ -429,17 +429,17 @@ export default function CommissionDashboard() {
 
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                                <TrendingUp className="h-3 w-3 text-teal-500" /> OVI Analysis
+                                <TrendingUp className="h-3 w-3 text-teal-500" /> OV Analysis
                             </label>
                             <div className="flex gap-2">
                                 <Select value={oviFilter} onValueChange={setOviFilter}>
                                     <SelectTrigger className="h-9 text-sm bg-background/50 flex-1">
-                                        <SelectValue placeholder="OVI Filter" />
+                                        <SelectValue placeholder="OV Filter" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Items</SelectItem>
-                                        <SelectItem value="with_ovi">With OVI</SelectItem>
-                                        <SelectItem value="without_ovi">No OVI</SelectItem>
+                                        <SelectItem value="with_ovi">With OV</SelectItem>
+                                        <SelectItem value="without_ovi">No OV</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <Button
@@ -520,9 +520,9 @@ export default function CommissionDashboard() {
                 <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden lg:col-span-2">
                     <CardHeader>
                         <CardTitle className="text-xl flex items-center gap-2">
-                            <ArrowUpRight className="h-5 w-5 text-teal-500" /> Over Value Invoice (OVI) Analysis
+                            <ArrowUpRight className="h-5 w-5 text-teal-500" /> Over Value (OV) Analysis
                         </CardTitle>
-                        <CardDescription>Monthly OVI amounts compared to basic sales.</CardDescription>
+                        <CardDescription>Monthly OV amounts compared to basic sales.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[400px] w-full pt-4">
                         <ResponsiveContainer width="100%" height="100%">
@@ -534,7 +534,7 @@ export default function CommissionDashboard() {
                                     contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
                                 />
                                 <Legend />
-                                <Line type="monotone" dataKey="ovi" name="OVI Amount" stroke="#14b8a6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+                                <Line type="monotone" dataKey="ovi" name="OV Amount" stroke="#14b8a6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
                                 <Line type="monotone" dataKey="sales" name="Basic Sales" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                             </LineChart>
                         </ResponsiveContainer>
@@ -559,7 +559,7 @@ export default function CommissionDashboard() {
                                     <th className="px-4 py-3 font-semibold">Beneficiary</th>
                                     <th className="px-4 py-3 font-semibold text-center">Comm. %</th>
                                     <th className="px-4 py-3 font-semibold">Sales (Comm.)</th>
-                                    <th className="px-4 py-3 font-semibold">OVI</th>
+                                    <th className="px-4 py-3 font-semibold">OV</th>
                                     <th className="px-4 py-3 font-semibold text-center">Status</th>
                                     <th className="px-4 py-3 font-semibold text-right">Action</th>
                                 </tr>

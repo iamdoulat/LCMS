@@ -215,7 +215,7 @@ export default function CommissionReportPage() {
 
             autoTable(doc, {
                 startY: 40, // Brought table closer to header
-                head: [['Invoice No.', 'Date', 'Customer', 'Comm. %', 'Sales', 'OVI', 'Total with OVI', 'Commission', 'Status']],
+                head: [['Invoice No.', 'Date', 'Customer', 'Comm. %', 'Sales', 'OV', 'Total with OV', 'Commission', 'Status']],
                 body: filteredInvoices.map(inv => [
                     inv.piNo,
                     format(parseISO(inv.piDate), "MMM dd, yyyy"),
@@ -251,7 +251,7 @@ export default function CommissionReportPage() {
     };
 
     const handleExportCSV = () => {
-        const headers = ["Invoice No.", "Date", "Customer", "Comm. %", "Sales Price", "OVI Amount", "Total with OVI", "Commission USD", "Status"];
+        const headers = ["Invoice No.", "Date", "Customer", "Comm. %", "Sales Price", "OV Amount", "Total with OV", "Commission USD", "Status"];
         const rows = filteredInvoices.map(inv => [
             `"${inv.piNo}"`,
             `"${format(parseISO(inv.piDate), "yyyy-MM-dd")}"`,
@@ -410,8 +410,8 @@ export default function CommissionReportPage() {
                                     <th className="px-6 py-4 font-semibold">Customer</th>
                                     <th className="px-6 py-4 font-semibold text-center">Comm. %</th>
                                     <th className="px-6 py-4 font-semibold">Sales</th>
-                                    <th className="px-6 py-4 font-semibold">OVI</th>
-                                    <th className="px-6 py-4 font-semibold">Total with OVI</th>
+                                    <th className="px-6 py-4 font-semibold">OV</th>
+                                    <th className="px-6 py-4 font-semibold">Total with OV</th>
                                     <th className="px-6 py-4 font-semibold">Commission</th>
                                     <th className="px-6 py-4 font-semibold text-center">Status</th>
                                 </tr>
