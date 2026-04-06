@@ -293,54 +293,135 @@ export default function CommissionDashboard() {
             autoTable(doc, {
                 startY: 65,
                 margin: { left: margin, right: margin },
-                head: [['Model No.', 'Qty', 'Unit Price', 'Total Price']],
-                body: pi.lineItems.map(item => [
+                head: [['No.', 'Model', 'Qty', 'Purchase Price', 'Sales Price', 'Sales with OV']],
+                body: pi.lineItems.map((item, index) => [
+                    index + 1,
                     item.modelNo || 'N/A',
                     item.qty,
+                    formatCurrencyValue(item.purchasePrice),
                     formatCurrencyValue(item.salesPrice),
-                    formatCurrencyValue(item.qty * item.salesPrice)
+                    formatCurrencyValue((item.qty * item.salesPrice) + (item.oviAmount || 0))
                 ]),
                 theme: 'striped',
                 headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], halign: 'center' },
                 columnStyles: {
-                    1: { halign: 'center' },
-                    2: { halign: 'right' },
-                    3: { halign: 'right' }
+                    0: { halign: 'center' },
+                    2: { halign: 'center' },
+                    3: { halign: 'right' },
+                    4: { halign: 'right' },
+                    5: { halign: 'right' }
                 },
                 styles: { fontSize: 9 }
             });
 
-            // Summary Section
-            const finalY = (doc as any).lastAutoTable.finalY + 10;
-            const summaryX = pageWidth - 85;
-            const summaryValueX = pageWidth - margin;
+            // Commission Analytics Summary
+            const startY = (doc as any).lastAutoTable.finalY + 15;
+            const boxWidth = (pageWidth - 2 * margin - 10) / 3; // roughly 60
+            const gap = 5;
 
+            // Box 1: General Statistics
+            doc.setDrawColor(200, 200, 200);
+            doc.roundedRect(margin, startY, boxWidth, 45, 2, 2, 'S');
+            doc.setFont('helvetica', 'bold');
             doc.setFontSize(10);
-            doc.setTextColor(40, 40, 40);
+            doc.setTextColor(59, 130, 246); // Blue
+            doc.text('General Statistics', margin + 2, startY + 6);
+            doc.setDrawColor(230, 230, 230);
+            doc.line(margin, startY + 9, margin + boxWidth, startY + 9);
 
-            doc.setFont('helvetica', 'bold');
-            doc.text('Total Items Qty:', summaryX, finalY);
+            doc.setFontSize(8);
+            doc.setTextColor(80, 80, 80);
             doc.setFont('helvetica', 'normal');
-            doc.text(pi.totalQty.toString(), summaryValueX, finalY, { align: 'right' });
+            doc.text('Total Qty:', margin + 2, startY + 16);
+            doc.text(pi.totalQty.toString(), margin + boxWidth - 2, startY + 16, { align: 'right' });
+
+            doc.text('Total Sales (Items):', margin + 2, startY + 23);
+            doc.text(formatCurrencyValue(pi.totalSalesPrice), margin + boxWidth - 2, startY + 23, { align: 'right' });
+
+            doc.text('Extra Net Comm.:', margin + 2, startY + 30);
+            const extraNetComm = (pi as any).totalExtraNetCommission || 0;
+            doc.text(formatCurrencyValue(extraNetComm), margin + boxWidth - 2, startY + 30, { align: 'right' });
+
+            doc.text('Comm. (%) (No OV):', margin + 2, startY + 37);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(16, 185, 129); // emerald
+            doc.text(`${(pi.totalCommissionPercentage || 0).toFixed(2)}%`, margin + boxWidth - 2, startY + 37, { align: 'right' });
+
+            // Box 2: Sales & Performance
+            const b2X = margin + boxWidth + gap;
+            doc.setDrawColor(200, 200, 200);
+            doc.roundedRect(b2X, startY, boxWidth, 45, 2, 2, 'S');
 
             doc.setFont('helvetica', 'bold');
-            doc.text('Basic Total Value:', summaryX, finalY + 6);
+            doc.setFontSize(10);
+            doc.setTextColor(16, 185, 129); // Emerald
+            doc.text('Sales & Performance', b2X + 2, startY + 6);
+            doc.setDrawColor(230, 230, 230);
+            doc.line(b2X, startY + 9, b2X + boxWidth, startY + 9);
+
+            doc.setFontSize(8);
+            doc.setTextColor(80, 80, 80);
             doc.setFont('helvetica', 'normal');
-            doc.text(formatCurrencyValue(pi.totalSalesPrice), summaryValueX, finalY + 6, { align: 'right' });
+            doc.text('Total Purchase Price:', b2X + 2, startY + 16);
+            doc.text(formatCurrencyValue(pi.totalPurchasePrice), b2X + boxWidth - 2, startY + 16, { align: 'right' });
 
-            if (pi.totalOVI && pi.totalOVI > 0) {
-                doc.setFont('helvetica', 'bold');
-                doc.text('Over Value (OV):', summaryX, finalY + 12);
-                doc.setFont('helvetica', 'normal');
-                doc.text(formatCurrencyValue(pi.totalOVI), summaryValueX, finalY + 12, { align: 'right' });
-            }
-
-            const grandTotalY = finalY + (pi.totalOVI ? 20 : 14);
-            doc.setFontSize(12);
+            doc.setFillColor(236, 253, 245);
+            doc.rect(b2X + 2, startY + 20, boxWidth - 4, 10, 'F');
             doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.5);
+            doc.setTextColor(16, 185, 129);
+            doc.text('GRAND TOTAL SALES (COMM.)', b2X + 3, startY + 23);
+            doc.setFontSize(10);
+            doc.text(formatCurrencyValue(pi.grandTotalSalesPrice), b2X + 3, startY + 28);
+
+            doc.setFillColor(239, 246, 255);
+            doc.rect(b2X + 2, startY + 32, boxWidth - 4, 10, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.5);
             doc.setTextColor(59, 130, 246);
-            doc.text('GRAND TOTAL:', summaryX, grandTotalY);
-            doc.text(formatCurrencyValue(pi.grandTotalSalesPrice), summaryValueX, grandTotalY, { align: 'right' });
+            doc.text('GRAND TOTAL COMM. USD', b2X + 3, startY + 35);
+            doc.setFontSize(10);
+            doc.text(formatCurrencyValue(pi.grandTotalCommissionUSD), b2X + 3, startY + 40);
+
+            // Box 3: Over Value Analysis
+            const b3X = b2X + boxWidth + gap;
+            doc.setDrawColor(200, 200, 200);
+            doc.roundedRect(b3X, startY, boxWidth, 45, 2, 2, 'S');
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.setTextColor(99, 102, 241); // Indigo
+            doc.text('Over Value Analysis', b3X + 2, startY + 6);
+            doc.setDrawColor(230, 230, 230);
+            doc.line(b3X, startY + 9, b3X + boxWidth, startY + 9);
+
+            doc.setFontSize(8);
+            doc.setTextColor(80, 80, 80);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Total OV Amount:', b3X + 2, startY + 16);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(99, 102, 241);
+            doc.text(formatCurrencyValue(pi.totalOVI || 0), b3X + boxWidth - 2, startY + 16, { align: 'right' });
+
+            const grandTotalSalesWithOV = pi.grandTotalSalesWithOvi !== undefined ? pi.grandTotalSalesWithOvi : (pi.grandTotalSalesPrice + (pi.totalOVI || 0));
+            doc.setFillColor(79, 70, 229);
+            doc.rect(b3X + 2, startY + 20, boxWidth - 4, 10, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.5);
+            doc.setTextColor(255, 255, 255);
+            doc.text('GRAND TOTAL SALES (WITH OV)', b3X + 3, startY + 23);
+            doc.setFontSize(10);
+            doc.text(formatCurrencyValue(grandTotalSalesWithOV), b3X + 3, startY + 28);
+
+            const grandTotalCommWithOV = pi.grandTotalCommissionWithOvi !== undefined ? pi.grandTotalCommissionWithOvi : (pi.grandTotalCommissionUSD + (pi.totalOVI || 0));
+            doc.setFillColor(79, 70, 229);
+            doc.rect(b3X + 2, startY + 32, boxWidth - 4, 10, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.5);
+            doc.setTextColor(255, 255, 255);
+            doc.text('GRAND TOTAL COMM. WITH OV', b3X + 3, startY + 35);
+            doc.setFontSize(10);
+            doc.text(formatCurrencyValue(grandTotalCommWithOV), b3X + 3, startY + 40);
 
             // Footer
             doc.setFontSize(8);
