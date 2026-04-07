@@ -39,6 +39,7 @@ function CreateClaimContent() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [employeeData, setEmployeeData] = useState<Employee | null>(null);
     const [isInitialLoading, setIsInitialLoading] = useState(!!editingId);
+    const [originalStatus, setOriginalStatus] = useState<string | null>(null);
 
     // Fetch Initial Data
     useEffect(() => {
@@ -117,6 +118,7 @@ function CreateClaimContent() {
                         setDescription(data.description || '');
                         setSupervisorComments(data.supervisorComments || '');
                         setDetails(data.details || []);
+                        setOriginalStatus(data.status);
                     }
                 }
             } catch (error) {
@@ -175,6 +177,10 @@ function CreateClaimContent() {
                 claimData.claimNo = `CLM-${empCode}/${randomNum}`;
             } else if (source !== 'requests') {
                 // If an employee updates their own claim, reset status to Claimed for re-approval
+                claimData.status = 'Claimed';
+            } else if (source === 'requests' && originalStatus === 'Approval by Supervisor') {
+                // If supervisor updates a claim that was in supervisor approval status, move it back to Claimed
+                // This triggers the 15-minute countdown in the list page
                 claimData.status = 'Claimed';
             }
 
