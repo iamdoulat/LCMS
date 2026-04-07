@@ -344,6 +344,11 @@ export default function IssuedPIListPage() {
       doc.setFont('helvetica', 'normal');
       doc.text(pi.salesPersonName || 'N/A', rightValueX, 57, { align: 'right' });
 
+      // Calculate totals for footer
+      const totalPurchaseValue = pi.lineItems.reduce((sum, item) => sum + (item.qty * (item.purchasePrice || 0)), 0);
+      const totalSalesValue = pi.lineItems.reduce((sum, item) => sum + (item.qty * (item.salesPrice || 0)), 0);
+      const totalSalesWithOVValue = pi.lineItems.reduce((sum, item) => sum + (item.qty * (item.oviAmount || 0)), 0);
+
       // Table Section
       autoTable(doc, {
         startY: 65,
@@ -357,8 +362,16 @@ export default function IssuedPIListPage() {
           formatCurrencyValue(item.salesPrice),
           formatCurrencyValue(item.oviAmount || 0)
         ]),
+        foot: [[
+          { content: 'Total:', colSpan: 2, styles: { halign: 'right' } },
+          pi.lineItems.reduce((sum, item) => sum + (item.qty || 0), 0),
+          formatCurrencyValue(totalPurchaseValue),
+          formatCurrencyValue(totalSalesValue),
+          formatCurrencyValue(totalSalesWithOVValue)
+        ]],
         theme: 'striped',
         headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], halign: 'center' },
+        footStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold', halign: 'right' },
         columnStyles: {
           0: { halign: 'center' },
           2: { halign: 'center' },
