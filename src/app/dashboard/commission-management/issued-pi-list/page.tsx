@@ -285,17 +285,7 @@ export default function IssuedPIListPage() {
       let textX = margin;
       const logoToUse = invoiceLogoUrl || companyLogoUrl;
 
-      if (logoToUse) {
-        try {
-          const logoData = await getDataUrl(logoToUse);
-          if (logoData) {
-            doc.addImage(logoData, 'PNG', margin, 8, 22, 22);
-            textX = margin + 26;
-          }
-        } catch (error) {
-          console.warn("Could not add logo to PDF:", error);
-        }
-      }
+      // Logo logic removed as per request
 
       // Company Info (Left)
       doc.setFontSize(22);
@@ -365,7 +355,7 @@ export default function IssuedPIListPage() {
           item.qty,
           formatCurrencyValue(item.purchasePrice),
           formatCurrencyValue(item.salesPrice),
-          formatCurrencyValue((item.qty * item.salesPrice) + (item.oviAmount || 0))
+          formatCurrencyValue(item.oviAmount || 0)
         ]),
         theme: 'striped',
         headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], halign: 'center' },
