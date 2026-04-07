@@ -381,6 +381,11 @@ function CreateClaimContent() {
                                                     <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">৳{detail.amount.toLocaleString()}</span>
                                                     <span className="text-[10px] text-slate-400">{new Date(detail.fromDate).toLocaleDateString()}</span>
                                                 </div>
+                                                {detail.description && (
+                                                    <p className="text-[11px] text-slate-500 mt-2 line-clamp-2 leading-relaxed border-t border-slate-50 pt-2 italic">
+                                                        {detail.description}
+                                                    </p>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 {detail.attachmentUrl && (
