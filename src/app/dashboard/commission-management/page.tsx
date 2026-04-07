@@ -222,10 +222,12 @@ export default function CommissionDashboard() {
 
             // Logo logic removed as per request
 
-            // Company Info (Left)
-            doc.setFontSize(22);
+            // Company Name (Left) - Bold and 20% smaller (22 -> 18)
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
             doc.setTextColor(40, 40, 40);
             doc.text(companyName || 'LCMS', textX, 16);
+            doc.setFont('helvetica', 'normal');
 
             doc.setFontSize(9);
             doc.setTextColor(100, 100, 100);
@@ -234,14 +236,15 @@ export default function CommissionDashboard() {
                 doc.text(splitAddress, textX, 22);
             }
 
-            // Invoice Label (Right)
-            doc.setFontSize(20);
+            // Invoice Label (Right) - 20% smaller (20 -> 16)
+            doc.setFontSize(16);
             doc.setTextColor(59, 130, 246); // Blue
             doc.text('COMMISSION INVOICE', pageWidth - margin, 16, { align: 'right' });
+            doc.setFontSize(10); // Reset for later
 
             // Divider Line
             doc.setDrawColor(220, 220, 220);
-            doc.line(margin, 35, pageWidth - margin, 35);
+            doc.line(margin, 30, pageWidth - margin, 30);
 
             // Info Section
             doc.setFontSize(10);
@@ -249,35 +252,35 @@ export default function CommissionDashboard() {
 
             // 1. Customer Name (Left)
             doc.setFont('helvetica', 'bold');
-            doc.text('Customer Name:', margin, 45);
+            doc.text('Customer Name:', margin, 37);
             doc.setFont('helvetica', 'normal');
-            doc.text(pi.applicantName || 'N/A', margin, 50);
+            doc.text(pi.applicantName || 'N/A', margin, 42);
 
             // 2. Beneficiary Name (Middle)
             const middleX = pageWidth / 2 - 20;
             doc.setFont('helvetica', 'bold');
-            doc.text('Beneficiary Name:', middleX, 45);
+            doc.text('Beneficiary Name:', middleX, 37);
             doc.setFont('helvetica', 'normal');
-            doc.text(pi.beneficiaryName || 'N/A', middleX, 50);
+            doc.text(pi.beneficiaryName || 'N/A', middleX, 42);
 
             // 3. Invoice Details (Right)
             const rightLabelX = pageWidth - 65;
             const rightValueX = pageWidth - margin;
 
             doc.setFont('helvetica', 'bold');
-            doc.text('INVOICE NO:', rightLabelX, 45);
+            doc.text('INVOICE NO:', rightLabelX, 37);
             doc.setFont('helvetica', 'normal');
-            doc.text(pi.piNo || 'N/A', rightValueX, 45, { align: 'right' });
+            doc.text(pi.piNo || 'N/A', rightValueX, 37, { align: 'right' });
 
             doc.setFont('helvetica', 'bold');
-            doc.text('DATE:', rightLabelX, 51);
+            doc.text('DATE:', rightLabelX, 43);
             doc.setFont('helvetica', 'normal');
-            doc.text(formatDisplayDate(pi.piDate), rightValueX, 51, { align: 'right' });
+            doc.text(formatDisplayDate(pi.piDate), rightValueX, 43, { align: 'right' });
 
             doc.setFont('helvetica', 'bold');
-            doc.text('SALES PERSON:', rightLabelX, 57);
+            doc.text('SALES PERSON:', rightLabelX, 49);
             doc.setFont('helvetica', 'normal');
-            doc.text(pi.salesPersonName || 'N/A', rightValueX, 57, { align: 'right' });
+            doc.text(pi.salesPersonName || 'N/A', rightValueX, 49, { align: 'right' });
 
             // Calculate totals for footer
             const totalPurchaseValue = pi.lineItems.reduce((sum, item) => sum + (item.qty * (item.purchasePrice || 0)), 0);
@@ -286,7 +289,7 @@ export default function CommissionDashboard() {
 
             // Table Section
             autoTable(doc, {
-                startY: 65,
+                startY: 55,
                 margin: { left: margin, right: margin },
                 head: [['No.', 'Model', 'Qty', 'Purchase Price', 'Sales Price', 'Sales with OV']],
                 body: pi.lineItems.map((item, index) => [
@@ -306,7 +309,7 @@ export default function CommissionDashboard() {
                 ]],
                 theme: 'striped',
                 headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], halign: 'center' },
-                footStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold', halign: 'right' },
+                footStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'right' },
                 columnStyles: {
                     0: { halign: 'center' },
                     2: { halign: 'center' },
