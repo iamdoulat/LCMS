@@ -6,7 +6,7 @@ import { MobileAttendanceModal } from '@/components/mobile/MobileAttendanceModal
 // MobileBreakTimeModal is now global via Context
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer, QrCode, Banknote, Box, Monitor } from 'lucide-react';
+import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer, QrCode, Banknote, Box, Monitor, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
@@ -183,6 +183,7 @@ export default function MobileDashboardPage() {
     const [calculatedPolicy, setCalculatedPolicy] = useState<AttendancePolicyDocument | null>(null);
     const [todayDailyPolicy, setTodayDailyPolicy] = useState<DailyAttendancePolicy | null>(null);
     const [workedTime, setWorkedTime] = useState<string>('00:00');
+    const [isOutTimeCheckLoading, setIsOutTimeCheckLoading] = useState(false);
 
     // Load settings from localStorage
     useEffect(() => {
@@ -905,23 +906,30 @@ export default function MobileDashboardPage() {
                                     whileTap={{ scale: 0.9 }}
                                     onClick={async () => {
                                         // Validation: Check for pending Check-In
-                                        const canonicalId = currentEmployeeId || user?.uid;
-                                        if (canonicalId) {
-                                            const isActiveVisit = await hasActiveCheckIn(canonicalId);
-                                            if (isActiveVisit) {
-                                                Swal.fire({
-                                                    title: "Action Restricted",
-                                                    text: "Please check out from Check In tab first.",
-                                                    icon: "error",
-                                                    timer: 3000,
-                                                    showConfirmButton: false
-                                                });
-                                                return;
+                                        setIsOutTimeCheckLoading(true);
+                                        try {
+                                            const canonicalId = currentEmployeeId || user?.uid;
+                                            if (canonicalId) {
+                                                const isActiveVisit = await hasActiveCheckIn(canonicalId);
+                                                if (isActiveVisit) {
+                                                    Swal.fire({
+                                                        title: "Action Restricted",
+                                                        text: "Please check out from Check In tab first.",
+                                                        icon: "error",
+                                                        timer: 3000,
+                                                        showConfirmButton: false
+                                                    });
+                                                    return;
+                                                }
                                             }
-                                        }
 
-                                        setAttendanceType('out');
-                                        setIsAttendanceModalOpen(true);
+                                            setAttendanceType('out');
+                                            setIsAttendanceModalOpen(true);
+                                        } catch (error) {
+                                            console.error("Error validating out time:", error);
+                                        } finally {
+                                            setIsOutTimeCheckLoading(false);
+                                        }
                                     }}
                                     disabled={!todayAttendance?.inTime || !!todayAttendance?.outTime || !!restrictionNote}
                                     className={cn(
@@ -942,7 +950,11 @@ export default function MobileDashboardPage() {
                                             <div className="absolute inset-0 rounded-full bg-sky-500 opacity-20 animate-ping [animation-duration:6000ms] pointer-events-none z-[-1]" style={{ animationDelay: '3000ms' }} />
                                         </>
                                     )}
-                                    <Clock className="h-6 w-6 mb-0.5" />
+                                    {isOutTimeCheckLoading ? (
+                                        <Loader2 className="h-6 w-6 mb-0.5 animate-spin" />
+                                    ) : (
+                                        <Clock className="h-6 w-6 mb-0.5" />
+                                    )}
                                     <span className="text-xs font-semibold">Out Time</span>
                                     {todayAttendance?.outTime && (
                                         <span className="text-[10px] font-medium bg-white/20 px-1.5 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.outTime)}</span>
