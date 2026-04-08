@@ -309,7 +309,6 @@ export default function ClaimListPage() {
                                         <button
                                             key={status}
                                             onClick={() => {
-                                                setLoading(true);
                                                 setStatusFilter(status);
                                                 setDisplayLimit(10);
                                                 setIsFilterSheetOpen(false);
@@ -353,7 +352,6 @@ export default function ClaimListPage() {
                                             onSelect={(range) => {
                                                 setDateRange(range as any || { from: null, to: null });
                                                 setDisplayLimit(10);
-                                                setLoading(true);
                                             }}
                                             numberOfMonths={1}
                                             className="mx-auto"
@@ -364,7 +362,6 @@ export default function ClaimListPage() {
                                             variant="outline" 
                                             className="flex-1 rounded-xl py-6 border-slate-200 text-slate-700 hover:bg-slate-50 font-bold"
                                             onClick={() => {
-                                                setLoading(true);
                                                 setDateRange({ from: null, to: null });
                                                 setDisplayLimit(10);
                                                 setIsDateSheetOpen(false);
