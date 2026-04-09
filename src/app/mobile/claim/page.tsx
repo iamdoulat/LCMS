@@ -184,8 +184,6 @@ export default function ClaimListPage() {
                     
                     await updateDoc(doc(firestore, 'hr_claims', claim.id), {
                         status: updatedStatus,
-                        approvedAmount: claim.claimAmount,
-                        approvedByName: approvedBy,
                         updatedAt: Timestamp.now()
                     });
                     console.log(`Claim ${claim.claimNo} auto-approved (moved to ${updatedStatus}).`);
@@ -221,8 +219,6 @@ export default function ClaimListPage() {
                         
                         updateDoc(doc(firestore, 'hr_claims', claim.id), {
                             status: updatedStatus,
-                            approvedAmount: claim.claimAmount,
-                            approvedByName: approvedBy,
                             updatedAt: Timestamp.now()
                         }).catch(err => console.error("Auto-approval error:", err));
                     }
