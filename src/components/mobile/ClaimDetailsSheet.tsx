@@ -84,7 +84,7 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category, initialDa
                             <Label className="text-xs font-bold text-slate-800">From Date <span className="text-red-500">*</span></Label>
                             <div className="relative">
                                 <div className="h-12 w-full bg-white rounded-xl border border-slate-200 px-4 flex items-center text-xs font-bold text-slate-800 pointer-events-none whitespace-nowrap overflow-hidden">
-                                    {fromDate ? format(new Date(fromDate), 'MMM d, yyyy') : 'Select'}
+                                    {fromDate ? format(new Date(fromDate), 'dd, MMM yyyy') : 'Select'}
                                 </div>
                                 <Input
                                     type="date"
@@ -98,7 +98,7 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category, initialDa
                             <Label className="text-xs font-bold text-slate-800">To Date <span className="text-red-500">*</span></Label>
                             <div className="relative">
                                 <div className="h-12 w-full bg-white rounded-xl border border-slate-200 px-4 flex items-center text-xs font-bold text-slate-800 pointer-events-none whitespace-nowrap overflow-hidden">
-                                    {toDate ? format(new Date(toDate), 'MMM d, yyyy') : 'Select'}
+                                    {toDate ? format(new Date(toDate), 'dd, MMM yyyy') : 'Select'}
                                 </div>
                                 <Input
                                     type="date"

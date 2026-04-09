@@ -286,7 +286,7 @@ function CreateClaimContent() {
                                 <Label className="text-xs font-semibold text-slate-500">Advance Date</Label>
                                 <div className="relative">
                                     <div className="h-12 w-full bg-white rounded-xl border border-slate-200 px-3 flex items-center text-xs font-semibold text-slate-700 pointer-events-none whitespace-nowrap overflow-hidden">
-                                        {advanceDate ? format(new Date(advanceDate), 'MMM d, yyyy') : 'Select'}
+                                        {advanceDate ? format(new Date(advanceDate), 'dd, MMM yyyy') : 'Select'}
                                     </div>
                                     <Input
                                         type="date"
@@ -312,7 +312,7 @@ function CreateClaimContent() {
                             <Label className="text-xs font-semibold text-slate-700">Claim Date <span className="text-red-500">*</span></Label>
                             <div className="relative">
                                 <div className="h-12 w-full bg-white rounded-xl border border-slate-200 px-4 flex items-center text-sm font-semibold text-slate-700 pointer-events-none">
-                                    {claimDate ? format(new Date(claimDate), 'MMM d, yyyy') : 'Select Date'}
+                                    {claimDate ? format(new Date(claimDate), 'dd, MMM yyyy') : 'Select Date'}
                                 </div>
                                 <Input
                                     type="date"
@@ -396,7 +396,7 @@ function CreateClaimContent() {
                                                 </div>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">৳{detail.amount.toLocaleString()}</span>
-                                                    <span className="text-[10px] text-slate-400">{new Date(detail.fromDate).toLocaleDateString()}</span>
+                                                    <span className="text-[10px] text-slate-400">{format(new Date(detail.fromDate), 'dd-MM-yyyy')}</span>
                                                 </div>
                                                 {detail.description && (
                                                     <p className="text-[11px] text-slate-500 mt-2 line-clamp-2 leading-relaxed border-t border-slate-50 pt-2 italic">
