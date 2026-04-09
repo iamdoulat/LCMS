@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { ClaimDetail } from '@/types';
 import Swal from 'sweetalert2';
+import { format } from 'date-fns';
 
 interface ClaimDetailsSheetProps {
     isOpen: boolean;
@@ -82,22 +83,28 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category, initialDa
                         <div className="space-y-2">
                             <Label className="text-xs font-bold text-slate-800">From Date <span className="text-red-500">*</span></Label>
                             <div className="relative">
+                                <div className="h-12 w-full bg-white rounded-xl border border-slate-200 px-4 flex items-center text-xs font-bold text-slate-800 pointer-events-none whitespace-nowrap overflow-hidden">
+                                    {fromDate ? format(new Date(fromDate), 'MMM d, yyyy') : 'Select'}
+                                </div>
                                 <Input
                                     type="date"
                                     value={fromDate}
                                     onChange={(e) => setFromDate(e.target.value)}
-                                    className="h-12 w-full bg-white rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-800"
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                             </div>
                         </div>
                         <div className="space-y-2">
                             <Label className="text-xs font-bold text-slate-800">To Date <span className="text-red-500">*</span></Label>
                             <div className="relative">
+                                <div className="h-12 w-full bg-white rounded-xl border border-slate-200 px-4 flex items-center text-xs font-bold text-slate-800 pointer-events-none whitespace-nowrap overflow-hidden">
+                                    {toDate ? format(new Date(toDate), 'MMM d, yyyy') : 'Select'}
+                                </div>
                                 <Input
                                     type="date"
                                     value={toDate}
                                     onChange={(e) => setToDate(e.target.value)}
-                                    className="h-12 w-full bg-white rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-800"
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                             </div>
                         </div>

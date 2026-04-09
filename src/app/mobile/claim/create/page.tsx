@@ -15,6 +15,7 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { ClaimDetail, HRClaim, Employee } from '@/types';
 import Swal from 'sweetalert2';
+import { format } from 'date-fns';
 
 function CreateClaimContent() {
     const router = useRouter();
@@ -283,12 +284,17 @@ function CreateClaimContent() {
                         <div className="grid grid-cols-12 gap-4">
                             <div className="space-y-2 col-span-5">
                                 <Label className="text-xs font-semibold text-slate-500">Advance Date</Label>
-                                <Input
-                                    type="date"
-                                    value={advanceDate}
-                                    onChange={(e) => setAdvanceDate(e.target.value)}
-                                    className="h-12 bg-white rounded-xl border-slate-200 text-xs font-semibold text-slate-700"
-                                />
+                                <div className="relative">
+                                    <div className="h-12 w-full bg-white rounded-xl border border-slate-200 px-3 flex items-center text-xs font-semibold text-slate-700 pointer-events-none whitespace-nowrap overflow-hidden">
+                                        {advanceDate ? format(new Date(advanceDate), 'MMM d, yyyy') : 'Select'}
+                                    </div>
+                                    <Input
+                                        type="date"
+                                        value={advanceDate}
+                                        onChange={(e) => setAdvanceDate(e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-2 col-span-5 col-start-8">
                                 <Label className="text-xs font-semibold text-slate-500">Advance Amount</Label>
@@ -304,12 +310,17 @@ function CreateClaimContent() {
 
                         <div className="space-y-2">
                             <Label className="text-xs font-semibold text-slate-700">Claim Date <span className="text-red-500">*</span></Label>
-                            <Input
-                                type="date"
-                                value={claimDate}
-                                onChange={(e) => setClaimDate(e.target.value)}
-                                className="h-12 bg-white rounded-xl border-slate-200 text-sm font-semibold text-slate-700"
-                            />
+                            <div className="relative">
+                                <div className="h-12 w-full bg-white rounded-xl border border-slate-200 px-4 flex items-center text-sm font-semibold text-slate-700 pointer-events-none">
+                                    {claimDate ? format(new Date(claimDate), 'MMM d, yyyy') : 'Select Date'}
+                                </div>
+                                <Input
+                                    type="date"
+                                    value={claimDate}
+                                    onChange={(e) => setClaimDate(e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                            </div>
                         </div>
 
                         <div className="space-y-2">
