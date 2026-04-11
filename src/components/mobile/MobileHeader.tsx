@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Search } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useMobileSidebar } from '@/context/MobileSidebarContext';
@@ -196,6 +196,12 @@ export function MobileHeader({ rightAction }: MobileHeaderProps) {
                             {rightAction}
                         </div>
                     )}
+
+                    <Link href="/mobile/search">
+                        <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full h-7 w-7 p-0 relative min-w-0 flex items-center justify-center">
+                            <Search className="!h-7 !w-7" />
+                        </Button>
+                    </Link>
 
                     <Link href="/mobile/notifications">
                         <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full h-7 w-7 p-0 relative min-w-0 flex items-center justify-center">

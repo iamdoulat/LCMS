@@ -6,7 +6,7 @@ import { MobileAttendanceModal } from '@/components/mobile/MobileAttendanceModal
 // MobileBreakTimeModal is now global via Context
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer, QrCode, Banknote, Box, Monitor, Loader2 } from 'lucide-react';
+import { ArrowRight, LogIn, LogOut, Clock, Coffee, ListTodo, MoreHorizontal, Settings, ChevronDown, CalendarX, Bell, Wallet, Users, X, UserCheck, Timer, QrCode, Banknote, Box, Monitor, Loader2, Cpu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
@@ -1249,6 +1249,7 @@ export default function MobileDashboardPage() {
                             )}
 
                             {/* Inventory Module Card - Only for Admin, Accountant, Viewer */}
+                            {/* Inventory Module Card - Only for Admin, Accountant, Viewer */}
                             {isInventoryAllowed && (
                                 <Link
                                     href="/mobile/inventory"
@@ -1260,6 +1261,17 @@ export default function MobileDashboardPage() {
                                     <span className="text-sm font-medium text-slate-600 text-center">Inventory</span>
                                 </Link>
                             )}
+
+                            {/* Search Machine Module Card */}
+                            <Link
+                                href="/mobile/search"
+                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
+                            >
+                                <div className="bg-sky-100 p-4 rounded-full text-sky-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-sky-200 group-hover:scale-110">
+                                    <Cpu className="h-7 w-7" />
+                                </div>
+                                <span className="text-sm font-medium text-slate-600 text-center leading-tight">Search Machine</span>
+                            </Link>
                         </div>
                     </div>
                 </div>
