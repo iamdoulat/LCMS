@@ -6,14 +6,25 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search as SearchIcon, FileText, Users, Building, Layers, CalendarDays, Link as LinkIcon, Loader2, AlertTriangle } from 'lucide-react';
+import { Search as SearchIcon, FileText, Users, Building, Layers, CalendarDays, Link as LinkIcon, Loader2, AlertTriangle, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { format, parseISO, isValid } from 'date-fns';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import type { LCEntryDocument, CustomerDocument, SupplierDocument } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+interface MachineryRow {
+  model: string;
+  applicantName: string;
+  qty?: number;
+  unitPrice?: number;
+  totalPrice?: number;
+  year?: number;
+  lcNo: string;
+  lcId: string;
+}
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
@@ -35,6 +46,10 @@ function SearchPageContent() {
   const [isLoadingBeneficiarySearch, setIsLoadingBeneficiarySearch] = useState(false);
   const [beneficiarySearchError, setBeneficiarySearchError] = useState<string | null>(null);
 
+  const [machineryRows, setMachineryRows] = useState<MachineryRow[]>([]);
+  const [isLoadingMachinery, setIsLoadingMachinery] = useState(false);
+  const [machineryError, setMachineryError] = useState<string | null>(null);
+
   useEffect(() => {
     const queryFromUrl = searchParams.get('q') || '';
     setSearchTerm(queryFromUrl);
@@ -47,12 +62,15 @@ function SearchPageContent() {
         setLcResults([]);
         setApplicantResults([]);
         setBeneficiaryResults([]);
+        setMachineryRows([]);
         setLcSearchError(null);
         setApplicantSearchError(null);
         setBeneficiarySearchError(null);
+        setMachineryError(null);
         setIsLoadingLcSearch(false);
         setIsLoadingApplicantSearch(false);
         setIsLoadingBeneficiarySearch(false);
+        setIsLoadingMachinery(false);
         return;
       }
 
@@ -62,12 +80,15 @@ function SearchPageContent() {
       setIsLoadingLcSearch(true);
       setIsLoadingApplicantSearch(true);
       setIsLoadingBeneficiarySearch(true);
+      setIsLoadingMachinery(true);
       setLcSearchError(null);
       setApplicantSearchError(null);
       setBeneficiarySearchError(null);
+      setMachineryError(null);
       setLcResults([]);
       setApplicantResults([]);
       setBeneficiaryResults([]);
+      setMachineryRows([]);
 
       try {
         // --- L/C Search (Exact Match) ---
@@ -118,7 +139,7 @@ function SearchPageContent() {
           limit(10) // Limit results for performance
         );
         const beneficiaryQuerySnapshot = await getDocs(beneficiaryNameQuery);
-        const fetchedBeneficiaries: SupplierDocument[] = [];
+        const fetchedBeneficiaries: SupplierDocument[] = []
         beneficiaryQuerySnapshot.forEach((doc) => {
           fetchedBeneficiaries.push({ id: doc.id, ...doc.data() } as SupplierDocument);
         });
@@ -128,6 +149,78 @@ function SearchPageContent() {
         setBeneficiarySearchError(`Failed to search Beneficiaries: ${error.message}. Ensure necessary Firestore indexes exist.`);
       } finally {
         setIsLoadingBeneficiarySearch(false);
+      }
+
+      // --- PI / Machinery Information Search ---
+      // Strategy: fetch LC entries that match applicantName starts-with query,
+      // then client-side filter piMachineryInfo rows where model contains the query.
+      // Also fetch by applicantName to get all their machinery. We combine both.
+      try {
+        const lcEntriesRef = collection(firestore, "lc_entries");
+
+        // Fetch LCs by applicantName starts-with
+        const lcByApplicantQuery = query(
+          lcEntriesRef,
+          where("applicantName", ">=", trimmedQuery),
+          where("applicantName", "<=", trimmedQuery + "\uf8ff"),
+          limit(50)
+        );
+
+        // Fetch LCs that match LC number (already done above, reuse below)
+        const [byApplicantSnap] = await Promise.all([
+          getDocs(lcByApplicantQuery),
+        ]);
+
+        const allLcDocs = new Map<string, LCEntryDocument>();
+
+        byApplicantSnap.forEach((doc) => {
+          allLcDocs.set(doc.id, { id: doc.id, ...doc.data() } as LCEntryDocument);
+        });
+
+        // Also iterate lcResults (from exact LC number match)
+        // These will be set once the first fetch completes, so re-fetch here for simplicity
+        const lcByExactQuery = query(
+          lcEntriesRef,
+          where("documentaryCreditNumber", "==", trimmedQuery)
+        );
+        const lcExactSnap = await getDocs(lcByExactQuery);
+        lcExactSnap.forEach((doc) => {
+          allLcDocs.set(doc.id, { id: doc.id, ...doc.data() } as LCEntryDocument);
+        });
+
+        // Build rows: for each LC with piMachineryInfo, create a row per item
+        const rows: MachineryRow[] = [];
+        const queryLower = trimmedQuery.toLowerCase();
+
+        allLcDocs.forEach((lc) => {
+          if (!lc.piMachineryInfo || lc.piMachineryInfo.length === 0) return;
+          lc.piMachineryInfo.forEach((item) => {
+            // Include if model, applicantName, or LC number matches the query
+            const modelMatch = item.model?.toLowerCase().includes(queryLower);
+            const applicantMatch = lc.applicantName?.toLowerCase().includes(queryLower);
+            const lcNoMatch = lc.documentaryCreditNumber?.toLowerCase().includes(queryLower);
+
+            if (modelMatch || applicantMatch || lcNoMatch) {
+              rows.push({
+                model: item.model || '—',
+                applicantName: lc.applicantName || '—',
+                qty: item.qty,
+                unitPrice: item.unitPrice,
+                totalPrice: item.totalPrice ?? ((item.qty ?? 0) * (item.unitPrice ?? 0)),
+                year: lc.year,
+                lcNo: lc.documentaryCreditNumber || '—',
+                lcId: lc.id,
+              });
+            }
+          });
+        });
+
+        setMachineryRows(rows);
+      } catch (error: any) {
+        console.error("Error searching Machinery:", error);
+        setMachineryError(`Failed to search Machinery info: ${error.message}`);
+      } finally {
+        setIsLoadingMachinery(false);
       }
     };
 
@@ -224,6 +317,113 @@ function SearchPageContent() {
     return <p className="text-muted-foreground text-sm">No Beneficiaries found starting with "{displayedQuery}" (case-sensitive).</p>;
   };
 
+  const renderMachineryResults = () => {
+    if (isLoadingMachinery) {
+      return (
+        <div className="flex items-center justify-center p-4">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" /> Searching Machinery Info...
+        </div>
+      );
+    }
+    if (machineryError) {
+      return (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Machinery Search Error</AlertTitle>
+          <AlertDescription>{machineryError}</AlertDescription>
+        </Alert>
+      );
+    }
+    if (machineryRows.length > 0) {
+      const grandTotalQty = machineryRows.reduce((sum, r) => sum + (r.qty ?? 0), 0);
+      const grandTotalPrice = machineryRows.reduce((sum, r) => sum + (r.totalPrice ?? 0), 0);
+
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/60 text-muted-foreground text-xs uppercase tracking-wider">
+                <th className="px-3 py-2 text-left font-semibold">#</th>
+                <th className="px-3 py-2 text-left font-semibold">Model</th>
+                <th className="px-3 py-2 text-left font-semibold">Applicant Name</th>
+                <th className="px-3 py-2 text-right font-semibold">Qty</th>
+                <th className="px-3 py-2 text-right font-semibold">U. Price</th>
+                <th className="px-3 py-2 text-right font-semibold">T. Price</th>
+                <th className="px-3 py-2 text-center font-semibold">Year</th>
+                <th className="px-3 py-2 text-left font-semibold">LC No.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {machineryRows.map((row, idx) => (
+                <tr
+                  key={`${row.lcId}-${idx}`}
+                  className={cn(
+                    "border-t border-border transition-colors",
+                    idx % 2 === 0 ? "bg-background" : "bg-muted/20",
+                    "hover:bg-primary/5"
+                  )}
+                >
+                  <td className="px-3 py-2 text-muted-foreground text-xs">{idx + 1}</td>
+                  <td className="px-3 py-2 font-medium text-foreground">
+                    {row.model}
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground">{row.applicantName}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {row.qty != null ? row.qty : '—'}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {row.unitPrice != null
+                      ? row.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : '—'}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums font-semibold text-primary">
+                    {row.totalPrice != null
+                      ? row.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : '—'}
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                      {row.year ?? '—'}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/dashboard/total-lc/${row.lcId}/edit`}
+                      className="text-primary hover:underline text-xs font-medium flex items-center gap-1"
+                    >
+                      <LinkIcon className="h-3 w-3 shrink-0" />
+                      {row.lcNo}
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-border bg-muted/40 font-semibold text-sm">
+                <td colSpan={3} className="px-3 py-2 text-right text-muted-foreground text-xs uppercase tracking-wider">
+                  Grand Total
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                  {grandTotalQty}
+                </td>
+                <td className="px-3 py-2 text-right text-muted-foreground">—</td>
+                <td className="px-3 py-2 text-right tabular-nums text-primary font-bold">
+                  {grandTotalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td colSpan={2} />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      );
+    }
+    return (
+      <p className="text-muted-foreground text-sm">
+        No PI / Machinery information found matching &quot;{displayedQuery}&quot;.
+      </p>
+    );
+  };
+
   return (
     <div className="mx-[15px]">
       <div className="container mx-auto py-8">
@@ -234,14 +434,14 @@ function SearchPageContent() {
               Global Search
             </CardTitle>
             <CardDescription>
-              Enter a search term. L/C Number uses exact match. Applicant and Beneficiary names use "starts with" (case-sensitive) matching.
+              Enter a search term. L/C Number uses exact match. Applicant and Beneficiary names use &quot;starts with&quot; (case-sensitive) matching. Machinery search matches model, applicant name, or LC number.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSearchSubmit} className="flex w-full max-w-2xl mx-auto items-center space-x-2 mb-8">
               <Input
                 type="search"
-                placeholder="Enter L/C No, Applicant, Beneficiary..."
+                placeholder="Enter L/C No, Applicant, Beneficiary, Model..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="flex-1"
@@ -266,9 +466,27 @@ function SearchPageContent() {
 
             {displayedQuery && (
               <div className="space-y-6">
+                {/* PI / Machinery Information - shown first as requested */}
+                <Card className="border-primary/20 shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      <Package className="h-5 w-5 text-primary" />
+                      PI / Machinery Information
+                      {!isLoadingMachinery && machineryRows.length > 0 && (
+                        <span className="ml-auto text-sm font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                          {machineryRows.length} item{machineryRows.length !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderMachineryResults()}
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2"><FileText className="h-5 w-5 text-primary" />L/C Entries Matching "{displayedQuery}"</CardTitle>
+                    <CardTitle className="text-xl flex items-center gap-2"><FileText className="h-5 w-5 text-primary" />L/C Entries Matching &quot;{displayedQuery}&quot;</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {renderLCResults()}
@@ -277,7 +495,7 @@ function SearchPageContent() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2"><Users className="h-5 w-5 text-primary" />Applicants Starting With "{displayedQuery}"</CardTitle>
+                    <CardTitle className="text-xl flex items-center gap-2"><Users className="h-5 w-5 text-primary" />Applicants Starting With &quot;{displayedQuery}&quot;</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {renderApplicantResults()}
@@ -286,7 +504,7 @@ function SearchPageContent() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Beneficiaries Starting With "{displayedQuery}"</CardTitle>
+                    <CardTitle className="text-xl flex items-center gap-2"><Building className="h-5 w-5 text-primary" />Beneficiaries Starting With &quot;{displayedQuery}&quot;</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {renderBeneficiaryResults()}
@@ -295,7 +513,7 @@ function SearchPageContent() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2"><Layers className="h-5 w-5 text-primary" />Proforma Invoices Matching "{displayedQuery}"</CardTitle>
+                    <CardTitle className="text-xl flex items-center gap-2"><Layers className="h-5 w-5 text-primary" />Proforma Invoices Matching &quot;{displayedQuery}&quot;</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground text-sm">Proforma Invoice search is not yet implemented for this query type.</p>
@@ -304,7 +522,7 @@ function SearchPageContent() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-xl flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary" />Entries by Year Matching "{displayedQuery}"</CardTitle>
+                    <CardTitle className="text-xl flex items-center gap-2"><CalendarDays className="h-5 w-5 text-primary" />Entries by Year Matching &quot;{displayedQuery}&quot;</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground text-sm">Year-based search for this query term is not yet implemented.</p>

@@ -161,6 +161,7 @@ export interface LCEntry {
   firstShipmentNote?: string;
   secondShipmentNote?: string;
   thirdShipmentNote?: string;
+  piMachineryInfo?: { qty?: number; model?: string; unitPrice?: number; totalPrice?: number }[];
 }
 
 export const lcEntrySchema = z.object({
@@ -272,6 +273,12 @@ export const lcEntrySchema = z.object({
   firstShipmentNote: z.string().optional(),
   secondShipmentNote: z.string().optional(),
   thirdShipmentNote: z.string().optional(),
+  piMachineryInfo: z.array(z.object({
+    qty: z.preprocess(toNumberOrUndefined, z.number().int().nonnegative("Quantity cannot be negative").optional()),
+    model: z.string().optional(),
+    unitPrice: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Unit Price cannot be negative").optional()),
+    totalPrice: z.preprocess(toNumberOrUndefined, z.number().nonnegative("Total Price cannot be negative").optional()),
+  })).optional().default([]),
 }).superRefine((data, ctx) => {
   if (!data.status || data.status.length === 0 || data.status.includes('Draft')) {
     return;
@@ -394,6 +401,7 @@ export interface LCEntryDocument {
   firstShipmentNote?: string;
   secondShipmentNote?: string;
   thirdShipmentNote?: string;
+  piMachineryInfo?: { qty?: number; model?: string; unitPrice?: number; totalPrice?: number }[];
   shipmentValue?: number; // Added this property
   shipmentDate?: string; // Added this property
   maturityDate?: string; // Added this property

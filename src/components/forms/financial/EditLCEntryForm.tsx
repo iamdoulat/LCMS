@@ -122,6 +122,7 @@ const defaultFormValues: LCEditFormValues = {
   secondShipmentNote: '',
   thirdShipmentNote: '',
   partialShippingInfo: [],
+  piMachineryInfo: [],
 };
 
 const sectionHeadingClass = "font-bold text-xl bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-6 flex items-center";
@@ -159,6 +160,11 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const { fields: commercialInvoiceFields, append: appendCommercialInvoice, remove: removeCommercialInvoice } = useFieldArray({
     control,
     name: "commercialInvoices",
+  });
+
+  const { fields: piMachineryFields, append: appendPiMachinery, remove: removePiMachinery } = useFieldArray({
+    control,
+    name: "piMachineryInfo",
   });
 
   React.useEffect(() => {
@@ -308,6 +314,12 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
           ...inv,
           invoiceDate: inv.invoiceDate && isValid(parseISO(inv.invoiceDate)) ? parseISO(inv.invoiceDate) : undefined,
         })),
+        piMachineryInfo: (initialData.piMachineryInfo || []).map(item => ({
+          qty: item.qty,
+          model: item.model ?? '',
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        })),
       };
       reset(valuesToSet);
     }
@@ -357,6 +369,7 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
   const watchedIsSecondShipment = watch("isSecondShipment");
   const watchedIsThirdShipment = watch("isThirdShipment");
   const watchedPartialShippingInfo = watch("partialShippingInfo") || [];
+  const watchedPiMachineryInfo = watch("piMachineryInfo") || [];
 
   // Automation: If 2nd or 3rd shipment is ON, set Partial Shipment Allowed to "Yes"
   React.useEffect(() => {
@@ -584,6 +597,14 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
       firstShipmentNote: finalData.firstShipmentNote,
       secondShipmentNote: finalData.secondShipmentNote,
       thirdShipmentNote: finalData.thirdShipmentNote,
+      piMachineryInfo: finalData.piMachineryInfo && finalData.piMachineryInfo.length > 0
+        ? finalData.piMachineryInfo.map(item => ({
+          qty: toNumberOrUndefined(item.qty),
+          model: item.model || undefined,
+          unitPrice: toNumberOrUndefined(item.unitPrice),
+          totalPrice: (toNumberOrUndefined(item.qty) ?? 0) * (toNumberOrUndefined(item.unitPrice) ?? 0),
+        })).filter(item => item.model || item.qty || item.unitPrice)
+        : undefined,
       partialShippingInfo: (finalData.partialShippingInfo || []).map(item => ({
         ...item,
         etd: item.etd ? format(new Date(item.etd), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : undefined,
@@ -2026,6 +2047,168 @@ export function EditLCEntryForm({ initialData, lcId }: EditLCEntryFormProps) {
             )}
           />
         </div>
+        <Separator />
+
+        {/* Section: PI / Machinery Information */}
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="sectionPIMachinery" className="border-none">
+            <AccordionTrigger
+              className={cn(
+                "flex w-full items-center justify-between py-3 text-foreground hover:no-underline",
+                "font-bold text-xl hover:tracking-wider transition-all duration-300 ease-in-out border-b pb-2 mb-0"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <PackageCheck className="mr-2 h-5 w-5 text-primary" />
+                <span className="text-primary">PI / Machinery Information</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-4 space-y-4">
+              {/* Table */}
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/60 text-muted-foreground text-xs uppercase tracking-wider">
+                      <th className="px-3 py-2 text-left font-semibold w-12">#</th>
+                      <th className="px-3 py-2 text-left font-semibold">Model</th>
+                      <th className="px-3 py-2 text-right font-semibold w-28">QTY</th>
+                      <th className="px-3 py-2 text-right font-semibold w-36">Unit Price</th>
+                      <th className="px-3 py-2 text-right font-semibold w-36">Total Price</th>
+                      <th className="px-3 py-2 text-center font-semibold w-16">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {piMachineryFields.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-6 text-center text-muted-foreground italic text-xs">
+                          No items added yet. Click &quot;Add Item&quot; to begin.
+                        </td>
+                      </tr>
+                    )}
+                    {piMachineryFields.map((field, index) => {
+                      const qty = Number(watchedPiMachineryInfo?.[index]?.qty) || 0;
+                      const unitPrice = Number(watchedPiMachineryInfo?.[index]?.unitPrice) || 0;
+                      const rowTotal = qty * unitPrice;
+                      return (
+                        <tr key={field.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                          <td className="px-3 py-2 text-muted-foreground">{index + 1}</td>
+                          <td className="px-3 py-2">
+                            <FormField
+                              control={control}
+                              name={`piMachineryInfo.${index}.model`}
+                              render={({ field: f }) => (
+                                <FormItem className="m-0 space-y-0">
+                                  <FormControl>
+                                    <Input
+                                      placeholder="Model / Description"
+                                      {...f}
+                                      value={f.value ?? ''}
+                                      className="h-8 text-sm bg-background border-slate-200"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <FormField
+                              control={control}
+                              name={`piMachineryInfo.${index}.qty`}
+                              render={({ field: f }) => (
+                                <FormItem className="m-0 space-y-0">
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      placeholder="0"
+                                      {...f}
+                                      value={f.value ?? ''}
+                                      className="h-8 text-sm text-right bg-background border-slate-200"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <FormField
+                              control={control}
+                              name={`piMachineryInfo.${index}.unitPrice`}
+                              render={({ field: f }) => (
+                                <FormItem className="m-0 space-y-0">
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      placeholder="0.00"
+                                      step="0.01"
+                                      {...f}
+                                      value={f.value ?? ''}
+                                      className="h-8 text-sm text-right bg-background border-slate-200"
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right font-medium tabular-nums">
+                            {rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                              onClick={() => removePiMachinery(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Add Item Button */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-primary text-primary hover:bg-primary/10 font-semibold"
+                onClick={() => appendPiMachinery({ qty: undefined, model: '', unitPrice: undefined, totalPrice: undefined })}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+              </Button>
+
+              {/* Totals */}
+              {piMachineryFields.length > 0 && (
+                <>
+                  <Separator />
+                  <div className="flex flex-col items-end gap-1 pr-1 text-sm font-medium">
+                    <div className="flex gap-8 text-muted-foreground">
+                      <span>Total QTY:</span>
+                      <span className="tabular-nums min-w-[4rem] text-right font-bold text-foreground">
+                        {watchedPiMachineryInfo.reduce((sum, item) => sum + (Number(item?.qty) || 0), 0)}
+                      </span>
+                    </div>
+                    <div className="flex gap-8 text-muted-foreground">
+                      <span>Total Price:</span>
+                      <span className="tabular-nums min-w-[4rem] text-right font-bold text-primary">
+                        {watchedPiMachineryInfo
+                          .reduce((sum, item) => sum + (Number(item?.qty) || 0) * (Number(item?.unitPrice) || 0), 0)
+                          .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
         <Separator />
 
         {/* Section: 46A: Documents Required */}
