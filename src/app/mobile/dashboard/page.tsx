@@ -792,6 +792,15 @@ export default function MobileDashboardPage() {
     };
     // We already have state listeners, so we don't need a mid-loading state for UI, 
     // but skeletons are good if data is still fetching.
+    
+    const isInventoryAllowed = useMemo(() => {
+        return globalUserRole?.some(role => ['Super Admin', 'Admin', 'Accounts', 'Accountant', 'Viewer'].includes(role));
+    }, [globalUserRole]);
+
+    const isSearchAllowed = useMemo(() => {
+        return globalUserRole?.some(role => ['Super Admin', 'Admin', 'Commercial', 'Viewer'].includes(role));
+    }, [globalUserRole]);
+
 
     return (
         <div className="flex flex-col h-screen bg-[#0a1e60]">
@@ -1263,15 +1272,17 @@ export default function MobileDashboardPage() {
                             )}
 
                             {/* Search Machine Module Card */}
-                            <Link
-                                href="/mobile/search"
-                                className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
-                            >
-                                <div className="bg-sky-100 p-4 rounded-full text-sky-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-sky-200 group-hover:scale-110">
-                                    <Cpu className="h-7 w-7" />
-                                </div>
-                                <span className="text-sm font-medium text-slate-600 text-center leading-tight">Search Machine</span>
-                            </Link>
+                            {isSearchAllowed && (
+                                <Link
+                                    href="/mobile/search"
+                                    className="bg-white p-4 rounded-xl flex flex-col items-center justify-center gap-3 shadow-sm min-h-[120px] transition-all hover:shadow-md hover:bg-slate-50 active:scale-95 group"
+                                >
+                                    <div className="bg-sky-100 p-4 rounded-full text-sky-600 h-14 w-14 flex items-center justify-center transition-all shadow-lg shadow-sky-200 group-hover:scale-110">
+                                        <Cpu className="h-7 w-7" />
+                                    </div>
+                                    <span className="text-sm font-medium text-slate-600 text-center leading-tight">Search Machine</span>
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>

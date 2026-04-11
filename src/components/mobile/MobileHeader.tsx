@@ -197,11 +197,14 @@ export function MobileHeader({ rightAction }: MobileHeaderProps) {
                         </div>
                     )}
 
-                    <Link href="/mobile/search">
-                        <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full h-7 w-7 p-0 relative min-w-0 flex items-center justify-center">
-                            <Search className="!h-7 !w-7" />
-                        </Button>
-                    </Link>
+                    {/* Search Icon - Restricted Roles */}
+                    {userRole?.some(role => ['Super Admin', 'Admin', 'Commercial', 'Viewer'].includes(role)) && (
+                        <Link href="/mobile/search">
+                            <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full h-7 w-7 p-0 relative min-w-0 flex items-center justify-center">
+                                <Search className="!h-7 !w-7" />
+                            </Button>
+                        </Link>
+                    )}
 
                     <Link href="/mobile/notifications">
                         <Button variant="ghost" className="text-white hover:bg-white/10 rounded-full h-7 w-7 p-0 relative min-w-0 flex items-center justify-center">
