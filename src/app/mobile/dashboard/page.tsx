@@ -793,10 +793,6 @@ export default function MobileDashboardPage() {
     // We already have state listeners, so we don't need a mid-loading state for UI, 
     // but skeletons are good if data is still fetching.
     
-    const isInventoryAllowed = useMemo(() => {
-        return globalUserRole?.some(role => ['Super Admin', 'Admin', 'Accounts', 'Accountant', 'Viewer'].includes(role));
-    }, [globalUserRole]);
-
     const isSearchAllowed = useMemo(() => {
         return globalUserRole?.some(role => ['Super Admin', 'Admin', 'Commercial', 'Viewer'].includes(role));
     }, [globalUserRole]);

@@ -76,6 +76,11 @@ function MobileSearchContent() {
   const [isLoadingMachinery, setIsLoadingMachinery] = useState(false);
   const [machineryError, setMachineryError] = useState<string | null>(null);
 
+  // Pagination limits
+  const [machineryLimit, setMachineryLimit] = useState(10);
+  const [lcLimit, setLcLimit] = useState(10);
+  const [applicantLimit, setApplicantLimit] = useState(10);
+
   useEffect(() => {
     const queryFromUrl = searchParams.get('q') || '';
     setSearchTerm(queryFromUrl);
@@ -89,6 +94,10 @@ function MobileSearchContent() {
         setApplicantResults([]);
         setBeneficiaryResults([]);
         setMachineryRows([]);
+        // Reset limits
+        setMachineryLimit(10);
+        setLcLimit(10);
+        setApplicantLimit(10);
         return;
       }
 
@@ -120,7 +129,7 @@ function MobileSearchContent() {
           customersRef,
           where("applicantName", ">=", trimmedQuery),
           where("applicantName", "<=", trimmedQuery + "\uf8ff"),
-          limit(10)
+          limit(100) // Support load more
         );
         const appSnap = await getDocs(appQuery);
         setApplicantResults(appSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerDocument)));
@@ -137,7 +146,7 @@ function MobileSearchContent() {
           suppliersRef,
           where("beneficiaryName", ">=", trimmedQuery),
           where("beneficiaryName", "<=", trimmedQuery + "\uf8ff"),
-          limit(10)
+          limit(100) // Support load more
         );
         const benSnap = await getDocs(benQuery);
         setBeneficiaryResults(benSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplierDocument)));
@@ -245,7 +254,10 @@ function MobileSearchContent() {
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full -ml-24 -mb-24 blur-3xl opacity-30" />
         
         <div className="flex items-center mb-3 relative z-10">
-          <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full active:bg-white/10 transition-colors">
+          <button 
+            onClick={() => router.back()} 
+            className="p-2 -ml-2 rounded-full bg-white/10 shadow-lg shadow-black/20 active:bg-white/20 transition-all active:scale-95 border border-white/10"
+          >
             <ArrowLeft className="h-6 w-6" />
           </button>
           <h1 className="text-xl font-bold ml-2">Machine Search</h1>
@@ -275,7 +287,7 @@ function MobileSearchContent() {
 
       {/* Main Content Area with Curved UI */}
       <div className="flex-1 bg-slate-50 relative -mt-4 rounded-t-[40px] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] overflow-hidden">
-        <div className="h-full overflow-y-auto overscroll-contain px-4 py-8 pb-[120px]">
+        <div className="h-full overflow-y-auto overscroll-contain px-4 py-8 pb-[200px]">
         {!displayedQuery ? (
           <div className="flex flex-col items-center justify-center h-full text-center opacity-40 select-none">
             <div className="bg-white p-8 rounded-full shadow-sm mb-6 border border-slate-100">
@@ -321,7 +333,7 @@ function MobileSearchContent() {
                 </div>
               ) : machineryRows.length > 0 ? (
                 <div className="space-y-4">
-                  {machineryRows.map((row, idx) => (
+                  {machineryRows.slice(0, machineryLimit).map((row, idx) => (
                     <Card key={`${row.lcId}-${idx}`} className="border-none shadow-[0_12px_24px_-8px_rgba(0,0,0,0.06),0_2px_4px_-1px_rgba(0,0,0,0.04)] rounded-[2rem] overflow-hidden group active:scale-[0.98] transition-all bg-white">
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start mb-4">
@@ -377,6 +389,15 @@ function MobileSearchContent() {
                       </CardContent>
                     </Card>
                   ))}
+                  {machineryRows.length > machineryLimit && (
+                    <Button 
+                      onClick={() => setMachineryLimit(prev => prev + 10)}
+                      variant="ghost" 
+                      className="w-full h-14 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 font-bold hover:bg-white transition-all"
+                    >
+                      Load More Items ({machineryRows.length - machineryLimit} left)
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <p className="text-xs text-slate-400 italic px-1">No machinery items found.</p>
@@ -397,7 +418,7 @@ function MobileSearchContent() {
                 <div className="h-12 w-full animate-pulse bg-slate-100 rounded-2xl" />
               ) : lcResults.length > 0 ? (
                 <div className="space-y-3">
-                  {lcResults.map(lc => (
+                  {lcResults.slice(0, lcLimit).map(lc => (
                     <Link key={lc.id} href={`/mobile/total-lc/${lc.id}`}>
                       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group active:bg-slate-50 transition-colors">
                         <div className="space-y-1">
@@ -408,6 +429,15 @@ function MobileSearchContent() {
                       </div>
                     </Link>
                   ))}
+                  {lcResults.length > lcLimit && (
+                    <Button 
+                      onClick={() => setLcLimit(prev => prev + 10)}
+                      variant="ghost" 
+                      className="w-full h-12 rounded-xl border-2 border-dashed border-slate-100 text-slate-400 font-bold hover:bg-white transition-all text-[10px] uppercase tracking-widest"
+                    >
+                      Load More Records
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <p className="text-xs text-slate-400 italic px-1">No exact L/C matches.</p>
@@ -428,7 +458,7 @@ function MobileSearchContent() {
                 <div className="h-12 w-full animate-pulse bg-slate-100 rounded-2xl" />
               ) : applicantResults.length > 0 ? (
                 <div className="space-y-3">
-                  {applicantResults.map(app => (
+                  {applicantResults.slice(0, applicantLimit).map(app => (
                     <div key={app.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
                       <div className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
                         <Building className="h-5 w-5" />
@@ -439,6 +469,15 @@ function MobileSearchContent() {
                       </div>
                     </div>
                   ))}
+                  {applicantResults.length > applicantLimit && (
+                    <Button 
+                      onClick={() => setApplicantLimit(prev => prev + 10)}
+                      variant="ghost" 
+                      className="w-full h-12 rounded-xl border-2 border-dashed border-slate-100 text-slate-400 font-bold hover:bg-white transition-all text-[10px] uppercase tracking-widest"
+                    >
+                      Load More Customers
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <p className="text-xs text-slate-400 italic px-1">No customers found.</p>

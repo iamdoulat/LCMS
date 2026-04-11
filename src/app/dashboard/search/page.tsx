@@ -56,6 +56,12 @@ function SearchPageContent() {
   const [isLoadingMachinery, setIsLoadingMachinery] = useState(false);
   const [machineryError, setMachineryError] = useState<string | null>(null);
 
+  // Pagination states
+  const [machineryLimit, setMachineryLimit] = useState(20);
+  const [lcLimit, setLcLimit] = useState(20);
+  const [applicantLimit, setApplicantLimit] = useState(20);
+  const [beneficiaryLimit, setBeneficiaryLimit] = useState(20);
+
   useEffect(() => {
     const queryFromUrl = searchParams.get('q') || '';
     setSearchTerm(queryFromUrl);
@@ -95,6 +101,12 @@ function SearchPageContent() {
       setApplicantResults([]);
       setBeneficiaryResults([]);
       setMachineryRows([]);
+      
+      // Reset limits
+      setMachineryLimit(20);
+      setLcLimit(20);
+      setApplicantLimit(20);
+      setBeneficiaryLimit(20);
 
       try {
         // --- L/C Search (Exact Match) ---
@@ -120,7 +132,7 @@ function SearchPageContent() {
           customersRef,
           where("applicantName", ">=", trimmedQuery),
           where("applicantName", "<=", trimmedQuery + "\uf8ff"),
-          limit(10) // Limit results for performance
+          limit(100) // Support load more
         );
         const applicantQuerySnapshot = await getDocs(applicantNameQuery);
         const fetchedApplicants: CustomerDocument[] = [];
@@ -142,7 +154,7 @@ function SearchPageContent() {
           suppliersRef,
           where("beneficiaryName", ">=", trimmedQuery),
           where("beneficiaryName", "<=", trimmedQuery + "\uf8ff"),
-          limit(10) // Limit results for performance
+          limit(100) // Support load more
         );
         const beneficiaryQuerySnapshot = await getDocs(beneficiaryNameQuery);
         const fetchedBeneficiaries: SupplierDocument[] = []
@@ -264,21 +276,36 @@ function SearchPageContent() {
     if (isLoadingLcSearch) return <div className="flex items-center justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-primary mr-2" /> Searching L/Cs...</div>;
     if (lcSearchError) return <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>L/C Search Error</AlertTitle><AlertDescription>{lcSearchError}</AlertDescription></Alert>;
     if (lcResults.length > 0) {
+      const visibleLcs = lcResults.slice(0, lcLimit);
       return (
-        <ul className="space-y-3">
-          {lcResults.map(lc => (
-            <li key={lc.id} className="text-sm hover:bg-muted/50 p-3 rounded-md border">
-              <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-primary hover:underline font-medium flex items-center gap-1">
-                <LinkIcon className="h-3 w-3" /> {lc.documentaryCreditNumber}
-              </Link>
-              <div className="text-xs text-muted-foreground mt-1">
-                <p>Applicant: {lc.applicantName || 'N/A'}</p>
-                <p>Beneficiary: {lc.beneficiaryName || 'N/A'}</p>
-                <p>Issue Date: {formatDisplayDate(lc.lcIssueDate)} | Status: {lc.status || 'N/A'}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-4">
+          <ul className="space-y-3">
+            {visibleLcs.map(lc => (
+              <li key={lc.id} className="text-sm hover:bg-muted/50 p-3 rounded-md border">
+                <Link href={`/dashboard/total-lc/${lc.id}/edit`} className="text-primary hover:underline font-medium flex items-center gap-1">
+                  <LinkIcon className="h-3 w-3" /> {lc.documentaryCreditNumber}
+                </Link>
+                <div className="text-xs text-muted-foreground mt-1">
+                  <p>Applicant: {lc.applicantName || 'N/A'}</p>
+                  <p>Beneficiary: {lc.beneficiaryName || 'N/A'}</p>
+                  <p>Issue Date: {formatDisplayDate(lc.lcIssueDate)} | Status: {lc.status || 'N/A'}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {lcResults.length > lcLimit && (
+            <div className="flex justify-center pt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setLcLimit(prev => prev + 20)}
+                className="font-semibold"
+              >
+                Load More L/C Entries ({lcResults.length - lcLimit} remaining)
+              </Button>
+            </div>
+          )}
+        </div>
       );
     }
     return <p className="text-muted-foreground text-sm">No L/C entries found matching "{displayedQuery}" (exact match).</p>;
@@ -288,20 +315,35 @@ function SearchPageContent() {
     if (isLoadingApplicantSearch) return <div className="flex items-center justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-primary mr-2" /> Searching Applicants...</div>;
     if (applicantSearchError) return <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Applicant Search Error</AlertTitle><AlertDescription>{applicantSearchError}</AlertDescription></Alert>;
     if (applicantResults.length > 0) {
+      const visibleApplicants = applicantResults.slice(0, applicantLimit);
       return (
-        <ul className="space-y-3">
-          {applicantResults.map(app => (
-            <li key={app.id} className="text-sm hover:bg-muted/50 p-3 rounded-md border">
-              <Link href={`/dashboard/customers/${app.id}/edit`} className="text-primary hover:underline font-medium flex items-center gap-1">
-                <LinkIcon className="h-3 w-3" /> {app.applicantName}
-              </Link>
-              <div className="text-xs text-muted-foreground mt-1">
-                <p>Email: {app.email || 'N/A'}</p>
-                <p>Phone: {app.phone || 'N/A'}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-4">
+          <ul className="space-y-3">
+            {visibleApplicants.map(app => (
+              <li key={app.id} className="text-sm hover:bg-muted/50 p-3 rounded-md border">
+                <Link href={`/dashboard/customers/${app.id}/edit`} className="text-primary hover:underline font-medium flex items-center gap-1">
+                  <LinkIcon className="h-3 w-3" /> {app.applicantName}
+                </Link>
+                <div className="text-xs text-muted-foreground mt-1">
+                  <p>Email: {app.email || 'N/A'}</p>
+                  <p>Phone: {app.phone || 'N/A'}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {applicantResults.length > applicantLimit && (
+            <div className="flex justify-center pt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setApplicantLimit(prev => prev + 20)}
+                className="font-semibold"
+              >
+                Load More Applicants ({applicantResults.length - applicantLimit} remaining)
+              </Button>
+            </div>
+          )}
+        </div>
       );
     }
     return <p className="text-muted-foreground text-sm">No Applicants found starting with "{displayedQuery}" (case-sensitive).</p>;
@@ -311,20 +353,35 @@ function SearchPageContent() {
     if (isLoadingBeneficiarySearch) return <div className="flex items-center justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-primary mr-2" /> Searching Beneficiaries...</div>;
     if (beneficiarySearchError) return <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Beneficiary Search Error</AlertTitle><AlertDescription>{beneficiarySearchError}</AlertDescription></Alert>;
     if (beneficiaryResults.length > 0) {
+      const visibleBeneficiaries = beneficiaryResults.slice(0, beneficiaryLimit);
       return (
-        <ul className="space-y-3">
-          {beneficiaryResults.map(ben => (
-            <li key={ben.id} className="text-sm hover:bg-muted/50 p-3 rounded-md border">
-              <Link href={`/dashboard/suppliers/${ben.id}/edit`} className="text-primary hover:underline font-medium flex items-center gap-1">
-                <LinkIcon className="h-3 w-3" /> {ben.beneficiaryName}
-              </Link>
-              <div className="text-xs text-muted-foreground mt-1">
-                <p>Email: {ben.emailId || 'N/A'}</p>
-                <p>Brand: {ben.brandName || 'N/A'}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="space-y-4">
+          <ul className="space-y-3">
+            {visibleBeneficiaries.map(ben => (
+              <li key={ben.id} className="text-sm hover:bg-muted/50 p-3 rounded-md border">
+                <Link href={`/dashboard/suppliers/${ben.id}/edit`} className="text-primary hover:underline font-medium flex items-center gap-1">
+                  <LinkIcon className="h-3 w-3" /> {ben.beneficiaryName}
+                </Link>
+                <div className="text-xs text-muted-foreground mt-1">
+                  <p>Email: {ben.emailId || 'N/A'}</p>
+                  <p>Brand: {ben.brandName || 'N/A'}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {beneficiaryResults.length > beneficiaryLimit && (
+            <div className="flex justify-center pt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setBeneficiaryLimit(prev => prev + 20)}
+                className="font-semibold"
+              >
+                Load More Beneficiaries ({beneficiaryResults.length - beneficiaryLimit} remaining)
+              </Button>
+            </div>
+          )}
+        </div>
       );
     }
     return <p className="text-muted-foreground text-sm">No Beneficiaries found starting with "{displayedQuery}" (case-sensitive).</p>;
@@ -348,8 +405,10 @@ function SearchPageContent() {
       );
     }
     if (machineryRows.length > 0) {
-      // Group rows by lcId
-      const groupedByLc = machineryRows.reduce<Record<string, MachineryRow[]>>((acc, row) => {
+      const visibleMachinery = machineryRows.slice(0, machineryLimit);
+
+      // Group rows by lcId for visible rows
+      const groupedByLc = visibleMachinery.reduce<Record<string, MachineryRow[]>>((acc, row) => {
         if (!acc[row.lcId]) acc[row.lcId] = [];
         acc[row.lcId].push(row);
         return acc;
@@ -357,8 +416,8 @@ function SearchPageContent() {
 
       const lcGroups = Object.entries(groupedByLc);
 
-      const grandTotalQty = machineryRows.reduce((sum, r) => sum + (r.qty ?? 0), 0);
-      const grandTotalPrice = machineryRows.reduce((sum, r) => sum + (r.totalPrice ?? 0), 0);
+      const grandTotalQty = visibleMachinery.reduce((sum, r) => sum + (r.qty ?? 0), 0);
+      const grandTotalPrice = visibleMachinery.reduce((sum, r) => sum + (r.totalPrice ?? 0), 0);
 
       return (
         <div className="space-y-4">
@@ -462,11 +521,11 @@ function SearchPageContent() {
             );
           })}
 
-          {/* Grand Total — only shown when multiple LCs */}
+          {/* Grand Total — only shown when multiple visible LCs */}
           {lcGroups.length > 1 && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between gap-4">
               <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                Grand Total ({lcGroups.length} L/Cs)
+                Grand Total ({visibleMachinery.length} items shown)
               </span>
               <div className="flex items-center gap-6 text-sm font-semibold">
                 <span className="text-muted-foreground text-xs">Total Qty:</span>
@@ -476,6 +535,19 @@ function SearchPageContent() {
                   {grandTotalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
+            </div>
+          )}
+
+          {machineryRows.length > machineryLimit && (
+            <div className="flex justify-center pt-2">
+              <Button 
+                variant="default" 
+                onClick={() => setMachineryLimit(prev => prev + 20)}
+                className="font-bold gap-2"
+              >
+                <Package className="h-4 w-4" />
+                Load More Machinery ({machineryRows.length - machineryLimit} remaining)
+              </Button>
             </div>
           )}
         </div>
