@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
-import { Search as SearchIcon, Layers, Wrench, Hourglass, ShieldCheck, ShieldOff, BarChart3, CalendarDays, Microscope, Loader2, Info, AlertTriangle, ChevronLeft, ChevronRight, FileEdit, HelpCircle } from 'lucide-react';
+import { Search as SearchIcon, Layers, Wrench, Hourglass, ShieldCheck, ShieldOff, BarChart3, CalendarDays, Microscope, Loader2, Info, AlertTriangle, ChevronLeft, ChevronRight, FileEdit, HelpCircle, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Swal from 'sweetalert2';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -18,6 +18,9 @@ import { collection, getDocs, query, Timestamp, orderBy as firestoreOrderBy, whe
 import type { InstallationReportDocument, InstallationDetailItem as PageInstallationDetailItemType, ClaimReportDocument } from '@/types';
 import { format, parseISO, isValid, getYear, addDays, isBefore, differenceInDays, startOfDay } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRef } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 
 const currentSystemYear = new Date().getFullYear();
@@ -67,6 +70,8 @@ export default function WarrantySearchPage() {
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const [currentSearchPage, setCurrentSearchPage] = useState(1);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const [warrantyStats, setWarrantyStats] = useState({
     totalLcMachineries: 0,
@@ -329,6 +334,35 @@ export default function WarrantySearchPage() {
     setIsSearching(false);
   };
 
+  const handleDownloadPDF = async () => {
+    if (!resultsRef.current || !displayedSearchTerm) return;
+
+    setIsDownloading(true);
+    try {
+      const element = resultsRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`warranty-search-${displayedSearchTerm.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const totalSearchPages = Math.ceil(searchResults.length / ITEMS_PER_PAGE);
   const indexOfLastSearchItem = currentSearchPage * ITEMS_PER_PAGE;
   const indexOfFirstSearchItem = indexOfLastSearchItem - ITEMS_PER_PAGE;
@@ -419,10 +453,22 @@ export default function WarrantySearchPage() {
             )}
 
             {currentSearchItems.length > 0 && !isSearching && !searchError && (
-              <div className="space-y-6 mt-8">
-                <h3 className="text-lg font-semibold text-card-foreground mt-6 mb-2 text-center">
-                  Search Results for &quot;{displayedSearchTerm || 'All Demo Machines'}&quot; in {selectedYear === "All Years" ? "All Years" : selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching entries):
-                </h3>
+              <div className="space-y-6 mt-8" ref={resultsRef}>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <h3 className="text-lg font-semibold text-card-foreground text-center sm:text-left">
+                    Search Results for &quot;{displayedSearchTerm || 'All Demo Machines'}&quot; in {selectedYear === "All Years" ? "All Years" : selectedYear} (Showing {indexOfFirstSearchItem + 1}-{Math.min(indexOfLastSearchItem, searchResults.length)} of {searchResults.length} matching entries):
+                  </h3>
+                  <Button
+                    onClick={handleDownloadPDF}
+                    disabled={isDownloading}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    {isDownloading ? 'Generating PDF...' : 'Download Results PDF'}
+                  </Button>
+                </div>
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>

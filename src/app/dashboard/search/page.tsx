@@ -1,12 +1,12 @@
 
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search as SearchIcon, FileText, Users, Building, Layers, CalendarDays, Link as LinkIcon, Loader2, AlertTriangle, Package } from 'lucide-react';
+import { Search as SearchIcon, FileText, Users, Building, Layers, CalendarDays, Link as LinkIcon, Loader2, AlertTriangle, Package, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { format, parseISO, isValid } from 'date-fns';
@@ -14,6 +14,8 @@ import { firestore } from '@/lib/firebase/config';
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import type { LCEntryDocument, CustomerDocument, SupplierDocument } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface MachineryRow {
   model: string;
@@ -34,6 +36,9 @@ function SearchPageContent() {
 
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [displayedQuery, setDisplayedQuery] = useState(initialQuery);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const [lcResults, setLcResults] = useState<LCEntryDocument[]>([]);
   const [isLoadingLcSearch, setIsLoadingLcSearch] = useState(false);
@@ -223,6 +228,35 @@ function SearchPageContent() {
       return isValid(date) ? format(date, 'PPP') : 'Invalid Date';
     } catch (e) {
       return 'N/A';
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!resultsRef.current || !displayedQuery) return;
+
+    setIsDownloading(true);
+    try {
+      const element = resultsRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`search-results-${displayedQuery.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -483,8 +517,18 @@ function SearchPageContent() {
             </form>
 
             {displayedQuery && (
-              <div className="mb-6 text-center">
+              <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <p className="text-lg">Showing results for: <span className="font-semibold text-primary">{displayedQuery}</span></p>
+                <Button
+                  onClick={handleDownloadPDF}
+                  disabled={isDownloading || isLoadingLcSearch || isLoadingApplicantSearch || isLoadingBeneficiarySearch || isLoadingMachinery}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  {isDownloading ? 'Generating PDF...' : 'Download Results PDF'}
+                </Button>
               </div>
             )}
 
@@ -496,7 +540,7 @@ function SearchPageContent() {
             )}
 
             {displayedQuery && (
-              <div className="space-y-6">
+              <div className="space-y-6" ref={resultsRef}>
                 {/* PI / Machinery Information - shown first as requested */}
                 <Card className="border-primary/20 shadow-sm">
                   <CardHeader className="pb-3">
