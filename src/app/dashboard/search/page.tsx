@@ -24,6 +24,7 @@ interface MachineryRow {
   year?: number;
   lcNo: string;
   lcId: string;
+  finalPIUrl?: string;
 }
 
 function SearchPageContent() {
@@ -152,50 +153,26 @@ function SearchPageContent() {
       }
 
       // --- PI / Machinery Information Search ---
-      // Strategy: fetch LC entries that match applicantName starts-with query,
-      // then client-side filter piMachineryInfo rows where model contains the query.
-      // Also fetch by applicantName to get all their machinery. We combine both.
+      // Firestore cannot do partial string matching on nested array fields.
+      // Strategy: fetch all lc_entries that have piMachineryInfo, then
+      // client-side filter rows where model/applicantName/lcNo contains the query.
       try {
         const lcEntriesRef = collection(firestore, "lc_entries");
-
-        // Fetch LCs by applicantName starts-with
-        const lcByApplicantQuery = query(
-          lcEntriesRef,
-          where("applicantName", ">=", trimmedQuery),
-          where("applicantName", "<=", trimmedQuery + "\uf8ff"),
-          limit(50)
-        );
-
-        // Fetch LCs that match LC number (already done above, reuse below)
-        const [byApplicantSnap] = await Promise.all([
-          getDocs(lcByApplicantQuery),
-        ]);
-
-        const allLcDocs = new Map<string, LCEntryDocument>();
-
-        byApplicantSnap.forEach((doc) => {
-          allLcDocs.set(doc.id, { id: doc.id, ...doc.data() } as LCEntryDocument);
-        });
-
-        // Also iterate lcResults (from exact LC number match)
-        // These will be set once the first fetch completes, so re-fetch here for simplicity
-        const lcByExactQuery = query(
-          lcEntriesRef,
-          where("documentaryCreditNumber", "==", trimmedQuery)
-        );
-        const lcExactSnap = await getDocs(lcByExactQuery);
-        lcExactSnap.forEach((doc) => {
-          allLcDocs.set(doc.id, { id: doc.id, ...doc.data() } as LCEntryDocument);
-        });
-
-        // Build rows: for each LC with piMachineryInfo, create a row per item
-        const rows: MachineryRow[] = [];
         const queryLower = trimmedQuery.toLowerCase();
 
-        allLcDocs.forEach((lc) => {
+        // Fetch all entries that have piMachineryInfo (up to 500)
+        // We filter client-side because Firestore can't search inside array objects
+        const allLcQuery = query(lcEntriesRef, limit(500));
+        const allLcSnap = await getDocs(allLcQuery);
+
+        const rows: MachineryRow[] = [];
+
+        allLcSnap.forEach((docSnap) => {
+          const lc = { id: docSnap.id, ...docSnap.data() } as LCEntryDocument;
           if (!lc.piMachineryInfo || lc.piMachineryInfo.length === 0) return;
+
           lc.piMachineryInfo.forEach((item) => {
-            // Include if model, applicantName, or LC number matches the query
+            // Match if model, applicantName, or LC number contains the query (case-insensitive)
             const modelMatch = item.model?.toLowerCase().includes(queryLower);
             const applicantMatch = lc.applicantName?.toLowerCase().includes(queryLower);
             const lcNoMatch = lc.documentaryCreditNumber?.toLowerCase().includes(queryLower);
@@ -210,6 +187,7 @@ function SearchPageContent() {
                 year: lc.year,
                 lcNo: lc.documentaryCreditNumber || '—',
                 lcId: lc.id,
+                finalPIUrl: lc.finalPIUrl || undefined,
               });
             }
           });
@@ -222,6 +200,7 @@ function SearchPageContent() {
       } finally {
         setIsLoadingMachinery(false);
       }
+
     };
 
     performSearch();
@@ -335,85 +314,136 @@ function SearchPageContent() {
       );
     }
     if (machineryRows.length > 0) {
+      // Group rows by lcId
+      const groupedByLc = machineryRows.reduce<Record<string, MachineryRow[]>>((acc, row) => {
+        if (!acc[row.lcId]) acc[row.lcId] = [];
+        acc[row.lcId].push(row);
+        return acc;
+      }, {});
+
+      const lcGroups = Object.entries(groupedByLc);
+
       const grandTotalQty = machineryRows.reduce((sum, r) => sum + (r.qty ?? 0), 0);
       const grandTotalPrice = machineryRows.reduce((sum, r) => sum + (r.totalPrice ?? 0), 0);
 
       return (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/60 text-muted-foreground text-xs uppercase tracking-wider">
-                <th className="px-3 py-2 text-left font-semibold">#</th>
-                <th className="px-3 py-2 text-left font-semibold">Model</th>
-                <th className="px-3 py-2 text-left font-semibold">Applicant Name</th>
-                <th className="px-3 py-2 text-right font-semibold">Qty</th>
-                <th className="px-3 py-2 text-right font-semibold">U. Price</th>
-                <th className="px-3 py-2 text-right font-semibold">T. Price</th>
-                <th className="px-3 py-2 text-center font-semibold">Year</th>
-                <th className="px-3 py-2 text-left font-semibold">LC No.</th>
-              </tr>
-            </thead>
-            <tbody>
-              {machineryRows.map((row, idx) => (
-                <tr
-                  key={`${row.lcId}-${idx}`}
-                  className={cn(
-                    "border-t border-border transition-colors",
-                    idx % 2 === 0 ? "bg-background" : "bg-muted/20",
-                    "hover:bg-primary/5"
-                  )}
-                >
-                  <td className="px-3 py-2 text-muted-foreground text-xs">{idx + 1}</td>
-                  <td className="px-3 py-2 font-medium text-foreground">
-                    {row.model}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground">{row.applicantName}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {row.qty != null ? row.qty : '—'}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {row.unitPrice != null
-                      ? row.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums font-semibold text-primary">
-                    {row.totalPrice != null
-                      ? row.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
-                      {row.year ?? '—'}
+        <div className="space-y-4">
+          {lcGroups.map(([lcId, rows]) => {
+            const firstRow = rows[0];
+            const groupTotalQty = rows.reduce((sum, r) => sum + (r.qty ?? 0), 0);
+            const groupTotalPrice = rows.reduce((sum, r) => sum + (r.totalPrice ?? 0), 0);
+
+            return (
+              <div key={lcId} className="rounded-lg border border-border overflow-hidden shadow-sm">
+                {/* Card Header: LC info */}
+                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-muted/40 border-b border-border">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Applicant:</span>
+                    <span className="text-sm font-semibold text-foreground">{firstRow.applicantName}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Year:</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      {firstRow.year ?? '—'}
                     </span>
-                  </td>
-                  <td className="px-3 py-2">
+                  </div>
+                  <div className="flex items-center gap-3">
                     <Link
-                      href={`/dashboard/total-lc/${row.lcId}/edit`}
-                      className="text-primary hover:underline text-xs font-medium flex items-center gap-1"
+                      href={`/dashboard/total-lc/${lcId}/edit`}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                     >
                       <LinkIcon className="h-3 w-3 shrink-0" />
-                      {row.lcNo}
+                      {firstRow.lcNo}
                     </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-border bg-muted/40 font-semibold text-sm">
-                <td colSpan={3} className="px-3 py-2 text-right text-muted-foreground text-xs uppercase tracking-wider">
-                  Grand Total
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums text-foreground">
-                  {grandTotalQty}
-                </td>
-                <td className="px-3 py-2 text-right text-muted-foreground">—</td>
-                <td className="px-3 py-2 text-right tabular-nums text-primary font-bold">
+                    {firstRow.finalPIUrl && (
+                      <a
+                        href={firstRow.finalPIUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View Final PI Document"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline"
+                      >
+                        <LinkIcon className="h-3 w-3 shrink-0" />
+                        View PI
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-muted/30 text-muted-foreground text-xs uppercase tracking-wider">
+                        <th className="px-3 py-2 text-left font-semibold w-8">#</th>
+                        <th className="px-3 py-2 text-left font-semibold">Model</th>
+                        <th className="px-3 py-2 text-right font-semibold w-20">Qty</th>
+                        <th className="px-3 py-2 text-right font-semibold w-32">U. Price</th>
+                        <th className="px-3 py-2 text-right font-semibold w-32">T. Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row, idx) => (
+                        <tr
+                          key={`${lcId}-${idx}`}
+                          className={cn(
+                            "border-t border-border transition-colors hover:bg-primary/5",
+                            idx % 2 === 0 ? "bg-background" : "bg-muted/10"
+                          )}
+                        >
+                          <td className="px-3 py-2 text-muted-foreground text-xs">{idx + 1}</td>
+                          <td className="px-3 py-2 font-medium text-foreground">{row.model}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {row.qty != null ? row.qty : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {row.unitPrice != null
+                              ? row.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                              : '—'}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums font-semibold text-primary">
+                            {row.totalPrice != null
+                              ? row.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                              : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-border bg-muted/30 font-semibold text-sm">
+                        <td colSpan={2} className="px-3 py-2 text-right text-muted-foreground text-xs uppercase tracking-wider">
+                          Sub‑Total
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                          {groupTotalQty}
+                        </td>
+                        <td className="px-3 py-2 text-right text-muted-foreground">—</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-primary font-bold">
+                          {groupTotalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Grand Total — only shown when multiple LCs */}
+          {lcGroups.length > 1 && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between gap-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                Grand Total ({lcGroups.length} L/Cs)
+              </span>
+              <div className="flex items-center gap-6 text-sm font-semibold">
+                <span className="text-muted-foreground text-xs">Total Qty:</span>
+                <span className="tabular-nums text-foreground">{grandTotalQty}</span>
+                <span className="text-muted-foreground text-xs">Total Price:</span>
+                <span className="tabular-nums text-primary font-bold">
                   {grandTotalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td colSpan={2} />
-              </tr>
-            </tfoot>
-          </table>
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -423,6 +453,7 @@ function SearchPageContent() {
       </p>
     );
   };
+
 
   return (
     <div className="mx-[15px]">
