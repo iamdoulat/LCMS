@@ -183,7 +183,7 @@ export default function MobileDashboardPage() {
     const [calculatedPolicy, setCalculatedPolicy] = useState<AttendancePolicyDocument | null>(null);
     const [todayDailyPolicy, setTodayDailyPolicy] = useState<DailyAttendancePolicy | null>(null);
     const [workedTime, setWorkedTime] = useState<string>('00:00');
-    const [isOutTimeCheckLoading, setIsOutTimeCheckLoading] = useState(false);
+
 
     // Load settings from localStorage
     useEffect(() => {
@@ -909,32 +909,31 @@ export default function MobileDashboardPage() {
                             <div className="flex flex-col items-center gap-4 relative z-10 w-full">
                                 <motion.button
                                     whileTap={{ scale: 0.9 }}
-                                    onClick={async () => {
-                                        // Validation: Check for pending Check-In
-                                        setIsOutTimeCheckLoading(true);
-                                        try {
+                                    onClick={() => {
+                                        setAttendanceType('out');
+                                        setIsAttendanceModalOpen(true);
+
+                                        // Background Validation: Check for pending Check-In
+                                        // Wrap in setTimeout to avoid Firestore race conditions with suspension network events
+                                        setTimeout(() => {
                                             const canonicalId = currentEmployeeId || user?.uid;
                                             if (canonicalId) {
-                                                const isActiveVisit = await hasActiveCheckIn(canonicalId);
-                                                if (isActiveVisit) {
-                                                    Swal.fire({
-                                                        title: "Action Restricted",
-                                                        text: "Please check out from Check In tab first.",
-                                                        icon: "error",
-                                                        timer: 3000,
-                                                        showConfirmButton: false
-                                                    });
-                                                    return;
-                                                }
+                                                hasActiveCheckIn(canonicalId).then(isActiveVisit => {
+                                                    if (isActiveVisit) {
+                                                        setIsAttendanceModalOpen(false);
+                                                        Swal.fire({
+                                                            title: "Action Restricted",
+                                                            text: "Please check out from Check In tab first.",
+                                                            icon: "error",
+                                                            timer: 3000,
+                                                            showConfirmButton: false
+                                                        });
+                                                    }
+                                                }).catch(error => {
+                                                    console.error("Error validating out time:", error);
+                                                });
                                             }
-
-                                            setAttendanceType('out');
-                                            setIsAttendanceModalOpen(true);
-                                        } catch (error) {
-                                            console.error("Error validating out time:", error);
-                                        } finally {
-                                            setIsOutTimeCheckLoading(false);
-                                        }
+                                        }, 100);
                                     }}
                                     disabled={!todayAttendance?.inTime || !!todayAttendance?.outTime || !!restrictionNote}
                                     className={cn(
@@ -955,11 +954,7 @@ export default function MobileDashboardPage() {
                                             <div className="absolute inset-0 rounded-full bg-sky-500 opacity-20 animate-ping [animation-duration:6000ms] pointer-events-none z-[-1]" style={{ animationDelay: '3000ms' }} />
                                         </>
                                     )}
-                                    {isOutTimeCheckLoading ? (
-                                        <Loader2 className="h-6 w-6 mb-0.5 animate-spin" />
-                                    ) : (
-                                        <Clock className="h-6 w-6 mb-0.5" />
-                                    )}
+                                    <Clock className="h-6 w-6 mb-0.5" />
                                     <span className="text-xs font-semibold">Out Time</span>
                                     {todayAttendance?.outTime && (
                                         <span className="text-[10px] font-medium bg-white/20 px-1.5 py-0.5 rounded-full">{formatAttendanceTime(todayAttendance.outTime)}</span>
