@@ -87,6 +87,22 @@ function MobileSearchContent() {
     setDisplayedQuery(queryFromUrl);
   }, [searchParams]);
 
+  const [cachedLcEntries, setCachedLcEntries] = useState<LCEntryDocument[]>([]);
+
+  // Pre-fetch machinery data in the background so the first search is incredibly fast
+  useEffect(() => {
+    const prefetchMachinery = async () => {
+      try {
+        const allLcQuery = query(collection(firestore, "lc_entries"), limit(500));
+        const allLcSnap = await getDocs(allLcQuery);
+        setCachedLcEntries(allLcSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LCEntryDocument)));
+      } catch (e) {
+        console.warn("Machinery prefetch failed", e);
+      }
+    };
+    prefetchMachinery();
+  }, []);
+
   useEffect(() => {
     const performSearch = async () => {
       if (!displayedQuery.trim()) {
@@ -109,62 +125,52 @@ function MobileSearchContent() {
       setIsLoadingBeneficiarySearch(true);
       setIsLoadingMachinery(true);
 
-      try {
-        // L/C Search
-        const lcEntriesRef = collection(firestore, "lc_entries");
+      const lcEntriesRef = collection(firestore, "lc_entries");
+      const customersRef = collection(firestore, "customers");
+      const suppliersRef = collection(firestore, "suppliers");
+
+      const fetchLC = async () => {
         const lcQuery = query(lcEntriesRef, where("documentaryCreditNumber", "==", trimmedQuery));
         const lcSnap = await getDocs(lcQuery);
-        const fetchedLcs = lcSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LCEntryDocument));
-        setLcResults(fetchedLcs);
-      } catch (error: any) {
-        setLcSearchError(error.message);
-      } finally {
-        setIsLoadingLcSearch(false);
-      }
+        setLcResults(lcSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LCEntryDocument)));
+      };
 
-      try {
-        // Applicant Search
-        const customersRef = collection(firestore, "customers");
+      const fetchApp = async () => {
         const appQuery = query(
           customersRef,
           where("applicantName", ">=", trimmedQuery),
           where("applicantName", "<=", trimmedQuery + "\uf8ff"),
-          limit(100) // Support load more
+          limit(100)
         );
         const appSnap = await getDocs(appQuery);
         setApplicantResults(appSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as CustomerDocument)));
-      } catch (error: any) {
-        setApplicantSearchError(error.message);
-      } finally {
-        setIsLoadingApplicantSearch(false);
-      }
+      };
 
-      try {
-        // Beneficiary Search
-        const suppliersRef = collection(firestore, "suppliers");
+      const fetchBen = async () => {
         const benQuery = query(
           suppliersRef,
           where("beneficiaryName", ">=", trimmedQuery),
           where("beneficiaryName", "<=", trimmedQuery + "\uf8ff"),
-          limit(100) // Support load more
+          limit(100)
         );
         const benSnap = await getDocs(benQuery);
         setBeneficiaryResults(benSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplierDocument)));
-      } catch (error: any) {
-        setBeneficiarySearchError(error.message);
-      } finally {
-        setIsLoadingBeneficiarySearch(false);
-      }
+      };
 
-      try {
-        // Machinery Search (Client-side filtered)
-        const lcEntriesRef = collection(firestore, "lc_entries");
-        const allLcQuery = query(lcEntriesRef, limit(500));
-        const allLcSnap = await getDocs(allLcQuery);
+      const fetchMachinery = async () => {
+        let docs: LCEntryDocument[];
+        
+        if (cachedLcEntries.length > 0) {
+            docs = cachedLcEntries;
+        } else {
+            const allLcQuery = query(lcEntriesRef, limit(500));
+            const allLcSnap = await getDocs(allLcQuery);
+            docs = allLcSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LCEntryDocument));
+            setCachedLcEntries(docs); // Cache it for next time
+        }
 
         const rows: MachineryRow[] = [];
-        allLcSnap.forEach((docSnap) => {
-          const lc = { id: docSnap.id, ...docSnap.data() } as LCEntryDocument;
+        docs.forEach((lc) => {
           if (!lc.piMachineryInfo) return;
 
           lc.piMachineryInfo.forEach((item) => {
@@ -188,15 +194,19 @@ function MobileSearchContent() {
           });
         });
         setMachineryRows(rows);
-      } catch (error: any) {
-        setMachineryError(error.message);
-      } finally {
-        setIsLoadingMachinery(false);
-      }
+      };
+
+      // Launch all independent network requests entirely in parallel
+      Promise.allSettled([
+        fetchLC().catch(e => setLcSearchError(e.message)).finally(() => setIsLoadingLcSearch(false)),
+        fetchApp().catch(e => setApplicantSearchError(e.message)).finally(() => setIsLoadingApplicantSearch(false)),
+        fetchBen().catch(e => setBeneficiarySearchError(e.message)).finally(() => setIsLoadingBeneficiarySearch(false)),
+        fetchMachinery().catch(e => setMachineryError(e.message)).finally(() => setIsLoadingMachinery(false))
+      ]);
     };
 
     performSearch();
-  }, [displayedQuery]);
+  }, [displayedQuery, cachedLcEntries]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

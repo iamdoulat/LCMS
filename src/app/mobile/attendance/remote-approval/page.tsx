@@ -60,6 +60,7 @@ export default function RemoteAttendanceApprovalPage() {
     }, [isPrivileged, supervisedEmployees, explicitSubordinates]);
 
     const [records, setRecords] = useState<UnifiedApprovalRecord[]>([]);
+    const [rawRecords, setRawRecords] = useState<UnifiedApprovalRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('Pending');
     const [typeFilter, setTypeFilter] = useState<'All' | 'In Time' | 'Out Time'>('All');
@@ -89,7 +90,9 @@ export default function RemoteAttendanceApprovalPage() {
         const cachedRecords = localStorage.getItem('remoteAttendanceRecords');
         if (cachedRecords) {
             try {
-                setRecords(JSON.parse(cachedRecords));
+                const parsed = JSON.parse(cachedRecords);
+                setRecords(parsed);
+                setRawRecords(parsed);
                 setLoading(false); // If we have cache, we can hide initial loader early
             } catch (e) {
                 console.error('Error parsing cached records', e);
@@ -263,33 +266,10 @@ export default function RemoteAttendanceApprovalPage() {
                 }
             }));
 
-            // Filter by date range and sort
-            const filteredRecords = fetchedRecords.filter((r) => {
-                const recordDate = new Date(r.timestamp);
-                const isWithinDate = dateRange?.from && dateRange?.to
-                    ? recordDate >= startOfDay(dateRange.from) && recordDate <= endOfDay(dateRange.to)
-                    : true;
-
-                const matchesStatus = statusFilter === 'All'
-                    ? true
-                    : (r.status || 'Pending') === statusFilter;
-
-                const matchesType = typeFilter === 'All'
-                    ? true
-                    : r.type === typeFilter;
-
-                const matchesEmployee = selectedEmployeeId === 'All'
-                    ? true
-                    : r.employeeId === selectedEmployeeId;
-
-                return isWithinDate && matchesStatus && matchesType && matchesEmployee;
-            });
-
-            filteredRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-            setRecords(filteredRecords);
-
-            // Update cache
-            localStorage.setItem('remoteAttendanceRecords', JSON.stringify(filteredRecords));
+            // Only sort raw records initially, don't apply client-side filters here
+            fetchedRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            
+            setRawRecords(fetchedRecords);
 
         } catch (error) {
             console.error("Error fetching remote attendance:", error);
@@ -298,6 +278,41 @@ export default function RemoteAttendanceApprovalPage() {
         }
     };
 
+    // Client-side filtering logic: runs INSTANTLY without network requests when filters change
+    useEffect(() => {
+        if (!rawRecords) return;
+
+        const filteredRecords = rawRecords.filter((r) => {
+            const recordDate = new Date(r.timestamp);
+            const isWithinDate = dateRange?.from && dateRange?.to
+                ? recordDate >= startOfDay(dateRange.from) && recordDate <= endOfDay(dateRange.to)
+                : true;
+
+            const matchesStatus = statusFilter === 'All'
+                ? true
+                : (r.status || 'Pending') === statusFilter;
+
+            const matchesType = typeFilter === 'All'
+                ? true
+                : r.type === typeFilter;
+
+            const matchesEmployee = selectedEmployeeId === 'All'
+                ? true
+                : r.employeeId === selectedEmployeeId;
+
+            return isWithinDate && matchesStatus && matchesType && matchesEmployee;
+        });
+
+        // Maintain sort order
+        filteredRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setRecords(filteredRecords);
+        
+        // Cache the currently filtered view
+        localStorage.setItem('remoteAttendanceRecords', JSON.stringify(filteredRecords));
+        
+    }, [rawRecords, dateRange, statusFilter, typeFilter, selectedEmployeeId]);
+
+    // Network request logic: only triggers when deeply required (e.g., month change, app startup)
     useEffect(() => {
         const fetchInitialData = async () => {
             if (isSupervisorLoading) return;
@@ -317,10 +332,14 @@ export default function RemoteAttendanceApprovalPage() {
             };
 
             setVisibleCount(50);
-            await Promise.all([fetchPolicies(), fetchRemoteAttendance()]);
+            
+            // Run non-blocking sequence to prevent network starvation
+            fetchPolicies();
+            fetchRemoteAttendance();
         };
         fetchInitialData();
-    }, [user, isSupervisor, effectiveSupervisedEmployees, dateRange, statusFilter, typeFilter, selectedEmployeeId, isSupervisorLoading]);
+    // Intentionally omitting quick filters to prevent network storming when user clicks 'Approved' etc.
+    }, [user?.email, isSupervisor, effectiveSupervisedEmployees.length, dateRange?.from?.getTime(), isSupervisorLoading]);
 
     const containerRef = usePullToRefresh(fetchRemoteAttendance);
 

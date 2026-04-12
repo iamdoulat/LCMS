@@ -157,37 +157,12 @@ export default function MobileCheckInOutPage() {
                     return user.uid;
                 };
 
-                const [canonicalId, holidaysSnap] = await Promise.all([
-                    fetchCanonicalId(),
-                    getDocs(collection(firestore, 'holidays'))
-                ]);
+                const canonicalId = await fetchCanonicalId();
 
                 if (!active) return;
                 setCurrentUserEmployeeId(canonicalId);
 
-                // Now fetch remaining data dependent on canonicalId in parallel
-                const [empSnap, attSnap, leavesSnap] = await Promise.all([
-                    getDoc(doc(firestore, 'employees', canonicalId)),
-                    getDoc(doc(firestore, 'attendance', `${canonicalId}_${format(new Date(), 'yyyy-MM-dd')}`)),
-                    getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', canonicalId), where('status', '==', 'Approved')))
-                ]);
-
-                if (!active) return;
-
-                const profile = empSnap.exists() ? { id: empSnap.id, ...empSnap.data() } as EmployeeDocument : null;
-                const attData = attSnap.exists() ? attSnap.data() : null;
-                const hData = holidaysSnap.docs.map(d => ({ id: d.id, ...d.data() } as HolidayDocument));
-                const lData = leavesSnap.docs.map(d => ({ id: d.id, ...d.data() } as LeaveApplicationDocument));
-
-                setEmployeeProfile(profile);
-                setTodayAttendance(attData);
-                setHolidays(hData);
-                setLeaves(lData);
-
-                // Update cache
-                localStorage.setItem(cacheKeySupportive, JSON.stringify({ holidays: hData, leaves: lData, profile }));
-
-                // Setup listener using canonicalId
+                // Setup listener using canonicalId IMMEDIATELY before blocking on other data
                 const qValues = query(collection(firestore, 'multiple_check_inout'), where('employeeId', '==', canonicalId));
 
                 unsubscribe = onSnapshot(qValues, (snapshot) => {
@@ -205,11 +180,37 @@ export default function MobileCheckInOutPage() {
                     } else {
                         setLastRecord(null);
                     }
-                    setIsLoading(false);
+                    setIsLoading(false); // UI unblocks instantly when records arrive
                 }, (err) => {
                     console.error("Personal records listener error:", err);
                     if (active) setIsLoading(false);
                 });
+
+                // Fetch validation data in parallel WITHOUT blocking the UI spinner
+                Promise.all([
+                    getDocs(collection(firestore, 'holidays')),
+                    getDoc(doc(firestore, 'employees', canonicalId)),
+                    getDoc(doc(firestore, 'attendance', `${canonicalId}_${format(new Date(), 'yyyy-MM-dd')}`)),
+                    getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', '==', canonicalId), where('status', '==', 'Approved')))
+                ]).then(([holidaysSnap, empSnap, attSnap, leavesSnap]) => {
+                    if (!active) return;
+                    
+                    const profile = empSnap.exists() ? { id: empSnap.id, ...empSnap.data() } as EmployeeDocument : null;
+                    const attData = attSnap.exists() ? attSnap.data() : null;
+                    const hData = holidaysSnap.docs.map(d => ({ id: d.id, ...d.data() } as HolidayDocument));
+                    const lData = leavesSnap.docs.map(d => ({ id: d.id, ...d.data() } as LeaveApplicationDocument));
+
+                    setEmployeeProfile(profile);
+                    setTodayAttendance(attData);
+                    setHolidays(hData);
+                    setLeaves(lData);
+
+                    // Update cache
+                    localStorage.setItem(cacheKeySupportive, JSON.stringify({ holidays: hData, leaves: lData, profile }));
+                }).catch(err => {
+                    console.error("Error loading supportive validation data:", err);
+                });
+
             } catch (err) {
                 console.error("Error setting up personal records listener:", err);
                 if (active) setIsLoading(false);
