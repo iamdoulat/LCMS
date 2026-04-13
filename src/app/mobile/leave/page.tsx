@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import {
     format, isWithinInterval, parseISO, getMonth, getYear, getDaysInMonth, getDay,
-    startOfMonth, isToday as isTodayFn
+    startOfMonth, isToday as isTodayFn, startOfDay, endOfDay
 } from 'date-fns';
 import { collection, query, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
@@ -101,9 +101,11 @@ export default function MobileLeavePage() {
             // Find leaves for this day
             const dayLeaves = leaves?.filter(leave => {
                 if (!['Approved', 'Pending'].includes(leave.status)) return false;
-                const fromDate = parseISO(leave.fromDate);
-                const toDate = parseISO(leave.toDate);
-                return isWithinInterval(date, { start: fromDate, end: toDate });
+                try {
+                    const start = startOfDay(parseISO(leave.fromDate));
+                    const end = endOfDay(parseISO(leave.toDate));
+                    return isWithinInterval(date, { start, end });
+                } catch { return false; }
             }).map(leave => {
                 const employee = employees?.find(e => e.id === leave.employeeId);
                 if (employee && format(date, 'yyyy-MM-dd') === '2026-01-28') {
@@ -123,9 +125,11 @@ export default function MobileLeavePage() {
             // Find visits for this day
             const dayVisits = visits?.filter(visit => {
                 if (!['Approved', 'Pending'].includes(visit.status)) return false;
-                const fromDate = parseISO(visit.fromDate);
-                const toDate = parseISO(visit.toDate);
-                return isWithinInterval(date, { start: fromDate, end: toDate });
+                try {
+                    const start = startOfDay(parseISO(visit.fromDate));
+                    const end = endOfDay(parseISO(visit.toDate));
+                    return isWithinInterval(date, { start, end });
+                } catch { return false; }
             }).map(visit => ({
                 ...visit,
                 employee: employees?.find(e => e.id === visit.employeeId)
@@ -141,12 +145,14 @@ export default function MobileLeavePage() {
             }) || [];
 
             // Check if this is a holiday
-            const holiday = holidays?.find(h =>
-                isWithinInterval(date, {
-                    start: parseISO(h.fromDate),
-                    end: parseISO(h.toDate || h.fromDate)
-                })
-            ) || null;
+            const holiday = holidays?.find(h => {
+                try {
+                    return isWithinInterval(date, {
+                        start: startOfDay(parseISO(h.fromDate)),
+                        end: endOfDay(parseISO(h.toDate || h.fromDate))
+                    });
+                } catch { return false; }
+            }) || null;
 
             return {
                 day,

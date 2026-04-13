@@ -19,7 +19,9 @@ import {
     subMonths,
     isSameDay,
     parseISO,
-    isWithinInterval
+    isWithinInterval,
+    startOfDay,
+    endOfDay
 } from 'date-fns';
 import type { LeaveApplicationDocument, EmployeeDocument, HolidayDocument, VisitApplicationDocument } from '@/types';
 import { cn } from '@/lib/utils';
@@ -117,8 +119,8 @@ export default function LeaveCalendarPage() {
     const getDayApps = (date: Date) => {
         const dayLeaves = leaveApplications.filter(leave => {
             try {
-                const start = parseISO(leave.fromDate);
-                const end = parseISO(leave.toDate);
+                const start = startOfDay(parseISO(leave.fromDate));
+                const end = endOfDay(parseISO(leave.toDate));
                 return isWithinInterval(date, { start, end });
             } catch { return false; }
         }).map(leave => ({
@@ -129,8 +131,8 @@ export default function LeaveCalendarPage() {
 
         const dayVisits = visitApplications.filter(visit => {
             try {
-                const start = parseISO(visit.fromDate);
-                const end = parseISO(visit.toDate);
+                const start = startOfDay(parseISO(visit.fromDate));
+                const end = endOfDay(parseISO(visit.toDate));
                 return isWithinInterval(date, { start, end });
             } catch { return false; }
         }).map(visit => ({
@@ -158,10 +160,16 @@ export default function LeaveCalendarPage() {
     };
 
     const getHoliday = (date: Date) => {
-        return holidays.find(h => isWithinInterval(date, {
-            start: parseISO(h.fromDate),
-            end: parseISO(h.toDate || h.fromDate)
-        }));
+        return holidays.find(h => {
+            try {
+                return isWithinInterval(date, {
+                    start: startOfDay(parseISO(h.fromDate)),
+                    end: endOfDay(parseISO(h.toDate || h.fromDate))
+                });
+            } catch {
+                return false;
+            }
+        });
     };
 
     const weekDays = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
