@@ -21,7 +21,7 @@ import {
     parseISO,
     isWithinInterval
 } from 'date-fns';
-import type { LeaveApplicationDocument, EmployeeDocument, HolidayDocument } from '@/types';
+import type { LeaveApplicationDocument, EmployeeDocument, HolidayDocument, VisitApplicationDocument } from '@/types';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -32,6 +32,7 @@ export default function LeaveCalendarPage() {
     const [loading, setLoading] = useState(true);
     const [employeeData, setEmployeeData] = useState<EmployeeDocument | null>(null);
     const [leaveApplications, setLeaveApplications] = useState<LeaveApplicationDocument[]>([]);
+    const [visitApplications, setVisitApplications] = useState<VisitApplicationDocument[]>([]);
     const [holidays, setHolidays] = useState<HolidayDocument[]>([]);
     const [allEmployees, setAllEmployees] = useState<EmployeeDocument[]>([]);
 
@@ -63,6 +64,14 @@ export default function LeaveCalendarPage() {
                 );
                 const leavesSnapshot = await getDocs(leavesQ);
                 setLeaveApplications(leavesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeaveApplicationDocument)));
+
+                // Fetch all approved/pending visits
+                const visitsQ = query(
+                    collection(firestore, 'visit_applications'),
+                    where('status', 'in', ['Approved', 'Pending'])
+                );
+                const visitsSnapshot = await getDocs(visitsQ);
+                setVisitApplications(visitsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VisitApplicationDocument)));
 
                 // Fetch holidays
                 const holidaysSnapshot = await getDocs(collection(firestore, 'holidays'));
@@ -105,8 +114,8 @@ export default function LeaveCalendarPage() {
 
     const paddingDays = Array.from({ length: firstDayOfMonth }, (_, i) => i);
 
-    const getDayLeaves = (date: Date) => {
-        return leaveApplications.filter(leave => {
+    const getDayApps = (date: Date) => {
+        const dayLeaves = leaveApplications.filter(leave => {
             try {
                 const start = parseISO(leave.fromDate);
                 const end = parseISO(leave.toDate);
@@ -114,8 +123,23 @@ export default function LeaveCalendarPage() {
             } catch { return false; }
         }).map(leave => ({
             ...leave,
+            type: 'leave' as const,
             employee: allEmployees.find(emp => emp.id === leave.employeeId)
         }));
+
+        const dayVisits = visitApplications.filter(visit => {
+            try {
+                const start = parseISO(visit.fromDate);
+                const end = parseISO(visit.toDate);
+                return isWithinInterval(date, { start, end });
+            } catch { return false; }
+        }).map(visit => ({
+            ...visit,
+            type: 'visit' as const,
+            employee: allEmployees.find(emp => emp.id === visit.employeeId)
+        }));
+
+        return [...dayLeaves, ...dayVisits];
     };
 
     const getInitials = (name?: string) => {
@@ -199,7 +223,9 @@ export default function LeaveCalendarPage() {
                         {daysInMonth.map((day) => {
                             const isCurrentDay = isToday(day);
                             const isCurrentMonth = isSameMonth(day, currentMonth);
-                            const dayLeaves = getDayLeaves(day);
+                            const dayApps = getDayApps(day);
+                            const dayLeaves = dayApps.filter(a => a.type === 'leave');
+                            const dayVisits = dayApps.filter(a => a.type === 'visit');
                             const holiday = getHoliday(day);
                             const birthday = isBirthday(day);
                             const isWeekend = getDay(day) === 5; // Friday
@@ -214,13 +240,13 @@ export default function LeaveCalendarPage() {
                                                 ? 'bg-blue-50/50 border-2 border-blue-500 shadow-sm z-10'
                                                 : holiday
                                                     ? 'bg-rose-100 text-rose-700 font-bold border border-rose-200'
-                                                    : dayLeaves.length > 0
-                                                        ? dayLeaves.every(l => l.status === 'Approved')
-                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                                                            : 'bg-amber-50 text-amber-700 border border-amber-100'
-                                                        : isWeekend
-                                                            ? 'text-rose-500 bg-rose-100 border border-rose-200'
-                                                            : 'text-slate-700 bg-white border border-slate-100 hover:bg-slate-50'
+                                                        : dayApps.length > 0
+                                ? dayApps.every(a => a.status === 'Approved')
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                    : 'bg-amber-50 text-amber-700 border border-amber-100'
+                                : isWeekend
+                                    ? 'text-rose-500 bg-rose-100 border border-rose-200'
+                                    : 'text-slate-700 bg-white border border-slate-100 hover:bg-slate-50'
                                             : 'text-slate-300'
                                     )}
                                     onClick={() => {
@@ -237,7 +263,7 @@ export default function LeaveCalendarPage() {
                                         }
 
                                         if (dayLeaves.length > 0) {
-                                            content += `<div class="text-left p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                                            content += `<div class="mb-3 text-left p-3 bg-emerald-50 rounded-lg border border-emerald-100">
                                                 <div class="font-bold text-emerald-700 mb-2">Employees on Leave</div>
                                                 <div class="space-y-2">
                                                     ${dayLeaves.map(l => `
@@ -245,6 +271,21 @@ export default function LeaveCalendarPage() {
                                                             <div class="w-2 h-2 rounded-full ${l.status === 'Approved' ? 'bg-emerald-500' : 'bg-amber-500'}"></div>
                                                             <span class="font-semibold text-slate-800">${l.employee?.fullName || 'Unknown'}</span>
                                                             <span class="text-[10px] text-slate-500 ml-auto">(${l.status})</span>
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            </div>`;
+                                        }
+
+                                        if (dayVisits.length > 0) {
+                                            content += `<div class="text-left p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                                <div class="font-bold text-indigo-700 mb-2">Employees on Visit</div>
+                                                <div class="space-y-2">
+                                                    ${dayVisits.map(v => `
+                                                        <div class="text-xs flex items-center gap-2 p-1.5 bg-white/50 rounded">
+                                                            <div class="w-2 h-2 rounded-full ${v.status === 'Approved' ? 'bg-indigo-500' : 'bg-amber-500'}"></div>
+                                                            <span class="font-semibold text-slate-800">${v.employee?.fullName || 'Unknown'}</span>
+                                                            <span class="text-[10px] text-slate-500 ml-auto">(${v.status})</span>
                                                         </div>
                                                     `).join('')}
                                                 </div>
@@ -288,36 +329,45 @@ export default function LeaveCalendarPage() {
                                 >
                                     <div className="flex justify-between items-center w-full px-1">
                                         <span className={cn("relative z-10 text-[11px]", isCurrentDay ? "text-blue-600 font-bold" : "")}>{format(day, 'd')}</span>
-                                        {holiday ? (
-                                            <span className="bg-rose-500 text-white text-[8px] px-1 rounded font-bold">H</span>
-                                        ) : isWeekend ? (
-                                            <span className="bg-rose-400 text-white text-[8px] px-1 rounded font-bold">W</span>
-                                        ) : null}
+                                        <div className="flex gap-0.5">
+                                            {holiday && (
+                                                <span className="bg-rose-500 text-white text-[8px] px-1 rounded font-bold shadow-sm">H</span>
+                                            )}
+                                            {isWeekend && (
+                                                <span className="bg-rose-400 text-white text-[8px] px-1 rounded font-bold shadow-sm">W</span>
+                                            )}
+                                            {dayVisits.length > 0 && (
+                                                <span className="bg-indigo-500 text-white text-[8px] px-1 rounded font-bold shadow-sm">V</span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="flex flex-wrap gap-0.5 mt-1 justify-center px-0.5 pb-1 relative z-10">
-                                        {dayLeaves.slice(0, 2).map((leave, idx) => (
-                                            <div key={`leave-${idx}`} className="relative">
+                                        {dayApps.slice(0, 2).map((app, idx) => (
+                                            <div key={`app-${idx}`} className="relative">
                                                 <Avatar className="h-5 w-5 border border-white shadow-sm">
                                                     <AvatarImage
-                                                        src={leave.employee?.photoURL || ''}
-                                                        alt={leave.employee?.fullName}
+                                                        src={app.employee?.photoURL || ''}
+                                                        alt={app.employee?.fullName}
                                                         className="object-cover"
                                                     />
-                                                    <AvatarFallback className="text-[7px] bg-emerald-100 text-emerald-700 font-bold uppercase">
-                                                        {getInitials(leave.employee?.fullName)}
+                                                    <AvatarFallback className={cn(
+                                                        "text-[7px] font-bold uppercase",
+                                                        app.type === 'leave' ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700"
+                                                    )}>
+                                                        {getInitials(app.employee?.fullName)}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className={cn(
                                                     "absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full border border-white",
-                                                    leave.status === 'Approved' ? "bg-emerald-500" : "bg-amber-500"
+                                                    app.status === 'Approved' ? (app.type === 'leave' ? "bg-emerald-500" : "bg-indigo-500") : "bg-amber-500"
                                                 )} />
                                             </div>
                                         ))}
-                                        {dayLeaves.length > 2 && (
-                                            <div className="text-[8px] text-slate-500 font-bold flex items-center">+{dayLeaves.length - 2}</div>
+                                        {dayApps.length > 2 && (
+                                            <div className="text-[8px] text-slate-500 font-bold flex items-center">+{dayApps.length - 2}</div>
                                         )}
-                                        {birthday && dayLeaves.length === 0 && (
+                                        {birthday && dayApps.length === 0 && (
                                             <Cake className={cn("h-3 w-3", isCurrentDay ? "text-blue-500" : "text-pink-500")} />
                                         )}
                                     </div>
@@ -359,6 +409,22 @@ export default function LeaveCalendarPage() {
                                 </div>
                             </div>
                             <span className="text-xs text-rose-500 font-medium">Weekend</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="relative w-4 h-4 rounded bg-indigo-50 flex items-center justify-center border border-indigo-100">
+                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-500 rounded-full flex items-center justify-center border border-white">
+                                    <span className="text-[5px] text-white font-bold leading-none">V</span>
+                                </div>
+                            </div>
+                            <span className="text-xs text-indigo-600 font-medium">Visit (Approved)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="relative w-4 h-4 rounded bg-amber-50 flex items-center justify-center border border-amber-100">
+                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full flex items-center justify-center border border-white">
+                                    <span className="text-[5px] text-white font-bold leading-none">V</span>
+                                </div>
+                            </div>
+                            <span className="text-xs text-amber-600 font-medium">Visit (Pending)</span>
                         </div>
                     </div>
                 </div>

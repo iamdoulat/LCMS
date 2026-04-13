@@ -122,7 +122,7 @@ export default function MobileLeavePage() {
 
             // Find visits for this day
             const dayVisits = visits?.filter(visit => {
-                if (visit.status !== 'Approved') return false;
+                if (!['Approved', 'Pending'].includes(visit.status)) return false;
                 const fromDate = parseISO(visit.fromDate);
                 const toDate = parseISO(visit.toDate);
                 return isWithinInterval(date, { start: fromDate, end: toDate });
@@ -339,13 +339,26 @@ export default function MobileLeavePage() {
                                             }
 
                                             if (dayObj.leaves.length > 0) {
-                                                content += `<div class="text-left p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                                                content += `<div class="mb-3 text-left p-3 bg-emerald-50 rounded-lg border border-emerald-100">
                                                     <div class="font-bold text-emerald-700">Employees on Leave</div>
                                                     <div class="mt-2 space-y-2">
                                                         ${dayObj.leaves.map(l => `<div class="text-xs flex items-center gap-2">
                                                             <div class="w-2 h-2 rounded-full ${l.status === 'Approved' ? 'bg-emerald-500' : 'bg-amber-500'}"></div>
                                                             <span class="font-medium">${l.employee?.fullName || l.employeeName || 'Unknown'}</span>
                                                             <span class="text-[10px] text-slate-500">(${l.leaveType})</span>
+                                                        </div>`).join('')}
+                                                    </div>
+                                                </div>`;
+                                            }
+
+                                            if (dayObj.visits.length > 0) {
+                                                content += `<div class="text-left p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                                    <div class="font-bold text-indigo-700">Employees on Visit</div>
+                                                    <div class="mt-2 space-y-2">
+                                                        ${dayObj.visits.map(v => `<div class="text-xs flex items-center gap-2">
+                                                            <div class="w-2 h-2 rounded-full ${v.status === 'Approved' ? 'bg-indigo-500' : 'bg-amber-500'}"></div>
+                                                            <span class="font-medium">${v.employee?.fullName || v.employeeName || 'Unknown'}</span>
+                                                            <span class="text-[10px] text-slate-500">(Visit)</span>
                                                         </div>`).join('')}
                                                     </div>
                                                 </div>`;
@@ -367,11 +380,17 @@ export default function MobileLeavePage() {
                                     >
                                         <div className="flex justify-between items-start">
                                             <div className={cn("font-semibold text-xs", dayObj.isToday ? "text-blue-600" : (dayObj.holiday || dayObj.isWeekend) ? "text-rose-600" : "text-slate-500")}>{dayObj.day}</div>
-                                            {dayObj.holiday ? (
-                                                <span className="bg-rose-500 text-white text-[8px] px-1 rounded font-bold">H</span>
-                                            ) : dayObj.isWeekend ? (
-                                                <span className="bg-rose-400 text-white text-[8px] px-1 rounded font-bold">W</span>
-                                            ) : null}
+                                            <div className="flex gap-0.5">
+                                                {dayObj.holiday && (
+                                                    <span className="bg-rose-500 text-white text-[8px] px-1 rounded font-bold shadow-sm">H</span>
+                                                )}
+                                                {dayObj.isWeekend && (
+                                                    <span className="bg-rose-400 text-white text-[8px] px-1 rounded font-bold shadow-sm">W</span>
+                                                )}
+                                                {dayObj.visits.length > 0 && (
+                                                    <span className="bg-indigo-500 text-white text-[8px] px-1 rounded font-bold shadow-sm">V</span>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {dayObj.isCurrentMonth && (
@@ -420,13 +439,13 @@ export default function MobileLeavePage() {
                                                                 alt={visit.employee?.fullName || visit.employeeName}
                                                                 className="object-cover"
                                                             />
-                                                            <AvatarFallback className="text-[7px] bg-blue-100 text-blue-700 font-semibold uppercase">
+                                                            <AvatarFallback className="text-[7px] bg-indigo-100 text-indigo-700 font-semibold uppercase">
                                                                 {getInitials(visit.employee?.fullName || visit.employeeName)}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div className={cn(
                                                             "absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full border-[0.5px] border-white",
-                                                            visit.status === 'Approved' ? "bg-emerald-500" : "bg-amber-500"
+                                                            visit.status === 'Approved' ? "bg-indigo-500" : "bg-amber-500"
                                                         )} />
                                                     </div>
                                                 ))}
@@ -463,6 +482,14 @@ export default function MobileLeavePage() {
                             <div className="flex items-center gap-1.5">
                                 <span className="bg-rose-400 text-white text-[8px] px-1 rounded font-bold">W</span>
                                 <span className="text-rose-500">Weekend</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="bg-indigo-500 text-white text-[8px] px-1 rounded font-bold">V</span>
+                                <span className="text-indigo-600">Visit (Approved)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="bg-amber-500 text-white text-[8px] px-1 rounded font-bold">V</span>
+                                <span className="text-amber-600">Visit (Pending)</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <Cake className="h-3 w-3 text-pink-500" />
