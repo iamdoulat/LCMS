@@ -396,6 +396,12 @@ export default function MobileLeavePage() {
                                                 {dayObj.visits.length > 0 && (
                                                     <span className="bg-indigo-500 text-white text-[8px] px-1 rounded font-bold shadow-sm">V</span>
                                                 )}
+                                                {dayObj.leaves.length > 0 && (
+                                                    <span className={cn(
+                                                        "text-white text-[8px] px-1 rounded font-bold shadow-sm",
+                                                        dayObj.leaves.some(l => l.status === 'Pending') ? "bg-amber-500" : "bg-emerald-500"
+                                                    )}>L</span>
+                                                )}
                                             </div>
                                         </div>
 
@@ -468,14 +474,22 @@ export default function MobileLeavePage() {
                         </div>
 
                         {/* Legend */}
-                        <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 text-[10px] text-slate-500 font-medium">
+                        <div className="flex flex-wrap gap-x-4 gap-y-3 mt-4 text-[10px] text-slate-500 font-medium">
                             <div className="flex items-center gap-1.5">
-                                <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                                <span>Approved</span>
+                                <div className="relative w-4 h-4 rounded bg-emerald-50 flex items-center justify-center border border-emerald-100">
+                                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full flex items-center justify-center border border-white">
+                                        <span className="text-[5px] text-white font-bold leading-none">L</span>
+                                    </div>
+                                </div>
+                                <span className="text-emerald-600">Leave (Approved)</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <div className="h-2 w-2 rounded-full bg-amber-500" />
-                                <span>Pending</span>
+                                <div className="relative w-4 h-4 rounded bg-amber-50 flex items-center justify-center border border-amber-100">
+                                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full flex items-center justify-center border border-white">
+                                        <span className="text-[5px] text-white font-bold leading-none">L</span>
+                                    </div>
+                                </div>
+                                <span className="text-amber-600">Leave (Pending)</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <div className="h-2 w-2 rounded-full bg-blue-500" />
@@ -490,11 +504,19 @@ export default function MobileLeavePage() {
                                 <span className="text-rose-500">Weekend</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <span className="bg-indigo-500 text-white text-[8px] px-1 rounded font-bold">V</span>
+                                <div className="relative w-4 h-4 rounded bg-indigo-50 flex items-center justify-center border border-indigo-100">
+                                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-500 rounded-full flex items-center justify-center border border-white">
+                                        <span className="text-[5px] text-white font-bold leading-none">V</span>
+                                    </div>
+                                </div>
                                 <span className="text-indigo-600">Visit (Approved)</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <span className="bg-amber-500 text-white text-[8px] px-1 rounded font-bold">V</span>
+                                <div className="relative w-4 h-4 rounded bg-amber-50 flex items-center justify-center border border-amber-100">
+                                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full flex items-center justify-center border border-white">
+                                        <span className="text-[5px] text-white font-bold leading-none">V</span>
+                                    </div>
+                                </div>
                                 <span className="text-amber-600">Visit (Pending)</span>
                             </div>
                             <div className="flex items-center gap-1.5">

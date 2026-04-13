@@ -347,6 +347,12 @@ export default function LeaveCalendarPage() {
                                             {dayVisits.length > 0 && (
                                                 <span className="bg-indigo-500 text-white text-[8px] px-1 rounded font-bold shadow-sm">V</span>
                                             )}
+                                            {dayLeaves.length > 0 && (
+                                                <span className={cn(
+                                                    "text-white text-[8px] px-1 rounded font-bold shadow-sm",
+                                                    dayLeaves.every(l => l.status === 'Approved') ? "bg-emerald-500" : "bg-amber-500"
+                                                )}>L</span>
+                                            )}
                                         </div>
                                     </div>
 
@@ -391,11 +397,19 @@ export default function LeaveCalendarPage() {
                             <span className="text-xs text-blue-600 font-medium">Today</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full bg-emerald-500" />
+                            <div className="relative w-4 h-4 rounded bg-emerald-50 flex items-center justify-center border border-emerald-100">
+                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full flex items-center justify-center border border-white">
+                                    <span className="text-[5px] text-white font-bold leading-none">L</span>
+                                </div>
+                            </div>
                             <span className="text-xs text-emerald-600 font-medium">Leave (Approved)</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full bg-amber-500" />
+                            <div className="relative w-4 h-4 rounded bg-amber-50 flex items-center justify-center border border-amber-100">
+                                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full flex items-center justify-center border border-white">
+                                    <span className="text-[5px] text-white font-bold leading-none">L</span>
+                                </div>
+                            </div>
                             <span className="text-xs text-amber-600 font-medium">Leave (Pending)</span>
                         </div>
                         <div className="flex items-center gap-2">
