@@ -65,13 +65,13 @@ export default function ReconApprovalPage() {
         }
 
         // Check if user is Admin, HR or Supervisor (has Supervision Power)
-        // Check if user has administrative rights
-        const privilegedRoles = ["Super Admin", "Admin", "HR", "Service", "DemoManager", "Accounts", "Commercial", "Viewer"];
-        const isAdmin = userRole?.some(role => privilegedRoles.includes(role));
+        // Check if user has full administrative rights (HR, Admin, Super Admin)
+        const fullAccessRoles = ["Super Admin", "Admin", "HR"];
+        const hasFullAccess = userRole?.some(role => fullAccessRoles.includes(role));
 
         const hasSupervision = effectiveSupervisedEmployees.length > 0;
 
-        if (!isAdmin && !hasSupervision) {
+        if (!hasFullAccess && !hasSupervision) {
             setLoading(false);
             setRequests([]);
             return;
@@ -83,8 +83,8 @@ export default function ReconApprovalPage() {
             const collectionName = activeTab === 'attendance' ? 'attendance_reconciliation' : 'break_reconciliation';
             const fetchedRequests: ReconRequest[] = [];
 
-            // Admin sees ALL requests, Supervisor sees only their team's requests
-            if (isAdmin && selectedEmployee === 'all') {
+            // Full access users see ALL requests if filter is set to 'all'
+            if (hasFullAccess && selectedEmployee === 'all') {
                 // Admin viewing all employees - fetch everything
                 let q;
 
@@ -126,7 +126,7 @@ export default function ReconApprovalPage() {
                     fetchedRequests.push({ id: doc.id, ...doc.data() } as ReconRequest);
                 });
             } else {
-                // Supervisor OR Admin filtering by specific employee
+                // Supervisor OR Limited Admin filtering by selected employee or their team
                 const employeeIds = selectedEmployee === 'all'
                     ? effectiveSupervisedEmployees.map(e => e.id)
                     : [selectedEmployee];
@@ -506,7 +506,11 @@ export default function ReconApprovalPage() {
                                     onChange={(e) => setSelectedEmployee(e.target.value)}
                                     className="w-full py-2 px-3 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
-                                    <option value="all">All Employees</option>
+                                    {hasFullAccess ? (
+                                        <option value="all">All Employees</option>
+                                    ) : (
+                                        <option value="all">My Team ({effectiveSupervisedEmployees.length})</option>
+                                    )}
                                     {effectiveSupervisedEmployees.map((emp) => (
                                         <option key={emp.id} value={emp.id}>
                                             {emp.fullName}
