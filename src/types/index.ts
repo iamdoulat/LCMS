@@ -1893,6 +1893,28 @@ export interface Employee {
 }
 
 export type EmployeeDocument = Employee;
+// --- END Employee Types ---
+
+// --- Supervision Delegation Types ---
+export interface SupervisionDelegation {
+    id: string;
+    delegatorId: string;
+    delegatorName: string;
+    delegateId: string;
+    delegateName: string;
+    status: 'active' | 'inactive';
+    assignedAt: any;
+    assignedBy: string;
+}
+
+export const SupervisionDelegationSchema = z.object({
+    delegatorId: z.string().min(1, "Delegator is required."),
+    delegateId: z.string().min(1, "Delegate is required."),
+    status: z.enum(['active', 'inactive']).default('active'),
+});
+
+export type SupervisionDelegationFormValues = z.infer<typeof SupervisionDelegationSchema>;
+// --- END Supervision Delegation Types ---
 
 export const BranchSchema = z.object({
   name: z.string().min(2, "Branch name must be at least 2 characters long."),

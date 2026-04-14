@@ -34,6 +34,7 @@ import { useRouter } from 'next/navigation';
 import { SupervisorManagementModal } from '@/components/dashboard/SupervisorManagementModal';
 import { SupervisorConfig } from '@/types';
 import { UserCog } from 'lucide-react';
+import { SupervisionDelegationSection } from '@/components/dashboard/SupervisionDelegationSection';
 
 
 export default function SupervisorSetupPage() {
@@ -140,6 +141,8 @@ export default function SupervisorSetupPage() {
                     <p className="text-muted-foreground">Assign direct supervisors to employees.</p>
                 </div>
             </div>
+
+            <SupervisionDelegationSection />
 
             <Card>
                 <CardHeader>

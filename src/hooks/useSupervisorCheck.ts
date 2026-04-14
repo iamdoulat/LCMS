@@ -25,7 +25,11 @@ export interface SupervisorInfo {
 }
 
 // Global cache for supervisor info to avoid re-fetching on every page mount
-const supervisorCache = new Map<string, SupervisorInfo>();
+let supervisorCache = new Map<string, SupervisorInfo>();
+
+export const clearSupervisorCache = () => {
+    supervisorCache = new Map<string, SupervisorInfo>();
+};
 
 export function useSupervisorCheck(userEmail: string | null | undefined): SupervisorInfo {
     const { userRole, user } = useAuth();
@@ -170,7 +174,25 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                 }
 
                 if (employeeId) {
-                    const supervisorIdCandidates = Array.from(new Set([employeeId, user?.uid].filter((id): id is string => !!id)));
+                    // --- Delegation Logic Start ---
+                    // 1. Check if anyone has delegated their power TO this user
+                    const delegationsToQuery = query(collection(firestore, 'supervision_delegations'), 
+                        where('delegateId', '==', employeeId),
+                        where('status', '==', 'active')
+                    );
+                    const delegationsToSnapshot = await getDocs(delegationsToQuery);
+                    const delegatorIds = delegationsToSnapshot.docs.map(doc => doc.data().delegatorId);
+
+                    // 2. Check if THIS user has delegated their power to someone else
+                    const delegationsFromQuery = query(collection(firestore, 'supervision_delegations'),
+                        where('delegatorId', '==', employeeId),
+                        where('status', '==', 'active')
+                    );
+                    const delegationsFromSnapshot = await getDocs(delegationsFromQuery);
+                    const isDelegatorActive = !delegationsFromSnapshot.empty;
+                    // --- Delegation Logic End ---
+
+                    const supervisorIdCandidates = Array.from(new Set([employeeId, user?.uid, ...delegatorIds].filter((id): id is string => !!id)));
                     const subordinatesMap = new Map<string, SupervisedEmployee>();
 
                     // Parallelize all direct reporting line queries
@@ -202,11 +224,11 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         });
                     });
 
-                    const finalSupervised = Array.from(subordinatesMap.values());
-                    const finalIds = Array.from(subordinatesMap.keys());
+                    const finalSupervised = isDelegatorActive && !isAdminRole ? [] : Array.from(subordinatesMap.values());
+                    const finalIds = isDelegatorActive && !isAdminRole ? [] : Array.from(subordinatesMap.keys());
 
                     const result: SupervisorInfo = {
-                        isSupervisor: hasSupervisorRole || finalIds.length > 0,
+                        isSupervisor: hasSupervisorRole || finalIds.length > 0 || (isDelegatorActive && !isAdminRole),
                         supervisedEmployees: finalSupervised,
                         explicitSubordinates: finalSupervised,
                         supervisedEmployeeIds: finalIds,
