@@ -48,6 +48,8 @@ export default function ReconApprovalPage() {
         ['Super Admin', 'Admin', 'HR', 'Supervisor'].includes(role)
     ) ? supervisedEmployees : explicitSubordinates;
 
+    const hasFullAccess = userRole?.some(role => ["Super Admin", "Admin", "HR"].includes(role));
+
     const [activeTab, setActiveTab] = useState<'attendance' | 'breaktime'>('attendance');
     const [requests, setRequests] = useState<ReconRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -65,10 +67,6 @@ export default function ReconApprovalPage() {
         }
 
         // Check if user is Admin, HR or Supervisor (has Supervision Power)
-        // Check if user has full administrative rights (HR, Admin, Super Admin)
-        const fullAccessRoles = ["Super Admin", "Admin", "HR"];
-        const hasFullAccess = userRole?.some(role => fullAccessRoles.includes(role));
-
         const hasSupervision = effectiveSupervisedEmployees.length > 0;
 
         if (!hasFullAccess && !hasSupervision) {
