@@ -1905,12 +1905,14 @@ export interface SupervisionDelegation {
     status: 'active' | 'inactive';
     assignedAt: any;
     assignedBy: string;
+    expiresAt?: any;
 }
 
 export const SupervisionDelegationSchema = z.object({
     delegatorId: z.string().min(1, "Delegator is required."),
     delegateId: z.string().min(1, "Delegate is required."),
     status: z.enum(['active', 'inactive']).default('active'),
+    expiresAt: z.date().optional(),
 });
 
 export type SupervisionDelegationFormValues = z.infer<typeof SupervisionDelegationSchema>;

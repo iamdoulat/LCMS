@@ -11,12 +11,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { DatePickerInput } from '@/components/ui/date-picker-input';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { collection, query, orderBy, doc, setDoc, serverTimestamp, deleteDoc, getDocs, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { EmployeeDocument, SupervisionDelegation } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Save, Trash2, UserPlus, ShieldAlert } from 'lucide-react';
+import { Loader2, Save, Trash2, UserPlus, ShieldAlert, Pencil } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { clearSupervisorCache } from '@/hooks/useSupervisorCheck';
@@ -37,7 +38,9 @@ export function SupervisionDelegationSection() {
 
     const [selectedDelegatorId, setSelectedDelegatorId] = useState<string>('');
     const [selectedDelegateId, setSelectedDelegateId] = useState<string>('');
+    const [expiresAt, setExpiresAt] = useState<Date | undefined>(undefined);
     const [isSaving, setIsSaving] = useState(false);
+    const [editingDelegationId, setEditingDelegationId] = useState<string | null>(null);
 
     // Filter supervisors: Anyone who has subordinates or the supervisor role
     // For simplicity, we can show all employees but highlight those who are already supervisors
@@ -69,7 +72,7 @@ export function SupervisionDelegationSection() {
 
             if (!delegator || !delegate) throw new Error("Employee not found");
 
-            const delegationId = `${selectedDelegatorId}_${selectedDelegateId}`;
+            const delegationId = editingDelegationId || `${selectedDelegatorId}_${selectedDelegateId}`;
             const newDelegation: Partial<SupervisionDelegation> = {
                 delegatorId: selectedDelegatorId,
                 delegatorName: delegator.fullName,
@@ -77,16 +80,17 @@ export function SupervisionDelegationSection() {
                 delegateName: delegate.fullName,
                 status: 'active',
                 assignedAt: serverTimestamp(),
-                assignedBy: user?.email || 'System'
+                assignedBy: user?.email || 'System',
+                expiresAt: expiresAt || null
             };
 
-            await setDoc(doc(firestore, 'supervision_delegations', delegationId), newDelegation);
+            await setDoc(doc(firestore, 'supervision_delegations', delegationId), newDelegation, { merge: true });
             
             clearSupervisorCache();
 
             Swal.fire({
                 title: 'Success',
-                text: 'Supervision power delegated successfully',
+                text: editingDelegationId ? 'Delegation updated successfully' : 'Supervision power delegated successfully',
                 icon: 'success',
                 timer: 2000,
                 showConfirmButton: false,
@@ -96,6 +100,8 @@ export function SupervisionDelegationSection() {
 
             setSelectedDelegatorId('');
             setSelectedDelegateId('');
+            setExpiresAt(undefined);
+            setEditingDelegationId(null);
             refetchDelegations();
         } catch (error: any) {
             console.error("Error saving delegation:", error);
@@ -103,6 +109,20 @@ export function SupervisionDelegationSection() {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleEditDelegation = (del: SupervisionDelegation) => {
+        setSelectedDelegatorId(del.delegatorId);
+        setSelectedDelegateId(del.delegateId);
+        setExpiresAt(del.expiresAt?.toDate ? del.expiresAt.toDate() : del.expiresAt ? new Date(del.expiresAt) : undefined);
+        setEditingDelegationId(del.id || `${del.delegatorId}_${del.delegateId}`);
+    };
+
+    const handleCancelEdit = () => {
+        setSelectedDelegatorId('');
+        setSelectedDelegateId('');
+        setExpiresAt(undefined);
+        setEditingDelegationId(null);
     };
 
     const handleDeleteDelegation = async (delegationId: string) => {
@@ -187,16 +207,33 @@ export function SupervisionDelegationSection() {
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {/* Expiration Date Column */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Expiration Date (Optional)</label>
+                        <DatePickerInput 
+                            field={{
+                                value: expiresAt,
+                                onChange: (date: Date) => setExpiresAt(date)
+                            } as any}
+                            placeholder="Set Expiration"
+                        />
+                    </div>
                 </div>
 
-                <div className="flex justify-end mb-8">
+                <div className="flex justify-end mb-8 gap-2">
+                    {editingDelegationId && (
+                        <Button variant="ghost" onClick={handleCancelEdit}>
+                            Cancel Edit
+                        </Button>
+                    )}
                     <Button 
                         onClick={handleSaveDelegation} 
                         disabled={isSaving || !selectedDelegatorId || !selectedDelegateId}
                         className="gap-2"
                     >
                         {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                        Save Delegation
+                        {editingDelegationId ? 'Update Delegation' : 'Save Delegation'}
                     </Button>
                 </div>
 
@@ -210,13 +247,14 @@ export function SupervisionDelegationSection() {
                                     <TableHead>Delegate (Powers to)</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Assigned On</TableHead>
+                                    <TableHead>Expiration</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isDelegationsLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-4">
+                                        <TableCell colSpan={6} className="text-center py-4">
                                             <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                                         </TableCell>
                                     </TableRow>
@@ -226,28 +264,47 @@ export function SupervisionDelegationSection() {
                                             <TableCell className="font-medium">{del.delegatorName}</TableCell>
                                             <TableCell>{del.delegateName}</TableCell>
                                             <TableCell>
-                                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                                    {del.status}
-                                                </span>
+                                                {(() => {
+                                                    const expiryDate = del.expiresAt?.toDate ? del.expiresAt.toDate() : del.expiresAt ? new Date(del.expiresAt) : null;
+                                                    const isExpired = expiryDate && expiryDate < new Date();
+                                                    return (
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${isExpired ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                                                            {isExpired ? 'Expired' : del.status}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </TableCell>
                                             <TableCell className="text-xs text-muted-foreground">
                                                 {del.assignedAt?.toDate ? del.assignedAt.toDate().toLocaleDateString() : 'N/A'}
                                             </TableCell>
+                                            <TableCell className="text-xs font-semibold text-orange-600">
+                                                {del.expiresAt?.toDate ? del.expiresAt.toDate().toLocaleDateString() : 'No Limit'}
+                                            </TableCell>
                                             <TableCell className="text-right">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    onClick={() => handleDeleteDelegation(del.id || `${del.delegatorId}_${del.delegateId}`)}
-                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <div className="flex justify-end gap-1">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        onClick={() => handleEditDelegation(del)}
+                                                        className="text-primary hover:bg-primary/10"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        onClick={() => handleDeleteDelegation(del.id || `${del.delegatorId}_${del.delegateId}`)}
+                                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground italic">
+                                        <TableCell colSpan={6} className="text-center py-4 text-muted-foreground italic">
                                             No active delegations found.
                                         </TableCell>
                                     </TableRow>

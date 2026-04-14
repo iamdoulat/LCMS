@@ -79,7 +79,7 @@ export function DatePickerInput({
 
   return (
     <div className={cn("relative w-full", className)}>
-      <Popover open={open} onOpenChange={setOpen} modal={true}>
+      <Popover open={open} onOpenChange={setOpen} modal={false}>
         <PopoverTrigger asChild>
           <Button
             type="button"
@@ -110,7 +110,7 @@ export function DatePickerInput({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[calc(100vw-2rem)] sm:w-auto p-0 flex flex-col sm:flex-row shadow-2xl border-slate-200 overflow-hidden"
+          className="w-[calc(100vw-2rem)] sm:w-auto p-0 flex flex-col sm:flex-row shadow-2xl border-slate-200"
           align="center"
           sideOffset={8}
           collisionPadding={10}

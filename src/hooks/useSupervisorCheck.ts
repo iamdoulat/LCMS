@@ -181,7 +181,15 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         where('status', '==', 'active')
                     );
                     const delegationsToSnapshot = await getDocs(delegationsToQuery);
-                    const delegatorIds = delegationsToSnapshot.docs.map(doc => doc.data().delegatorId);
+                    const delegatorIds = delegationsToSnapshot.docs
+                        .filter(doc => {
+                            const data = doc.data();
+                            if (data.status === 'inactive') return false;
+                            if (!data.expiresAt) return true;
+                            const expiry = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+                            return expiry > new Date();
+                        })
+                        .map(doc => doc.data().delegatorId as string);
 
                     // 2. Check if THIS user has delegated their power to someone else
                     const delegationsFromQuery = query(collection(firestore, 'supervision_delegations'),
@@ -189,7 +197,12 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         where('status', '==', 'active')
                     );
                     const delegationsFromSnapshot = await getDocs(delegationsFromQuery);
-                    const isDelegatorActive = !delegationsFromSnapshot.empty;
+                    const isDelegatorActive = !delegationsFromSnapshot.empty && delegationsFromSnapshot.docs.some(doc => {
+                        const data = doc.data();
+                        if (!data.expiresAt) return true;
+                        const expiry = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+                        return expiry > new Date();
+                    });
                     // --- Delegation Logic End ---
 
                     const supervisorIdCandidates = Array.from(new Set([employeeId, user?.uid, ...delegatorIds].filter((id): id is string => !!id)));
