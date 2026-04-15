@@ -56,8 +56,8 @@ export default function ClaimListPage() {
     const isAdmin = React.useMemo(() => {
         if (!userRole) return false;
         const privilegedRoles = ["Super Admin", "Admin", "HR", "Supervisor"];
-        return userRole.some(role => privilegedRoles.includes(role)) || isSupervisor;
-    }, [userRole, isSupervisor]);
+        return userRole.some(role => privilegedRoles.includes(role)) || isSupervisor || isDelegate;
+    }, [userRole, isSupervisor, isDelegate]);
 
     const filteredClaims = React.useMemo(() => {
         let result = claims;
@@ -475,7 +475,7 @@ export default function ClaimListPage() {
                                                       (activeTab === 'Claim Requests' && ['Claimed', 'Approval by Supervisor'].includes(claim.status))) && (
                                                         <Edit2 className="h-3 w-3 text-blue-400" />
                                                     )}
-                                                    {activeTab === 'My Claims' && claim.status === 'Claimed' && (
+                                                    {((activeTab === 'My Claims' && claim.status === 'Claimed') || (activeTab === 'Claim Requests' && isAdmin)) && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();

@@ -25,7 +25,7 @@ function CreateClaimContent() {
     const editingId = searchParams.get('id');
     const source = searchParams.get('source');
     const { user, userRole } = useAuth();
-    const { isSupervisor } = useSupervisorCheck(user?.email);
+    const { isSupervisor, isDelegate, isLoading: isSupLoading } = useSupervisorCheck(user?.email);
 
     // Form State
     const [advanceDate, setAdvanceDate] = useState('');
@@ -108,13 +108,15 @@ function CreateClaimContent() {
                     if (claimSnap.exists()) {
                         const data = claimSnap.data() as HRClaim;
                         const canEditAsEmployee = data.status === 'Claimed' && !source;
-                        const isAdmin = userRole?.some(role => ["Super Admin", "Admin", "HR", "Supervisor"].includes(role)) || isSupervisor;
+                        const isAdmin = userRole?.some(role => ["Super Admin", "Admin", "HR", "Supervisor"].includes(role)) || isSupervisor || isDelegate;
                         const canEditAsSupervisor = source === 'requests' && isAdmin && ['Claimed', 'Approval by Supervisor'].includes(data.status);
 
-                        if (!canEditAsEmployee && !canEditAsSupervisor) {
-                            Swal.fire('Access Denied', 'You do not have permission to edit this claim in its current status.', 'error');
-                            router.push('/mobile/claim');
-                            return;
+                        if (!isSupLoading) {
+                            if (!canEditAsEmployee && !canEditAsSupervisor) {
+                                Swal.fire('Access Denied', 'You do not have permission to edit this claim in its current status.', 'error');
+                                router.push('/mobile/claim');
+                                return;
+                            }
                         }
 
                         setAdvanceDate(data.advancedDate || '');
@@ -133,7 +135,7 @@ function CreateClaimContent() {
             }
         };
         fetchData();
-    }, [user?.uid, editingId, user?.email, source]);
+    }, [user?.uid, editingId, user?.email, source, isSupervisor, isDelegate, isSupLoading, userRole]);
 
     const calculateRequestedTotal = () => details.reduce((sum, item) => sum + item.amount, 0);
     const calculateApprovedTotal = () => details.reduce((sum, item) => sum + (item.status === 'Approved' ? item.amount : 0), 0);
