@@ -248,6 +248,9 @@ function CreateClaimContent() {
         );
     }
 
+    const displayTotalLabel = editingId ? 'Updated Claim for Approval' : 'Submit Claim for Approval';
+    const displayTotalAmount = (details.some(d => d.status) ? calculateApprovedTotal() : calculateRequestedTotal()).toLocaleString();
+
     return (
         <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
             {/* Header */}
@@ -338,7 +341,7 @@ function CreateClaimContent() {
                             </div>
                         </div>
 
-                        </div>
+
 
                         {(source === 'requests' || supervisorComments) && (
                             <div className="space-y-2">
@@ -524,7 +527,7 @@ function CreateClaimContent() {
                         disabled={isSubmitting || details.length === 0}
                         className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-xl font-bold rounded-2xl shadow-xl shadow-blue-200 text-white"
                     >
-                        {isSubmitting ? <Loader2 className="animate-spin h-6 w-6" /> : `${editingId ? 'Updated Claim for Approval' : 'Submit Claim for Approval'} (৳${(details.some(d => d.status) ? calculateApprovedTotal() : calculateRequestedTotal()).toLocaleString()})`}
+                        {isSubmitting ? <Loader2 className="animate-spin h-6 w-6" /> : `${displayTotalLabel} (৳${displayTotalAmount})`}
                     </Button>
                 </div>
 
