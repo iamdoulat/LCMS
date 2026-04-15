@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { DatePickerInput } from '@/components/ui/date-picker-input';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
-import { collection, query, orderBy, doc, setDoc, serverTimestamp, deleteDoc, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, setDoc, serverTimestamp, deleteDoc, getDocs, where, getDoc, updateDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import type { EmployeeDocument, SupervisionDelegation } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -104,11 +104,11 @@ export function SupervisionDelegationSection() {
                                 role: [...currentRoles, 'Supervisor'],
                                 updatedAt: serverTimestamp()
                             });
-                            console.log(`Elevated ${delegate.fullName} to Supervisor role for delegation.`);
+                            // console.log(`Elevated ${delegate.fullName} to Supervisor role for delegation.`);
                         }
                     }
                 } catch (roleError) {
-                    console.error("Error elevating delegate role:", roleError);
+                    /* console.error("Error elevating delegate role:", roleError); */
                     // We don't fail the whole operation if role elevation fails, 
                     // as it might be a permission issue itself or the user might already have sufficient rules.
                 }

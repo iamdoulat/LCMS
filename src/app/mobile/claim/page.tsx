@@ -190,7 +190,8 @@ export default function ClaimListPage() {
                         status: updatedStatus,
                         updatedAt: Timestamp.now()
                     });
-                    console.log(`Claim ${claim.claimNo} auto-approved (moved to ${updatedStatus}).`);
+                    // Claim auto-approved
+                    // console.log(`Claim ${claim.claimNo} auto-approved (moved to ${updatedStatus}).`);
                 } catch (err) {
                     autoApprovalProcessed.current.delete(claim.id);
                     console.error(`Failed to auto-approve claim ${claim.id}:`, err);
@@ -224,7 +225,7 @@ export default function ClaimListPage() {
                         updateDoc(doc(firestore, 'hr_claims', claim.id), {
                             status: updatedStatus,
                             updatedAt: Timestamp.now()
-                        }).catch(err => console.error("Auto-approval error:", err));
+                        }).catch(err => { /* console.error("Auto-approval error:", err) */ });
                     }
                     return;
                 }
@@ -751,9 +752,9 @@ export default function ClaimListPage() {
                     confirmText="Delete"
                     onConfirm={async () => {
                         try {
-                            console.log("Attempting to delete claim:", confirmDelete.id);
+                            // console.log("Attempting to delete claim:", confirmDelete.id);
                             await deleteDoc(doc(firestore, 'hr_claims', confirmDelete.id));
-                            console.log("Claim successfully deleted from Firestore");
+                            // console.log("Claim successfully deleted from Firestore");
                             toast({
                                 title: "Deleted",
                                 description: "Claim has been removed successfully.",
@@ -829,6 +830,18 @@ export default function ClaimListPage() {
                                             title: "Rejected",
                                             description: "Claim has been rejected.",
                                         });
+
+                                        // Trigger notification for revert
+                                        if (claim) {
+                                            const updatedClaim = {
+                                                ...claim,
+                                                status: 'Claimed',
+                                                rejectionReason: rejectionReason
+                                            } as HRClaim;
+                                            sendClaimStatusNotifications(updatedClaim).catch(err => 
+                                                console.error("Failed to send rejection notification:", err)
+                                            );
+                                        }
                                     } catch (err) {
                                         toast({
                                             title: "Error",

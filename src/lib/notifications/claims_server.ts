@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { admin } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/sender';
 import { sendWhatsApp } from '@/lib/whatsapp/sender';
@@ -27,6 +28,9 @@ export async function sendClaimStatusNotificationsInternal(claim: HRClaim) {
         } else if (status === 'Disbursed') {
             emailSlug = 'claim-disbursed';
             waSlug = 'claim-disbursed-whatsapp';
+        } else if (status === 'Claimed') {
+            emailSlug = 'claim-reverted';
+            waSlug = 'claim-reverted-whatsapp';
         } else {
             console.log(`sendClaimStatusNotificationsInternal: No notification logic for status "${status}"`, claim.id);
             return;
@@ -62,6 +66,7 @@ export async function sendClaimStatusNotificationsInternal(claim: HRClaim) {
             Amount: approvedAmt.toLocaleString(), // Primarily show approved amount as the main "Amount"
             ApprovedAmount: approvedAmt.toLocaleString(),
             DueAmount: dueAmt.toLocaleString(),
+            SupervisorComment: claim.supervisorComments || (claim as any).rejectionReason || 'No comments provided.',
         };
 
         // 2. Send Email

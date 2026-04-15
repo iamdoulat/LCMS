@@ -17,6 +17,7 @@ import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, do
 import type { ClaimDetail, HRClaim, Employee } from '@/types';
 import Swal from 'sweetalert2';
 import { format } from 'date-fns';
+import { sendClaimStatusNotifications } from '@/lib/notifications/claims';
 
 function CreateClaimContent() {
     const router = useRouter();
@@ -196,6 +197,18 @@ function CreateClaimContent() {
             if (editingId) {
                 const claimRef = doc(firestore, 'hr_claims', editingId);
                 await updateDoc(claimRef, finalData);
+
+                // Trigger notification if supervisor reverted the claim to 'Claimed'
+                if (source === 'requests' && finalData.status === 'Claimed' && editingId) {
+                    const fullClaimDoc = await getDoc(claimRef);
+                    if (fullClaimDoc.exists()) {
+                        const fullClaim = { id: editingId, ...fullClaimDoc.data() } as HRClaim;
+                        // Use a background call so it doesn't block UI rotation
+                        sendClaimStatusNotifications(fullClaim).catch(err => 
+                            console.error("Failed to send revert notification:", err)
+                        );
+                    }
+                }
             } else {
                 await addDoc(collection(firestore, 'hr_claims'), finalData);
             }
