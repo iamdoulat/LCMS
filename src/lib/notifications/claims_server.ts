@@ -59,14 +59,51 @@ export async function sendClaimStatusNotificationsInternal(claim: HRClaim) {
         const approvedAmt = claim.approvedAmount || 0;
         const totalAmt = claim.claimAmount || 0;
         const dueAmt = totalAmt - approvedAmt;
-        
+
+        // Build combined supervisor comment including per-category comments
+        const mainComment = claim.supervisorComments || (claim as any).rejectionReason || '';
+        const categoryComments: string[] = [];
+        if (claim.details && Array.isArray(claim.details)) {
+            for (const detail of claim.details) {
+                if (detail.supervisorComment && detail.supervisorComment.trim()) {
+                    categoryComments.push(`[${detail.categoryName}] ${detail.supervisorComment.trim()}`);
+                }
+            }
+        }
+
+        let combinedComment = mainComment;
+        if (categoryComments.length > 0) {
+            combinedComment = combinedComment
+                ? `${combinedComment}\n${categoryComments.join('\n')}`
+                : categoryComments.join('\n');
+        }
+        if (!combinedComment) {
+            combinedComment = 'No comments provided.';
+        }
+
+        // Build HTML version for email (with category labels styled)
+        let combinedCommentHtml = '';
+        if (mainComment) {
+            combinedCommentHtml += mainComment;
+        }
+        if (categoryComments.length > 0) {
+            const categoryHtmlParts = (claim.details || [])
+                .filter((d: any) => d.supervisorComment && d.supervisorComment.trim())
+                .map((d: any) => `<br/><strong style="color:#d97706;text-transform:uppercase;">${d.categoryName}:</strong> ${d.supervisorComment.trim()}`);
+            combinedCommentHtml += categoryHtmlParts.join('');
+        }
+        if (!combinedCommentHtml) {
+            combinedCommentHtml = 'No comments provided.';
+        }
+
         const templateData = {
             EmployeeName: employee?.fullName || employee?.name || 'Employee',
             claimNo: claim.claimNo,
-            Amount: approvedAmt.toLocaleString(), // Primarily show approved amount as the main "Amount"
+            Amount: approvedAmt.toLocaleString(),
             ApprovedAmount: approvedAmt.toLocaleString(),
             DueAmount: dueAmt.toLocaleString(),
-            SupervisorComment: claim.supervisorComments || (claim as any).rejectionReason || 'No comments provided.',
+            SupervisorComment: combinedCommentHtml,       // HTML version for email
+            SupervisorCommentText: combinedComment,        // Plain text for WhatsApp
         };
 
         // 2. Send Email
@@ -91,7 +128,7 @@ export async function sendClaimStatusNotificationsInternal(claim: HRClaim) {
                 await sendWhatsApp({
                     to: phone,
                     templateSlug: waSlug,
-                    data: templateData
+                    data: { ...templateData, SupervisorComment: templateData.SupervisorCommentText }
                 });
                 console.log(`sendClaimStatusNotificationsInternal: WhatsApp sent successfully to ${phone}`);
             } catch (waErr) {

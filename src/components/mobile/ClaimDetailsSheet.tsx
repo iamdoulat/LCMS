@@ -112,7 +112,7 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category, initialDa
 
                     {/* Description */}
                     <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-800">Description</Label>
+                        <Label className="text-xs font-bold text-slate-800">Description <span className="text-red-500">*</span></Label>
                         <Textarea
                             placeholder="Enter description"
                             value={description}
@@ -168,6 +168,10 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category, initialDa
                     <Button
                         onClick={async () => {
                             if (!category || !amount || !fromDate || !toDate) {
+                                return;
+                            }
+                            if (!description.trim()) {
+                                Swal.fire('Required', 'Add Details Description of Claim', 'warning');
                                 return;
                             }
                             setIsUploading(true);
@@ -236,7 +240,7 @@ export function ClaimDetailsSheet({ isOpen, onClose, onSave, category, initialDa
                                 setIsUploading(false);
                             }
                         }}
-                        disabled={isUploading || !amount || !fromDate || !toDate}
+                        disabled={isUploading || !amount || !fromDate || !toDate || !description.trim()}
                         className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-200"
                     >
                         {isUploading ? <Loader2 className="animate-spin h-5 w-5" /> : initialData ? "Update Item" : "Add Item"}
