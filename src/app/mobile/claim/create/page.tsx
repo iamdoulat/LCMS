@@ -31,7 +31,6 @@ function CreateClaimContent() {
     const [advanceDate, setAdvanceDate] = useState('');
     const [advanceAmount, setAdvanceAmount] = useState<number>(0);
     const [claimDate, setClaimDate] = useState(new Date().toISOString().split('T')[0]);
-    const [description, setDescription] = useState('');
     const [supervisorComments, setSupervisorComments] = useState('');
     const [details, setDetails] = useState<ClaimDetail[]>([]);
 
@@ -122,7 +121,6 @@ function CreateClaimContent() {
                         setAdvanceDate(data.advancedDate || '');
                         setAdvanceAmount(data.advancedAmount || 0);
                         setClaimDate(data.claimDate);
-                        setDescription(data.description || '');
                         setSupervisorComments(data.supervisorComments || '');
                         setDetails(data.details || []);
                         setOriginalStatus(data.status);
@@ -152,7 +150,6 @@ function CreateClaimContent() {
                 claimDate,
                 advancedDate: advanceDate || null,
                 advancedAmount: Number(advanceAmount) || 0,
-                description: description || '',
                 supervisorComments: supervisorComments || '',
                 claimAmount: calculateRequestedTotal() - (Number(advanceAmount) || 0),
                 approvedAmount: calculateApprovedTotal(),
@@ -341,14 +338,6 @@ function CreateClaimContent() {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label className="text-xs font-semibold text-slate-700">Description</Label>
-                            <Textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Write general description..."
-                                className="min-h-[80px] bg-white rounded-xl border-slate-200 p-4 text-sm font-semibold text-slate-700 placeholder:text-slate-400 resize-none"
-                            />
                         </div>
 
                         {(source === 'requests' || supervisorComments) && (
