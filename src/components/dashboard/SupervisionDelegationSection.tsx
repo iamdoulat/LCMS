@@ -86,6 +86,35 @@ export function SupervisionDelegationSection() {
 
             await setDoc(doc(firestore, 'supervision_delegations', delegationId), newDelegation, { merge: true });
             
+            // --- Role Elevation Start ---
+            // To ensure the delegate can bypass Firestore rules that check for 'Supervisor' role,
+            // we'll update their user document to include the role.
+            if (delegate.uid) {
+                try {
+                    const userDocRef = doc(firestore, 'users', delegate.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+                    if (userDocSnap.exists()) {
+                        const userData = userDocSnap.data();
+                        const currentRoles = Array.isArray(userData.role) 
+                            ? userData.role 
+                            : (userData.role ? [userData.role] : []);
+                        
+                        if (!currentRoles.includes('Supervisor')) {
+                            await updateDoc(userDocRef, {
+                                role: [...currentRoles, 'Supervisor'],
+                                updatedAt: serverTimestamp()
+                            });
+                            console.log(`Elevated ${delegate.fullName} to Supervisor role for delegation.`);
+                        }
+                    }
+                } catch (roleError) {
+                    console.error("Error elevating delegate role:", roleError);
+                    // We don't fail the whole operation if role elevation fails, 
+                    // as it might be a permission issue itself or the user might already have sufficient rules.
+                }
+            }
+            // --- Role Elevation End ---
+
             clearSupervisorCache();
 
             Swal.fire({

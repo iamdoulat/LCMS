@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { cn } from "@/lib/utils";
 import { ClaimDetailsSheet } from '@/components/mobile/ClaimDetailsSheet';
 import { useAuth } from '@/context/AuthContext';
+import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { ClaimDetail, HRClaim, Employee } from '@/types';
@@ -23,6 +24,7 @@ function CreateClaimContent() {
     const editingId = searchParams.get('id');
     const source = searchParams.get('source');
     const { user, userRole } = useAuth();
+    const { isSupervisor } = useSupervisorCheck(user?.email);
 
     // Form State
     const [advanceDate, setAdvanceDate] = useState('');
@@ -105,7 +107,8 @@ function CreateClaimContent() {
                     if (claimSnap.exists()) {
                         const data = claimSnap.data() as HRClaim;
                         const canEditAsEmployee = data.status === 'Claimed' && !source;
-                        const canEditAsSupervisor = source === 'requests' && ['Claimed', 'Approval by Supervisor'].includes(data.status);
+                        const isAdmin = userRole?.some(role => ["Super Admin", "Admin", "HR", "Supervisor"].includes(role)) || isSupervisor;
+                        const canEditAsSupervisor = source === 'requests' && isAdmin && ['Claimed', 'Approval by Supervisor'].includes(data.status);
 
                         if (!canEditAsEmployee && !canEditAsSupervisor) {
                             Swal.fire('Access Denied', 'You do not have permission to edit this claim in its current status.', 'error');

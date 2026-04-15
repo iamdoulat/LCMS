@@ -38,7 +38,7 @@ export default function ClaimListPage() {
     const router = useRouter();
     const { user, companyName, address, invoiceLogoUrl, companyLogoUrl, userRole } = useAuth();
     const { toast } = useToast();
-    const { supervisedEmployeeIds, isSupervisor } = useSupervisorCheck(user?.email);
+    const { supervisedEmployeeIds, isSupervisor, isDelegate } = useSupervisorCheck(user?.email);
     const [activeTab, setActiveTab] = useState<'My Claims' | 'Claim Requests'>('My Claims');
     const [claims, setClaims] = useState<HRClaim[]>([]);
     const [loading, setLoading] = useState(true);
@@ -52,6 +52,12 @@ export default function ClaimListPage() {
     const [confirmReject, setConfirmReject] = useState<{ open: boolean; id: string; claimNo: string }>({ open: false, id: '', claimNo: '' });
     const [rejectionReason, setRejectionReason] = useState('');
     const autoApprovalProcessed = useRef<Set<string>>(new Set());
+
+    const isAdmin = React.useMemo(() => {
+        if (!userRole) return false;
+        const privilegedRoles = ["Super Admin", "Admin", "HR", "Supervisor"];
+        return userRole.some(role => privilegedRoles.includes(role)) || isSupervisor;
+    }, [userRole, isSupervisor]);
 
     const filteredClaims = React.useMemo(() => {
         let result = claims;
@@ -84,8 +90,6 @@ export default function ClaimListPage() {
 
     React.useEffect(() => {
         if (!user) return;
-
-        const isAdmin = userRole?.some(role => ["Super Admin", "Admin", "HR", "Supervisor"].includes(role));
 
         let q;
         if (activeTab === 'My Claims') {

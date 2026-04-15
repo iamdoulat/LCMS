@@ -21,6 +21,7 @@ export interface SupervisorInfo {
     supervisedEmployeeIds: string[];
     explicitSubordinateIds: string[]; // Always reporting-line based IDs
     currentEmployeeId: string | null;
+    isDelegate: boolean;
     isLoading: boolean;
 }
 
@@ -40,6 +41,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
         supervisedEmployeeIds: [],
         explicitSubordinateIds: [],
         currentEmployeeId: null,
+        isDelegate: false,
         isLoading: true
     });
 
@@ -166,6 +168,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         supervisedEmployeeIds: subordinateIds,
                         explicitSubordinateIds: explicitSubordinates.map(e => e.id),
                         currentEmployeeId: employeeId,
+                        isDelegate: false,
                         isLoading: false
                     };
                     supervisorCache.set(cacheKey, result);
@@ -247,6 +250,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         supervisedEmployeeIds: finalIds,
                         explicitSubordinateIds: finalIds,
                         currentEmployeeId: employeeId,
+                        isDelegate: delegatorIds.length > 0,
                         isLoading: false
                     };
                     supervisorCache.set(cacheKey, result);
@@ -255,6 +259,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                     const result: SupervisorInfo = {
                         ...info,
                         isSupervisor: hasSupervisorRole,
+                        isDelegate: false,
                         isLoading: false
                     };
                     setInfo(result);

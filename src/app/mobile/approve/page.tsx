@@ -55,12 +55,14 @@ export default function ApproveApplicationsPage() {
     const router = useRouter();
     const { user, userRole } = useAuth();
     // Check for privileged roles (Supervision Power)
+    const { isSupervisor, supervisedEmployeeIds, explicitSubordinateIds, currentEmployeeId } = useSupervisorCheck(user?.email);
+
+    // Check for privileged roles (Supervision Power)
     const isPrivileged = React.useMemo(() => {
         if (!userRole) return false;
-        return userRole.some(role => ['Super Admin', 'Admin', 'HR', 'Supervisor'].includes(role));
-    }, [userRole]);
-
-    const { isSupervisor, supervisedEmployeeIds, explicitSubordinateIds, currentEmployeeId } = useSupervisorCheck(user?.email);
+        const privilegedRoles = ['Super Admin', 'Admin', 'HR', 'Supervisor'];
+        return userRole.some(role => privilegedRoles.includes(role)) || isSupervisor;
+    }, [userRole, isSupervisor]);
     const { toast } = useToast();
 
     const effectiveSupervisedEmployeeIds = React.useMemo(() => {

@@ -45,19 +45,19 @@ interface UnifiedApprovalRecord extends MultipleCheckInOutRecord {
 
 export default function RemoteAttendanceApprovalPage() {
     const { user, userRole } = useAuth();
-    const { isSupervisor, supervisedEmployees, explicitSubordinates, currentEmployeeId, isLoading: isSupervisorLoading } = useSupervisorCheck(user?.email);
+    const { isSupervisor, supervisedEmployees, explicitSubordinates, currentEmployeeId, isDelegate, isLoading: isSupervisorLoading } = useSupervisorCheck(user?.email);
     const router = useRouter();
 
     const isPrivileged = React.useMemo(() => {
         if (!userRole) return false;
         const privilegedRoles = ["Super Admin", "Admin", "HR", "Supervisor"];
-        return userRole.some(role => privilegedRoles.includes(role));
-    }, [userRole]);
+        return userRole.some(role => privilegedRoles.includes(role)) || isSupervisor;
+    }, [userRole, isSupervisor]);
 
     const effectiveSupervisedEmployees = React.useMemo(() => {
-        if (isPrivileged) return supervisedEmployees;
+        if (isPrivileged || isSupervisor) return supervisedEmployees;
         return explicitSubordinates;
-    }, [isPrivileged, supervisedEmployees, explicitSubordinates]);
+    }, [isPrivileged, isSupervisor, supervisedEmployees, explicitSubordinates]);
 
     const [records, setRecords] = useState<UnifiedApprovalRecord[]>([]);
     const [rawRecords, setRawRecords] = useState<UnifiedApprovalRecord[]>([]);
@@ -110,7 +110,7 @@ export default function RemoteAttendanceApprovalPage() {
     const fetchRemoteAttendance = async () => {
         if (!user || isSupervisorLoading) return;
 
-        if (!isSupervisor || effectiveSupervisedEmployees.length === 0) {
+        if (!isSupervisor && !isDelegate && effectiveSupervisedEmployees.length === 0) {
             setLoading(false);
             return;
         }
@@ -339,7 +339,7 @@ export default function RemoteAttendanceApprovalPage() {
         };
         fetchInitialData();
     // Intentionally omitting quick filters to prevent network storming when user clicks 'Approved' etc.
-    }, [user?.email, isSupervisor, effectiveSupervisedEmployees.length, dateRange?.from?.getTime(), isSupervisorLoading]);
+    }, [user?.email, isSupervisor, isDelegate, effectiveSupervisedEmployees.length, dateRange?.from?.getTime(), isSupervisorLoading]);
 
     const containerRef = usePullToRefresh(fetchRemoteAttendance);
 

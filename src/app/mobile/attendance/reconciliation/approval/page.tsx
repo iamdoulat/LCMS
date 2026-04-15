@@ -39,14 +39,18 @@ interface ReconRequest {
 
 export default function ReconApprovalPage() {
     const { user, userRole } = useAuth();
-    const { isSupervisor, supervisedEmployees, explicitSubordinates, currentEmployeeId } = useSupervisorCheck(user?.email);
+    const { isSupervisor, supervisedEmployees, explicitSubordinates, currentEmployeeId, isDelegate } = useSupervisorCheck(user?.email);
     const router = useRouter();
 
     // For Supervisors and Admins, use the full supervised list (all non-privileged employees)
     // For others, use only explicit subordinates (direct reports)
-    const effectiveSupervisedEmployees = userRole?.some(role =>
-        ['Super Admin', 'Admin', 'HR', 'Supervisor'].includes(role)
-    ) ? supervisedEmployees : explicitSubordinates;
+    const isPrivileged = React.useMemo(() => {
+        if (!userRole) return false;
+        const privilegedRoles = ['Super Admin', 'Admin', 'HR', 'Supervisor'];
+        return userRole.some(role => privilegedRoles.includes(role)) || isSupervisor;
+    }, [userRole, isSupervisor]);
+
+    const effectiveSupervisedEmployees = isPrivileged ? supervisedEmployees : explicitSubordinates;
 
     const hasFullAccess = userRole?.some(role => ["Super Admin", "Admin", "HR"].includes(role));
 
@@ -67,7 +71,7 @@ export default function ReconApprovalPage() {
         }
 
         // Check if user is Admin, HR or Supervisor (has Supervision Power)
-        const hasSupervision = effectiveSupervisedEmployees.length > 0;
+        const hasSupervision = effectiveSupervisedEmployees.length > 0 || isSupervisor || isDelegate;
 
         if (!hasFullAccess && !hasSupervision) {
             setLoading(false);
@@ -265,7 +269,7 @@ export default function ReconApprovalPage() {
         setVisibleCount(10); // Reset count on filter change
         setEnrichedData({}); // Clear enriched data on filter change
         fetchRequests();
-    }, [user, isSupervisor, effectiveSupervisedEmployees, activeTab, filterDays, statusFilter, selectedEmployee]);
+    }, [user, isSupervisor, isDelegate, effectiveSupervisedEmployees.length, activeTab, filterDays, statusFilter, selectedEmployee]);
 
     const employeeMap = React.useMemo(() => {
         const map: Record<string, { fullName: string; employeeCode: string; designation?: string }> = {};
