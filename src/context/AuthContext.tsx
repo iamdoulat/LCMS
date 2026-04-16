@@ -59,9 +59,10 @@ interface AuthContextType {
   appVersion: string;
   hideCompanyLogo: boolean;
   hideCompanyName: boolean;
+  operationStartDate?: any;
   employeeData: Employee | null;
   refreshEmployeeData: () => Promise<void>;
-  updateCompanyProfile: (profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address' | 'hideCompanyLogo' | 'hideCompanyName' | 'appVersion'>>) => void;
+  updateCompanyProfile: (profile: Partial<CompanyProfile>) => void;
   ghostMode: boolean;
   setGhostMode: (mode: boolean) => void;
   godMode: boolean;
@@ -85,6 +86,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [appVersion, setAppVersion] = useState<string>(DEFAULT_APP_VERSION);
   const [hideCompanyLogo, setHideCompanyLogo] = useState<boolean>(false);
   const [hideCompanyName, setHideCompanyName] = useState<boolean>(false);
+  const [operationStartDate, setOperationStartDate] = useState<any>(undefined);
   const [employeeData, setEmployeeData] = useState<Employee | null>(null);
   const [ghostMode, setGhostModeState] = useState<boolean>(false);
   const [godMode, setGodModeState] = useState<boolean>(false);
@@ -103,6 +105,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         const newAddress = profileData.address || '';
         const newHideLogo = !!profileData.hideCompanyLogo;
         const newHideName = !!profileData.hideCompanyName;
+        const newOperationStartDate = profileData.operationStartDate || undefined;
         const newVersion = DEFAULT_APP_VERSION;
 
         setCompanyName(newName);
@@ -111,6 +114,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         setAddress(newAddress);
         setHideCompanyLogo(newHideLogo);
         setHideCompanyName(newHideName);
+        setOperationStartDate(newOperationStartDate);
         setAppVersion(newVersion);
 
         if (typeof window !== 'undefined') {
@@ -522,6 +526,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     let newInvoiceLogoUrl = invoiceLogoUrl;
     let newHideLogo = hideCompanyLogo;
     let newHideName = hideCompanyName;
+    let newOperationStartDate = operationStartDate;
     let newVersion = appVersion;
 
     if (profile.companyName !== undefined) {
@@ -542,6 +547,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
     if (profile.hideCompanyLogo !== undefined) newHideLogo = !!profile.hideCompanyLogo;
     if (profile.hideCompanyName !== undefined) newHideName = !!profile.hideCompanyName;
+    if (profile.operationStartDate !== undefined) newOperationStartDate = profile.operationStartDate;
 
     setCompanyName(newName);
     setCompanyLogoUrl(newLogoUrl);
@@ -549,8 +555,9 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setAppVersion(newVersion);
     setHideCompanyLogo(newHideLogo);
     setHideCompanyName(newHideName);
+    setOperationStartDate(newOperationStartDate);
     if (profile.address !== undefined) setAddress(profile.address || '');
-  }, [companyName, companyLogoUrl, invoiceLogoUrl, hideCompanyLogo, hideCompanyName, appVersion]);
+  }, [companyName, companyLogoUrl, invoiceLogoUrl, hideCompanyLogo, hideCompanyName, appVersion, operationStartDate]);
 
   return (
     <AuthContext.Provider value={{
@@ -572,6 +579,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       appVersion,
       hideCompanyLogo,
       hideCompanyName,
+      operationStartDate,
       employeeData,
       refreshEmployeeData,
       updateCompanyProfile,

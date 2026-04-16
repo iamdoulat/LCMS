@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -43,7 +43,6 @@ const MonthlyTransactionBarChart = dynamic(() => import('@/components/dashboard/
 });
 
 
-const years = Array.from({ length: 16 }, (_, i) => (2015 + i).toString());
 
 interface DashboardStats {
   totalLCs: number;
@@ -205,8 +204,26 @@ const setupAutoScroll = (scrollRef: React.RefObject<HTMLDivElement>, intervalRef
 
 
 export default function DashboardPage() {
-  const { user: authUser, loading: authLoading, userRole, setViewMode } = useAuth();
+  const { user: authUser, loading: authLoading, userRole, setViewMode, operationStartDate } = useAuth();
   const router = useRouter();
+
+  const startYearValue = useMemo(() => {
+    if (!operationStartDate) return 2015;
+    let date: Date;
+    if (typeof operationStartDate.toDate === 'function') {
+      date = operationStartDate.toDate();
+    } else {
+      date = new Date(operationStartDate);
+    }
+    return isValid(date) ? date.getFullYear() : 2015;
+  }, [operationStartDate]);
+
+  const dynamicYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const endYear = currentYear + 5;
+    return Array.from({ length: endYear - startYearValue + 1 }, (_, i) => (startYearValue + i).toString());
+  }, [startYearValue]);
+
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedChartYear, setSelectedChartYear] = React.useState<string>(new Date().getFullYear().toString());
   const [isLoading, setIsLoading] = useState(true);
@@ -219,7 +236,11 @@ export default function DashboardPage() {
     totalLinkedPIs: 0,
   });
   const [supplierPieData, setSupplierPieData] = useState<PieChartDataItem[]>([]);
-  const [yearlyLcValueData, setYearlyLcValueData] = useState<YearlyLcValue[]>(years.map(y => ({ year: y, totalValue: null })));
+  const [yearlyLcValueData, setYearlyLcValueData] = useState<YearlyLcValue[]>([]);
+
+  useEffect(() => {
+    setYearlyLcValueData(dynamicYears.map(y => ({ year: y, totalValue: null })));
+  }, [dynamicYears]);
   const [monthlyTxData, setMonthlyTxData] = useState<MonthlyChartData[]>([]);
   const [recentlyCompletedLCs, setRecentlyCompletedLCs] = useState<RecentlyCompletedLC[]>([]);
   const [draftLCs, setDraftLCs] = useState<DraftLC[]>([]);
@@ -426,7 +447,7 @@ export default function DashboardPage() {
         totalLCValue, activeSuppliers: activeSuppliersCount, activeApplicants: activeApplicantsCount, thisMonthLCQty, totalLinkedPIs: totalLinkedPIsCount,
       });
 
-      const yearlyDataPromises = years.map(async chartYearStr => {
+      const yearlyDataPromises = dynamicYears.map(async chartYearStr => {
         const chartYearNum = parseInt(chartYearStr);
         const yearlyLcQuery = query(lcEntriesRef, where("year", "==", chartYearNum));
         const yearlySnapshot = await getDocs(yearlyLcQuery);
@@ -452,11 +473,11 @@ export default function DashboardPage() {
       setRecentlyCompletedLCs([]);
       setDraftLCs([]);
       setUpcomingEtdShipments([]);
-      setYearlyLcValueData(years.map(y => ({ year: y, totalValue: null })));
+      setYearlyLcValueData(dynamicYears.map(y => ({ year: y, totalValue: null })));
     } finally {
       setIsLoading(false);
     }
-  }, [authUser, userRole]);
+  }, [authUser, userRole, dynamicYears]);
 
   const fetchMonthlyTxData = useCallback(async (year: number) => {
     const txQuery = query(
@@ -514,11 +535,11 @@ export default function DashboardPage() {
       setRecentlyCompletedLCs([]);
       setDraftLCs([]);
       setUpcomingEtdShipments([]);
-      setYearlyLcValueData(years.map(y => ({ year: y, totalValue: null })));
+      setYearlyLcValueData(dynamicYears.map(y => ({ year: y, totalValue: null })));
       setMonthlyTxData([]);
       setIsLoading(false);
     }
-  }, [selectedYear, authUser, authLoading, userRole, fetchDashboardData, fetchMonthlyTxData, selectedChartYear]);
+  }, [selectedYear, authUser, authLoading, userRole, fetchDashboardData, fetchMonthlyTxData, selectedChartYear, dynamicYears]);
 
   useEffect(() => {
     fetchMonthlyTxData(parseInt(selectedChartYear));
@@ -681,7 +702,7 @@ export default function DashboardPage() {
               <SelectValue placeholder="Select Year" />
             </SelectTrigger>
             <SelectContent>
-              {years.map((year) => (
+              {dynamicYears.map((year) => (
                 <SelectItem key={year} value={year}>
                   {year}
                 </SelectItem>
@@ -887,7 +908,7 @@ export default function DashboardPage() {
                         <SelectValue placeholder="Select Year" />
                       </SelectTrigger>
                       <SelectContent>
-                        {years.map((year) => (
+                        {dynamicYears.map((year) => (
                           <SelectItem key={year} value={year}>{year}</SelectItem>
                         ))}
                       </SelectContent>

@@ -504,6 +504,7 @@ export interface CompanyProfile {
   pwaScreenshotUrl?: string;
   hideCompanyLogo?: boolean;
   hideCompanyName?: boolean;
+  operationStartDate?: any;
   appVersion?: string;
   logoWidth?: number;
   logoHeight?: number;

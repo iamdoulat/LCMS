@@ -27,6 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getCroppedImg } from '@/lib/image-utils';
 import { Separator } from '@/components/ui/separator';
+import { DatePickerInput } from '@/components/ui/date-picker-input';
 
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
@@ -54,6 +55,7 @@ interface FinancialSettingsProfile {
   contactPerson?: string;
   binNumber?: string;
   tinNumber?: string;
+  operationStartDate?: any;
   appVersion?: string;
   timezone?: string;
   updatedAt?: any;
@@ -82,6 +84,7 @@ const financialSettingsSchema = z.object({
   contactPerson: z.string().optional(),
   binNumber: z.string().optional(),
   tinNumber: z.string().optional(),
+  operationStartDate: z.any().optional(),
   appVersion: z.string().optional().or(z.literal('')),
   timezone: z.string().optional(),
 });
@@ -203,6 +206,7 @@ export function CompanySetupForm() {
       contactPerson: '',
       binNumber: '',
       tinNumber: '',
+      operationStartDate: undefined,
       appVersion: DEFAULT_APP_VERSION,
       timezone: 'Asia/Dhaka',
     },
@@ -235,6 +239,7 @@ export function CompanySetupForm() {
           contactPerson: '',
           binNumber: '',
           tinNumber: '',
+          operationStartDate: undefined,
           appVersion: DEFAULT_APP_VERSION,
         };
 
@@ -367,6 +372,7 @@ export function CompanySetupForm() {
         pwaAppName: data.pwaAppName,
         pwaShortName: data.pwaShortName,
         pwaDescription: data.pwaDescription,
+        operationStartDate: data.operationStartDate || null,
         timezone: data.timezone || 'Asia/Dhaka',
         updatedAt: serverTimestamp(),
       };
@@ -569,6 +575,23 @@ export function CompanySetupForm() {
                   </FormItem>
                 )} />
               </div>
+
+              <FormField control={form.control} name="operationStartDate" render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Company Operation Start</FormLabel>
+                  <FormControl>
+                    <DatePickerInput
+                      field={field}
+                      placeholder="Select operation start date"
+                      disabled={isReadOnly}
+                      fromYear={1980}
+                      toYear={new Date().getFullYear() + 5}
+                    />
+                  </FormControl>
+                  <FormDescription>The official date when company operations began.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
               <FormField control={form.control} name="timezone" render={({ field }) => (
                 <FormItem>
