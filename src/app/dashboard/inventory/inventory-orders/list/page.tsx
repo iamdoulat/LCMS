@@ -69,7 +69,7 @@ const orderSortOptions = [
 ];
 
 const currentSystemYear = new Date().getFullYear();
-const orderYearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
+const orderYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_ORDER__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_ORDER__";

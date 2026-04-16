@@ -29,7 +29,7 @@ const PLACEHOLDER_APPLICANT_VALUE = "__ALL_APPLICANTS_SHIPMENT_DONE__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__ALL_BENEFICIARIES_SHIPMENT_DONE__";
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
+const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {

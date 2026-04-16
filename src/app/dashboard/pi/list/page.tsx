@@ -69,7 +69,7 @@ const invoiceSortOptions = [
 ];
 
 const currentSystemYear = new Date().getFullYear();
-const invoiceYearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
+const invoiceYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_INVOICE__";
 const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_INVOICE__";

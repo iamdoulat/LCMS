@@ -90,7 +90,7 @@ const ALL_TERMS_VALUE = "__ALL_TERMS_OF_PAY__";
 const ITEMS_PER_PAGE = 10;
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
+const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 
 

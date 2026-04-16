@@ -26,7 +26,7 @@ const ALL_MACHINES_VALUE = "__ALL_MACHINES_DEMO_PROG__";
 const ALL_BRANDS_VALUE = "__ALL_BRANDS_DEMO_PROG__";
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
+const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 
 const formatDisplayDate = (dateString?: string | null | Timestamp): string => {

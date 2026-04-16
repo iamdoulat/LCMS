@@ -24,7 +24,7 @@ import html2canvas from 'html2canvas';
 
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
+const yearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ITEMS_PER_PAGE = 10;
 

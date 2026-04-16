@@ -26,7 +26,7 @@ const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_INSTALL_REPORT__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_INSTALL_REPORT__";
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
+const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const formatDisplayDate = (dateString?: string | null): string => {
   if (!dateString) return 'N/A';

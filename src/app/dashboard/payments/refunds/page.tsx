@@ -62,7 +62,7 @@ const getFirstItemName = (lineItems: SaleDocument['lineItems']): string => {
 };
 
 const currentSystemYear = new Date().getFullYear();
-const saleYearFilterOptions = ["All Years", ...Array.from({ length: (currentSystemYear - 2020 + 11) }, (_, i) => (2020 + i).toString())];
+const saleYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_REFUND__";
 const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_REFUND__";
