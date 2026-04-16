@@ -3,12 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { StatCard } from '@/components/dashboard/StatCard';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Calendar as CalendarIcon, FileSpreadsheet, MoreHorizontal, FileText, FileEdit, Printer, Loader2, ListChecks, Trash2, LayoutDashboard, Settings } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Search, Calendar as CalendarIcon, FileSpreadsheet, MoreHorizontal, FileText, FileEdit, Printer, Loader2, ListChecks, Trash2, LayoutDashboard, Settings, Wallet, CreditCard, CheckCircle, AlertCircle, TrendingUp, CheckCircle2, Banknote, AlertTriangle, CalendarDays } from 'lucide-react';
+import { format, startOfMonth, isSameMonth, isSameYear, parseISO, isValid, getYear } from 'date-fns';
+import { Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 import {
     Popover,
     PopoverContent,
@@ -17,6 +21,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { AddClaimModal } from '@/components/forms/hr/AddClaimModal';
 import { ClaimCategoryModal } from '@/components/forms/hr/ClaimCategoryModal';
 import { ClaimSettingsForm } from '@/components/forms/hr/ClaimSettingsForm';
@@ -36,12 +41,19 @@ import { useToast } from '@/hooks/use-toast';
 import type { HRClaim, HRClaimStatus, ClaimCategory, CompanyProfile, Employee } from '@/types';
 import { hrClaimStatusOptions } from '@/types';
 
+const formatCurrency = (value?: number) => {
+    if (typeof value !== 'number' || isNaN(value)) return 'BDT 0';
+    return `BDT ${value.toLocaleString()}`;
+};
+
 export default function ClaimManagementPage() {
-    const { toast } = useToast();
+    const { userRole, user, operationStartDate } = useAuth();
     const [claims, setClaims] = useState<HRClaim[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
+    const ALL_YEARS_VALUE = "__ALL_YEARS_CLAIM__";
     const [editingClaim, setEditingClaim] = useState<HRClaim | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState<string | null>(null);
@@ -49,6 +61,14 @@ export default function ClaimManagementPage() {
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [pageSize, setPageSize] = useState(20);
     const [currentPage, setCurrentPage] = useState(1);
+
+    const dynamicYears = React.useMemo(() => {
+        return getDynamicYearRange(operationStartDate);
+    }, [operationStartDate]);
+
+    const yearOptions = React.useMemo(() => {
+        return [ALL_YEARS_VALUE, ...dynamicYears];
+    }, [dynamicYears]);
 
     // Confirmation Dialog State
     const [confirmDelete, setConfirmDelete] = useState<{
@@ -107,6 +127,71 @@ export default function ClaimManagementPage() {
         });
         return () => unsubscribe();
     }, []);
+
+
+    const stats = React.useMemo(() => {
+        const now = new Date();
+        const refDate = filterYear && filterYear !== ALL_YEARS_VALUE 
+            ? new Date(parseInt(filterYear), now.getMonth(), now.getDate()) 
+            : now;
+        
+        let yearClaimed = 0;
+        let monthClaimed = 0;
+        let yearApproved = 0;
+        let monthApproved = 0;
+        let yearDisbursed = 0;
+        let monthDisbursed = 0;
+        let yearDue = 0;
+        let monthDue = 0;
+
+        // Use ALL claims for the targeted year stats, but respect the year filter
+        claims.forEach(c => {
+            if (!c.claimDate) return;
+
+            // Robust date parsing
+            let claimDate: Date;
+            if (c.claimDate instanceof Timestamp) {
+                claimDate = c.claimDate.toDate();
+            } else if (typeof c.claimDate === 'string') {
+                claimDate = parseISO(c.claimDate);
+            } else {
+                return;
+            }
+
+            if (!isValid(claimDate)) return;
+
+            const isCurrentMatch = filterYear === ALL_YEARS_VALUE 
+                ? true 
+                : getYear(claimDate) === parseInt(filterYear);
+
+            if (isCurrentMatch) {
+                yearClaimed += c.claimAmount || 0;
+                yearApproved += c.approvedAmount || 0;
+                yearDisbursed += c.sanctionedAmount || 0;
+                yearDue += Math.max(0, (c.approvedAmount || 0) - (c.sanctionedAmount || 0));
+
+                // Only show monthly breakdown if the filtered year is the current year
+                // OR if "All Years" is selected, show this month's data
+                if (isSameMonth(claimDate, now)) {
+                    monthClaimed += c.claimAmount || 0;
+                    monthApproved += c.approvedAmount || 0;
+                    monthDisbursed += c.sanctionedAmount || 0;
+                    monthDue += Math.max(0, (c.approvedAmount || 0) - (c.sanctionedAmount || 0));
+                }
+            }
+        });
+        
+        return {
+            thisYearClaimed: yearClaimed,
+            thisMonthClaimed: monthClaimed,
+            thisYearApproved: yearApproved,
+            thisMonthApproved: monthApproved,
+            thisYearDisbursed: yearDisbursed,
+            thisMonthDisbursed: monthDisbursed,
+            thisYearDue: yearDue,
+            thisMonthDue: monthDue,
+        };
+    }, [claims, filterYear]);
 
     const handleDeleteClaim = (id: string, claimNo: string) => {
         setConfirmDelete({
@@ -211,7 +296,15 @@ export default function ClaimManagementPage() {
             }
         }
 
-        return matchesSearch && matchesStatus && matchesDate;
+        const matchesYear = filterYear === ALL_YEARS_VALUE || (() => {
+            if (!claim.claimDate) return false;
+            try {
+                const claimDate = claim.claimDate instanceof Timestamp ? claim.claimDate.toDate() : parseISO(claim.claimDate);
+                return isValid(claimDate) && getYear(claimDate) === parseInt(filterYear);
+            } catch { return false; }
+        })();
+
+        return matchesSearch && matchesStatus && matchesDate && matchesYear;
     });
 
     useEffect(() => {
@@ -229,6 +322,59 @@ export default function ClaimManagementPage() {
                     <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--accent))] to-rose-500 text-transparent bg-clip-text">Claim Management</h1>
                     <p className="text-muted-foreground">Manage your organization's employees monthly claims.</p>
                 </div>
+                <div className="flex items-center gap-2">
+                    <Label htmlFor="yearFilter" className="text-sm font-semibold text-slate-600 whitespace-nowrap hidden sm:inline-flex items-center">
+                        <CalendarDays className="mr-1 h-4 w-4" /> Year:
+                    </Label>
+                    <Select value={filterYear} onValueChange={setFilterYear}>
+                        <SelectTrigger id="yearFilter" className="w-[130px] h-10 bg-white border-slate-200 shadow-sm">
+                            <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {yearOptions.map(year => (
+                                <SelectItem key={year} value={year}>
+                                    {year === ALL_YEARS_VALUE ? "All Years" : year}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <StatCard
+                    title={`Total Claimed Amount (${filterYear === ALL_YEARS_VALUE ? 'All' : filterYear})`}
+                    value={`BDT ${stats.thisYearClaimed.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
+                    icon={<TrendingUp />}
+                    description={`This Month: BDT ${stats.thisMonthClaimed.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
+                    className="bg-yellow-600"
+                    valueClassName="text-2xl"
+                />
+                <StatCard
+                    title={`Total Approved Amount (${filterYear === ALL_YEARS_VALUE ? 'All' : filterYear})`}
+                    value={`BDT ${stats.thisYearApproved.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
+                    icon={<CheckCircle2 className="h-6 w-6" />}
+                    description={`This Month: BDT ${stats.thisMonthApproved.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
+                    className="bg-emerald-600"
+                    valueClassName="text-2xl"
+                />
+                <StatCard
+                    title={`Total Disbursed Amount (${filterYear === ALL_YEARS_VALUE ? 'All' : filterYear})`}
+                    value={`BDT ${stats.thisYearDisbursed.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
+                    icon={<Banknote />}
+                    description={`This Month: BDT ${stats.thisMonthDisbursed.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
+                    className="bg-indigo-600"
+                    valueClassName="text-2xl"
+                />
+                <StatCard
+                    title={`Total Due Amount (${filterYear === ALL_YEARS_VALUE ? 'All' : filterYear})`}
+                    value={`BDT ${stats.thisYearDue.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
+                    icon={<AlertTriangle className="h-6 w-6" />}
+                    description={`This Month: BDT ${stats.thisMonthDue.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
+                    className="bg-red-600"
+                    valueClassName="text-2xl"
+                />
             </div>
 
             {/* Main Content Card */}

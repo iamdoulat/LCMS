@@ -59,8 +59,6 @@ interface HrmDashboardStats {
     pendingAttendanceRecon: number;
     pendingAttendanceApproval: number;
     pendingBreakTimeRecon: number;
-    monthlyClaimAmount: number;
-    monthlyDisburseAmount: number;
 }
 
 const getInitials = (name?: string) => {
@@ -96,8 +94,6 @@ export default function HrmDashboardPage() {
         pendingAttendanceRecon: 0,
         pendingAttendanceApproval: 0,
         pendingBreakTimeRecon: 0,
-        monthlyClaimAmount: 0,
-        monthlyDisburseAmount: 0,
     });
 
     const { data: employees, isLoading: isLoadingEmployees } = useFirestoreQuery<EmployeeDocument[]>(collection(firestore, 'employees'), undefined, ['employees_hrm_dashboard']);
@@ -310,26 +306,6 @@ export default function HrmDashboardPage() {
                     pendingAttendanceRecon: reconSnap.size,
                     pendingAttendanceApproval: approvalSnap.size,
                     pendingBreakTimeRecon: breakReconSnap.size,
-                }));
-
-                // Fetch Monthly Claims Stats
-                const monthStart = startOfMonth(new Date());
-                const claimsQuery = query(
-                    collection(firestore, 'hr_claims'),
-                    where('claimDate', '>=', monthStart.toISOString())
-                );
-                const claimsSnap = await getDocs(claimsQuery);
-                const monthlyClaims = claimsSnap.docs.map(doc => doc.data() as HRClaim);
-
-                const totalClaimed = monthlyClaims.reduce((sum, c) => sum + (c.claimAmount || 0), 0);
-                const totalDisbursed = monthlyClaims
-                    .filter(c => c.status === 'Disbursed')
-                    .reduce((sum, c) => sum + (c.approvedAmount || 0), 0);
-
-                setStats(prev => ({
-                    ...prev,
-                    monthlyClaimAmount: totalClaimed,
-                    monthlyDisburseAmount: totalDisbursed
                 }));
 
             } catch (err) {
@@ -687,22 +663,6 @@ export default function HrmDashboardPage() {
                             description="Break review requests"
                             className="bg-orange-600"
                             footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/hr/payroll/break-time-reconciliation')}>Review</Button>}
-                        />
-                        <StatCard
-                            title="Monthly Claim Amount"
-                            value={formatCurrency(stats.monthlyClaimAmount)}
-                            icon={<Wallet />}
-                            description="Total claimed this month"
-                            className="bg-blue-600"
-                            footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/inventory/claim')}>Manage</Button>}
-                        />
-                        <StatCard
-                            title="Monthly Disburse Amount"
-                            value={formatCurrency(stats.monthlyDisburseAmount)}
-                            icon={<CreditCard />}
-                            description="Total disbursed this month"
-                            className="bg-emerald-600"
-                            footer={<Button variant="link" className="p-0 h-auto text-white text-xs underline" onClick={() => router.push('/dashboard/inventory/claim')}>View Claims</Button>}
                         />
                     </div>
 

@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import type { PettyCashAccountDocument, PettyCashTransactionDocument, SaleDocument, SaleStatus, ItemDocument, HRClaim } from '@/types';
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid, getMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid, getMonth, isSameMonth, isSameYear } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -286,23 +286,29 @@ export default function PettyCashDashboardPage() {
                 const data = docSnap.data() as HRClaim;
                 if (!data.claimDate) return;
 
-                const claimDate = new Date(data.claimDate);
+                // Robust date parsing
+                let claimDate: Date;
+                if (data.claimDate instanceof Timestamp) {
+                    claimDate = data.claimDate.toDate();
+                } else if (typeof data.claimDate === 'string') {
+                    claimDate = parseISO(data.claimDate);
+                } else {
+                    return;
+                }
+
                 if (!isValid(claimDate)) return;
 
-                const claimYear = claimDate.getFullYear();
-                const claimMonth = claimDate.getMonth();
-
-                if (claimYear === currentYear) {
+                if (isSameYear(claimDate, now)) {
                     yearClaimed += data.claimAmount || 0;
                     yearApproved += data.approvedAmount || 0;
                     yearDisbursed += data.sanctionedAmount || 0;
-                    yearDue += (data.approvedAmount || 0) - (data.sanctionedAmount || 0);
+                    yearDue += Math.max(0, (data.approvedAmount || 0) - (data.sanctionedAmount || 0));
 
-                    if (claimMonth === currentMonth) {
+                    if (isSameMonth(claimDate, now)) {
                         monthClaimed += data.claimAmount || 0;
                         monthApproved += data.approvedAmount || 0;
                         monthDisbursed += data.sanctionedAmount || 0;
-                        monthDue += (data.approvedAmount || 0) - (data.sanctionedAmount || 0);
+                        monthDue += Math.max(0, (data.approvedAmount || 0) - (data.sanctionedAmount || 0));
                     }
                 }
             });
