@@ -520,7 +520,7 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     }
   }, [router]);
 
-  const updateCompanyProfile = useCallback((profile: Partial<Pick<CompanyProfile, 'companyName' | 'companyLogoUrl' | 'invoiceLogoUrl' | 'address' | 'hideCompanyLogo' | 'hideCompanyName' | 'appVersion'>>) => {
+  const updateCompanyProfile = useCallback((profile: Partial<CompanyProfile>) => {
     let newName = companyName;
     let newLogoUrl = companyLogoUrl;
     let newInvoiceLogoUrl = invoiceLogoUrl;

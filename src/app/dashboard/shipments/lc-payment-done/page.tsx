@@ -18,6 +18,8 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 // Extended interface for LCs on this page to ensure IDs are present for filtering
 interface PaymentDoneLC extends LCEntryDocument {
@@ -30,7 +32,7 @@ const PLACEHOLDER_APPLICANT_VALUE = "__ALL_APPLICANTS_PAYMENT_DONE__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__ALL_BENEFICIARIES_PAYMENT_DONE__";
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
@@ -62,6 +64,16 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 
 
 export default function LCPaymentDonePage() {
+  const { operationStartDate } = useAuth();
+  
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const yearFilterOptions = useMemo(() => {
+    return [ALL_YEARS_VALUE, ...dynamicYears];
+  }, [dynamicYears]);
+
   const [allPaymentDoneLCs, setAllPaymentDoneLCs] = useState<PaymentDoneLC[]>([]);
   const [displayedPaymentDoneLCs, setDisplayedPaymentDoneLCs] = useState<PaymentDoneLC[]>([]);
   const [isLoading, setIsLoading] = useState(true);

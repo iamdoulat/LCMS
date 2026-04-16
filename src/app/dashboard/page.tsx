@@ -15,6 +15,7 @@ import Swal from 'sweetalert2';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
@@ -207,22 +208,9 @@ export default function DashboardPage() {
   const { user: authUser, loading: authLoading, userRole, setViewMode, operationStartDate } = useAuth();
   const router = useRouter();
 
-  const startYearValue = useMemo(() => {
-    if (!operationStartDate) return 2015;
-    let date: Date;
-    if (typeof operationStartDate.toDate === 'function') {
-      date = operationStartDate.toDate();
-    } else {
-      date = new Date(operationStartDate);
-    }
-    return isValid(date) ? date.getFullYear() : 2015;
-  }, [operationStartDate]);
-
   const dynamicYears = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const endYear = currentYear + 5;
-    return Array.from({ length: endYear - startYearValue + 1 }, (_, i) => (startYearValue + i).toString());
-  }, [startYearValue]);
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
 
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedChartYear, setSelectedChartYear] = React.useState<string>(new Date().getFullYear().toString());

@@ -28,6 +28,8 @@ import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 interface SalesInvoiceListProps {
     showFilters?: boolean;
@@ -74,7 +76,7 @@ const invoiceSortOptions = [
 ];
 
 const currentSystemYear = new Date().getFullYear();
-const invoiceYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const invoiceYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_INVOICE__";
 const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_INVOICE__";
@@ -82,7 +84,16 @@ const ALL_STATUSES_VALUE = "__ALL_STATUSES_INVOICE__";
 const DEFAULT_ITEMS_PER_PAGE = 10;
 
 export function SalesInvoiceList({ showFilters = true, itemsPerPage = DEFAULT_ITEMS_PER_PAGE }: SalesInvoiceListProps) {
+  const { operationStartDate } = useAuth();
   const router = useRouter();
+
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const invoiceYearFilterOptions = useMemo(() => {
+    return ["All Years", ...dynamicYears];
+  }, [dynamicYears]);
   const [allInvoices, setAllInvoices] = useState<InvoiceDocument[]>([]);
   const [displayedInvoices, setDisplayedInvoices] = useState<InvoiceDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);

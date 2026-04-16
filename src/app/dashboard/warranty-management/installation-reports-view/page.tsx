@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { format, parseISO, isValid, addDays, isBefore, getYear, startOfDay } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 const ITEMS_PER_PAGE = 10;
 const ALL_YEARS_VALUE = "__ALL_YEARS_INSTALL_REPORT__";
@@ -26,7 +27,7 @@ const ALL_APPLICANTS_VALUE = "__ALL_APPLICANTS_INSTALL_REPORT__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_INSTALL_REPORT__";
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const formatDisplayDate = (dateString?: string | null): string => {
   if (!dateString) return 'N/A';
@@ -46,8 +47,16 @@ const formatReportValue = (value: string | number | undefined | null, defaultVal
 };
 
 export default function InstallationReportsViewPage() {
+  const { operationStartDate, userRole } = useAuth();
   const router = useRouter();
-  const { userRole } = useAuth();
+
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const yearFilterOptions = useMemo(() => {
+    return [ALL_YEARS_VALUE, ...dynamicYears];
+  }, [dynamicYears]);
   const isReadOnly = userRole?.includes('Viewer');
   const [allReports, setAllReports] = useState<InstallationReportDocument[]>([]);
   const [displayedReports, setDisplayedReports] = useState<InstallationReportDocument[]>([]);

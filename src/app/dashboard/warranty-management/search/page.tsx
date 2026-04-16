@@ -21,10 +21,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const yearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ITEMS_PER_PAGE = 10;
 
@@ -59,6 +61,16 @@ const WarrantySearchSkeleton = () => (
 
 
 export default function WarrantySearchPage() {
+  const { operationStartDate } = useAuth();
+  
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const yearFilterOptions = useMemo(() => {
+    return ["All Years", ...dynamicYears];
+  }, [dynamicYears]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [displayedSearchTerm, setDisplayedSearchTerm] = useState('');
   const [selectedYear, setSelectedYear] = useState<string>("All Years");

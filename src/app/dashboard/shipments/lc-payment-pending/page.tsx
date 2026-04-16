@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Swal from 'sweetalert2';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 import { Input } from '@/components/ui/input';
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,7 +32,7 @@ const PLACEHOLDER_APPLICANT_VALUE = "__ALL_APPLICANTS_PAYMENT_PENDING__";
 const PLACEHOLDER_BENEFICIARY_VALUE = "__ALL_BENEFICIARIES_PAYMENT_PENDING__";
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 
 const getStatusBadgeVariant = (status?: LCStatus): "default" | "secondary" | "outline" | "destructive" => {
@@ -63,6 +65,16 @@ const formatCurrencyValue = (currency?: Currency | string, amount?: number) => {
 
 
 export default function LCPaymentPendingPage() {
+  const { operationStartDate } = useAuth();
+  
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const yearFilterOptions = useMemo(() => {
+    return [ALL_YEARS_VALUE, ...dynamicYears];
+  }, [dynamicYears]);
+
   const [allPaymentPendingLCs, setAllPaymentPendingLCs] = useState<PaymentPendingLC[]>([]);
   const [displayedPaymentPendingLCs, setDisplayedPaymentPendingLCs] = useState<PaymentPendingLC[]>([]);
   const [isLoading, setIsLoading] = useState(true);

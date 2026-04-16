@@ -21,6 +21,7 @@ import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -90,7 +91,7 @@ const ALL_TERMS_VALUE = "__ALL_TERMS_OF_PAY__";
 const ITEMS_PER_PAGE = 10;
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 
 
@@ -145,7 +146,15 @@ const TableSkeleton = () => (
 
 export default function TotalLCPage() {
   const router = useRouter();
-  const { user, userRole, loading: authLoading } = useAuth();
+  const { user, userRole, loading: authLoading, operationStartDate } = useAuth();
+
+  const dynamicYears = React.useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const yearFilterOptions = React.useMemo(() => {
+    return [ALL_YEARS_VALUE, ...dynamicYears];
+  }, [dynamicYears]);
 
   const [isReadOnly, setIsReadOnly] = React.useState(true);
 
