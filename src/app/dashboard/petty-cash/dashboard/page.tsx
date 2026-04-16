@@ -288,8 +288,8 @@ export default function PettyCashDashboardPage() {
 
                 // Robust date parsing
                 let claimDate: Date;
-                if (data.claimDate instanceof Timestamp) {
-                    claimDate = data.claimDate.toDate();
+                if ((data.claimDate as any) instanceof Timestamp) {
+                    claimDate = (data.claimDate as any).toDate();
                 } else if (typeof data.claimDate === 'string') {
                     claimDate = parseISO(data.claimDate);
                 } else {

@@ -150,8 +150,8 @@ export default function ClaimManagementPage() {
 
             // Robust date parsing
             let claimDate: Date;
-            if (c.claimDate instanceof Timestamp) {
-                claimDate = c.claimDate.toDate();
+            if ((c.claimDate as any) instanceof Timestamp) {
+                claimDate = (c.claimDate as any).toDate();
             } else if (typeof c.claimDate === 'string') {
                 claimDate = parseISO(c.claimDate);
             } else {
@@ -299,7 +299,7 @@ export default function ClaimManagementPage() {
         const matchesYear = filterYear === ALL_YEARS_VALUE || (() => {
             if (!claim.claimDate) return false;
             try {
-                const claimDate = claim.claimDate instanceof Timestamp ? claim.claimDate.toDate() : parseISO(claim.claimDate);
+                const claimDate = (claim.claimDate as any) instanceof Timestamp ? (claim.claimDate as any).toDate() : parseISO(claim.claimDate);
                 return isValid(claimDate) && getYear(claimDate) === parseInt(filterYear);
             } catch { return false; }
         })();
