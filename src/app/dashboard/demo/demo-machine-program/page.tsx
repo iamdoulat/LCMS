@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -18,6 +18,7 @@ import { Combobox, type ComboboxOption } from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 const ITEMS_PER_PAGE = 10;
 const ALL_YEARS_VALUE = "__ALL_YEARS_DEMO_PROG__";
@@ -26,7 +27,7 @@ const ALL_MACHINES_VALUE = "__ALL_MACHINES_DEMO_PROG__";
 const ALL_BRANDS_VALUE = "__ALL_BRANDS_DEMO_PROG__";
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const yearFilterOptions = [ALL_YEARS_VALUE, ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 
 const formatDisplayDate = (dateString?: string | null | Timestamp): string => {
@@ -82,7 +83,15 @@ const getDemoStatusBadgeVariant = (status: DemoAppDisplayStatus): "default" | "s
 
 
 export default function DemoMachineProgramPage() {
-  const { userRole } = useAuth();
+  const { userRole, operationStartDate } = useAuth();
+  
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const yearFilterOptions = useMemo(() => {
+    return [ALL_YEARS_VALUE, ...dynamicYears];
+  }, [dynamicYears]);
   const isReadOnly = userRole?.includes('Viewer');
   const [allApplications, setAllApplications] = useState<DemoMachineApplicationDocument[]>([]);
   const [displayedApplications, setDisplayedApplications] = useState<DemoMachineApplicationDocument[]>([]);

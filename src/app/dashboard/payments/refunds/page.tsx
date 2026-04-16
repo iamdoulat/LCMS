@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -29,6 +29,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
 import { useAuth } from '@/context/AuthContext';
 import { z } from 'zod';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 
 const formatDisplayDate = (dateString?: string) => {
@@ -62,7 +63,7 @@ const getFirstItemName = (lineItems: SaleDocument['lineItems']): string => {
 };
 
 const currentSystemYear = new Date().getFullYear();
-const saleYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const saleYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_REFUND__";
 const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_REFUND__";
@@ -76,7 +77,15 @@ const returnReasonSchema = z.object({
 type ReturnReasonFormValues = z.infer<typeof returnReasonSchema>;
 
 export default function InventoryRefundsReturnsPage() {
-  const { user } = useAuth();
+  const { user, operationStartDate } = useAuth();
+  
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const saleYearFilterOptions = useMemo(() => {
+    return ["All Years", ...dynamicYears];
+  }, [dynamicYears]);
   const [allSales, setAllSales] = useState<SaleDocument[]>([]);
   const [displayedSales, setDisplayedSales] = useState<SaleDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);

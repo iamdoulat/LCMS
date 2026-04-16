@@ -20,6 +20,8 @@ import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,13 +70,23 @@ const quoteSortOptions = [
 ];
 
 const currentSystemYear = new Date().getFullYear();
-const quoteYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const quoteYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_QUOTE__";
 const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_QUOTE__";
 const QUOTE_ITEMS_PER_PAGE = 10;
 
 export default function QuotesListPage() {
+  const { operationStartDate } = useAuth();
+  
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const quoteYearFilterOptions = useMemo(() => {
+    return ["All Years", ...dynamicYears];
+  }, [dynamicYears]);
+
   const router = useRouter();
   const [allQuotes, setAllQuotes] = useState<QuoteDocument[]>([]);
   const [displayedQuotes, setDisplayedQuotes] = useState<QuoteDocument[]>([]);

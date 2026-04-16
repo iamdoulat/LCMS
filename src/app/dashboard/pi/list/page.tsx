@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from '@/components/ui/table';
@@ -28,6 +28,8 @@ import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -69,7 +71,7 @@ const invoiceSortOptions = [
 ];
 
 const currentSystemYear = new Date().getFullYear();
-const invoiceYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const invoiceYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_INVOICE__";
 const ALL_CUSTOMERS_VALUE = "__ALL_CUSTOMERS_INVOICE__";
@@ -77,6 +79,16 @@ const ALL_STATUSES_VALUE = "__ALL_STATUSES_INVOICE__";
 const INVOICE_ITEMS_PER_PAGE = 10;
 
 export default function InvoicesListPage() {
+  const { operationStartDate } = useAuth();
+  
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const invoiceYearFilterOptions = useMemo(() => {
+    return ["All Years", ...dynamicYears];
+  }, [dynamicYears]);
+
   const router = useRouter();
   const [allInvoices, setAllInvoices] = useState<InvoiceDocument[]>([]);
   const [displayedInvoices, setDisplayedInvoices] = useState<InvoiceDocument[]>([]);

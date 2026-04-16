@@ -18,6 +18,7 @@ import { firestore } from '@/lib/firebase/config';
 import { cn } from '@/lib/utils';
 import { Combobox } from '@/components/ui/combobox';
 import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -56,7 +57,7 @@ const sortOptions = [
 ];
 
 const currentSystemYear = new Date().getFullYear();
-const yearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const yearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS__";
 const ALL_STATUSES_VALUE = "__ALL_STATUSES__";
@@ -126,7 +127,16 @@ const ReportSkeleton = () => (
 
 
 export default function ReportsPage() {
-  const { userRole } = useAuth();
+  const { userRole, operationStartDate } = useAuth();
+  
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const yearFilterOptions = useMemo(() => {
+    return ["All Years", ...dynamicYears];
+  }, [dynamicYears]);
+
   const [initialData, setInitialData] = React.useState<{
     allLcEntries: LCEntryDocument[];
     applicantOptions: DropdownOption[];

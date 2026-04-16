@@ -28,6 +28,8 @@ import { cn } from '@/lib/utils';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/AuthContext';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 const formatDisplayDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -67,13 +69,23 @@ const orderSortOptions = [
 ];
 
 const currentSystemYear = new Date().getFullYear();
-const orderYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
+// const orderYearFilterOptions = ["All Years", ...Array.from({ length: (2040 - 2010 + 1) }, (_, i) => (2010 + i).toString())];
 
 const ALL_YEARS_VALUE = "__ALL_YEARS_PO__";
 const ALL_BENEFICIARIES_VALUE = "__ALL_BENEFICIARIES_PO__";
 const PO_ITEMS_PER_PAGE = 10;
 
 export default function PurchaseOrdersListPage() {
+  const { operationStartDate } = useAuth();
+  
+  const dynamicYears = useMemo(() => {
+    return getDynamicYearRange(operationStartDate);
+  }, [operationStartDate]);
+
+  const orderYearFilterOptions = useMemo(() => {
+    return ["All Years", ...dynamicYears];
+  }, [dynamicYears]);
+
   const router = useRouter();
   const [allOrders, setAllOrders] = useState<OrderDocument[]>([]);
   const [displayedOrders, setDisplayedOrders] = useState<OrderDocument[]>([]);
