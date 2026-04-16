@@ -47,6 +47,7 @@ const formatCurrency = (value?: number) => {
 };
 
 export default function ClaimManagementPage() {
+    const { toast } = useToast();
     const { userRole, user, operationStartDate } = useAuth();
     const [claims, setClaims] = useState<HRClaim[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
