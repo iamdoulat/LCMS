@@ -100,11 +100,9 @@ export default function ClaimListPage() {
         } else {
             // "Claim Requests" tab for supervisors
             if (isAdmin) {
-                // Admins see everyone
+                // Admins see all claims (no limit to ensure accurate totals)
                 q = query(
-                    collection(firestore, 'hr_claims'),
-                    orderBy('createdAt', 'desc'),
-                    limit(50) // Initial broad fetch
+                    collection(firestore, 'hr_claims')
                 );
             } else {
                 if (supervisedEmployeeIds.length === 0) {
@@ -114,12 +112,9 @@ export default function ClaimListPage() {
                 }
 
                 if (supervisedEmployeeIds.length > 30) {
-                    // Firestore "in" limit is 30. If more, we fetch all and filter in memory, 
-                    // or for simplicity here, fetch recent claims and filter.
+                    // Firestore "in" limit is 30. Fetch all and filter in memory.
                     q = query(
-                        collection(firestore, 'hr_claims'),
-                        orderBy('createdAt', 'desc'),
-                        limit(100)
+                        collection(firestore, 'hr_claims')
                     );
                 } else {
                     q = query(
