@@ -309,13 +309,15 @@ export default function ClaimListPage() {
             {/* Header */}
             <div className="sticky top-0 z-50 bg-[#0a1e60]">
                 <div className="flex items-center justify-between px-4 pt-[5px] pb-6 relative">
-                    <button
-                        onClick={() => router.back()}
-                        className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors z-10 shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
-                    >
-                        <ArrowLeft className="h-6 w-6" />
-                    </button>
-                    <h1 className="text-lg font-bold text-white absolute inset-0 flex items-center justify-center pointer-events-none pt-[5px] pb-6">Claim</h1>
+                    <div className="flex items-center gap-3 z-10">
+                        <button
+                            onClick={() => router.back()}
+                            className="p-2 -ml-2 text-white hover:bg-white/10 rounded-full transition-colors shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]"
+                        >
+                            <ArrowLeft className="h-6 w-6" />
+                        </button>
+                        <h1 className="text-xl font-bold text-white tracking-wide">Claim</h1>
+                    </div>
                     <div className="flex items-center gap-2">
                         {/* Native Select for Year Filter */}
                         <div className="relative z-10 shadow-[0_4px_12px_rgba(0,0,0,0.4)] rounded-full bg-[#1a2b6d]">
