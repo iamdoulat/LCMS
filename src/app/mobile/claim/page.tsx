@@ -396,7 +396,7 @@ export default function ClaimListPage() {
                                         <Calendar
                                             initialFocus
                                             mode="range"
-                                            defaultMonth={dateRange?.from || new Date()}
+                                            defaultMonth={dateRange?.from || (filterYear && filterYear !== 'All' ? new Date(parseInt(filterYear), new Date().getMonth(), 1) : new Date())}
                                             selected={dateRange as any}
                                             onSelect={(range) => {
                                                 setDateRange(range as any || { from: null, to: null });
