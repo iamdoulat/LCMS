@@ -12,7 +12,7 @@ import { firestore } from '@/lib/firebase/config';
 import { HRClaim, Employee, HRClaimStatus } from '@/types';
 import { sendPushNotification } from '@/lib/notifications';
 import { sendClaimStatusNotifications } from '@/lib/notifications/claims';
-import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay, getYear, isValid, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -33,10 +33,11 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { generateClaimPDF } from '@/components/reports/hr/ClaimReportPDF';
+import { getDynamicYearRange } from '@/lib/date-utils';
 
 export default function ClaimListPage() {
     const router = useRouter();
-    const { user, companyName, address, invoiceLogoUrl, companyLogoUrl, userRole } = useAuth();
+    const { user, companyName, address, invoiceLogoUrl, companyLogoUrl, userRole, operationStartDate } = useAuth();
     const { toast } = useToast();
     const { supervisedEmployeeIds, isSupervisor, isDelegate } = useSupervisorCheck(user?.email);
     const [activeTab, setActiveTab] = useState<'My Claims' | 'Claim Requests'>('My Claims');
@@ -45,6 +46,7 @@ export default function ClaimListPage() {
     const [statusFilter, setStatusFilter] = useState<string>('All');
     const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
     const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
+    const [filterYear, setFilterYear] = useState<string>('2026');
     const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
     const [displayLimit, setDisplayLimit] = useState(10);
     const [confirmApprove, setConfirmApprove] = useState<{ open: boolean; id: string; claimNo: string }>({ open: false, id: '', claimNo: '' });
@@ -52,6 +54,11 @@ export default function ClaimListPage() {
     const [confirmReject, setConfirmReject] = useState<{ open: boolean; id: string; claimNo: string }>({ open: false, id: '', claimNo: '' });
     const [rejectionReason, setRejectionReason] = useState('');
     const autoApprovalProcessed = useRef<Set<string>>(new Set());
+
+    const yearOptions = React.useMemo(() => {
+        const dynamicYears = getDynamicYearRange(operationStartDate);
+        return ['All', ...dynamicYears];
+    }, [operationStartDate]);
 
     const isAdmin = React.useMemo(() => {
         if (!userRole) return false;
@@ -64,17 +71,40 @@ export default function ClaimListPage() {
         if (statusFilter !== 'All') {
             result = result.filter(c => c.status === statusFilter);
         }
-        if (dateRange.from && dateRange.to) {
-            result = result.filter(c => {
-                const claimDate = new Date(c.claimDate);
+
+        // Year Filter and Date Range
+        result = result.filter(c => {
+            if (!c.claimDate) return false;
+
+            // Robust date parsing (matches dashboard)
+            let claimDate: Date;
+            if ((c.claimDate as any) instanceof Timestamp) {
+                claimDate = (c.claimDate as any).toDate();
+            } else if (typeof c.claimDate === 'string') {
+                claimDate = parseISO(c.claimDate);
+            } else {
+                return false;
+            }
+
+            if (!isValid(claimDate)) return false;
+
+            // 1. Year Filter
+            const yearMatch = filterYear === 'All' ? true : getYear(claimDate) === parseInt(filterYear);
+            if (!yearMatch) return false;
+
+            // 2. Custom Date Range Filter
+            if (dateRange.from && dateRange.to) {
                 return isWithinInterval(claimDate, {
-                    start: startOfDay(dateRange.from!),
-                    end: endOfDay(dateRange.to!)
+                    start: startOfDay(dateRange.from),
+                    end: endOfDay(dateRange.to)
                 });
-            });
-        }
+            }
+
+            return true;
+        });
+
         return result;
-    }, [claims, statusFilter, dateRange]);
+    }, [claims, statusFilter, dateRange, filterYear]);
 
     const totals = React.useMemo(() => {
         return filteredClaims.reduce((acc, c) => ({
@@ -287,6 +317,27 @@ export default function ClaimListPage() {
                     </button>
                     <h1 className="text-lg font-bold text-white absolute inset-0 flex items-center justify-center pointer-events-none pt-[5px] pb-6">Claim</h1>
                     <div className="flex items-center gap-2">
+                        {/* Native Select for Year Filter */}
+                        <div className="relative z-10 shadow-[0_4px_12px_rgba(0,0,0,0.4)] rounded-full bg-[#1a2b6d]">
+                            <select
+                                value={filterYear}
+                                onChange={(e) => {
+                                    setFilterYear(e.target.value);
+                                    setDisplayLimit(10);
+                                }}
+                                className="appearance-none bg-transparent text-white font-bold text-sm px-4 py-2 pr-8 rounded-full border-none focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            >
+                                {yearOptions.map(year => (
+                                    <option key={year} value={year} className="text-slate-800">{year === 'All' ? 'All Years' : year}</option>
+                                ))}
+                            </select>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M1 1L5 5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </div>
+                        </div>
+
                         <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
                             <SheetTrigger asChild>
                                 <button className="p-2 text-white hover:bg-white/10 rounded-full transition-colors relative shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d]">
