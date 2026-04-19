@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon, ListChecks, Package, CheckCircle2 } from 'lucide-react';
+import { Banknote, Wallet, TrendingUp, TrendingDown, Loader2, AlertTriangle, PlusCircle, Edit, Trash2, MoreHorizontal, Info, Receipt, GitCommitVertical, ChevronLeft, ChevronRight, BarChart3, PieChartIcon, ListChecks, Package, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { firestore } from '@/lib/firebase/config';
 import { collection, getDocs, Timestamp, query, orderBy, onSnapshot, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
@@ -42,6 +42,8 @@ interface PettyCashStats {
     thisMonthDisbursed: number;
     thisYearDue: number;
     thisMonthDue: number;
+    thisYearRejected: number;
+    thisMonthRejected: number;
 }
 
 interface PieChartDataItem {
@@ -154,6 +156,8 @@ export default function PettyCashDashboardPage() {
         thisMonthDisbursed: 0,
         thisYearDue: 0,
         thisMonthDue: 0,
+        thisYearRejected: 0,
+        thisMonthRejected: 0,
     });
     const [transactions, setTransactions] = React.useState<PettyCashTransactionDocument[]>([]);
 
@@ -281,6 +285,8 @@ export default function PettyCashDashboardPage() {
             let monthDisbursed = 0;
             let yearDue = 0;
             let monthDue = 0;
+            let yearRejected = 0;
+            let monthRejected = 0;
 
             snapshot.forEach(docSnap => {
                 const data = docSnap.data() as HRClaim;
@@ -299,13 +305,22 @@ export default function PettyCashDashboardPage() {
                 if (!isValid(claimDate)) return;
 
                 if (isSameYear(claimDate, now)) {
-                    yearClaimed += data.claimAmount || 0;
+                    // Exclude rejected claims from claimed totals
+                    if (data.status !== 'Rejected') {
+                        yearClaimed += data.claimAmount || 0;
+                    } else {
+                        yearRejected += data.claimAmount || 0;
+                    }
                     yearApproved += data.approvedAmount || 0;
                     yearDisbursed += data.sanctionedAmount || 0;
                     yearDue += Math.max(0, (data.approvedAmount || 0) - (data.sanctionedAmount || 0));
 
                     if (isSameMonth(claimDate, now)) {
-                        monthClaimed += data.claimAmount || 0;
+                        if (data.status !== 'Rejected') {
+                            monthClaimed += data.claimAmount || 0;
+                        } else {
+                            monthRejected += data.claimAmount || 0;
+                        }
                         monthApproved += data.approvedAmount || 0;
                         monthDisbursed += data.sanctionedAmount || 0;
                         monthDue += Math.max(0, (data.approvedAmount || 0) - (data.sanctionedAmount || 0));
@@ -323,6 +338,8 @@ export default function PettyCashDashboardPage() {
                 thisMonthDisbursed: monthDisbursed,
                 thisYearDue: yearDue,
                 thisMonthDue: monthDue,
+                thisYearRejected: yearRejected,
+                thisMonthRejected: monthRejected,
             }));
         }, (error) => {
             console.error("Error fetching claims for stats:", error);
@@ -594,6 +611,14 @@ export default function PettyCashDashboardPage() {
                         icon={<AlertTriangle className="h-6 w-6" />}
                         description={`This Month: ${formatCurrency(stats.thisMonthDue)}`}
                         className="bg-red-600"
+                        valueClassName="text-2xl"
+                    />
+                    <StatCard
+                        title={`Total Rejected Amount (${new Date().getFullYear()})`}
+                        value={formatCurrency(stats.thisYearRejected)}
+                        icon={<XCircle className="h-6 w-6" />}
+                        description={`This Month: ${formatCurrency(stats.thisMonthRejected)}`}
+                        className="bg-rose-600"
                         valueClassName="text-2xl"
                     />
                 </CardContent>
