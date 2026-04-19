@@ -144,6 +144,8 @@ export default function ClaimManagementPage() {
         let monthDisbursed = 0;
         let yearDue = 0;
         let monthDue = 0;
+        let yearRejected = 0;
+        let monthRejected = 0;
 
         // Use ALL claims for the targeted year stats, but respect the year filter
         claims.forEach(c => {
@@ -166,7 +168,11 @@ export default function ClaimManagementPage() {
                 : getYear(claimDate) === parseInt(filterYear);
 
             if (isCurrentMatch) {
-                yearClaimed += c.claimAmount || 0;
+                if (c.status === 'Rejected') {
+                    yearRejected += c.claimAmount || 0;
+                } else {
+                    yearClaimed += c.claimAmount || 0;
+                }
                 yearApproved += c.approvedAmount || 0;
                 yearDisbursed += c.sanctionedAmount || 0;
                 yearDue += Math.max(0, (c.approvedAmount || 0) - (c.sanctionedAmount || 0));
@@ -174,7 +180,11 @@ export default function ClaimManagementPage() {
                 // Only show monthly breakdown if the filtered year is the current year
                 // OR if "All Years" is selected, show this month's data
                 if (isSameMonth(claimDate, now)) {
-                    monthClaimed += c.claimAmount || 0;
+                    if (c.status === 'Rejected') {
+                        monthRejected += c.claimAmount || 0;
+                    } else {
+                        monthClaimed += c.claimAmount || 0;
+                    }
                     monthApproved += c.approvedAmount || 0;
                     monthDisbursed += c.sanctionedAmount || 0;
                     monthDue += Math.max(0, (c.approvedAmount || 0) - (c.sanctionedAmount || 0));
@@ -191,6 +201,8 @@ export default function ClaimManagementPage() {
             thisMonthDisbursed: monthDisbursed,
             thisYearDue: yearDue,
             thisMonthDue: monthDue,
+            thisYearRejected: yearRejected,
+            thisMonthRejected: monthRejected,
         };
     }, [claims, filterYear]);
 
@@ -343,7 +355,7 @@ export default function ClaimManagementPage() {
             </div>
 
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                 <StatCard
                     title={`Total Claimed Amount (${filterYear === ALL_YEARS_VALUE ? 'All' : filterYear})`}
                     value={`BDT ${stats.thisYearClaimed.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
@@ -374,6 +386,14 @@ export default function ClaimManagementPage() {
                     icon={<AlertTriangle className="h-6 w-6" />}
                     description={`This Month: BDT ${stats.thisMonthDue.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
                     className="bg-red-600"
+                    valueClassName="text-2xl"
+                />
+                <StatCard
+                    title={`Total Rejected Amount (${filterYear === ALL_YEARS_VALUE ? 'All' : filterYear})`}
+                    value={`BDT ${stats.thisYearRejected.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
+                    icon={<AlertCircle className="h-6 w-6" />}
+                    description={`This Month: BDT ${stats.thisMonthRejected.toLocaleString('en-BD', { minimumFractionDigits: 2 })}`}
+                    className="bg-rose-600"
                     valueClassName="text-2xl"
                 />
             </div>

@@ -108,7 +108,7 @@ export default function ClaimListPage() {
 
     const totals = React.useMemo(() => {
         return filteredClaims.reduce((acc, c) => ({
-            claimed: acc.claimed + (c.claimAmount || 0),
+            claimed: acc.claimed + (c.status !== 'Rejected' ? (c.claimAmount || 0) : 0),
             approved: acc.approved + (c.approvedAmount || 0),
             disbursed: acc.disbursed + (c.sanctionedAmount || 0)
         }), { claimed: 0, approved: 0, disbursed: 0 });
@@ -275,33 +275,6 @@ export default function ClaimListPage() {
         );
     };
 
-    // Swipe Handling
-    const [touchStart, setTouchStart] = useState<number | null>(null);
-    const [touchEnd, setTouchEnd] = useState<number | null>(null);
-    const minSwipeDistance = 50;
-
-    const onTouchStart = (e: React.TouchEvent) => {
-        setTouchEnd(null);
-        setTouchStart(e.targetTouches[0].clientX);
-    };
-
-    const onTouchMove = (e: React.TouchEvent) => {
-        setTouchEnd(e.targetTouches[0].clientX);
-    };
-
-    const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return;
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-
-        if (isLeftSwipe && activeTab === 'My Claims') {
-            setActiveTab('Claim Requests');
-        }
-        if (isRightSwipe && activeTab === 'Claim Requests') {
-            setActiveTab('My Claims');
-        }
-    };
 
 
     return (
@@ -436,9 +409,6 @@ export default function ClaimListPage() {
 
             <div
                 className="flex-1 bg-slate-50 rounded-t-[2rem] overflow-hidden flex flex-col relative"
-                onTouchStart={onTouchStart}
-                onTouchMove={onTouchMove}
-                onTouchEnd={onTouchEnd}
             >
 
                 {/* Tabs Section */}
