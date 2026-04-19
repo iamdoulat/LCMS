@@ -49,10 +49,7 @@ export default function ClaimListPage() {
     const [filterYear, setFilterYear] = useState<string>('2026');
     const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
     const [displayLimit, setDisplayLimit] = useState(10);
-    const [confirmApprove, setConfirmApprove] = useState<{ open: boolean; id: string; claimNo: string }>({ open: false, id: '', claimNo: '' });
     const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string; claimNo: string }>({ open: false, id: '', claimNo: '' });
-    const [confirmReject, setConfirmReject] = useState<{ open: boolean; id: string; claimNo: string }>({ open: false, id: '', claimNo: '' });
-    const [rejectionReason, setRejectionReason] = useState('');
     const autoApprovalProcessed = useRef<Set<string>>(new Set());
 
     const yearOptions = React.useMemo(() => {
@@ -647,44 +644,7 @@ export default function ClaimListPage() {
                                         </div>
                                     )}
 
-                                    {/* Supervisor Actions */}
-                                    {activeTab === 'Claim Requests' && (claim.status === 'Approval by Supervisor') && (
-                                        <div className="mt-4 pt-4 border-t border-dashed border-slate-100 flex gap-3">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setConfirmApprove({
-                                                        open: true,
-                                                        id: claim.id,
-                                                        claimNo: claim.claimNo
-                                                    });
-                                                }}
-                                                className="flex-1 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 rounded-xl h-10 font-bold"
-                                            >
-                                                <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                                                Approve
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setConfirmReject({
-                                                        open: true,
-                                                        id: claim.id,
-                                                        claimNo: claim.claimNo
-                                                    });
-                                                    setRejectionReason('');
-                                                }}
-                                                className="flex-1 bg-red-50 border-red-200 text-red-700 hover:bg-red-100 rounded-xl h-10 font-bold"
-                                            >
-                                                <XCircle className="h-4 w-4 mr-1.5" />
-                                                Reject
-                                            </Button>
-                                        </div>
-                                    )}
+
                                 </Card>
                             ))}
 
@@ -708,172 +668,6 @@ export default function ClaimListPage() {
                     )}
                 </div>
 
-                {/* Approve Confirmation Dialog */}
-                <ConfirmDialog
-                    isOpen={confirmApprove.open}
-                    onOpenChange={(open) => setConfirmApprove(prev => ({ ...prev, open }))}
-                    title="Approve Claim?"
-                    description={`Are you sure you want to approve claim ${confirmApprove.claimNo}?`}
-                    onConfirm={async () => {
-                        try {
-                            const claimToApprove = claims.find(c => c.id === confirmApprove.id);
-                            if (!claimToApprove) return;
-
-                            const approvedBy = user?.displayName || user?.email || 'Supervisor';
-                            const updatedStatus: HRClaimStatus = 'Approved';
-                            const approvedAmount = claimToApprove.claimAmount;
-
-                            await updateDoc(doc(firestore, 'hr_claims', confirmApprove.id), {
-                                status: updatedStatus,
-                                approvedAmount: approvedAmount,
-                                approvedByName: approvedBy,
-                                updatedAt: Timestamp.now()
-                            });
-
-                            // Create a temporary updated claim object to pass to notifications
-                            // to avoid waiting for state refresh (onSnapshot)
-                            const updatedClaim: HRClaim = {
-                                ...claimToApprove,
-                                status: updatedStatus,
-                                approvedAmount: approvedAmount,
-                                approvedByName: approvedBy,
-                                updatedAt: Timestamp.now()
-                            };
-
-                            // Send Push Notification
-                            sendPushNotification({
-                                title: "Claim Approved",
-                                body: `Your claim ${updatedClaim.claimNo} has been approved.`,
-                                userIds: [updatedClaim.employeeId],
-                                url: '/mobile/claim'
-                            });
-                            
-                            // Send Email/WhatsApp Notifications
-                            sendClaimStatusNotifications(updatedClaim);
-                        } catch (err) {
-                            toast({
-                                title: "Error",
-                                description: "Failed to update claim status",
-                                variant: "destructive"
-                            });
-                        }
-                    }}
-                />
-
-                {/* Delete Confirmation Dialog */}
-                <ConfirmDialog
-                    isOpen={confirmDelete.open}
-                    onOpenChange={(open) => setConfirmDelete(prev => ({ ...prev, open }))}
-                    title="Delete Claim?"
-                    description={`Are you sure you want to delete claim ${confirmDelete.claimNo}? This action cannot be undone.`}
-                    variant="destructive"
-                    confirmText="Delete"
-                    onConfirm={async () => {
-                        try {
-                            // console.log("Attempting to delete claim:", confirmDelete.id);
-                            await deleteDoc(doc(firestore, 'hr_claims', confirmDelete.id));
-                            // console.log("Claim successfully deleted from Firestore");
-                            toast({
-                                title: "Deleted",
-                                description: "Claim has been removed successfully.",
-                            });
-                            setConfirmDelete(prev => ({ ...prev, open: false }));
-                        } catch (err) {
-                            console.error("Delete failed in Firestore:", err);
-                            toast({
-                                title: "Error",
-                                description: `Failed to delete claim: ${err instanceof Error ? err.message : 'Unknown error'}`,
-                                variant: "destructive"
-                            });
-                        }
-                    }}
-                />
-
-                {/* Reject Dialog */}
-                <Dialog open={confirmReject.open} onOpenChange={(open) => setConfirmReject(prev => ({ ...prev, open }))}>
-                    <DialogContent className="sm:max-w-md bg-white rounded-3xl mx-4">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl font-bold">Reject Claim</DialogTitle>
-                            <DialogDescription>
-                                Please provide a reason for rejecting claim {confirmReject.claimNo}.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4">
-                            <textarea
-                                className="w-full h-32 p-3 text-sm border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                                placeholder="Reason for rejection..."
-                                value={rejectionReason}
-                                onChange={(e) => setRejectionReason(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex gap-3">
-                            <Button
-                                variant="outline"
-                                className="flex-1 rounded-2xl h-12 font-bold"
-                                onClick={() => setConfirmReject(prev => ({ ...prev, open: false }))}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                className="flex-1 rounded-2xl h-12 font-bold bg-red-600 hover:bg-red-700 text-white"
-                                onClick={async () => {
-                                    if (!rejectionReason.trim()) {
-                                        toast({
-                                            title: "Error",
-                                            description: "Please provide a reason for rejection.",
-                                            variant: "destructive"
-                                        });
-                                        return;
-                                    }
-                                    try {
-                                        await updateDoc(doc(firestore, 'hr_claims', confirmReject.id), {
-                                            status: 'Claimed',
-                                            updatedAt: Timestamp.now(),
-                                            rejectionReason: rejectionReason
-                                        });
-
-                                        // Send Push Notification
-                                        const claim = claims.find(c => c.id === confirmReject.id);
-                                        if (claim) {
-                                            sendPushNotification({
-                                                title: "Claim Rejected",
-                                                body: `Your claim ${claim.claimNo} has been rejected by supervisor.`,
-                                                userIds: [claim.employeeId],
-                                                url: '/mobile/claim'
-                                            });
-                                        }
-
-                                        setConfirmReject(prev => ({ ...prev, open: false }));
-                                        toast({
-                                            title: "Rejected",
-                                            description: "Claim has been rejected.",
-                                        });
-
-                                        // Trigger notification for revert
-                                        if (claim) {
-                                            const updatedClaim = {
-                                                ...claim,
-                                                status: 'Claimed',
-                                                rejectionReason: rejectionReason
-                                            } as HRClaim;
-                                            sendClaimStatusNotifications(updatedClaim).catch(err => 
-                                                console.error("Failed to send rejection notification:", err)
-                                            );
-                                        }
-                                    } catch (err) {
-                                        toast({
-                                            title: "Error",
-                                            description: "Failed to reject claim",
-                                            variant: "destructive"
-                                        });
-                                    }
-                                }}
-                            >
-                                Reject
-                            </Button>
-                        </div>
-                    </DialogContent>
-                </Dialog>
 
                 {/* Floating Action Button */}
                 {activeTab === 'My Claims' && (

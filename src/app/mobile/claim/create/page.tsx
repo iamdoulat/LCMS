@@ -183,9 +183,21 @@ function CreateClaimContent() {
                 // If an employee updates their own claim, reset status to Claimed for re-approval
                 claimData.status = 'Claimed';
             } else if (source === 'requests' && originalStatus === 'Approval by Supervisor') {
-                // If supervisor updates a claim that was in supervisor approval status, move it back to Claimed
-                // This triggers the 15-minute countdown in the list page
-                claimData.status = 'Claimed';
+                const areAllRejected = details.length > 0 && details.every(d => d.status === 'Rejected');
+                const hasAnyApproved = details.some(d => d.status === 'Approved');
+                const hasPending = details.some(d => !d.status);
+
+                if (hasPending) {
+                    Swal.fire('Incomplete', 'Please approve or reject all items before submitting.', 'warning');
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                if (areAllRejected) {
+                    claimData.status = 'Rejected';
+                } else if (hasAnyApproved) {
+                    claimData.status = 'Approved';
+                }
             }
 
             // Clean data of undefined values
@@ -197,14 +209,14 @@ function CreateClaimContent() {
                 const claimRef = doc(firestore, 'hr_claims', editingId);
                 await updateDoc(claimRef, finalData);
 
-                // Trigger notification if supervisor reverted the claim to 'Claimed'
-                if (source === 'requests' && finalData.status === 'Claimed' && editingId) {
+                // Trigger notification if supervisor approved or rejected the claim
+                if (source === 'requests' && (finalData.status === 'Approved' || finalData.status === 'Rejected' || finalData.status === 'Claimed') && editingId) {
                     const fullClaimDoc = await getDoc(claimRef);
                     if (fullClaimDoc.exists()) {
                         const fullClaim = { id: editingId, ...fullClaimDoc.data() } as HRClaim;
                         // Use a background call so it doesn't block UI rotation
                         sendClaimStatusNotifications(fullClaim).catch(err => 
-                            console.error("Failed to send revert notification:", err)
+                            console.error("Failed to send status notification:", err)
                         );
                     }
                 }
