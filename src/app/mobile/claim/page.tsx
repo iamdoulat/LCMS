@@ -583,6 +583,20 @@ export default function ClaimListPage() {
                                         </div>
                                     </div>
 
+                                    {/* Claim Categories */}
+                                    {claim.claimCategories && claim.claimCategories.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5 mb-3">
+                                            {claim.claimCategories.map((cat, idx) => (
+                                                <span
+                                                    key={idx}
+                                                    className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100/60"
+                                                >
+                                                    {cat}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     <div className="flex flex-row items-end justify-between gap-4 mt-2 pt-2 border-t border-slate-50 flex-wrap">
                                         <div className="flex flex-col items-start min-w-[90px]">
                                             <span className="text-[10px] text-slate-400">Claim Amount</span>
