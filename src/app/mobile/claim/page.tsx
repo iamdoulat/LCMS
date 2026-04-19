@@ -3,15 +3,14 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Plus, ArrowLeft, Loader2, FileSpreadsheet, Filter, Calendar as CalendarIcon, CheckCircle2, XCircle, Edit2, Download, MessageSquare, Trash2, Timer } from 'lucide-react';
+import { Plus, ArrowLeft, Loader2, FileSpreadsheet, Filter, Calendar as CalendarIcon, Edit2, Download, MessageSquare, Trash2, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
-import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, deleteDoc, Timestamp, limit, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, Timestamp, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { HRClaim, Employee, HRClaimStatus } from '@/types';
-import { sendPushNotification } from '@/lib/notifications';
-import { sendClaimStatusNotifications } from '@/lib/notifications/claims';
+
 import { format, isWithinInterval, startOfDay, endOfDay, getYear, isValid, parseISO } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,15 +24,54 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+
 import { generateClaimPDF } from '@/components/reports/hr/ClaimReportPDF';
 import { getDynamicYearRange } from '@/lib/date-utils';
+
+const ClaimStopwatch = React.memo(({ claim }: { claim: HRClaim }) => {
+    const [timeLeft, setTimeLeft] = useState<string>('--:--');
+    const timerExpiredRef = useRef(false);
+    
+    React.useEffect(() => {
+        if (claim.status !== 'Claimed') return;
+        timerExpiredRef.current = false;
+
+        const updateTimer = () => {
+            const now = Date.now();
+            const timestamp = claim.updatedAt || claim.createdAt;
+            const referenceDate = timestamp?.toDate ? timestamp.toDate() : (timestamp?.seconds ? new Date(timestamp.seconds * 1000) : null);
+            
+            if (!referenceDate) return;
+
+            const diff = (15 * 60 * 1000) - (now - referenceDate.getTime());
+            
+            if (diff <= 0) {
+                setTimeLeft('00:00');
+                timerExpiredRef.current = true;
+                // Don't call updateDoc here — the auto-approval useEffect handles it
+                return;
+            }
+
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [claim.id, claim.status, claim.updatedAt, claim.createdAt]);
+
+    if (claim.status !== 'Claimed') return null;
+
+    return (
+        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50/50 rounded-lg border border-blue-100/50 min-w-fit shadow-sm">
+            <Timer className="h-3 w-3 text-blue-500 animate-pulse" />
+            <span className="text-[10px] font-bold text-blue-600 font-mono tracking-tighter">{timeLeft}</span>
+        </div>
+    );
+});
+ClaimStopwatch.displayName = 'ClaimStopwatch';
 
 export default function ClaimListPage() {
     const router = useRouter();
@@ -115,8 +153,21 @@ export default function ClaimListPage() {
         return filteredClaims.slice(0, displayLimit);
     }, [filteredClaims, displayLimit]);
 
+    // Stable ref for toast to avoid re-subscribing onSnapshot on every render
+    const toastRef = useRef(toast);
+    toastRef.current = toast;
+
+    // Stable ref for supervisedEmployeeIds to avoid re-subscribing when array reference changes
+    const supervisedIdsRef = useRef(supervisedEmployeeIds);
+    supervisedIdsRef.current = supervisedEmployeeIds;
+
+    // Stable key for supervisedEmployeeIds — only changes when actual IDs change
+    const supervisedIdsKey = React.useMemo(() => supervisedEmployeeIds.join(','), [supervisedEmployeeIds]);
+
     React.useEffect(() => {
         if (!user) return;
+
+        const currentSupervisedIds = supervisedIdsRef.current;
 
         let q;
         if (activeTab === 'My Claims') {
@@ -132,13 +183,13 @@ export default function ClaimListPage() {
                     collection(firestore, 'hr_claims')
                 );
             } else {
-                if (supervisedEmployeeIds.length === 0) {
+                if (currentSupervisedIds.length === 0) {
                     setClaims([]);
                     setLoading(false);
                     return;
                 }
 
-                if (supervisedEmployeeIds.length > 30) {
+                if (currentSupervisedIds.length > 30) {
                     // Firestore "in" limit is 30. Fetch all and filter in memory.
                     q = query(
                         collection(firestore, 'hr_claims')
@@ -146,7 +197,7 @@ export default function ClaimListPage() {
                 } else {
                     q = query(
                         collection(firestore, 'hr_claims'),
-                        where('employeeId', 'in', supervisedEmployeeIds)
+                        where('employeeId', 'in', currentSupervisedIds)
                     );
                 }
             }
@@ -156,8 +207,8 @@ export default function ClaimListPage() {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             let items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HRClaim));
 
-            if (activeTab === 'Claim Requests' && !isAdmin && supervisedEmployeeIds.length > 30) {
-                items = items.filter(item => supervisedEmployeeIds.includes(item.employeeId));
+            if (activeTab === 'Claim Requests' && !isAdmin && supervisedIdsRef.current.length > 30) {
+                items = items.filter(item => supervisedIdsRef.current.includes(item.employeeId));
             }
 
             items.sort((a, b) => {
@@ -169,7 +220,7 @@ export default function ClaimListPage() {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching claims:", error);
-            toast({
+            toastRef.current({
                 title: "Error",
                 description: "Failed to load claims. Please try again.",
                 variant: "destructive"
@@ -178,7 +229,8 @@ export default function ClaimListPage() {
         });
 
         return () => unsubscribe();
-    }, [user, activeTab, supervisedEmployeeIds, userRole, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.uid, activeTab, isAdmin, supervisedIdsKey]);
 
     // Auto-approval logic: Claims stay 'Claimed' for 15 mins, then move to 'Approval by Supervisor'
     // Auto-approval logic with freeze protection
@@ -221,57 +273,6 @@ export default function ClaimListPage() {
             });
         }
     }, [claims, loading]);
-
-    const ClaimStopwatch = ({ claim }: { claim: HRClaim }) => {
-        const [timeLeft, setTimeLeft] = useState<string>('--:--');
-        
-        React.useEffect(() => {
-            if (claim.status !== 'Claimed') return;
-
-            const updateTimer = () => {
-                const now = Date.now();
-                const timestamp = claim.updatedAt || claim.createdAt;
-                const referenceDate = timestamp?.toDate ? timestamp.toDate() : (timestamp?.seconds ? new Date(timestamp.seconds * 1000) : null);
-                
-                if (!referenceDate) return;
-
-                const diff = (15 * 60 * 1000) - (now - referenceDate.getTime());
-                
-                if (diff <= 0) {
-                    setTimeLeft('00:00');
-                    // Automatically trigger the status update if we hit zero while viewing
-                    if (claim.status === 'Claimed') {
-                        const updatedStatus: HRClaimStatus = 'Approval by Supervisor';
-                        const approvedBy = user?.displayName || user?.email || 'System';
-                        
-                        updateDoc(doc(firestore, 'hr_claims', claim.id), {
-                            status: updatedStatus,
-                            updatedAt: Timestamp.now()
-                        }).catch(err => { /* console.error("Auto-approval error:", err) */ });
-                    }
-                    return;
-                }
-
-                const minutes = Math.floor(diff / 60000);
-                const seconds = Math.floor((diff % 60000) / 1000);
-                setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-            };
-
-            updateTimer();
-            const interval = setInterval(updateTimer, 1000);
-            return () => clearInterval(interval);
-        }, [claim]);
-
-        if (claim.status !== 'Claimed') return null;
-
-        return (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50/50 rounded-lg border border-blue-100/50 min-w-fit shadow-sm">
-                <Timer className="h-3 w-3 text-blue-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-blue-600 font-mono tracking-tighter">{timeLeft}</span>
-            </div>
-        );
-    };
-
 
 
     return (
@@ -465,7 +466,7 @@ export default function ClaimListPage() {
                             <p className="text-lg font-medium">No {statusFilter !== 'All' ? statusFilter : ''} claims</p>
                         </div>
                     ) : (
-                        <div className="space-y-4">
+                        <div className="space-y-4" style={{ contain: 'layout style' }}>
                             {paginatedClaims.map((claim: HRClaim) => (
                                 <Card
                                     key={claim.id}
@@ -477,9 +478,10 @@ export default function ClaimListPage() {
                                         }
                                     }}
                                     className={cn(
-                                        "p-4 border-none shadow-sm rounded-xl bg-white relative overflow-hidden transition-all active:bg-slate-50 select-none",
+                                        "p-4 border-none shadow-sm rounded-xl bg-white relative overflow-hidden active:bg-slate-50 select-none",
                                         (claim.status === 'Claimed' && activeTab === 'My Claims') || (activeTab === 'Claim Requests' && ['Claimed', 'Approval by Supervisor'].includes(claim.status)) ? "cursor-pointer hover:shadow-md border-l-4 border-l-blue-500" : "border-l-4 border-l-blue-400"
                                     )}
+                                    style={{ contain: 'content', willChange: 'auto' }}
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex flex-col">
@@ -581,7 +583,7 @@ export default function ClaimListPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-row items-end justify-between gap-4 mt-2 pt-2 border-t border-slate-50 overflow-x-auto no-scrollbar">
+                                    <div className="flex flex-row items-end justify-between gap-4 mt-2 pt-2 border-t border-slate-50 flex-wrap">
                                         <div className="flex flex-col items-start min-w-[90px]">
                                             <span className="text-[10px] text-slate-400">Claim Amount</span>
                                             <span className="text-sm font-bold text-blue-600">৳{claim.claimAmount.toLocaleString()}</span>
@@ -668,6 +670,33 @@ export default function ClaimListPage() {
                     )}
                 </div>
 
+
+                {/* Delete Confirmation Dialog */}
+                <ConfirmDialog
+                    isOpen={confirmDelete.open}
+                    onOpenChange={(open) => setConfirmDelete(prev => ({ ...prev, open }))}
+                    title="Delete Claim?"
+                    description={`Are you sure you want to delete claim ${confirmDelete.claimNo}? This action cannot be undone.`}
+                    variant="destructive"
+                    confirmText="Delete"
+                    onConfirm={async () => {
+                        try {
+                            await deleteDoc(doc(firestore, 'hr_claims', confirmDelete.id));
+                            toast({
+                                title: "Deleted",
+                                description: "Claim has been removed successfully.",
+                            });
+                            setConfirmDelete(prev => ({ ...prev, open: false }));
+                        } catch (err) {
+                            console.error("Delete failed in Firestore:", err);
+                            toast({
+                                title: "Error",
+                                description: `Failed to delete claim: ${err instanceof Error ? err.message : 'Unknown error'}`,
+                                variant: "destructive"
+                            });
+                        }
+                    }}
+                />
 
                 {/* Floating Action Button */}
                 {activeTab === 'My Claims' && (
