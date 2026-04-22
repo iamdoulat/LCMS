@@ -232,7 +232,47 @@ export default function ClaimListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, activeTab, isAdmin, supervisedIdsKey]);
 
+    // Auto-approval logic: Claims stay 'Claimed' for 15 mins, then move to 'Approval by Supervisor'
+    // Auto-approval logic with freeze protection
+    React.useEffect(() => {
+        if (loading || claims.length === 0) return;
 
+        const now = Date.now();
+        const autoApprovalThreshold = 15 * 60 * 1000; // 15 minutes in ms
+
+        const claimsToApprove = claims.filter(claim => {
+            if (claim.status !== 'Claimed') return false;
+            if (autoApprovalProcessed.current.has(claim.id)) return false;
+            
+            const timestamp = claim.updatedAt || claim.createdAt;
+            const referenceDate = timestamp?.toDate ? timestamp.toDate() : (timestamp?.seconds ? new Date(timestamp.seconds * 1000) : null);
+            
+            if (!referenceDate) return false;
+
+            const age = now - referenceDate.getTime();
+            return age >= autoApprovalThreshold;
+        });
+
+        if (claimsToApprove.length > 0) {
+            claimsToApprove.forEach(async (claim) => {
+                autoApprovalProcessed.current.add(claim.id);
+                try {
+                    const updatedStatus: HRClaimStatus = 'Approval by Supervisor';
+                    const approvedBy = user?.displayName || user?.email || 'System';
+                    
+                    await updateDoc(doc(firestore, 'hr_claims', claim.id), {
+                        status: updatedStatus,
+                        updatedAt: Timestamp.now()
+                    });
+                    // Claim auto-approved
+                    // console.log(`Claim ${claim.claimNo} auto-approved (moved to ${updatedStatus}).`);
+                } catch (err) {
+                    autoApprovalProcessed.current.delete(claim.id);
+                    console.error(`Failed to auto-approve claim ${claim.id}:`, err);
+                }
+            });
+        }
+    }, [claims, loading]);
 
 
     return (
@@ -285,7 +325,7 @@ export default function ClaimListPage() {
                                     <SheetTitle className="text-xl font-bold text-slate-800">Filter by Status</SheetTitle>
                                 </SheetHeader>
                                 <div className="grid grid-cols-1 gap-3">
-                                    {['All', 'Claimed', 'Approved', 'Disbursed', 'Rejected'].map((status) => (
+                                    {['All', 'Claimed', 'Approval by Supervisor', 'Approved', 'Disbursed', 'Rejected'].map((status) => (
                                         <button
                                             key={status}
                                             onClick={() => {
@@ -433,13 +473,13 @@ export default function ClaimListPage() {
                                     onClick={() => {
                                         if (claim.status === 'Claimed' && activeTab === 'My Claims') {
                                             router.push(`/mobile/claim/create?id=${claim.id}`);
-                                        } else if (activeTab === 'Claim Requests' && claim.status === 'Claimed') {
+                                        } else if (activeTab === 'Claim Requests' && (isAdmin || ['Claimed', 'Approval by Supervisor'].includes(claim.status))) {
                                             router.push(`/mobile/claim/create?id=${claim.id}&source=requests`);
                                         }
                                     }}
                                     className={cn(
                                         "p-4 border-none shadow-sm rounded-xl bg-white relative overflow-hidden active:bg-slate-50 select-none",
-                                        (claim.status === 'Claimed' && activeTab === 'My Claims') || (activeTab === 'Claim Requests' && claim.status === 'Claimed') ? "cursor-pointer hover:shadow-md border-l-4 border-l-blue-500" : "border-l-4 border-l-blue-400"
+                                        (claim.status === 'Claimed' && activeTab === 'My Claims') || (activeTab === 'Claim Requests' && (isAdmin || ['Claimed', 'Approval by Supervisor'].includes(claim.status))) ? "cursor-pointer hover:shadow-md border-l-4 border-l-blue-500" : "border-l-4 border-l-blue-400"
                                     )}
                                     style={{ contain: 'content', willChange: 'auto' }}
                                 >
@@ -449,7 +489,7 @@ export default function ClaimListPage() {
                                                 <span className="text-xs font-bold text-blue-600">{claim.claimNo}</span>
                                                 <div className="flex items-center gap-3 grayscale-[0.2]">
                                                     {((claim.status === 'Claimed' && activeTab === 'My Claims') || 
-                                                      (activeTab === 'Claim Requests' && claim.status === 'Claimed')) && (
+                                                      (activeTab === 'Claim Requests' && ['Claimed', 'Approval by Supervisor'].includes(claim.status))) && (
                                                         <Edit2 className="h-3 w-3 text-blue-400" />
                                                     )}
                                                     {((activeTab === 'My Claims' && claim.status === 'Claimed') || (activeTab === 'Claim Requests' && isAdmin)) && (

@@ -26,6 +26,11 @@ function CreateClaimContent() {
     const source = searchParams.get('source');
     const { user, userRole } = useAuth();
     const { isSupervisor, isDelegate, isLoading: isSupLoading } = useSupervisorCheck(user?.email);
+    const isAdmin = React.useMemo(() => {
+        if (!userRole) return false;
+        const privilegedRoles = ["Super Admin", "Admin", "HR", "Supervisor"];
+        return userRole.some(role => privilegedRoles.includes(role)) || isSupervisor || isDelegate;
+    }, [userRole, isSupervisor, isDelegate]);
 
     // Form State
     const [advanceDate, setAdvanceDate] = useState('');
@@ -107,12 +112,12 @@ function CreateClaimContent() {
                     if (claimSnap.exists()) {
                         const data = claimSnap.data() as HRClaim;
                         const canEditAsEmployee = data.status === 'Claimed' && !source;
-                        const isAdmin = userRole?.some(role => ["Super Admin", "Admin", "HR", "Supervisor"].includes(role)) || isSupervisor || isDelegate;
-                        const canEditAsSupervisor = source === 'requests' && isAdmin && data.status === 'Claimed';
+                        const canEditAsSupervisor = source === 'requests' && isAdmin && ['Claimed', 'Approval by Supervisor'].includes(data.status);
+                        const canViewAsSupervisor = source === 'requests' && isAdmin;
 
                         if (!isSupLoading) {
-                            if (!canEditAsEmployee && !canEditAsSupervisor) {
-                                Swal.fire('Access Denied', 'You do not have permission to edit this claim in its current status.', 'error');
+                            if (!canEditAsEmployee && !canViewAsSupervisor) {
+                                Swal.fire('Access Denied', 'You do not have permission to view or edit this claim in its current status.', 'error');
                                 router.push('/mobile/claim');
                                 return;
                             }
@@ -133,7 +138,7 @@ function CreateClaimContent() {
             }
         };
         fetchData();
-    }, [user?.uid, editingId, user?.email, source, isSupervisor, isDelegate, isSupLoading, userRole]);
+    }, [user?.uid, editingId, user?.email, source, isSupervisor, isDelegate, isSupLoading, userRole, isAdmin]);
 
     const calculateRequestedTotal = () => details.reduce((sum, item) => sum + item.amount, 0);
     const calculateApprovedTotal = () => details.reduce((sum, item) => sum + (item.status === 'Approved' ? item.amount : 0), 0);
@@ -182,7 +187,7 @@ function CreateClaimContent() {
             } else if (source !== 'requests') {
                 // If an employee updates their own claim, reset status to Claimed for re-approval
                 claimData.status = 'Claimed';
-            } else if (source === 'requests' && originalStatus === 'Claimed') {
+            } else if (source === 'requests' && (originalStatus === 'Approval by Supervisor' || originalStatus === 'Claimed')) {
                 const areAllRejected = details.length > 0 && details.every(d => d.status === 'Rejected');
                 const hasAnyApproved = details.some(d => d.status === 'Approved');
                 const hasPending = details.some(d => !d.status);
@@ -259,6 +264,49 @@ function CreateClaimContent() {
 
     const displayTotalLabel = editingId ? 'Updated Claim for Approval' : 'Submit Claim for Approval';
     const displayTotalAmount = (details.some(d => d.status) ? calculateApprovedTotal() : calculateRequestedTotal()).toLocaleString();
+
+    const handleReturnToClaimed = async () => {
+        if (!user?.uid || !editingId) return;
+        
+        const result = await Swal.fire({
+            title: 'Return to Claimed?',
+            text: 'This will change the status back to Claimed and allow the employee to edit it again.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'Yes, Return'
+        });
+
+        if (result.isConfirmed) {
+            setIsSubmitting(true);
+            try {
+                const claimRef = doc(firestore, 'hr_claims', editingId);
+                await updateDoc(claimRef, {
+                    status: 'Claimed',
+                    updatedAt: serverTimestamp()
+                });
+
+                Swal.fire({
+                    title: 'Status Updated!',
+                    text: 'Claim has been returned to Claimed state.',
+                    icon: 'success',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+
+                router.push('/mobile/claim');
+            } catch (error: any) {
+                console.error("Error updating claim:", error);
+                Swal.fire('Error', 'Failed to update status.', 'error');
+            } finally {
+                setIsSubmitting(false);
+            }
+        }
+    };
 
     return (
         <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
@@ -531,6 +579,16 @@ function CreateClaimContent() {
 
                 {/* Submit Bar */}
                 <div className="absolute bottom-[94px] left-0 right-0 p-5 bg-white/80 backdrop-blur-md border-t border-slate-100 flex flex-col gap-3 z-50">
+                    {source === 'requests' && isAdmin && originalStatus === 'Approval by Supervisor' && (
+                        <Button
+                            onClick={handleReturnToClaimed}
+                            disabled={isSubmitting}
+                            variant="outline"
+                            className="w-full h-12 border-2 border-amber-500 text-amber-600 hover:bg-amber-50 text-lg font-bold rounded-2xl shadow-sm"
+                        >
+                            Return to Claimed (For Edit)
+                        </Button>
+                    )}
                     <Button
                         onClick={handleSubmit}
                         disabled={isSubmitting || details.length === 0}
