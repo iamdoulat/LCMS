@@ -2450,7 +2450,7 @@ export type AssetRequisitionDocument = AssetRequisition & { id: string; createdA
 
 
 // --- HR Claim Types ---
-export const hrClaimStatusOptions = ["Claimed", "Approval by Supervisor", "Approved", "Disbursed", "Rejected"] as const;
+export const hrClaimStatusOptions = ["Claimed", "Approved", "Disbursed", "Rejected"] as const;
 export type HRClaimStatus = typeof hrClaimStatusOptions[number];
 
 export interface ClaimDetail {

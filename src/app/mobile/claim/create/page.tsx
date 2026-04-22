@@ -108,7 +108,7 @@ function CreateClaimContent() {
                         const data = claimSnap.data() as HRClaim;
                         const canEditAsEmployee = data.status === 'Claimed' && !source;
                         const isAdmin = userRole?.some(role => ["Super Admin", "Admin", "HR", "Supervisor"].includes(role)) || isSupervisor || isDelegate;
-                        const canEditAsSupervisor = source === 'requests' && isAdmin && ['Claimed', 'Approval by Supervisor'].includes(data.status);
+                        const canEditAsSupervisor = source === 'requests' && isAdmin && data.status === 'Claimed';
 
                         if (!isSupLoading) {
                             if (!canEditAsEmployee && !canEditAsSupervisor) {
@@ -182,7 +182,7 @@ function CreateClaimContent() {
             } else if (source !== 'requests') {
                 // If an employee updates their own claim, reset status to Claimed for re-approval
                 claimData.status = 'Claimed';
-            } else if (source === 'requests' && (originalStatus === 'Approval by Supervisor' || originalStatus === 'Claimed')) {
+            } else if (source === 'requests' && originalStatus === 'Claimed') {
                 const areAllRejected = details.length > 0 && details.every(d => d.status === 'Rejected');
                 const hasAnyApproved = details.some(d => d.status === 'Approved');
                 const hasPending = details.some(d => !d.status);
