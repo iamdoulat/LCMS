@@ -282,10 +282,26 @@ function CreateClaimContent() {
             setIsSubmitting(true);
             try {
                 const claimRef = doc(firestore, 'hr_claims', editingId);
-                await updateDoc(claimRef, {
+                const updateData = {
                     status: 'Claimed',
-                    updatedAt: serverTimestamp()
-                });
+                    updatedAt: serverTimestamp(),
+                    supervisorComments: supervisorComments,
+                    details: details.map(d => ({
+                        ...d,
+                        supervisorComment: d.supervisorComment || ''
+                    }))
+                };
+                await updateDoc(claimRef, updateData);
+
+                // Fetch the updated doc to send notifications
+                const updatedDoc = await getDoc(claimRef);
+                if (updatedDoc.exists()) {
+                    const fullClaim = { id: editingId, ...updatedDoc.data() } as HRClaim;
+                    // Use a background call so it doesn't block UI
+                    sendClaimStatusNotifications(fullClaim).catch(err => 
+                        console.error("Failed to send revert notification:", err)
+                    );
+                }
 
                 Swal.fire({
                     title: 'Status Updated!',
