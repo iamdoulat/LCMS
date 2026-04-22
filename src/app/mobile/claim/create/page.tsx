@@ -182,18 +182,15 @@ function CreateClaimContent() {
             } else if (source !== 'requests') {
                 // If an employee updates their own claim, reset status to Claimed for re-approval
                 claimData.status = 'Claimed';
-            } else if (source === 'requests' && originalStatus === 'Approval by Supervisor') {
+            } else if (source === 'requests' && (originalStatus === 'Approval by Supervisor' || originalStatus === 'Claimed')) {
                 const areAllRejected = details.length > 0 && details.every(d => d.status === 'Rejected');
                 const hasAnyApproved = details.some(d => d.status === 'Approved');
                 const hasPending = details.some(d => !d.status);
 
                 if (hasPending) {
-                    Swal.fire('Incomplete', 'Please approve or reject all items before submitting.', 'warning');
-                    setIsSubmitting(false);
-                    return;
-                }
-
-                if (areAllRejected) {
+                    // Retain original status if not all items are processed
+                    claimData.status = originalStatus;
+                } else if (areAllRejected) {
                     claimData.status = 'Rejected';
                 } else if (hasAnyApproved) {
                     claimData.status = 'Approved';
