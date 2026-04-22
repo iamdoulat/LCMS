@@ -311,7 +311,7 @@ const AttendanceDayRow = ({
                 const configSnap = await getDoc(doc(firestore, 'hrm_settings', 'multi_check_in_out'));
                 const config = configSnap.data() as MultipleCheckInOutConfiguration;
                 if (config?.isClockOutRestrictedIfActiveCheckIn) {
-                    const isActiveVisit = await hasActiveCheckIn(employee.id);
+                    const isActiveVisit = await hasActiveCheckIn(employee.id, config);
                     if (isActiveVisit) {
                         Swal.fire({
                             title: "Restricted",

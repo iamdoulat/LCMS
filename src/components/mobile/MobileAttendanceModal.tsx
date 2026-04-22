@@ -452,7 +452,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     const config = configSnap.data() as MultipleCheckInOutConfiguration;
                     
                     if (config?.isClockOutRestrictedIfActiveCheckIn) {
-                        const isActiveVisit = await hasActiveCheckIn(canonicalId);
+                        const isActiveVisit = await hasActiveCheckIn(canonicalId, config);
                         console.log(`[ClockOut Restriction] Is check-out restricted: ${config?.isClockOutRestrictedIfActiveCheckIn}, Active visit found: ${isActiveVisit}`);
                         if (isActiveVisit) {
                             throw new Error('Please check out from Check In tab first.');

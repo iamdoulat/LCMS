@@ -134,7 +134,7 @@ export function AddAttendanceForm({ onFormSubmit }: AddAttendanceFormProps) {
         const config = configSnap.data() as MultipleCheckInOutConfiguration;
 
         if (config?.isClockOutRestrictedIfActiveCheckIn) {
-          const isActiveVisit = await hasActiveCheckIn(data.employeeId);
+          const isActiveVisit = await hasActiveCheckIn(data.employeeId, config);
           if (isActiveVisit) {
             Swal.fire({
               title: "Restricted",

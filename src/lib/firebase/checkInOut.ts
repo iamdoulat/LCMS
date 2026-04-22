@@ -4,6 +4,7 @@ import { collection, addDoc, getDocs, query, where, orderBy, Timestamp, limit } 
 import { firestore } from './config';
 import { uploadFile } from '../storage/storage';
 import type { MultipleCheckInOutRecord, CheckInOutType, MultipleCheckInOutLocation } from '@/types/checkInOut';
+import type { MultipleCheckInOutConfiguration } from '@/types';
 
 /**
  * Get current geolocation with a 3-stage robust fallback strategy:
@@ -234,7 +235,7 @@ export const updateCheckInOutStatus = async (
  * Check if the employee has any active (un-closed) check-in records.
  * This handles multiple check-ins if allowed by the configuration.
  */
-export const hasActiveCheckIn = async (employeeId: string): Promise<boolean> => {
+export const hasActiveCheckIn = async (employeeId: string, config?: MultipleCheckInOutConfiguration): Promise<boolean> => {
     try {
         // Fetch last 10 records for this employee to see if any are still "active"
         const q = query(
@@ -248,7 +249,18 @@ export const hasActiveCheckIn = async (employeeId: string): Promise<boolean> => 
         
         const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
         const now = new Date().getTime();
-        const maxHours = 12; // Standard expiry window
+        
+        // Determine dynamic expiry window based on configuration
+        let maxHours = 12; // Default fallback
+        if (config) {
+            if (config.isMaxHourLimitEnabled) {
+                maxHours = config.maxHourLimitOfCheckOut || 12;
+            } else {
+                // If limit is disabled, we use a very large window (e.g. 1 month) 
+                // to ensure old records still block clock-out until manually cleared
+                maxHours = 24 * 30; 
+            }
+        }
 
         // Look for any "Check In" that doesn't have a newer "Check Out" for the same company
         const activeCheckIn = records.find(r => {
@@ -260,7 +272,7 @@ export const hasActiveCheckIn = async (employeeId: string): Promise<boolean> => 
                 new Date(out.timestamp).getTime() > new Date(r.timestamp).getTime()
             );
 
-            // Check if it's within the auto-done/expiry window (e.g. 12 hours)
+            // Check if it's within the auto-done/expiry window
             const checkInTime = new Date(r.timestamp).getTime();
             const isExpired = (now - checkInTime) > (maxHours * 60 * 60 * 1000);
 
