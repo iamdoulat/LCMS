@@ -14,7 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
 import { firestore } from '@/lib/firebase/config';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, where, doc, getDoc, updateDoc } from 'firebase/firestore';
-import type { ClaimDetail, HRClaim, Employee } from '@/types';
+import type { ClaimDetail, HRClaim, Employee, HRClaimStatus } from '@/types';
 import Swal from 'sweetalert2';
 import { format } from 'date-fns';
 import { sendClaimStatusNotifications } from '@/lib/notifications/claims';
