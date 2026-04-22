@@ -37,6 +37,7 @@ function CreateClaimContent() {
     const [advanceAmount, setAdvanceAmount] = useState<number>(0);
     const [claimDate, setClaimDate] = useState(new Date().toISOString().split('T')[0]);
     const [supervisorComments, setSupervisorComments] = useState('');
+    const [claimStatus, setClaimStatus] = useState<HRClaimStatus>('Claimed');
     const [details, setDetails] = useState<ClaimDetail[]>([]);
 
     // Meta State
@@ -129,6 +130,7 @@ function CreateClaimContent() {
                         setSupervisorComments(data.supervisorComments || '');
                         setDetails(data.details || []);
                         setOriginalStatus(data.status);
+                        setClaimStatus(data.status);
                     }
                 }
             } catch (error) {
@@ -187,19 +189,8 @@ function CreateClaimContent() {
             } else if (source !== 'requests') {
                 // If an employee updates their own claim, reset status to Claimed for re-approval
                 claimData.status = 'Claimed';
-            } else if (source === 'requests' && (originalStatus === 'Approval by Supervisor' || originalStatus === 'Claimed')) {
-                const areAllRejected = details.length > 0 && details.every(d => d.status === 'Rejected');
-                const hasAnyApproved = details.some(d => d.status === 'Approved');
-                const hasPending = details.some(d => !d.status);
-
-                if (hasPending) {
-                    // Retain original status if not all items are processed
-                    claimData.status = originalStatus;
-                } else if (areAllRejected) {
-                    claimData.status = 'Rejected';
-                } else if (hasAnyApproved) {
-                    claimData.status = 'Approved';
-                }
+            } else if (source === 'requests') {
+                claimData.status = claimStatus;
             }
 
             // Clean data of undefined values
@@ -265,64 +256,7 @@ function CreateClaimContent() {
     const displayTotalLabel = editingId ? 'Updated Claim for Approval' : 'Submit Claim for Approval';
     const displayTotalAmount = (details.some(d => d.status) ? calculateApprovedTotal() : calculateRequestedTotal()).toLocaleString();
 
-    const handleReturnToClaimed = async () => {
-        if (!user?.uid || !editingId) return;
-        
-        const result = await Swal.fire({
-            title: 'Return to Claimed?',
-            text: 'This will change the status back to Claimed and allow the employee to edit it again.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#f59e0b',
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Yes, Return'
-        });
 
-        if (result.isConfirmed) {
-            setIsSubmitting(true);
-            try {
-                const claimRef = doc(firestore, 'hr_claims', editingId);
-                const updateData = {
-                    status: 'Claimed',
-                    updatedAt: serverTimestamp(),
-                    supervisorComments: supervisorComments,
-                    details: details.map(d => ({
-                        ...d,
-                        supervisorComment: d.supervisorComment || ''
-                    }))
-                };
-                await updateDoc(claimRef, updateData);
-
-                // Fetch the updated doc to send notifications
-                const updatedDoc = await getDoc(claimRef);
-                if (updatedDoc.exists()) {
-                    const fullClaim = { id: editingId, ...updatedDoc.data() } as HRClaim;
-                    // Use a background call so it doesn't block UI
-                    sendClaimStatusNotifications(fullClaim).catch(err => 
-                        console.error("Failed to send revert notification:", err)
-                    );
-                }
-
-                Swal.fire({
-                    title: 'Status Updated!',
-                    text: 'Claim has been returned to Claimed state.',
-                    icon: 'success',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2000,
-                    timerProgressBar: true
-                });
-
-                router.push('/mobile/claim');
-            } catch (error: any) {
-                console.error("Error updating claim:", error);
-                Swal.fire('Error', 'Failed to update status.', 'error');
-            } finally {
-                setIsSubmitting(false);
-            }
-        }
-    };
 
     return (
         <div className="flex flex-col h-[100dvh] bg-[#0a1e60] overflow-hidden">
@@ -455,6 +389,44 @@ function CreateClaimContent() {
                                 <ChevronDown className="h-4 w-4 text-slate-400 absolute right-4 top-4 pointer-events-none" />
                             </div>
                         </div>
+
+                        {isAdmin && source === 'requests' && (
+                            <div className="space-y-3 pt-2">
+                                <Label className="text-[13px] font-bold text-slate-800">Claim Status</Label>
+                                <div className="flex flex-wrap gap-x-5 gap-y-3">
+                                    {["Claimed", "Approval by Supervisor", "Approved", "Disbursed", "Rejected"].map((status) => (
+                                        <label key={status} className="flex items-center gap-2 cursor-pointer group">
+                                            <div className="relative flex items-center justify-center">
+                                                <input
+                                                    type="radio"
+                                                    name="claimStatus"
+                                                    value={status}
+                                                    checked={claimStatus === status}
+                                                    onChange={(e) => setClaimStatus(e.target.value as HRClaimStatus)}
+                                                    className="sr-only"
+                                                />
+                                                <div className={cn(
+                                                    "h-5 w-5 rounded-full border-2 transition-all duration-200 flex items-center justify-center",
+                                                    claimStatus === status 
+                                                        ? "border-blue-500 bg-white" 
+                                                        : "border-slate-300 bg-white group-hover:border-slate-400"
+                                                )}>
+                                                    {claimStatus === status && (
+                                                        <div className="h-2.5 w-2.5 rounded-full bg-blue-500 animate-in zoom-in-50 duration-200" />
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <span className={cn(
+                                                "text-[13px] font-medium transition-colors duration-200",
+                                                claimStatus === status ? "text-slate-900" : "text-slate-500"
+                                            )}>
+                                                {status}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {details.length > 0 && (
                             <div className="space-y-4 pt-2">
@@ -595,16 +567,7 @@ function CreateClaimContent() {
 
                 {/* Submit Bar */}
                 <div className="absolute bottom-[94px] left-0 right-0 p-5 bg-white/80 backdrop-blur-md border-t border-slate-100 flex flex-col gap-3 z-50">
-                    {source === 'requests' && isAdmin && originalStatus === 'Approval by Supervisor' && (
-                        <Button
-                            onClick={handleReturnToClaimed}
-                            disabled={isSubmitting}
-                            variant="outline"
-                            className="w-full h-12 border-2 border-amber-500 text-amber-600 hover:bg-amber-50 text-lg font-bold rounded-2xl shadow-sm"
-                        >
-                            Return to Claimed (For Edit)
-                        </Button>
-                    )}
+
                     <Button
                         onClick={handleSubmit}
                         disabled={isSubmitting || details.length === 0}
