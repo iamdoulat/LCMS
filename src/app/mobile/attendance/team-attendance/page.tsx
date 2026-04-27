@@ -49,10 +49,10 @@ export default function TeamAttendancePage() {
 
         setLoading(true);
         try {
-            // Get today's start and end timestamps in the format used by MobileAttendanceModal
+            // Get today's date in 'yyyy-MM-dd' format (which is how it's stored in the attendance collection)
             const now = new Date();
-            const startStr = format(startOfDay(now), "yyyy-MM-dd'T'00:00:00.000xxx");
-            const endStr = format(endOfDay(now), "yyyy-MM-dd'T'23:59:59.999xxx");
+            const startStr = format(now, 'yyyy-MM-dd');
+            const endStr = format(now, 'yyyy-MM-dd');
 
             const employeeIds = supervisedEmployees.map(e => e.id);
             const summaries: AttendanceSummary[] = [];

@@ -78,9 +78,17 @@ export default function SubordinateAttendanceDetailsPage() {
                 setLeaves(lvs);
                 setVisits(vsts);
 
-                // 3. Fetch Attendance Records
+                // 3. Fetch Attendance Records with date bounds
                 const queryIds = [empData.id, empData.uid].filter((id): id is string => !!id);
-                const attQ = query(collection(firestore, 'attendance'), where('employeeId', 'in', queryIds));
+                const fromStr = format(dateRange.from, 'yyyy-MM-dd');
+                const toStr = format(dateRange.to, 'yyyy-MM-dd');
+                
+                const attQ = query(
+                    collection(firestore, 'attendance'), 
+                    where('employeeId', 'in', queryIds),
+                    where('date', '>=', fromStr),
+                    where('date', '<=', toStr)
+                );
                 const attSnap = await getDocs(attQ);
                 const rawAttData = attSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
 
