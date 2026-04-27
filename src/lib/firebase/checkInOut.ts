@@ -107,38 +107,9 @@ export const reverseGeocode = async (lat: number, lng: number): Promise<string> 
             
             if (osmResponse.ok) {
                 const osmData = await osmResponse.json();
-                if (osmData && osmData.address) {
-                    const addr = osmData.address;
-                    // Build Google Maps style: "Road 10, Sector 10, Uttara Model Town, Dhaka-1230"
-                    const road = addr.road || addr.street;
-                    const neighbourhood = addr.neighbourhood || addr.suburb || addr.residential || addr.quarter;
-                    const city = addr.city || addr.town || addr.county || addr.state_district || addr.state;
-                    
-                    const parts = [];
-                    if (road) parts.push(road);
-                    if (neighbourhood && neighbourhood !== road) parts.push(neighbourhood);
-                    
-                    let cityPostal = city || '';
-                    if (cityPostal && addr.postcode) {
-                        cityPostal += `-${addr.postcode}`;
-                    } else if (addr.postcode) {
-                        cityPostal = addr.postcode;
-                    }
-                    
-                    if (cityPostal && cityPostal !== neighbourhood) parts.push(cityPostal);
-                    
-                    // Deduplicate parts (e.g. if neighbourhood and city are same)
-                    const uniqueParts = Array.from(new Set(parts));
-                    
-                    if (uniqueParts.length > 0) {
-                        return uniqueParts.join(', ');
-                    }
-                    
-                    if (osmData.display_name) {
-                        // Truncate overly long generic display names
-                        const splitName = osmData.display_name.split(', ');
-                        return splitName.slice(0, 4).join(', ');
-                    }
+                // Return the full, detailed pinpoint location string exactly as OSM/Google would present it
+                if (osmData && osmData.display_name) {
+                    return osmData.display_name;
                 }
             }
         } catch (e) {
