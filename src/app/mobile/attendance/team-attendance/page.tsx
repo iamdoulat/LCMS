@@ -51,8 +51,8 @@ export default function TeamAttendancePage() {
         try {
             // Get today's date in 'yyyy-MM-dd' format (which is how it's stored in the attendance collection)
             const now = new Date();
-            const startStr = format(now, 'yyyy-MM-dd');
-            const endStr = format(now, 'yyyy-MM-dd');
+            const startStr = format(now, 'yyyy-MM-dd') + 'T00:00:00';
+            const endStr = format(now, 'yyyy-MM-dd') + 'T23:59:59';
 
             const employeeIds = supervisedEmployees.map(e => e.id);
             const summaries: AttendanceSummary[] = [];

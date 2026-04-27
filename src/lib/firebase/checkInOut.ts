@@ -91,38 +91,81 @@ export const getCurrentLocation = async (options?: PositionOptions & {
 };
 
 /**
- * Reverse geocode coordinates to address using BigDataCloud (Fast/Free) with Nominatim fallback
+ * Reverse geocode coordinates to a Google Maps-style detailed address
  */
 export const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); 
+        const timeoutId = setTimeout(() => controller.abort(), 4000); 
 
-        // Try BigDataCloud first (fastest, no CORS issues, no rate limit blocking)
-        const response = await fetch(
+        // Primary: Nominatim (OpenStreetMap) for detailed street-level address
+        try {
+            const osmResponse = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`,
+                { signal: controller.signal }
+            );
+            
+            if (osmResponse.ok) {
+                const osmData = await osmResponse.json();
+                if (osmData && osmData.address) {
+                    const addr = osmData.address;
+                    // Build Google Maps style: "Road 10, Sector 10, Uttara Model Town, Dhaka-1230"
+                    const road = addr.road || addr.street;
+                    const neighbourhood = addr.neighbourhood || addr.suburb || addr.residential || addr.quarter;
+                    const city = addr.city || addr.town || addr.county || addr.state_district || addr.state;
+                    
+                    const parts = [];
+                    if (road) parts.push(road);
+                    if (neighbourhood && neighbourhood !== road) parts.push(neighbourhood);
+                    
+                    let cityPostal = city || '';
+                    if (cityPostal && addr.postcode) {
+                        cityPostal += `-${addr.postcode}`;
+                    } else if (addr.postcode) {
+                        cityPostal = addr.postcode;
+                    }
+                    
+                    if (cityPostal && cityPostal !== neighbourhood) parts.push(cityPostal);
+                    
+                    // Deduplicate parts (e.g. if neighbourhood and city are same)
+                    const uniqueParts = Array.from(new Set(parts));
+                    
+                    if (uniqueParts.length > 0) {
+                        return uniqueParts.join(', ');
+                    }
+                    
+                    if (osmData.display_name) {
+                        // Truncate overly long generic display names
+                        const splitName = osmData.display_name.split(', ');
+                        return splitName.slice(0, 4).join(', ');
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Nominatim detailed fetch failed, falling back to basic data", e);
+        }
+
+        // Fallback: BigDataCloud (fast, no rate limits, but only locality-level)
+        const bdcResponse = await fetch(
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
             { signal: controller.signal }
         );
         clearTimeout(timeoutId);
         
-        if (response.ok) {
-            const data = await response.json();
+        if (bdcResponse.ok) {
+            const data = await bdcResponse.json();
             if (data && (data.locality || data.city || data.principalSubdivision)) {
-                const parts = [data.locality, data.city, data.principalSubdivision, data.countryName].filter(Boolean);
-                return parts.join(', ') || `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                const parts = [data.locality, data.city, data.principalSubdivision].filter(Boolean);
+                const uniqueParts = Array.from(new Set(parts));
+                return uniqueParts.join(', ') || `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             }
         }
         
-        // Fallback to OSM Nominatim if BigDataCloud fails or doesn't have detailed data
-        const osmResponse = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-        );
-        const osmData = await osmResponse.json();
-        return osmData.display_name || `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        return `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         
     } catch (error) {
         console.error('Reverse geocoding failed:', error);
-        return `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`; // Return coords instead of 'Address unavailable'
+        return `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     }
 };
 
