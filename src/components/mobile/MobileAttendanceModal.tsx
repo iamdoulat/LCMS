@@ -65,40 +65,53 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
     const [employeeData, setEmployeeData] = useState<EmployeeDocument | null>(null);
     const [allPolicies, setAllPolicies] = useState<AttendancePolicyDocument[]>([]);
 
-    // Fetch branch and hotspots
+    // Stable ref for canonical employee doc ID (avoids re-fetch in handleSubmit)
+    const canonicalDocRef = useRef<{ id: string; data: EmployeeDocument | null }>({ id: '', data: null });
+
+    // Fetch branch, hotspots, and policies — parallelized for speed
     React.useEffect(() => {
         const fetchGeodata = async () => {
             if (!user || !isOpen) return;
             setIsLoadingGeodata(true);
             try {
-                // First try to fetch by UID
-                let empDoc = await getDoc(doc(firestore, 'employees', user.uid));
+                // Round 1: Fetch employee + policies in PARALLEL
+                const [empResult, policySnap] = await Promise.all([
+                    (async () => {
+                        let empDoc = await getDoc(doc(firestore, 'employees', user.uid));
+                        if (!empDoc.exists() && user.email) {
+                            const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
+                            const snap = await getDocs(q);
+                            if (!snap.empty) empDoc = snap.docs[0];
+                        }
+                        return empDoc;
+                    })(),
+                    getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'))
+                ]);
 
-                // If not found by UID, try by email
-                if (!empDoc.exists() && user.email) {
-                    const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
-                    const snap = await getDocs(q);
-                    if (!snap.empty) {
-                        empDoc = snap.docs[0];
-                    }
-                }
+                // Process policies immediately
+                const policies = policySnap.docs.map(d => ({ id: d.id, ...d.data() } as AttendancePolicyDocument));
+                setAllPolicies(policies);
 
                 let branchIdForHotspots = '';
 
-                if (empDoc.exists()) {
-                    const empData = empDoc.data() as EmployeeDocument;
+                if (empResult.exists()) {
+                    const empData = empResult.data() as EmployeeDocument;
                     setEmployeeData(empData);
-                    // Store the found employee document ID for attendance submission
-                    // We can use a ref or just rely on the same logic in handleSubmit
+                    canonicalDocRef.current = { id: empResult.id, data: empData };
 
+                    // Round 2: Fetch branch + hotspots in PARALLEL
                     if (empData.branchId) {
                         branchIdForHotspots = empData.branchId;
-                        const branchDoc = await getDoc(doc(firestore, 'branches', empData.branchId));
+                        const [branchDoc, hotspotsSnap] = await Promise.all([
+                            getDoc(doc(firestore, 'branches', empData.branchId)),
+                            getDocs(query(collection(firestore, 'hotspots'), where('branchId', '==', empData.branchId)))
+                        ]);
                         if (branchDoc.exists()) {
                             setEmployeeBranch({ id: branchDoc.id, ...branchDoc.data() });
                         }
+                        setBranchHotspots(hotspotsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+                        return; // Done — skip fallbacks below
                     } else if (empData.branch) {
-                        // Fallback to name match if branchId is missing
                         const branchQuery = query(collection(firestore, 'branches'), where('name', '==', empData.branch));
                         const branchSnap = await getDocs(branchQuery);
                         if (!branchSnap.empty) {
@@ -109,12 +122,11 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     }
                 }
 
-                // If no branch found yet (e.g. for Admin/HR), fetch Head Office or first branch
+                // Fallback: If no branch found (Admin/HR), fetch Head Office
                 if (!branchIdForHotspots) {
-                    const branchesQuery = query(collection(firestore, 'branches'));
-                    const branchesSnap = await getDocs(branchesQuery);
+                    const branchesSnap = await getDocs(collection(firestore, 'branches'));
                     if (!branchesSnap.empty) {
-                        const branches = branchesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        const branches = branchesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                         const headOffice = branches.find((b: any) => b.isHeadOffice);
                         const fallbackBranch = headOffice || branches[0];
                         branchIdForHotspots = fallbackBranch.id;
@@ -122,18 +134,12 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     }
                 }
 
-                // Fetch hotspots for the determined branch (or all if no branch)
+                // Fetch hotspots for determined branch
                 const hotspotsQuery = branchIdForHotspots
                     ? query(collection(firestore, 'hotspots'), where('branchId', '==', branchIdForHotspots))
                     : query(collection(firestore, 'hotspots'));
-
                 const hotspotsSnap = await getDocs(hotspotsQuery);
-                setBranchHotspots(hotspotsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-
-                // Fetch All Policies
-                const policySnap = await getDocs(collection(firestore, 'hrm_settings', 'attendance_policies', 'items'));
-                const policies = policySnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendancePolicyDocument));
-                setAllPolicies(policies);
+                setBranchHotspots(hotspotsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
             } catch (err) {
                 console.error("Error fetching geodata:", err);
             } finally {
@@ -234,7 +240,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
                     {
                         enableHighAccuracy: true,
                         timeout: 15000,
-                        maximumAge: 0
+                        maximumAge: 10000 // Allow 10s GPS cache to avoid slow satellite fixes
                     }
                 );
             });
@@ -297,20 +303,9 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
         setError(null);
 
         try {
-            // First try to fetch by UID
-            let employeeDoc = await getDoc(doc(firestore, 'employees', user.uid));
-
-            // If not found by UID, try by email
-            if (!employeeDoc.exists() && user.email) {
-                const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
-                const snap = await getDocs(q);
-                if (!snap.empty) {
-                    employeeDoc = snap.docs[0];
-                }
-            }
-
-            const canonicalId = employeeDoc.exists() ? employeeDoc.id : user.uid;
-            const empLocalData = employeeDoc.exists() ? employeeDoc.data() as EmployeeDocument : {
+            // Reuse employee data already fetched in fetchGeodata — avoid 3rd Firestore read
+            const canonicalId = canonicalDocRef.current.id || user.uid;
+            const empLocalData = canonicalDocRef.current.data || employeeData || {
                 fullName: user.displayName || 'Unknown',
                 employeeCode: `EMP-${user.uid.substring(0, 5).toUpperCase()}`,
                 email: user.email || '',
@@ -336,7 +331,7 @@ export function MobileAttendanceModal({ isOpen, onClose, onSuccess, type }: Mobi
 
                 // Determine attendance flag using policy
                 const today = new Date();
-                const employeeForPolicy = employeeData || (employeeDoc.exists() ? employeeDoc.data() as EmployeeDocument : null);
+                const employeeForPolicy = employeeData || empLocalData as EmployeeDocument || null;
                 let activePolicy = employeeForPolicy ? getActivePolicyForDate(employeeForPolicy, today, allPolicies) : null;
 
                 // Fallback to General policy if no policy assigned

@@ -169,6 +169,46 @@ export default function ClaimListPage() {
 
         const currentSupervisedIds = supervisedIdsRef.current;
 
+        // For >30 supervised IDs, we need multiple listeners merged
+        if (activeTab === 'Claim Requests' && !isAdmin && currentSupervisedIds.length > 30) {
+            if (currentSupervisedIds.length === 0) {
+                setClaims([]);
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+            // Chunk into batches of 30 with separate listeners
+            const chunks: string[][] = [];
+            for (let i = 0; i < currentSupervisedIds.length; i += 30) {
+                chunks.push(currentSupervisedIds.slice(i, i + 30));
+            }
+
+            const chunkResults = new Map<number, HRClaim[]>();
+            const unsubscribes: (() => void)[] = [];
+
+            chunks.forEach((chunk, idx) => {
+                const chunkQuery = query(
+                    collection(firestore, 'hr_claims'),
+                    where('employeeId', 'in', chunk)
+                );
+                const unsub = onSnapshot(chunkQuery, (snapshot) => {
+                    chunkResults.set(idx, snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HRClaim)));
+                    // Merge all chunks
+                    const merged = Array.from(chunkResults.values()).flat();
+                    merged.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                    setClaims(merged);
+                    setLoading(false);
+                }, (error) => {
+                    console.error("Error fetching claims chunk:", error);
+                    setLoading(false);
+                });
+                unsubscribes.push(unsub);
+            });
+
+            return () => unsubscribes.forEach(u => u());
+        }
+
         let q;
         if (activeTab === 'My Claims') {
             q = query(
@@ -176,40 +216,33 @@ export default function ClaimListPage() {
                 where('employeeId', '==', user.uid)
             );
         } else {
-            // "Claim Requests" tab for supervisors
+            // "Claim Requests" tab for supervisors/admins
             if (isAdmin) {
-                // Admins see all claims (no limit to ensure accurate totals)
-                q = query(
-                    collection(firestore, 'hr_claims')
-                );
+                // Admin: use status filter server-side when possible to avoid full collection scan
+                if (statusFilter === 'All') {
+                    q = query(collection(firestore, 'hr_claims'));
+                } else {
+                    q = query(
+                        collection(firestore, 'hr_claims'),
+                        where('status', '==', statusFilter)
+                    );
+                }
             } else {
                 if (currentSupervisedIds.length === 0) {
                     setClaims([]);
                     setLoading(false);
                     return;
                 }
-
-                if (currentSupervisedIds.length > 30) {
-                    // Firestore "in" limit is 30. Fetch all and filter in memory.
-                    q = query(
-                        collection(firestore, 'hr_claims')
-                    );
-                } else {
-                    q = query(
-                        collection(firestore, 'hr_claims'),
-                        where('employeeId', 'in', currentSupervisedIds)
-                    );
-                }
+                q = query(
+                    collection(firestore, 'hr_claims'),
+                    where('employeeId', 'in', currentSupervisedIds)
+                );
             }
         }
 
         setLoading(true);
         const unsubscribe = onSnapshot(q, (snapshot) => {
             let items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HRClaim));
-
-            if (activeTab === 'Claim Requests' && !isAdmin && supervisedIdsRef.current.length > 30) {
-                items = items.filter(item => supervisedIdsRef.current.includes(item.employeeId));
-            }
 
             items.sort((a, b) => {
                 const dateA = a.createdAt?.seconds || 0;
@@ -230,7 +263,7 @@ export default function ClaimListPage() {
 
         return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.uid, activeTab, isAdmin, supervisedIdsKey]);
+    }, [user?.uid, activeTab, isAdmin, supervisedIdsKey, statusFilter]);
 
     // Auto-approval logic: Claims stay 'Claimed' for 15 mins, then move to 'Approval by Supervisor'
     // Auto-approval logic with freeze protection

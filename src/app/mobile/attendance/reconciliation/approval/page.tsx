@@ -113,13 +113,19 @@ export default function ReconApprovalPage() {
                         );
                     }
                 } else {
+                    // Default: apply 90-day bound to prevent full collection scan
+                    const defaultStart = format(subDays(new Date(), 90), 'yyyy-MM-dd');
                     if (statusFilter === 'pending') {
                         q = query(
                             collection(firestore, collectionName),
-                            where('status', '==', 'pending')
+                            where('status', '==', 'pending'),
+                            where('attendanceDate', '>=', defaultStart)
                         );
                     } else {
-                        q = query(collection(firestore, collectionName));
+                        q = query(
+                            collection(firestore, collectionName),
+                            where('attendanceDate', '>=', defaultStart)
+                        );
                     }
                 }
 
@@ -138,32 +144,29 @@ export default function ReconApprovalPage() {
                     chunks.push(employeeIds.slice(i, i + 10));
                 }
 
+                // Calculate date bound once for server-side filtering
+                const dateBound = filterDays !== 'all'
+                    ? format(subDays(new Date(), Number(filterDays)), 'yyyy-MM-dd')
+                    : format(subDays(new Date(), 90), 'yyyy-MM-dd'); // Default 90-day cap
+
                 for (const chunk of chunks) {
-                    // Fetch all records for these employees, filter in memory
-                    // This avoids complex composite index requirements (Employee + Status + Date)
+                    // Push date filter server-side to reduce reads
                     const q = query(
                         collection(firestore, collectionName),
-                        where('employeeId', 'in', chunk)
+                        where('employeeId', 'in', chunk),
+                        where('attendanceDate', '>=', dateBound)
                     );
 
                     const snapshot = await getDocs(q);
                     snapshot.forEach(doc => {
                         const data = doc.data() as ReconRequest;
-                        // In-Memory Filtering
+                        // Status filtering still in-memory (avoids composite index)
                         let matchesStatus = false;
                         if (statusFilter === 'all') matchesStatus = true;
                         else if (statusFilter === 'approved') matchesStatus = ['approved', 'rejected', 'Approved', 'Rejected'].includes(data.status);
                         else matchesStatus = data.status?.toLowerCase() === statusFilter;
 
-                        let matchesDate = true;
-                        if (filterDays !== 'all') {
-                            const endDate = new Date();
-                            const startDate = subDays(endDate, Number(filterDays));
-                            const startDateStr = format(startDate, 'yyyy-MM-dd');
-                            matchesDate = data.attendanceDate >= startDateStr;
-                        }
-
-                        if (matchesStatus && matchesDate) {
+                        if (matchesStatus) {
                             fetchedRequests.push({ ...data, id: doc.id });
                         }
                     });
@@ -226,19 +229,14 @@ export default function ReconApprovalPage() {
                             hasNew = true;
                         }
                     } else if (activeTab === 'breaktime' && req.attendanceDate && req.employeeId) {
+                        // Fix C3: Add date filter to avoid downloading ALL break records for this employee
                         const q = query(
                             collection(firestore, 'break_time'),
-                            where('employeeId', '==', req.employeeId)
+                            where('employeeId', '==', req.employeeId),
+                            where('date', '==', req.attendanceDate)
                         );
                         const snapshot = await getDocs(q);
-                        const breakRecord = snapshot.docs.find(d => {
-                            const data = d.data();
-                            const startTime = data.startTime;
-                            if (!startTime) return false;
-                            try {
-                                return new Date(startTime).toISOString().split('T')[0] === req.attendanceDate;
-                            } catch { return false; }
-                        });
+                        const breakRecord = snapshot.docs.length > 0 ? snapshot.docs[0] : null;
 
                         if (breakRecord) {
                             const data = breakRecord.data();

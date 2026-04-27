@@ -536,7 +536,11 @@ export default function MobileDashboardPage() {
         };
     }, [isOnBreak, activeBreakRecord?.startTime]);
 
+    // Cached holidays ref to avoid re-fetching on every check
+    const holidaysRef = React.useRef<any[] | null>(null);
+
     // Check for restrictions (Weekend, Holiday, Leave, Visit)
+    // Uses already-loaded leaveData/visitData from real-time hooks instead of re-fetching
     const checkRestrictions = useCallback(async () => {
         const today = startOfDay(new Date());
 
@@ -547,15 +551,13 @@ export default function MobileDashboardPage() {
         }
 
         try {
-            // Parallelize checks
-            const [holidaySnap, empSnap] = await Promise.all([
-                getDocs(collection(firestore, 'holidays')),
-                (user?.email ? getDocs(query(collection(firestore, 'employees'), where('email', '==', user.email))) : Promise.resolve(null))
-            ]);
+            // 2. Check Holidays (fetch once, then cache)
+            if (!holidaysRef.current) {
+                const holidaySnap = await getDocs(collection(firestore, 'holidays'));
+                holidaysRef.current = holidaySnap.docs.map(d => d.data());
+            }
 
-            // 2. Check Holidays
-            const todayHoliday = holidaySnap.docs.find(doc => {
-                const data = doc.data();
+            const todayHoliday = holidaysRef.current.find(data => {
                 if (!data.fromDate) return false;
                 const start = startOfDay(parseISO(data.fromDate));
                 const end = data.toDate ? startOfDay(parseISO(data.toDate)) : start;
@@ -566,47 +568,44 @@ export default function MobileDashboardPage() {
                 return;
             }
 
-            // Get Employee IDs for Leave/Visit checks
-            const ids = [user?.uid || ''];
-            if (empSnap && !empSnap.empty) {
-                ids.push(empSnap.docs[0].id);
+            // 3. Check Leaves — use already-loaded leaveData from real-time hook
+            const myId = currentEmployeeId || user?.uid || '';
+            if (leaveData) {
+                const todayLeave = leaveData.find(doc => {
+                    if (doc.employeeId !== myId && doc.employeeId !== user?.uid) return false;
+                    if (doc.status !== 'Approved') return false;
+                    if (!doc.fromDate || !doc.toDate) return false;
+                    const start = startOfDay(parseISO(doc.fromDate));
+                    const end = startOfDay(parseISO(doc.toDate));
+                    return isWithinInterval(today, { start, end });
+                });
+                if (todayLeave) {
+                    setRestrictionNote("You are on leave.");
+                    return;
+                }
             }
 
-            // 3 & 4. Check Leaves and Visits (Approved)
-            const [leaveSnap, visitSnap] = await Promise.all([
-                getDocs(query(collection(firestore, 'leave_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved'))),
-                getDocs(query(collection(firestore, 'visit_applications'), where('employeeId', 'in', ids), where('status', '==', 'Approved')))
-            ]);
-
-            const todayLeave = leaveSnap.docs.find(doc => {
-                const data = doc.data();
-                if (!data.fromDate || !data.toDate) return false;
-                const start = startOfDay(parseISO(data.fromDate));
-                const end = startOfDay(parseISO(data.toDate));
-                return isWithinInterval(today, { start, end });
-            });
-            if (todayLeave) {
-                setRestrictionNote("You are on leave.");
-                return;
-            }
-
-            const todayVisit = visitSnap.docs.find(doc => {
-                const data = doc.data();
-                if (!data.fromDate || !data.toDate) return false;
-                const start = startOfDay(parseISO(data.fromDate));
-                const end = startOfDay(parseISO(data.toDate));
-                return isWithinInterval(today, { start, end });
-            });
-            if (todayVisit) {
-                setRestrictionNote("You are on a visit.");
-                return;
+            // 4. Check Visits — use already-loaded visitData from real-time hook
+            if (visitData) {
+                const todayVisit = visitData.find(doc => {
+                    if (doc.employeeId !== myId && doc.employeeId !== user?.uid) return false;
+                    if (doc.status !== 'Approved') return false;
+                    if (!doc.fromDate || !doc.toDate) return false;
+                    const start = startOfDay(parseISO(doc.fromDate));
+                    const end = startOfDay(parseISO(doc.toDate));
+                    return isWithinInterval(today, { start, end });
+                });
+                if (todayVisit) {
+                    setRestrictionNote("You are on a visit.");
+                    return;
+                }
             }
         } catch (e) {
             console.error("Error checking restrictions:", e);
         }
 
         setRestrictionNote(null);
-    }, [user, currentEmployeeId]);
+    }, [user, currentEmployeeId, leaveData, visitData]);
 
     useEffect(() => {
         const fetchData = async () => {
