@@ -27,9 +27,41 @@ export interface SupervisorInfo {
 
 // Global cache for supervisor info to avoid re-fetching on every page mount
 let supervisorCache = new Map<string, SupervisorInfo>();
+const SUPERVISOR_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+// Persist to localStorage for cross-refresh survival
+const persistCache = (key: string, data: SupervisorInfo) => {
+    supervisorCache.set(key, data);
+    if (typeof window !== 'undefined') {
+        try {
+            localStorage.setItem(`supervisor_${key}`, JSON.stringify(data));
+            localStorage.setItem(`supervisor_${key}_ts`, Date.now().toString());
+        } catch (e) { /* localStorage full — silently skip */ }
+    }
+};
+
+const loadCachedSupervisor = (key: string): SupervisorInfo | null => {
+    if (supervisorCache.has(key)) return supervisorCache.get(key)!;
+    if (typeof window === 'undefined') return null;
+    try {
+        const ts = localStorage.getItem(`supervisor_${key}_ts`);
+        if (!ts || Date.now() - parseInt(ts) > SUPERVISOR_CACHE_TTL) return null;
+        const data = localStorage.getItem(`supervisor_${key}`);
+        if (!data) return null;
+        const parsed = JSON.parse(data) as SupervisorInfo;
+        parsed.isLoading = false;
+        supervisorCache.set(key, parsed);
+        return parsed;
+    } catch (e) { return null; }
+};
 
 export const clearSupervisorCache = () => {
     supervisorCache = new Map<string, SupervisorInfo>();
+    if (typeof window !== 'undefined') {
+        Object.keys(localStorage).forEach(k => {
+            if (k.startsWith('supervisor_')) localStorage.removeItem(k);
+        });
+    }
 };
 
 export function useSupervisorCheck(userEmail: string | null | undefined): SupervisorInfo {
@@ -60,10 +92,11 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
         const fetchSupervisorInfo = async () => {
             if (!userEmail) return;
 
-            // Check cache first
+            // Check in-memory + localStorage cache
             const cacheKey = `${userEmail}-${isAdminRole}`;
-            if (supervisorCache.has(cacheKey)) {
-                setInfo(supervisorCache.get(cacheKey)!);
+            const cached = loadCachedSupervisor(cacheKey);
+            if (cached) {
+                setInfo(cached);
                 return;
             }
 
@@ -171,7 +204,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         isDelegate: false,
                         isLoading: false
                     };
-                    supervisorCache.set(cacheKey, result);
+                    persistCache(cacheKey, result);
                     setInfo(result);
                     return;
                 }
@@ -211,22 +244,31 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                     const supervisorIdCandidates = Array.from(new Set([employeeId, user?.uid, ...delegatorIds].filter((id): id is string => !!id)));
                     const subordinatesMap = new Map<string, SupervisedEmployee>();
 
-                    // Parallelize all direct reporting line queries
-                    const queryFields = ['supervisorId', 'leaveApproverId', 'directSupervisorId', 'supervisor', 'supervision', 'Direct supervision'];
-                    
-                    const queryPromises = queryFields.map(field => 
-                        getDocs(query(collection(firestore, 'employees'), where(field, 'in', supervisorIdCandidates)))
-                    );
+                    // Optimized: Query the 2 most common supervisor fields directly (indexed),
+                    // then do a single broader fetch for rarer field variants instead of 6 separate queries.
+                    const commonFields = ['supervisorId', 'leaveApproverId'];
+                    const rareFields = ['directSupervisorId', 'supervisor', 'supervision', 'Direct supervision'];
 
-                    const snapshots = await Promise.all(queryPromises);
-                    
-                    snapshots.forEach(snap => {
+                    // Only fire if supervisorIdCandidates fits in 'in' limit (max 30)
+                    const candidateChunk = supervisorIdCandidates.slice(0, 30);
+
+                    const [commonSnapshots, allEmpSnap] = await Promise.all([
+                        // 2 targeted queries for high-hit fields
+                        Promise.all(
+                            commonFields.map(field =>
+                                getDocs(query(collection(firestore, 'employees'), where(field, 'in', candidateChunk)))
+                            )
+                        ),
+                        // 1 broad fetch filtered client-side for rare fields (avoids 4 extra reads)
+                        getDocs(collection(firestore, 'employees'))
+                    ]);
+
+                    // Process common field results
+                    commonSnapshots.forEach(snap => {
                         snap.docs.forEach(doc => {
                             if (!subordinatesMap.has(doc.id)) {
                                 const data = doc.data() as EmployeeDocument;
-                                // Skip self if returned by any chance
                                 if (doc.id === employeeId || (user?.uid && (data.uid === user.uid || doc.id === user.uid))) return;
-                                
                                 subordinatesMap.set(doc.id, {
                                     id: doc.id,
                                     uid: data.uid,
@@ -239,6 +281,33 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                             }
                         });
                     });
+
+                    // Process rare fields client-side from broad fetch
+                    allEmpSnap.docs.forEach(doc => {
+                        if (subordinatesMap.has(doc.id)) return; // already found
+                        const data = doc.data() as any;
+                        if (doc.id === employeeId || (user?.uid && (data.uid === user.uid || doc.id === user.uid))) return;
+
+                        const matchesRare = rareFields.some(field => {
+                            const val = data[field];
+                            if (!val) return false;
+                            if (Array.isArray(val)) return val.some((v: any) => candidateChunk.includes(v?.supervisorId || v));
+                            return candidateChunk.includes(val);
+                        });
+
+                        if (matchesRare) {
+                            subordinatesMap.set(doc.id, {
+                                id: doc.id,
+                                uid: data.uid,
+                                name: data.fullName || 'Unknown',
+                                fullName: data.fullName || 'Unknown',
+                                employeeCode: data.employeeCode || 'N/A',
+                                designation: data.designation || undefined,
+                                photoURL: data.photoURL || undefined
+                            });
+                        }
+                    });
+
 
                     const finalSupervised = isDelegatorActive && !isAdminRole ? [] : Array.from(subordinatesMap.values());
                     const finalIds = isDelegatorActive && !isAdminRole ? [] : Array.from(subordinatesMap.keys());
@@ -253,7 +322,7 @@ export function useSupervisorCheck(userEmail: string | null | undefined): Superv
                         isDelegate: delegatorIds.length > 0,
                         isLoading: false
                     };
-                    supervisorCache.set(cacheKey, result);
+                    persistCache(cacheKey, result);
                     setInfo(result);
                 } else {
                     const result: SupervisorInfo = {

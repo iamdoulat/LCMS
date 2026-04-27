@@ -188,21 +188,22 @@ export const getCheckInOutRecords = async (filters?: {
         q = query(q, where('type', '==', filters.type));
     }
 
+    // Server-side date filtering instead of client-side
+    if (filters?.fromDate) {
+        q = query(q, where('timestamp', '>=', new Date(filters.fromDate).toISOString()));
+    }
+    if (filters?.toDate) {
+        q = query(q, where('timestamp', '<=', new Date(filters.toDate).toISOString()));
+    }
+
+    // Cap results to prevent unbounded reads
+    q = query(q, limit(200));
+
     const snapshot = await getDocs(q);
-    let records = snapshot.docs.map(doc => ({
+    const records = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
     })) as MultipleCheckInOutRecord[];
-
-    // Client-side date filtering
-    if (filters?.fromDate || filters?.toDate) {
-        records = records.filter(record => {
-            const recordDate = new Date(record.timestamp);
-            if (filters.fromDate && recordDate < new Date(filters.fromDate)) return false;
-            if (filters.toDate && recordDate > new Date(filters.toDate)) return false;
-            return true;
-        });
-    }
 
     return records;
 };

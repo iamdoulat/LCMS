@@ -83,21 +83,6 @@ export default function MyAttendancePage() {
                 where('employeeId', 'in', queryIds)
             );
 
-            // Date Range Filter
-            if (filters.dateRange?.from) {
-                // Assuming date is stored as YYYY-MM-DD string
-                const fromStr = format(filters.dateRange.from, 'yyyy-MM-dd');
-                q = query(q, where('date', '>=', fromStr));
-
-                if (filters.dateRange.to) {
-                    const toStr = format(filters.dateRange.to, 'yyyy-MM-dd');
-                    q = query(q, where('date', '<=', toStr));
-                }
-            }
-
-            const snapshot = await getDocs(q);
-            const rawData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
-
             // Determine date range for filling gaps
             let startDate: Date;
             let endDate: Date;
@@ -110,6 +95,15 @@ export default function MyAttendancePage() {
                 endDate = startOfDay(new Date());
                 startDate = startOfDay(subDays(endDate, daysToLoad - 1));
             }
+
+            const fromStr = format(startDate, 'yyyy-MM-dd');
+            const toStr = format(endDate, 'yyyy-MM-dd');
+
+            // Apply date filter to query to prevent unbounded reads
+            q = query(q, where('date', '>=', fromStr), where('date', '<=', toStr));
+
+            const snapshot = await getDocs(q);
+            const rawData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendanceRecord));
 
             // Generate all dates in interval
             const daysInInterval = eachDayOfInterval({ start: startDate, end: endDate });
@@ -252,16 +246,21 @@ export default function MyAttendancePage() {
                 where('employeeId', 'in', queryIds)
             );
 
-            // Date Range Filter
-            if (filters.dateRange?.from) {
-                const fromStr = format(filters.dateRange.from, 'yyyy-MM-dd');
-                q = query(q, where('date', '>=', fromStr));
+            // Date Range Filter (Apply defaults if no filter)
+            let startDate: Date;
+            let endDate: Date;
 
-                if (filters.dateRange.to) {
-                    const toStr = format(filters.dateRange.to, 'yyyy-MM-dd');
-                    q = query(q, where('date', '<=', toStr));
-                }
+            if (filters.dateRange?.from) {
+                startDate = startOfDay(filters.dateRange.from);
+                endDate = startOfDay(filters.dateRange.to || filters.dateRange.from);
+            } else {
+                endDate = startOfDay(new Date());
+                startDate = startOfDay(subDays(endDate, daysToLoad - 1));
             }
+
+            const fromStr = format(startDate, 'yyyy-MM-dd');
+            const toStr = format(endDate, 'yyyy-MM-dd');
+            q = query(q, where('date', '>=', fromStr), where('date', '<=', toStr));
 
             // Status Filter
             if (filters.status && filters.status !== 'All') {

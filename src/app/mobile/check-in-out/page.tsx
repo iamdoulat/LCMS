@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, ArrowLeft, Filter, Loader2, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
-import { collection, query, where, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, doc, getDoc, orderBy, limit } from 'firebase/firestore';
 import { format, startOfDay, endOfDay, isFriday, isSameDay, parse, isAfter, isBefore, isValid, subMonths, subWeeks } from 'date-fns';
 import { MobileCheckInOutModal } from '@/components/mobile/MobileCheckInOutModal';
 import type { MultipleCheckInOutConfiguration } from '@/types';
@@ -47,10 +47,9 @@ export default function MobileCheckInOutPage() {
     const [checkInOutType, setCheckInOutType] = useState<'Check In' | 'Check Out'>('Check In');
     const [lastRecord, setLastRecord] = useState<MultipleCheckInOutRecord | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    // Supervision & Filtering — currentEmployeeId resolves via same logic as fetchCanonicalId, no need to duplicate
+    const { isSupervisor, supervisedEmployees, supervisedEmployeeIds, explicitSubordinates, currentEmployeeId: supervisorEmployeeId } = useSupervisorCheck(user?.email);
     const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState<string | null>(null);
-
-    // Supervision & Filtering
-    const { isSupervisor, supervisedEmployees, supervisedEmployeeIds, explicitSubordinates } = useSupervisorCheck(user?.email);
 
     const isSuperAdminOrAdmin = React.useMemo(() => {
         if (!userRole) return false;
@@ -144,26 +143,21 @@ export default function MobileCheckInOutPage() {
                     } catch (e) { console.error("Cache parse error", e); }
                 }
 
-                // Parallelize canonical ID discovery and basic supportive data
-                const fetchCanonicalId = async () => {
-                    const empDocRef = doc(firestore, 'employees', user.uid);
-                    const empDocSnap = await getDoc(empDocRef);
-                    if (empDocSnap.exists()) return empDocSnap.id;
-                    if (user.email) {
-                        const q = query(collection(firestore, 'employees'), where('email', '==', user.email));
-                        const snap = await getDocs(q);
-                        if (!snap.empty) return snap.docs[0].id;
-                    }
-                    return user.uid;
-                };
-
-                const canonicalId = await fetchCanonicalId();
+                // Use supervisorEmployeeId if already resolved (avoids 1-2 duplicate Firestore reads)
+                // Fall back to uid only if supervisor hook hasn't loaded yet
+                const canonicalId = supervisorEmployeeId || user.uid;
 
                 if (!active) return;
                 setCurrentUserEmployeeId(canonicalId);
 
-                // Setup listener using canonicalId IMMEDIATELY before blocking on other data
-                const qValues = query(collection(firestore, 'multiple_check_inout'), where('employeeId', '==', canonicalId));
+                // Setup listener using canonicalId — bounded to last 30 days to avoid unbounded growth
+                const thirtyDaysAgo = subMonths(new Date(), 1).toISOString();
+                const qValues = query(
+                    collection(firestore, 'multiple_check_inout'),
+                    where('employeeId', '==', canonicalId),
+                    where('timestamp', '>=', thirtyDaysAgo),
+                    orderBy('timestamp', 'desc')
+                );
 
                 unsubscribe = onSnapshot(qValues, (snapshot) => {
                     if (!active) return;
@@ -251,8 +245,11 @@ export default function MobileCheckInOutPage() {
                 const to = filterToDate ? endOfDay(new Date(filterToDate)).toISOString() : null;
 
                 if (isSuperAdminOrAdmin) {
-                    // Optimized query for admins: Get all records in range without chunking individual IDs
-                    let q = query(collection(firestore, 'multiple_check_inout'));
+                    let q = query(
+                        collection(firestore, 'multiple_check_inout'),
+                        orderBy('timestamp', 'desc'),
+                        limit(200)
+                    );
                     if (from) q = query(q, where('timestamp', '>=', from));
                     if (to) q = query(q, where('timestamp', '<=', to));
                     
@@ -306,68 +303,11 @@ export default function MobileCheckInOutPage() {
         fetchSupervisionData();
     }, [isSupervisor, isSuperAdminOrAdmin, effectiveSupervisedEmployeeIds.length, activeTab, refreshTrigger, filterFromDate, filterToDate, user?.email]);
 
-    // Fetch Privileged Role Check-Ins
+    // Privileged role records are now covered by the admin supervision query above.
+    // No separate fetch needed — avoids users collection scan + extra chunked reads.
     useEffect(() => {
-        const fetchPrivilegedRoleCheckIns = async () => {
-            if (!user?.email || activeTab !== 'Check Ins') return;
-
-            const privilegedRoles = ['Super Admin', 'Admin', 'HR', 'Commercial', 'Service', 'DemoManager', 'Supervisor'];
-            const hasPrivilegedRole = userRole?.some(role => privilegedRoles.includes(role));
-            if (!hasPrivilegedRole) {
-                setPrivilegedRoleRecords([]);
-                return;
-            }
-
-            // Load from cache first
-            const cacheKey = `privilegedRecords_${user?.email}`;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                try { setPrivilegedRoleRecords(JSON.parse(cached)); } catch (e) { }
-            }
-
-            try {
-                const usersQuery = query(collection(firestore, 'users'), where('role', 'array-contains-any', privilegedRoles));
-                const usersSnap = await getDocs(usersQuery);
-
-                const privilegedUserIds: string[] = usersSnap.docs.map(doc => doc.id).filter(id => id !== user.uid);
-                if (privilegedUserIds.length === 0) {
-                    setPrivilegedRoleRecords([]);
-                    return;
-                }
-
-                const chunks: string[][] = [];
-                for (let i = 0; i < privilegedUserIds.length; i += 10) {
-                    chunks.push(privilegedUserIds.slice(i, i + 10));
-                }
-
-                let accumulatedRecords: MultipleCheckInOutRecord[] = [];
-                await Promise.all(chunks.map(async (chunk) => {
-                    try {
-                        const q = query(collection(firestore, 'multiple_check_inout'), where('employeeId', 'in', chunk));
-                        const snap = await getDocs(q);
-                        const chunkRecords = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MultipleCheckInOutRecord));
-                        
-                        setPrivilegedRoleRecords(prev => {
-                            const combined = [...prev, ...chunkRecords];
-                            const unique = Array.from(new Map(combined.map(r => [r.id, r])).values());
-                            return unique.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                        });
-
-                        accumulatedRecords = [...accumulatedRecords, ...chunkRecords];
-                    } catch (err) { console.error("Error fetching chunk:", err); }
-                }));
-
-                const finalSorted = accumulatedRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                localStorage.setItem(cacheKey, JSON.stringify(finalSorted.slice(0, 100)));
-            } catch (err) {
-                console.error("Error fetching privileged role records:", err);
-            } finally {
-                setIsRefreshing(false);
-            }
-        };
-
-        fetchPrivilegedRoleCheckIns();
-    }, [user?.email, userRole, activeTab, refreshTrigger]);
+        setPrivilegedRoleRecords([]);
+    }, []);
 
     // Fetch missing profiles for avatars
 

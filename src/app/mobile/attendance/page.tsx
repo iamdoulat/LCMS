@@ -85,23 +85,17 @@ export default function MobileAttendancePage() {
             const startDateStr = format(start, 'yyyy-MM-dd');
             const endDateStr = format(end, 'yyyy-MM-dd');
 
-            // Fetch all attendance records for these IDs
+            // Fetch attendance records for these IDs with server-side date filtering
             const attendanceQuery = query(
                 collection(firestore, 'attendance'),
-                where('employeeId', 'in', uniquePossibleIds)
+                where('employeeId', 'in', uniquePossibleIds),
+                where('date', '>=', startDateStr),
+                where('date', '<=', endDateStr + 'T23:59:59')
             );
             const attendanceSnap = await getDocs(attendanceQuery);
 
-            // Filter by date client-side
             const attendanceRecords = attendanceSnap.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as any))
-                .filter((record: any) => {
-                    if (!record.date) return false;
-                    const rDatePrefix = (typeof record.date === 'string' && record.date.includes('T'))
-                        ? record.date.split('T')[0]
-                        : record.date;
-                    return rDatePrefix >= startDateStr && rDatePrefix <= endDateStr;
-                });
+                .map(doc => ({ id: doc.id, ...doc.data() } as any));
 
             // 2. Fetch Approved Leave Applications
             const leaveQuery = query(

@@ -2,10 +2,11 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { 
-  getFirestore, 
-  type Firestore, 
-  enableMultiTabIndexedDbPersistence, 
-  enableIndexedDbPersistence 
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore
 } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { getMessaging, type Messaging } from 'firebase/messaging';
@@ -33,22 +34,27 @@ if (!getApps().length) {
 }
 
 auth = getAuth(app);
-firestore = getFirestore(app);
 storage = getStorage(app);
 
+// Initialize Firestore with modern persistence API (replaces deprecated enableMultiTabIndexedDbPersistence)
 if (typeof window !== 'undefined') {
-  messaging = getMessaging(app);
-  
-  // Enable offline persistence
-  enableMultiTabIndexedDbPersistence(firestore).catch((err) => {
-    if (err.code == 'failed-precondition') {
-      // Multiple tabs open, persistence can only be enabled in one tab at a time.
-      console.warn('Firestore persistence failed: failed-precondition');
-    } else if (err.code == 'unimplemented') {
-      // The current browser does not support all of the features required to enable persistence
-      console.warn('Firestore persistence failed: unimplemented');
+  try {
+    firestore = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+  } catch (e: any) {
+    // If Firestore was already initialized (e.g., by another module), fall back to getFirestore
+    if (e.code === 'failed-precondition' || e.message?.includes('already been called')) {
+      firestore = getFirestore(app);
+    } else {
+      throw e;
     }
-  });
+  }
+  messaging = getMessaging(app);
+} else {
+  firestore = getFirestore(app);
 }
 
 export { app, auth, firestore, storage, messaging };

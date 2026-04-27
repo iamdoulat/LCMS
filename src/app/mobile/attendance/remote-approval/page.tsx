@@ -270,6 +270,8 @@ export default function RemoteAttendanceApprovalPage() {
             fetchedRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
             
             setRawRecords(fetchedRecords);
+            // Cache raw data once (not on every filter change)
+            localStorage.setItem('remoteAttendanceRecords', JSON.stringify(fetchedRecords.slice(0, 200)));
 
         } catch (error) {
             console.error("Error fetching remote attendance:", error);
@@ -306,9 +308,6 @@ export default function RemoteAttendanceApprovalPage() {
         // Maintain sort order
         filteredRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         setRecords(filteredRecords);
-        
-        // Cache the currently filtered view
-        localStorage.setItem('remoteAttendanceRecords', JSON.stringify(filteredRecords));
         
     }, [rawRecords, dateRange, statusFilter, typeFilter, selectedEmployeeId]);
 
@@ -397,8 +396,13 @@ export default function RemoteAttendanceApprovalPage() {
                         const inTime = attendanceData?.inTime;
 
                         // Fetch employee data and determine policy accurately
-                        const empSnap = await getDoc(doc(firestore, 'employees', selectedRecord.employeeId));
-                        const empData = empSnap.exists() ? { id: empSnap.id, ...empSnap.data() } : null;
+                        // Use in-memory data first; only fetch if not found (rare edge case)
+                        const cachedEmp = effectiveSupervisedEmployees.find(e => e.id === selectedRecord.employeeId);
+                        let empData: any = cachedEmp ? { ...cachedEmp, id: cachedEmp.id } : null;
+                        if (!empData) {
+                            const empSnap = await getDoc(doc(firestore, 'employees', selectedRecord.employeeId));
+                            empData = empSnap.exists() ? { id: empSnap.id, ...empSnap.data() } : null;
+                        }
                         const targetDate = selectedRecord.timestamp ? new Date(selectedRecord.timestamp) : new Date();
 
                         let activePolicy = null;
