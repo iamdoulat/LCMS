@@ -91,28 +91,38 @@ export const getCurrentLocation = async (options?: PositionOptions & {
 };
 
 /**
- * Reverse geocode coordinates to address using Nominatim (OpenStreetMap)
+ * Reverse geocode coordinates to address using BigDataCloud (Fast/Free) with Nominatim fallback
  */
 export const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000); // Reduced from 3s
+        const timeoutId = setTimeout(() => controller.abort(), 3000); 
 
+        // Try BigDataCloud first (fastest, no CORS issues, no rate limit blocking)
         const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-            {
-                headers: {
-                    'User-Agent': 'LCMSAttendanceApp/1.0'
-                },
-                signal: controller.signal
-            }
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+            { signal: controller.signal }
         );
         clearTimeout(timeoutId);
-        const data = await response.json();
-        return data.display_name || `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data && (data.locality || data.city || data.principalSubdivision)) {
+                const parts = [data.locality, data.city, data.principalSubdivision, data.countryName].filter(Boolean);
+                return parts.join(', ') || `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            }
+        }
+        
+        // Fallback to OSM Nominatim if BigDataCloud fails or doesn't have detailed data
+        const osmResponse = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+        );
+        const osmData = await osmResponse.json();
+        return osmData.display_name || `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        
     } catch (error) {
         console.error('Reverse geocoding failed:', error);
-        return `Location captured (Address unavailable)`;
+        return `Coords: ${lat.toFixed(6)}, ${lng.toFixed(6)}`; // Return coords instead of 'Address unavailable'
     }
 };
 

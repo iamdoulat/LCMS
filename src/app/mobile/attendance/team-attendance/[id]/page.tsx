@@ -80,8 +80,8 @@ export default function SubordinateAttendanceDetailsPage() {
 
                 // 3. Fetch Attendance Records with date bounds
                 const queryIds = [empData.id, empData.uid].filter((id): id is string => !!id);
-                const fromStr = format(dateRange.from, 'yyyy-MM-dd');
-                const toStr = format(dateRange.to, 'yyyy-MM-dd');
+                const fromStr = format(dateRange.from, 'yyyy-MM-dd') + 'T00:00:00';
+                const toStr = format(dateRange.to, 'yyyy-MM-dd') + 'T23:59:59';
                 
                 const attQ = query(
                     collection(firestore, 'attendance'), 

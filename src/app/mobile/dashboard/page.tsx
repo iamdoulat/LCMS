@@ -46,6 +46,40 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useFirebaseMessaging } from '@/hooks/useFirebaseMessaging';
 
+const BreakTimerDisplay = ({ isOnBreak, startTime }: { isOnBreak: boolean, startTime?: string }) => {
+    const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isOnBreak && startTime) {
+            const updateTimer = () => {
+                const start = new Date(startTime);
+                const now = new Date();
+                const diff = Math.max(0, now.getTime() - start.getTime());
+
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                setBreakElapsedTime(
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+                );
+            };
+
+            updateTimer();
+            interval = setInterval(updateTimer, 1000);
+        } else {
+            setBreakElapsedTime("00:00:00");
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isOnBreak, startTime]);
+
+    if (!isOnBreak) return null;
+    return <span className="text-[10px] font-mono font-bold text-orange-600 mt-0.5">{breakElapsedTime}</span>;
+};
+
 export default function MobileDashboardPage() {
     const { user, userRole: globalUserRole, companyName, companyLogoUrl } = useAuth();
     const { isSupervisor, supervisedEmployeeIds, explicitSubordinateIds, currentEmployeeId } = useSupervisorCheck(user?.email);
@@ -174,7 +208,6 @@ export default function MobileDashboardPage() {
         workingHours?: string;
     } | null>(null);
     const { isOnBreak, activeBreakRecord, openBreakModal } = useBreakTime();
-    const [breakElapsedTime, setBreakElapsedTime] = useState<string>("00:00:00");
     // Local role for display/legacy check, but we'll prioritize globalUserRole
     const [localUserRole, setLocalUserRole] = useState<string>('user');
     const [restrictionNote, setRestrictionNote] = useState<string | null>(null);
@@ -508,33 +541,7 @@ export default function MobileDashboardPage() {
         }
     }, [claimData]);
 
-    // Timer effect for active break
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (isOnBreak && activeBreakRecord?.startTime) {
-            const updateTimer = () => {
-                const start = new Date(activeBreakRecord.startTime);
-                const now = new Date();
-                const diff = Math.max(0, now.getTime() - start.getTime());
-
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-                setBreakElapsedTime(
-                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-                );
-            };
-
-            updateTimer();
-            interval = setInterval(updateTimer, 1000);
-        } else {
-            setBreakElapsedTime("00:00:00");
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [isOnBreak, activeBreakRecord?.startTime]);
+    // Timer effect extracted to BreakTimerDisplay to prevent full dashboard re-renders
 
     // Cached holidays ref to avoid re-fetching on every check
     const holidaysRef = React.useRef<any[] | null>(null);
@@ -729,9 +736,8 @@ export default function MobileDashboardPage() {
         // Initial update
         updateWorkedTime();
 
-        // Update every minute (or second if strict live feel needed, user said '00:01' implying minutes)
-        // Updating every 10 seconds to align reasonably well without too much load
-        interval = setInterval(updateWorkedTime, 10000);
+        // Updating every 60 seconds is sufficient since UI only shows hours and minutes
+        interval = setInterval(updateWorkedTime, 60000);
 
         return () => clearInterval(interval);
     }, [todayAttendance, todayDailyPolicy, calculatedPolicy]);
@@ -881,10 +887,7 @@ export default function MobileDashboardPage() {
                                 >
                                     <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                                     {!todayAttendance?.inTime && !restrictionNote && (
-                                        <>
-                                            <div className="absolute inset-0 rounded-full bg-sky-500 opacity-20 animate-ping [animation-duration:6000ms] pointer-events-none z-[-1]" />
-                                            <div className="absolute inset-0 rounded-full bg-sky-500 opacity-20 animate-ping [animation-duration:6000ms] pointer-events-none z-[-1]" style={{ animationDelay: '3000ms' }} />
-                                        </>
+                                        <div className="absolute inset-0 rounded-full bg-sky-500 opacity-30 animate-ping [animation-duration:3000ms] pointer-events-none z-[-1]" />
                                     )}
                                     <Clock className="h-6 w-6 mb-0.5" />
                                     <span className="text-xs font-semibold">In Time</span>
@@ -948,10 +951,7 @@ export default function MobileDashboardPage() {
                                 >
                                     <div className="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                                     {todayAttendance?.inTime && !todayAttendance?.outTime && !restrictionNote && (
-                                        <>
-                                            <div className="absolute inset-0 rounded-full bg-sky-500 opacity-20 animate-ping [animation-duration:6000ms] pointer-events-none z-[-1]" />
-                                            <div className="absolute inset-0 rounded-full bg-sky-500 opacity-20 animate-ping [animation-duration:6000ms] pointer-events-none z-[-1]" style={{ animationDelay: '3000ms' }} />
-                                        </>
+                                        <div className="absolute inset-0 rounded-full bg-sky-500 opacity-30 animate-ping [animation-duration:3000ms] pointer-events-none z-[-1]" />
                                     )}
                                     <Clock className="h-6 w-6 mb-0.5" />
                                     <span className="text-xs font-semibold">Out Time</span>
@@ -1169,9 +1169,7 @@ export default function MobileDashboardPage() {
                                 </div>
                                 <div className="flex flex-col items-center">
                                     <span className="text-sm font-medium text-slate-600 leading-tight">Break Time</span>
-                                    {isOnBreak && (
-                                        <span className="text-[10px] font-mono font-bold text-orange-600 mt-0.5">{breakElapsedTime}</span>
-                                    )}
+                                    <BreakTimerDisplay isOnBreak={isOnBreak} startTime={activeBreakRecord?.startTime} />
                                 </div>
                             </button>
 

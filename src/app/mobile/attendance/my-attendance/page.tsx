@@ -96,8 +96,9 @@ export default function MyAttendancePage() {
                 startDate = startOfDay(subDays(endDate, daysToLoad - 1));
             }
 
-            const fromStr = format(startDate, 'yyyy-MM-dd');
-            const toStr = format(endDate, 'yyyy-MM-dd');
+            // ISO format includes time, so we must add times to ensure the string comparison covers the entire day
+            const fromStr = format(startDate, 'yyyy-MM-dd') + 'T00:00:00';
+            const toStr = format(endDate, 'yyyy-MM-dd') + 'T23:59:59';
 
             // Apply date filter to query to prevent unbounded reads
             q = query(q, where('date', '>=', fromStr), where('date', '<=', toStr));
