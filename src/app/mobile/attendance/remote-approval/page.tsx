@@ -524,7 +524,7 @@ export default function RemoteAttendanceApprovalPage() {
             console.error("Error updating status:", error);
             // Rollback optimistic update on failure
             const rollback = (prev: UnifiedApprovalRecord[]) =>
-                prev.map(r => r.id === recordToProcess.id ? { ...r, status: 'Pending' } : r);
+                prev.map(r => r.id === recordToProcess.id ? { ...r, status: 'Pending' as const } : r);
             setRecords(rollback);
             setRawRecords(rollback);
             Swal.fire("Error", `Failed to update status: ${error.message || 'Unknown error'}`, "error");
