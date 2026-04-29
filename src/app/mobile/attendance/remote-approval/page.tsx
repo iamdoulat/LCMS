@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useSupervisorCheck } from '@/hooks/useSupervisorCheck';
-import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, Timestamp, doc, updateDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ChevronLeft, MapPin, Map as MapIcon, ArrowRight, Loader2, Calendar, Check, X, ArrowLeft, Filter, RefreshCw } from 'lucide-react';
@@ -118,41 +118,46 @@ export default function RemoteAttendanceApprovalPage() {
         setLoading(true);
         try {
             const startDate = dateRange?.from || subDays(new Date(), 30);
+            const endDate = dateRange?.to || new Date();
             const fetchedRecords: UnifiedApprovalRecord[] = [];
+
+            // O(1) employee lookup maps instead of O(n) .find() per document
+            const empById = new Map<string, typeof effectiveSupervisedEmployees[0]>();
+            const empByUid = new Map<string, typeof effectiveSupervisedEmployees[0]>();
+            for (const emp of effectiveSupervisedEmployees) {
+                empById.set(emp.id, emp);
+                if (emp.uid) empByUid.set(emp.uid, emp);
+            }
+            const findEmp = (id: string) => empById.get(id) || empByUid.get(id) || null;
 
             const normalizeStatus = (s: string) => {
                 if (!s) return 'Pending';
-                const trimmed = s.toString().trim();
-                const lower = trimmed.toLowerCase();
+                const lower = s.trim().toLowerCase();
                 if (lower === 'pending') return 'Pending';
                 if (lower === 'approved') return 'Approved';
                 if (lower === 'rejected') return 'Rejected';
-                return trimmed; // Return trimmed version if it's something else
+                return s.trim();
             };
 
             const processDaily = (snap: any) => {
-                snap.forEach((doc: any) => {
-                    const data = doc.data();
-                    const emp = effectiveSupervisedEmployees.find(e => e.id === data.employeeId || e.uid === data.employeeId);
+                snap.forEach((docSnap: any) => {
+                    const data = docSnap.data();
+                    const emp = findEmp(data.employeeId);
 
                     // Skip if employee is not in supervised list
-                    if (!emp) {
-                        // console.log(`[processDaily] Skipping doc ${doc.id} - Employee ${data.employeeId} not supervised`);
-                        return;
-                    }
+                    if (!emp) return;
 
                     // Map daily attendance records - Show if it was a remote attendance
                     // Remote if: Pending OR (Approved/Rejected AND was outside geofence)
                     const statusIn = normalizeStatus(data.inTimeApprovalStatus || data.approvalStatus);
-
                     const isInTimeRemote = (statusIn === 'Pending') || (data.isInsideGeofence === false);
 
                     if (isInTimeRemote) {
                         fetchedRecords.push({
-                            id: doc.id,
+                            id: docSnap.id,
                             employeeId: data.employeeId || data.uid,
-                            employeeName: data.employeeName || emp?.fullName || 'Unknown',
-                            employeeCode: emp?.employeeCode || 'N/A',
+                            employeeName: data.employeeName || emp.fullName || 'Unknown',
+                            employeeCode: emp.employeeCode || 'N/A',
                             type: 'In Time',
                             timestamp: data.date,
                             location: {
@@ -175,10 +180,10 @@ export default function RemoteAttendanceApprovalPage() {
 
                     if (isOutTimeRemote) {
                         fetchedRecords.push({
-                            id: doc.id + '_out',
+                            id: docSnap.id + '_out',
                             employeeId: data.employeeId || data.uid,
-                            employeeName: data.employeeName || emp?.fullName || 'Unknown',
-                            employeeCode: emp?.employeeCode || 'N/A',
+                            employeeName: data.employeeName || emp.fullName || 'Unknown',
+                            employeeCode: emp.employeeCode || 'N/A',
                             type: 'Out Time',
                             timestamp: data.date,
                             displayTime: data.outTime,
@@ -194,21 +199,20 @@ export default function RemoteAttendanceApprovalPage() {
                             createdAt: data.createdAt,
                             updatedAt: data.updatedAt,
                             companyName: 'Office',
-                            originalId: doc.id
+                            originalId: docSnap.id
                         } as UnifiedApprovalRecord & { originalId: string });
                     }
                 });
             };
 
             const processMultiple = (snap: any) => {
-                snap.forEach((doc: any) => {
-                    const data = doc.data();
-                    const emp = effectiveSupervisedEmployees.find(e => e.id === data.employeeId);
-
+                snap.forEach((docSnap: any) => {
+                    const data = docSnap.data();
+                    const emp = findEmp(data.employeeId);
                     if (!emp) return;
 
                     fetchedRecords.push({
-                        id: doc.id,
+                        id: docSnap.id,
                         employeeId: data.employeeId,
                         employeeName: data.employeeName || emp.fullName,
                         employeeCode: emp.employeeCode || 'N/A',
@@ -233,6 +237,7 @@ export default function RemoteAttendanceApprovalPage() {
 
             if (allTeamIds.length === 0) {
                 setRecords([]);
+                setRawRecords([]);
                 setLoading(false);
                 return;
             }
@@ -242,18 +247,24 @@ export default function RemoteAttendanceApprovalPage() {
                 chunks.push(allTeamIds.slice(i, i + 10));
             }
 
+            // Date bounds for both queries
             const startDateStr = format(startDate, "yyyy-MM-dd'T'00:00:00");
+            const endDateStr = format(endDate, "yyyy-MM-dd'T'23:59:59");
 
             await Promise.all(chunks.map(async (chunk) => {
                 try {
                     const qAttendance = query(
                         collection(firestore, 'attendance'),
                         where('employeeId', 'in', chunk),
-                        where('date', '>=', startDateStr)
+                        where('date', '>=', startDateStr),
+                        where('date', '<=', endDateStr)
                     );
+                    // Add date filter to multiple_check_inout — was previously unbounded!
                     const qMultiple = query(
                         collection(firestore, 'multiple_check_inout'),
-                        where('employeeId', 'in', chunk)
+                        where('employeeId', 'in', chunk),
+                        where('timestamp', '>=', startDateStr),
+                        where('timestamp', '<=', endDateStr)
                     );
                     const [snapAttendance, snapMultiple] = await Promise.all([
                         getDocs(qAttendance),
@@ -266,12 +277,22 @@ export default function RemoteAttendanceApprovalPage() {
                 }
             }));
 
-            // Only sort raw records initially, don't apply client-side filters here
-            fetchedRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            // Sort with pre-computed timestamps (avoid creating Date objects per comparison)
+            const withSortKey = fetchedRecords.map(r => ({
+                record: r,
+                ts: new Date(r.timestamp).getTime() || 0
+            }));
+            withSortKey.sort((a, b) => b.ts - a.ts);
+            const sortedRecords = withSortKey.map(x => x.record);
             
-            setRawRecords(fetchedRecords);
-            // Cache raw data once (not on every filter change)
-            localStorage.setItem('remoteAttendanceRecords', JSON.stringify(fetchedRecords.slice(0, 200)));
+            setRawRecords(sortedRecords);
+
+            // Defer localStorage caching off the main thread
+            setTimeout(() => {
+                try {
+                    localStorage.setItem('remoteAttendanceRecords', JSON.stringify(sortedRecords.slice(0, 200)));
+                } catch (e) { /* storage full — silently skip */ }
+            }, 100);
 
         } catch (error) {
             console.error("Error fetching remote attendance:", error);
@@ -282,31 +303,29 @@ export default function RemoteAttendanceApprovalPage() {
 
     // Client-side filtering logic: runs INSTANTLY without network requests when filters change
     useEffect(() => {
-        if (!rawRecords) return;
+        if (!rawRecords || rawRecords.length === 0) {
+            setRecords([]);
+            return;
+        }
 
+        // Pre-compute date bounds once, not per record
+        const fromTime = dateRange?.from ? startOfDay(dateRange.from).getTime() : null;
+        const toTime = dateRange?.to ? endOfDay(dateRange.to).getTime() : null;
+
+        // rawRecords is already sorted — .filter() preserves order, no re-sort needed
         const filteredRecords = rawRecords.filter((r) => {
-            const recordDate = new Date(r.timestamp);
-            const isWithinDate = dateRange?.from && dateRange?.to
-                ? recordDate >= startOfDay(dateRange.from) && recordDate <= endOfDay(dateRange.to)
-                : true;
+            if (fromTime !== null && toTime !== null) {
+                const rt = new Date(r.timestamp).getTime();
+                if (rt < fromTime || rt > toTime) return false;
+            }
 
-            const matchesStatus = statusFilter === 'All'
-                ? true
-                : (r.status || 'Pending') === statusFilter;
+            if (statusFilter !== 'All' && (r.status || 'Pending') !== statusFilter) return false;
+            if (typeFilter !== 'All' && r.type !== typeFilter) return false;
+            if (selectedEmployeeId !== 'All' && r.employeeId !== selectedEmployeeId) return false;
 
-            const matchesType = typeFilter === 'All'
-                ? true
-                : r.type === typeFilter;
-
-            const matchesEmployee = selectedEmployeeId === 'All'
-                ? true
-                : r.employeeId === selectedEmployeeId;
-
-            return isWithinDate && matchesStatus && matchesType && matchesEmployee;
+            return true;
         });
 
-        // Maintain sort order
-        filteredRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         setRecords(filteredRecords);
         
     }, [rawRecords, dateRange, statusFilter, typeFilter, selectedEmployeeId]);
@@ -371,12 +390,22 @@ export default function RemoteAttendanceApprovalPage() {
             return;
         }
 
-        setProcessingId(selectedRecord.id);
-        try {
-            const { doc, updateDoc, serverTimestamp, getDoc } = await import('firebase/firestore');
-            const realDocId = (selectedRecord as any).originalId || selectedRecord.id;
+        const recordToProcess = selectedRecord;
+        setProcessingId(recordToProcess.id);
 
-            if (selectedRecord.source === 'multiple') {
+        // Optimistic UI update: close dialog & update state immediately for instant feedback
+        setIsDialogOpen(false);
+        setSelectedRecord(null);
+
+        const updateRecordStatus = (prev: UnifiedApprovalRecord[]) =>
+            prev.map(r => r.id === recordToProcess.id ? { ...r, status: action } : r);
+        setRecords(updateRecordStatus);
+        setRawRecords(updateRecordStatus);
+
+        try {
+            const realDocId = (recordToProcess as any).originalId || recordToProcess.id;
+
+            if (recordToProcess.source === 'multiple') {
                 const docRef = doc(firestore, 'multiple_check_inout', realDocId);
                 await updateDoc(docRef, {
                     status: action,
@@ -389,21 +418,20 @@ export default function RemoteAttendanceApprovalPage() {
                 // Update Daily Attendance
                 const docRef = doc(firestore, 'attendance', realDocId);
 
-                if (selectedRecord.type === 'In Time') {
+                if (recordToProcess.type === 'In Time') {
                     if (action === 'Approved') {
                         const snap = await getDoc(docRef);
                         const attendanceData = snap.data();
                         const inTime = attendanceData?.inTime;
 
-                        // Fetch employee data and determine policy accurately
                         // Use in-memory data first; only fetch if not found (rare edge case)
-                        const cachedEmp = effectiveSupervisedEmployees.find(e => e.id === selectedRecord.employeeId);
+                        const cachedEmp = effectiveSupervisedEmployees.find(e => e.id === recordToProcess.employeeId);
                         let empData: any = cachedEmp ? { ...cachedEmp, id: cachedEmp.id } : null;
                         if (!empData) {
-                            const empSnap = await getDoc(doc(firestore, 'employees', selectedRecord.employeeId));
+                            const empSnap = await getDoc(doc(firestore, 'employees', recordToProcess.employeeId));
                             empData = empSnap.exists() ? { id: empSnap.id, ...empSnap.data() } : null;
                         }
-                        const targetDate = selectedRecord.timestamp ? new Date(selectedRecord.timestamp) : new Date();
+                        const targetDate = recordToProcess.timestamp ? new Date(recordToProcess.timestamp) : new Date();
 
                         let activePolicy = null;
                         if (empData) {
@@ -445,7 +473,7 @@ export default function RemoteAttendanceApprovalPage() {
                             updatedAt: serverTimestamp()
                         });
                     }
-                } else if (selectedRecord.type === 'Out Time') {
+                } else if (recordToProcess.type === 'Out Time') {
                     const snap = await getDoc(docRef);
                     const currentData = snap.data();
 
@@ -470,21 +498,19 @@ export default function RemoteAttendanceApprovalPage() {
                 }
             }
 
-            // Send Push Notification to Employee
-            if (selectedRecord.employeeId) {
-                const emp = effectiveSupervisedEmployees.find(e => e.id === selectedRecord.employeeId || e.uid === selectedRecord.employeeId);
-                const uid = emp?.uid || selectedRecord.employeeId;
-                const recordDate = selectedRecord.timestamp ? format(new Date(selectedRecord.timestamp), 'dd MMM yyyy') : 'today';
+            // Fire-and-forget push notification — don't block UI
+            if (recordToProcess.employeeId) {
+                const emp = effectiveSupervisedEmployees.find(e => e.id === recordToProcess.employeeId || e.uid === recordToProcess.employeeId);
+                const uid = emp?.uid || recordToProcess.employeeId;
+                const recordDate = recordToProcess.timestamp ? format(new Date(recordToProcess.timestamp), 'dd MMM yyyy') : 'today';
 
                 sendPushNotification({
                     title: `Attendance ${action}`,
-                    body: `Your ${selectedRecord.type} for ${recordDate} has been ${action.toLowerCase()}.`,
+                    body: `Your ${recordToProcess.type} for ${recordDate} has been ${action.toLowerCase()}.`,
                     userIds: [uid],
                     url: '/mobile/attendance/my-attendance'
-                });
+                }).catch(err => console.warn('Push notification failed:', err));
             }
-
-            setRecords(prev => prev.map(r => r.id === selectedRecord.id ? { ...r, status: action } : r));
 
             Swal.fire({
                 icon: 'success',
@@ -494,13 +520,16 @@ export default function RemoteAttendanceApprovalPage() {
                 showConfirmButton: false,
                 timer: 1500
             });
-            setIsDialogOpen(false);
         } catch (error: any) {
             console.error("Error updating status:", error);
+            // Rollback optimistic update on failure
+            const rollback = (prev: UnifiedApprovalRecord[]) =>
+                prev.map(r => r.id === recordToProcess.id ? { ...r, status: 'Pending' } : r);
+            setRecords(rollback);
+            setRawRecords(rollback);
             Swal.fire("Error", `Failed to update status: ${error.message || 'Unknown error'}`, "error");
         } finally {
             setProcessingId(null);
-            setIsDialogOpen(false);
         }
     };
 

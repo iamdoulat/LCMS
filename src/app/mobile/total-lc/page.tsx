@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useTransition } from 'react';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -177,12 +177,20 @@ const LCCardSkeleton = () => (
     </Card>
 );
 
+// Pre-processed LC with cached computed fields for performance
+interface ProcessedLC extends LCEntryDocument {
+    _year: number;
+    _searchText: string;
+    _sortKey: number;
+}
+
 export default function MobileTotalLCPage() {
     const router = useRouter();
     const { userRole } = useAuth();
-    const [lcs, setLcs] = useState<LCEntryDocument[]>([]);
+    const [lcs, setLcs] = useState<ProcessedLC[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>('Shipment Pending');
     const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -200,6 +208,12 @@ export default function MobileTotalLCPage() {
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
+    // Debounce search to avoid re-computation on every keystroke
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchTerm.toLowerCase()), 200);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
     const getEffectiveYear = useCallback((lc: any) => {
         if (lc.year) return Number(lc.year);
         if (lc.lcIssueDate) return new Date(lc.lcIssueDate).getFullYear();
@@ -211,33 +225,64 @@ export default function MobileTotalLCPage() {
         return new Date().getFullYear();
     }, []);
 
+    // Pre-process LC records: compute year, search text, and sort key once
+    const preprocessLCs = useCallback((rawLcs: LCEntryDocument[]): ProcessedLC[] => {
+        return rawLcs.map(lc => {
+            const year = getEffectiveYear(lc);
+            const searchText = [
+                lc.documentaryCreditNumber,
+                lc.applicantName,
+                lc.beneficiaryName
+            ].filter(Boolean).join(' ').toLowerCase();
+            const dateRef = lc.createdAt;
+            let sortKey = 0;
+            if (dateRef) {
+                sortKey = (dateRef as any).toDate ? (dateRef as any).toDate().getTime() : new Date(dateRef as any).getTime();
+            }
+            return { ...lc, _year: year, _searchText: searchText, _sortKey: sortKey };
+        });
+    }, [getEffectiveYear]);
+
+    // Load from cache on mount for instant display
+    useEffect(() => {
+        const cached = localStorage.getItem('totalLcRecords');
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                setLcs(parsed);
+                setIsLoading(false);
+            } catch (e) {
+                console.error('Error parsing cached LC records', e);
+            }
+        }
+    }, []);
+
+    // Compute context-filtered LCs (by year/applicant/beneficiary/terms) once
+    // Then derive both status counts and the final filtered list from this single pass
+    const contextFilteredLcs = useMemo(() => {
+        const yearNum = filterYear === 'All' ? null : Number(filterYear);
+        return lcs.filter(lc => {
+            if (yearNum !== null && lc._year !== yearNum) return false;
+            if (filterApplicant !== 'All' && lc.applicantName !== filterApplicant) return false;
+            if (filterBeneficiary !== 'All' && lc.beneficiaryName !== filterBeneficiary) return false;
+            if (filterTerms !== 'All' && lc.termsOfPay !== filterTerms) return false;
+            return true;
+        });
+    }, [lcs, filterYear, filterApplicant, filterBeneficiary, filterTerms]);
+
     const calculatedStatusCounts = useMemo(() => {
         const counts: Record<string, number> = {
             'All': 0, 'Draft': 0, 'Transmitted': 0, 'Shipment Pending': 0, 'Payment Pending': 0, 'Payment Done': 0, 'Shipment Done': 0
         };
-
-        const contextFilteredLcs = lcs.filter(lc => {
-            const lcYear = getEffectiveYear(lc);
-            const matchesYear = filterYear === 'All' || lcYear === Number(filterYear);
-            const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
-            const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
-            const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
-            return matchesYear && matchesApplicant && matchesBeneficiary && matchesTerms;
-        });
-
         counts['All'] = contextFilteredLcs.length;
-
-        contextFilteredLcs.forEach(lc => {
+        for (const lc of contextFilteredLcs) {
             const statusArray = Array.isArray(lc.status) ? lc.status : [lc.status];
-            statusArray.forEach((s: any) => {
-                if (s && counts[s] !== undefined) {
-                    counts[s]++;
-                }
-            });
-        });
-
+            for (const s of statusArray) {
+                if (s && counts[s] !== undefined) counts[s]++;
+            }
+        }
         return counts;
-    }, [lcs, filterYear, filterApplicant, filterBeneficiary, filterTerms, getEffectiveYear]);
+    }, [contextFilteredLcs]);
 
     const fetchLCs = useCallback(async (isManual = false, isLoadMore = false) => {
         if (isLoadMore) setLoadingMore(true);
@@ -255,7 +300,7 @@ export default function MobileTotalLCPage() {
                 constraints.push(orderBy("createdAt", "desc"));
             }
 
-            const fetchLimit = filterYear === 'All' ? 100 : 1000;
+            const fetchLimit = filterYear === 'All' ? 100 : 500;
             constraints.push(limit(fetchLimit));
 
             if (isLoadMore && lastDocRef.current) {
@@ -270,10 +315,19 @@ export default function MobileTotalLCPage() {
                 ...(doc.data() as any)
             } as LCEntryDocument));
 
+            // Pre-process once during fetch — avoids repeated computation during filtering
+            const processed = preprocessLCs(fetchedLcs);
+
             if (isLoadMore) {
-                setLcs(prev => [...prev, ...fetchedLcs]);
+                setLcs(prev => [...prev, ...processed]);
             } else {
-                setLcs(fetchedLcs);
+                setLcs(processed);
+                // Cache for instant display on next visit (deferred off main thread)
+                setTimeout(() => {
+                    try {
+                        localStorage.setItem('totalLcRecords', JSON.stringify(processed.slice(0, 200)));
+                    } catch (e) { /* storage full */ }
+                }, 100);
             }
 
             const lastVisible = snapshot.docs[snapshot.docs.length - 1];
@@ -291,7 +345,7 @@ export default function MobileTotalLCPage() {
                         id: doc.id,
                         ...(doc.data() as any)
                     } as LCEntryDocument));
-                    setLcs(fallbackLcs);
+                    setLcs(preprocessLCs(fallbackLcs));
                 } catch (fallbackError) {
                     console.error("Fallback fetch failed:", fallbackError);
                 }
@@ -301,7 +355,7 @@ export default function MobileTotalLCPage() {
             else if (isManual) setTimeout(() => setIsRefreshing(false), 600);
             else setIsLoading(false);
         }
-    }, [filterYear]);
+    }, [filterYear, preprocessLCs]);
 
     // Data fetching effect
     useEffect(() => {
@@ -329,80 +383,84 @@ export default function MobileTotalLCPage() {
         fetchLCs(true);
     };
 
+    // Filter from contextFilteredLcs (already year/applicant/beneficiary/terms filtered)
+    // Uses pre-computed _searchText and _sortKey for fast filtering + sorting
     const filteredLcs = useMemo(() => {
-        return lcs.filter(lc => {
-            const matchesSearch =
-                (lc.documentaryCreditNumber?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (lc.applicantName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (lc.beneficiaryName?.toLowerCase().includes(searchTerm.toLowerCase()));
+        const result = contextFilteredLcs.filter(lc => {
+            // Search uses pre-computed lowercase text
+            if (debouncedSearch && !lc._searchText.includes(debouncedSearch)) return false;
 
-            const lcYear = getEffectiveYear(lc);
-
-            const matchesStatus = filterStatus === 'All' || (Array.isArray(lc.status) ? (lc.status as any[]).includes(filterStatus) : (lc.status as any) === filterStatus);
-            const matchesYear = filterYear === 'All' || lcYear === Number(filterYear);
-            const matchesApplicant = filterApplicant === 'All' || lc.applicantName === filterApplicant;
-            const matchesBeneficiary = filterBeneficiary === 'All' || lc.beneficiaryName === filterBeneficiary;
-            const matchesTerms = filterTerms === 'All' || lc.termsOfPay === filterTerms;
-
-            return matchesSearch && matchesStatus && matchesYear && matchesApplicant && matchesBeneficiary && matchesTerms;
-        }).sort((a, b) => {
-            if (sortBy === 'Amount') {
-                return Number(b.amount || 0) - Number(a.amount || 0);
+            if (filterStatus !== 'All') {
+                const match = Array.isArray(lc.status)
+                    ? (lc.status as any[]).includes(filterStatus)
+                    : (lc.status as any) === filterStatus;
+                if (!match) return false;
             }
-            if (sortBy === 'LC Number') {
-                return (a.documentaryCreditNumber || '').localeCompare(b.documentaryCreditNumber || '');
-            }
-            const dateA = a.createdAt && (a.createdAt as any).toDate ? (a.createdAt as any).toDate() : new Date(a.createdAt || 0);
-            const dateB = b.createdAt && (b.createdAt as any).toDate ? (b.createdAt as any).toDate() : new Date(b.createdAt || 0);
-            return dateB.getTime() - dateA.getTime();
+
+            return true;
         });
-    }, [lcs, searchTerm, sortBy, filterStatus, filterYear, filterApplicant, filterBeneficiary, filterTerms, getEffectiveYear]);
+
+        // Sort using pre-computed sort keys
+        if (sortBy === 'Amount') {
+            result.sort((a, b) => Number(b.amount || 0) - Number(a.amount || 0));
+        } else if (sortBy === 'LC Number') {
+            result.sort((a, b) => (a.documentaryCreditNumber || '').localeCompare(b.documentaryCreditNumber || ''));
+        } else {
+            // Issue Date — uses pre-computed _sortKey
+            result.sort((a, b) => b._sortKey - a._sortKey);
+        }
+
+        return result;
+    }, [contextFilteredLcs, debouncedSearch, sortBy, filterStatus]);
 
     const applicants = useMemo(() => Array.from(new Set(lcs.map(lc => lc.applicantName).filter(Boolean))), [lcs]);
     const beneficiaries = useMemo(() => Array.from(new Set(lcs.map(lc => lc.beneficiaryName).filter(Boolean))), [lcs]);
     const years = useMemo(() => Array.from({ length: 2030 - 2015 + 1 }, (_, i) => (2030 - i).toString()), []);
 
+    // Uses contextFilteredLcs (already year-filtered) instead of re-filtering from scratch
     const yearStats = useMemo(() => {
         const yearToFilter = filterYear === 'All' ? null : Number(filterYear);
         const currentDate = new Date();
         const currentSystemYear = currentDate.getFullYear();
         const currentMonth = currentDate.getMonth();
 
-        const yearLcs = lcs.filter(lc => {
-            const lcYear = getEffectiveYear(lc);
-            return yearToFilter === null || lcYear === yearToFilter;
-        });
-
-        const validLcEntriesForStats = yearLcs.filter(lc =>
+        const validLcEntriesForStats = contextFilteredLcs.filter(lc =>
             typeof lc.amount === 'number' && !isNaN(lc.amount) &&
             lc.lcIssueDate && isValid(parseISO(lc.lcIssueDate))
         );
 
-        const totalValue = validLcEntriesForStats.reduce((sum, lc) => sum + (Number(lc.amount) || 0), 0);
-        const uniqueBeneficiaries = new Set(validLcEntriesForStats.map(lc => lc.beneficiaryId).filter(id => !!id && id.trim() !== '')).size;
-        const uniqueApplicants = new Set(validLcEntriesForStats.map(lc => lc.applicantId).filter(id => !!id && id.trim() !== '')).size;
-
+        let totalValue = 0;
+        let linkedPIs = 0;
         let monthlyQty = 0;
-        if (yearToFilter === currentSystemYear || yearToFilter === null) {
-            monthlyQty = validLcEntriesForStats.filter(lc => {
-                const issueDate = parseISO(lc.lcIssueDate as string);
-                return isValid(issueDate) && issueDate.getMonth() === currentMonth && issueDate.getFullYear() === currentSystemYear;
-            }).length;
-        }
+        const beneficiaryIds = new Set<string>();
+        const applicantIds = new Set<string>();
 
-        const linkedPIs = validLcEntriesForStats.filter(lc => lc.proformaInvoiceNumber).length;
+        // Single pass for all stats
+        for (const lc of validLcEntriesForStats) {
+            totalValue += Number(lc.amount) || 0;
+            if (lc.proformaInvoiceNumber) linkedPIs++;
+            if (lc.beneficiaryId?.trim()) beneficiaryIds.add(lc.beneficiaryId);
+            if (lc.applicantId?.trim()) applicantIds.add(lc.applicantId);
+
+            if (yearToFilter === currentSystemYear || yearToFilter === null) {
+                const issueDate = parseISO(lc.lcIssueDate as string);
+                if (isValid(issueDate) && issueDate.getMonth() === currentMonth && issueDate.getFullYear() === currentSystemYear) {
+                    monthlyQty++;
+                }
+            }
+        }
 
         return {
             totalOpened: validLcEntriesForStats.length,
             totalValue,
-            activeBeneficiaries: uniqueBeneficiaries,
-            activeApplicants: uniqueApplicants,
+            activeBeneficiaries: beneficiaryIds.size,
+            activeApplicants: applicantIds.size,
             linkedPIs,
-            monthlyQty: monthlyQty,
+            monthlyQty,
             monthName: format(currentDate, 'MMMM'),
             displayYear: filterYear === 'All' ? 'ALL' : filterYear
         };
-    }, [lcs, filterYear, getEffectiveYear]);
+    }, [contextFilteredLcs, filterYear]);
 
     const clearFilters = () => {
         setSearchTerm('');
