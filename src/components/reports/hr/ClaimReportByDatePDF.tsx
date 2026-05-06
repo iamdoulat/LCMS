@@ -231,24 +231,39 @@ export const generateClaimReportByDatePDF = async (data: ClaimReportData) => {
   // ═══════════════════════════════════════════
 
   const finalY = (pdf as any).lastAutoTable?.finalY || yPos + 40;
-  const sigY = finalY + 25;
+  let sigY = finalY + 25;
 
   const pageHeight = pdf.internal.pageSize.getHeight();
-  if (sigY + 15 < pageHeight - 15) {
-    pdf.setDrawColor(60, 60, 60);
-    pdf.setLineWidth(0.3);
 
-    // Admin/Accounts signature
-    pdf.line(margin + 10, sigY, margin + 60, sigY);
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(40, 40, 40);
-    pdf.text('Admin / Accounts', margin + 16, sigY + 5);
-
-    // Employee signature
-    pdf.line(pageWidth - margin - 60, sigY, pageWidth - margin - 10, sigY);
-    pdf.text('Employee', pageWidth - margin - 47, sigY + 5);
+  // If not enough space, add a new page
+  if (sigY + 20 > pageHeight - 15) {
+    pdf.addPage();
+    sigY = 40;
   }
+
+  pdf.setDrawColor(60, 60, 60);
+  pdf.setLineWidth(0.3);
+
+  // Admin/Accounts signature line
+  const leftLineStart = margin + 10;
+  const leftLineEnd = margin + 65;
+  pdf.line(leftLineStart, sigY, leftLineEnd, sigY);
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(40, 40, 40);
+  const leftLabel = 'Admin / Accounts';
+  const leftLabelWidth = pdf.getTextWidth(leftLabel);
+  const leftCenter = leftLineStart + (leftLineEnd - leftLineStart - leftLabelWidth) / 2;
+  pdf.text(leftLabel, leftCenter, sigY + 6);
+
+  // Employee signature line
+  const rightLineStart = pageWidth - margin - 65;
+  const rightLineEnd = pageWidth - margin - 10;
+  pdf.line(rightLineStart, sigY, rightLineEnd, sigY);
+  const rightLabel = 'Employee';
+  const rightLabelWidth = pdf.getTextWidth(rightLabel);
+  const rightCenter = rightLineStart + (rightLineEnd - rightLineStart - rightLabelWidth) / 2;
+  pdf.text(rightLabel, rightCenter, sigY + 6);
 
   // Save PDF
   const fileName = `Claim_Report_${employee.employeeCode || 'EMP'}_${format(fromDate, 'ddMMyyyy')}_${format(toDate, 'ddMMyyyy')}.pdf`;
