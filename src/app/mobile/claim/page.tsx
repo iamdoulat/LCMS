@@ -11,7 +11,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, Timest
 import { firestore } from '@/lib/firebase/config';
 import { HRClaim, Employee, HRClaimStatus } from '@/types';
 
-import { format, isWithinInterval, startOfDay, endOfDay, getYear, isValid, parseISO } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay, getYear, isValid, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -83,8 +83,11 @@ export default function ClaimListPage() {
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<string>('All');
     const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
-    const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
-    const [filterYear, setFilterYear] = useState<string>('2026');
+    const [dateRange, setDateRange] = useState<{ from: Date | null; to: Date | null }>(() => {
+        const now = new Date();
+        return { from: startOfMonth(now), to: endOfMonth(now) };
+    });
+    const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
     const [displayLimit, setDisplayLimit] = useState(10);
     const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string; claimNo: string }>({ open: false, id: '', claimNo: '' });
@@ -169,6 +172,20 @@ export default function ClaimListPage() {
 
         const currentSupervisedIds = supervisedIdsRef.current;
 
+        const constraints: any[] = [];
+        
+        // Apply Firestore date range filtering to prevent big data fetches
+        if (dateRange.from && dateRange.to) {
+            const fromStr = format(dateRange.from, 'yyyy-MM-dd');
+            // Use 23:59:59 to ensure we capture all times on the end date if stored as ISO string
+            const toStr = format(dateRange.to, 'yyyy-MM-dd') + 'T23:59:59.999Z'; 
+            
+            // We use claimDate string comparison. Note: This requires composite indexes in Firestore
+            // e.g., employeeId + claimDate, or status + claimDate
+            constraints.push(where('claimDate', '>=', fromStr));
+            constraints.push(where('claimDate', '<=', toStr));
+        }
+
         // For >30 supervised IDs, we need multiple listeners merged
         if (activeTab === 'Claim Requests' && !isAdmin && currentSupervisedIds.length > 30) {
             if (currentSupervisedIds.length === 0) {
@@ -190,7 +207,8 @@ export default function ClaimListPage() {
             chunks.forEach((chunk, idx) => {
                 const chunkQuery = query(
                     collection(firestore, 'hr_claims'),
-                    where('employeeId', 'in', chunk)
+                    where('employeeId', 'in', chunk),
+                    ...constraints
                 );
                 const unsub = onSnapshot(chunkQuery, (snapshot) => {
                     chunkResults.set(idx, snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HRClaim)));
@@ -213,18 +231,20 @@ export default function ClaimListPage() {
         if (activeTab === 'My Claims') {
             q = query(
                 collection(firestore, 'hr_claims'),
-                where('employeeId', '==', user.uid)
+                where('employeeId', '==', user.uid),
+                ...constraints
             );
         } else {
             // "Claim Requests" tab for supervisors/admins
             if (isAdmin) {
                 // Admin: use status filter server-side when possible to avoid full collection scan
                 if (statusFilter === 'All') {
-                    q = query(collection(firestore, 'hr_claims'));
+                    q = query(collection(firestore, 'hr_claims'), ...constraints);
                 } else {
                     q = query(
                         collection(firestore, 'hr_claims'),
-                        where('status', '==', statusFilter)
+                        where('status', '==', statusFilter),
+                        ...constraints
                     );
                 }
             } else {
@@ -235,7 +255,8 @@ export default function ClaimListPage() {
                 }
                 q = query(
                     collection(firestore, 'hr_claims'),
-                    where('employeeId', 'in', currentSupervisedIds)
+                    where('employeeId', 'in', currentSupervisedIds),
+                    ...constraints
                 );
             }
         }
@@ -263,7 +284,7 @@ export default function ClaimListPage() {
 
         return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.uid, activeTab, isAdmin, supervisedIdsKey, statusFilter]);
+    }, [user?.uid, activeTab, isAdmin, supervisedIdsKey, statusFilter, dateRange.from, dateRange.to]);
 
     // Auto-approval logic: Claims stay 'Claimed' for 15 mins, then move to 'Approval by Supervisor'
     // Auto-approval logic with freeze protection
