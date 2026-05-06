@@ -435,15 +435,24 @@ export default function ClaimManagementPage() {
 
             {/* Main Content Card */}
             <div>
-                <div className="bg-[#5C5CFF] p-4 rounded-t-lg">
+                <div className="bg-[#5C5CFF] p-4 rounded-t-lg flex items-center justify-between">
                     <h2 className="text-white font-semibold text-lg">Claim</h2>
+                    <Button
+                        className="bg-[#2B59FF] hover:bg-[#2B59FF]/90 text-white shadow-[0_0_12px_rgba(255,255,255,0.5)] border border-white/20"
+                        onClick={() => {
+                            setEditingClaim(null);
+                            setIsEditModalOpen(true);
+                        }}
+                    >
+                        <Plus className="mr-2 h-4 w-4" /> Add New
+                    </Button>
                 </div>
                 <Card className="rounded-t-none border-t-0 shadow-sm bg-white">
                     <CardContent className="p-6 space-y-6">
                         {/* Filters & Actions */}
                         <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
                             <div className="flex flex-col md:flex-row gap-4 flex-1">
-                                <div className="relative w-full md:w-64">
+                                <div className="relative w-full md:w-32">
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                                     <Input
                                         placeholder="Search"
@@ -548,15 +557,6 @@ export default function ClaimManagementPage() {
                                         </Button>
                                     </>
                                 )}
-                                <Button
-                                    className="bg-[#2B59FF] hover:bg-[#2B59FF]/90 text-white"
-                                    onClick={() => {
-                                        setEditingClaim(null);
-                                        setIsEditModalOpen(true);
-                                    }}
-                                >
-                                    <Plus className="mr-2 h-4 w-4" /> Add New
-                                </Button>
                             </div>
                         </div>
 
