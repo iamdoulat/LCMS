@@ -70,7 +70,7 @@ export default function MobileCheckInOutPage() {
     const [supervisionRecords, setSupervisionRecords] = useState<MultipleCheckInOutRecord[]>([]);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filterEmployeeName, setFilterEmployeeName] = useState('');
-    const [filterFromDate, setFilterFromDate] = useState(format(subMonths(new Date(), 1), 'yyyy-MM-dd'));
+    const [filterFromDate, setFilterFromDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [filterToDate, setFilterToDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [selectedRecordForAction, setSelectedRecordForAction] = useState<MultipleCheckInOutRecord | null>(null);
 
@@ -1026,7 +1026,7 @@ export default function MobileCheckInOutPage() {
                         </button>
                         <button
                             onClick={() => setIsFilterOpen(true)}
-                            className={`p-2 text-white hover:bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d] active:scale-95 ${activeTab !== 'Supervision' ? 'opacity-0 pointer-events-none' : ''}`}
+                            className={`p-2 text-white hover:bg-white/10 rounded-full transition-all shadow-[0_4px_12px_rgba(0,0,0,0.4)] bg-[#1a2b6d] active:scale-95 ${activeTab === 'Check Ins' ? 'opacity-0 pointer-events-none' : ''}`}
                         >
                             <Filter className="h-5 w-5" />
                         </button>
@@ -1108,15 +1108,17 @@ export default function MobileCheckInOutPage() {
                     </div>
 
                     <div className="space-y-4">
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium text-slate-700">Find Employee</Label>
-                            <Input
-                                placeholder="Search by name or Code"
-                                className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:ring-2 focus:ring-blue-500"
-                                value={filterEmployeeName}
-                                onChange={(e) => setFilterEmployeeName(e.target.value)}
-                            />
-                        </div>
+                        {activeTab === 'Supervision' && (
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium text-slate-700">Find Employee</Label>
+                                <Input
+                                    placeholder="Search by name or Code"
+                                    className="h-12 rounded-xl bg-slate-50 border-slate-200 focus:ring-2 focus:ring-blue-500"
+                                    value={filterEmployeeName}
+                                    onChange={(e) => setFilterEmployeeName(e.target.value)}
+                                />
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <Label className="text-sm font-medium text-slate-700">From Date*</Label>
