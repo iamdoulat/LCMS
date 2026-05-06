@@ -140,6 +140,7 @@ const inventoryNavItems: NavItem[] = [
   { href: '/dashboard/inventory/sales-invoices-reports', label: 'Sales Invoices Reports', icon: BarChart3, iconColorClass: 'bg-icon-reports' },
   { href: '/dashboard/petty-cash/settings', label: 'Settings', icon: Settings, iconColorClass: 'bg-icon-settings' },
   { href: "/dashboard/inventory/claim", label: "Claim Management", icon: FileSpreadsheet, iconColorClass: 'bg-icon-list' },
+  { href: "/dashboard/inventory/claim-report", label: "Claim Report", icon: BarChart3, iconColorClass: 'bg-icon-reports', allowedRoles: ["Super Admin", "Admin", "HR", "Accounts"] as UserRole[] },
 
 ];
 
@@ -252,7 +253,7 @@ const settingsNavItems: NavItem[] = [
 const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
   { groupLabel: "T/T OR L/C Management", icon: FileText, iconColorClass: 'bg-icon-lc', subLinks: lcManagementNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
   { groupLabel: "Quotations and Invoices", icon: DollarSign, iconColorClass: 'bg-icon-financial', subLinks: financialNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial", "Accounts"] },
-  { groupLabel: "Accounts and Inventory", icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems, allowedRoles: ["Super Admin", "Admin", "Accounts", "Viewer"] },
+  { groupLabel: "Accounts and Inventory", icon: Package, iconColorClass: 'bg-icon-list', subLinks: inventoryNavItems, allowedRoles: ["Super Admin", "Admin", "Accounts", "HR", "Viewer"] },
   { groupLabel: "Commiss. Management", icon: Briefcase, iconColorClass: 'bg-icon-list', subLinks: commissionManagementNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial"] },
   { groupLabel: "HRM & Payroll", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: hrNavItems, allowedRoles: ["Super Admin", "Admin", "HR", "Viewer"] },
   { groupLabel: "Suppliers / Applicants", icon: UsersIcon, iconColorClass: 'bg-icon-users', subLinks: partiesNavItems, allowedRoles: ["Super Admin", "Admin", "Viewer", "Commercial", "Accounts", "Service", "DemoManager", "Supervisor"] },

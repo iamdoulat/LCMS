@@ -7,7 +7,7 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Calendar as CalendarIcon, FileSpreadsheet, MoreHorizontal, FileText, FileEdit, Printer, Loader2, ListChecks, Trash2, LayoutDashboard, Settings, Wallet, CreditCard, CheckCircle, AlertCircle, TrendingUp, CheckCircle2, Banknote, AlertTriangle, CalendarDays } from 'lucide-react';
+import { Plus, Search, Calendar as CalendarIcon, FileSpreadsheet, MoreHorizontal, FileText, FileEdit, Printer, Loader2, ListChecks, Trash2, LayoutDashboard, Settings, Wallet, CreditCard, CheckCircle, AlertCircle, TrendingUp, CheckCircle2, Banknote, AlertTriangle, CalendarDays, RefreshCw } from 'lucide-react';
 import { format, startOfMonth, isSameMonth, isSameYear, parseISO, isValid, getYear } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { generateClaimPDF } from '@/components/reports/hr/ClaimReportPDF';
-import { collection, onSnapshot, query, orderBy, deleteDoc, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, deleteDoc, doc, getDoc, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase/config';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useToast } from '@/hooks/use-toast';
@@ -60,6 +60,8 @@ export default function ClaimManagementPage() {
     const [isGeneratingPdf, setIsGeneratingPdf] = useState<string | null>(null);
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+    const [bulkStatus, setBulkStatus] = useState<string>('');
     const [pageSize, setPageSize] = useState(20);
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -267,6 +269,39 @@ export default function ClaimManagementPage() {
         });
     };
 
+    const handleBulkStatusChange = async () => {
+        if (selectedIds.length === 0 || !bulkStatus) {
+            toast({ title: "Error", description: "Please select a status to apply.", variant: "destructive" });
+            return;
+        }
+        setIsBulkUpdating(true);
+        try {
+            await Promise.all(
+                selectedIds.map(id =>
+                    updateDoc(doc(firestore, 'hr_claims', id), {
+                        status: bulkStatus,
+                        updatedAt: serverTimestamp(),
+                    })
+                )
+            );
+            toast({
+                title: "Status Updated!",
+                description: `${selectedIds.length} claim(s) status changed to "${bulkStatus}".`,
+            });
+            setSelectedIds([]);
+            setBulkStatus('');
+        } catch (error) {
+            console.error('Bulk status change error:', error);
+            toast({
+                title: "Error!",
+                description: "Failed to update status for some claims.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsBulkUpdating(false);
+        }
+    };
+
     const toggleSelectAll = () => {
         if (selectedIds.length === filteredClaims.length) {
             setSelectedIds([]);
@@ -467,15 +502,51 @@ export default function ClaimManagementPage() {
                                 </Select>
                             </div>
 
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                                 {selectedIds.length > 0 && (
-                                    <Button
-                                        variant="outline"
-                                        className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                                        onClick={handleBulkDelete}
-                                    >
-                                        <Trash2 className="mr-2 h-4 w-4" /> Delete ALL
-                                    </Button>
+                                    <>
+                                        <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 font-semibold py-1.5 px-3">
+                                            {selectedIds.length} selected
+                                        </Badge>
+                                        <Select
+                                            value={bulkStatus}
+                                            onValueChange={setBulkStatus}
+                                            disabled={isBulkUpdating}
+                                        >
+                                            <SelectTrigger className="w-[180px] h-9 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-700 font-medium">
+                                                <SelectValue placeholder="Select Status" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {hrClaimStatusOptions.map((status) => (
+                                                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <Button
+                                            size="sm"
+                                            className="h-9 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold shadow-sm"
+                                            onClick={handleBulkStatusChange}
+                                            disabled={isBulkUpdating || !bulkStatus}
+                                        >
+                                            {isBulkUpdating ? (
+                                                <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Applying...</>
+                                            ) : (
+                                                <><CheckCircle className="mr-1.5 h-3.5 w-3.5" /> Apply</>
+                                            )}
+                                        </Button>
+
+                                        {/* Separator */}
+                                        <div className="h-7 w-px bg-slate-300 mx-1" />
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-9 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                                            onClick={handleBulkDelete}
+                                        >
+                                            <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete ALL
+                                        </Button>
+                                    </>
                                 )}
                                 <Button
                                     className="bg-[#2B59FF] hover:bg-[#2B59FF]/90 text-white"
