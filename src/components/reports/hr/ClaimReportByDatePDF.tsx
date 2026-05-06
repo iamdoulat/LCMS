@@ -231,12 +231,12 @@ export const generateClaimReportByDatePDF = async (data: ClaimReportData) => {
   // ═══════════════════════════════════════════
 
   const finalY = (pdf as any).lastAutoTable?.finalY || yPos + 40;
-  let sigY = finalY + 25;
+  let sigY = finalY + 18; // Reduced gap so it fits on same page more easily
 
   const pageHeight = pdf.internal.pageSize.getHeight();
 
-  // If not enough space, add a new page
-  if (sigY + 20 > pageHeight - 15) {
+  // If not enough space, add a new page (checking if signature fits above footer)
+  if (sigY + 10 > pageHeight - 15) {
     pdf.addPage();
     sigY = 40;
   }
