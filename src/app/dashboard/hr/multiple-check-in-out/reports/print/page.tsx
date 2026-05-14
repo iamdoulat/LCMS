@@ -98,7 +98,7 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
             
             <div className="text-center mb-4">
                 <h2 className="text-2xl font-bold uppercase tracking-wider text-gray-800">Multiple Check In/Out Report</h2>
-                <p className="text-sm font-medium text-gray-600 mt-2 bg-gray-100 inline-block px-4 py-1 rounded-full border border-gray-200">
+                <p className="text-sm font-medium text-gray-600 mt-2 bg-gray-100 inline-flex items-center justify-center px-4 py-1.5 rounded-full border border-gray-200 leading-none h-8">
                     Period: {formatDisplayDate(dateRange.from)} To {formatDisplayDate(dateRange.to)}
                 </p>
             </div>
@@ -111,15 +111,15 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
 
                 return (
                     <div key={employee.id} className="mb-10 page-break-inside-avoid">
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
-                            <h3 className="font-bold text-lg text-primary mb-2 flex items-center gap-2">
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 shadow-sm flex flex-col justify-center">
+                            <h3 className="font-bold text-lg text-primary mb-1 flex items-center gap-2 leading-none">
                                 <span className="w-2 h-2 bg-primary rounded-full"></span>
                                 {employee.fullName} <span className="text-gray-500 font-normal text-sm">({employee.employeeCode})</span>
                             </h3>
-                            <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
-                                <p><span className="font-semibold text-gray-700">Designation:</span> {employee.designation}</p>
-                                <p><span className="font-semibold text-gray-700">Department:</span> {employee.department || 'N/A'}</p>
-                                <p><span className="font-semibold text-gray-700">Branch:</span> {employee.branch || 'N/A'}</p>
+                            <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 items-center mt-1">
+                                <p className="leading-none"><span className="font-semibold text-gray-700">Designation:</span> {employee.designation}</p>
+                                <p className="leading-none"><span className="font-semibold text-gray-700">Department:</span> {employee.department || 'N/A'}</p>
+                                <p className="leading-none"><span className="font-semibold text-gray-700">Branch:</span> {employee.branch || 'N/A'}</p>
                             </div>
                         </div>
 
@@ -128,25 +128,25 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
                                 <Table className="text-xs w-full">
                                     <TableHeader className="bg-gray-100">
                                         <TableRow>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2">Date</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2">Company Visit</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2">Check In</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 w-[20%]">In Location</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2">Check Out</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 w-[20%]">Out Location</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2">Duration</TableHead>
+                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Date</TableHead>
+                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Company Visit</TableHead>
+                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Check In</TableHead>
+                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 w-[20%] align-middle">In Location</TableHead>
+                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Check Out</TableHead>
+                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 w-[20%] align-middle">Out Location</TableHead>
+                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Duration</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {employeePairedRecords.map((row, idx) => (
-                                            <TableRow key={idx} className="hover:bg-gray-50 transition-colors align-top">
-                                                <TableCell className="p-2 border-b border-gray-100 pt-3">{row.date}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 font-medium pt-3">{row.companyName}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 text-green-600 font-medium pt-3">{row.checkInTime}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 pt-3"><div className="whitespace-normal break-words leading-relaxed" title={row.checkInLocation}>{row.checkInLocation}</div></TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 text-red-600 font-medium pt-3">{row.checkOutTime}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 pt-3"><div className="whitespace-normal break-words leading-relaxed" title={row.checkOutLocation}>{row.checkOutLocation}</div></TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 font-semibold pt-3">{row.duration}</TableCell>
+                                            <TableRow key={idx} className="hover:bg-gray-50 transition-colors">
+                                                <TableCell className="p-2 border-b border-gray-100 align-middle">{row.date}</TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 font-medium align-middle">{row.companyName}</TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 text-green-600 font-medium align-middle">{row.checkInTime}</TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 align-middle"><div className="whitespace-normal break-words leading-relaxed" title={row.checkInLocation}>{row.checkInLocation}</div></TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 text-red-600 font-medium align-middle">{row.checkOutTime}</TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 align-middle"><div className="whitespace-normal break-words leading-relaxed" title={row.checkOutLocation}>{row.checkOutLocation}</div></TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 font-semibold align-middle">{row.duration}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
