@@ -304,9 +304,19 @@ export default function PrintMultipleCheckInOutReportPage() {
                 
                 // Scale image to fit the width of A4
                 const imgRatio = canvas.height / canvas.width;
-                const imgHeight = pdfWidth * imgRatio;
+                let finalWidth = pdfWidth;
+                let finalHeight = pdfWidth * imgRatio;
+                let xPos = 0;
+
+                // If the content is taller than A4 (due to long wrapping text), scale it down so the footer is not cropped
+                if (finalHeight > pdfHeight) {
+                    const shrinkRatio = pdfHeight / finalHeight;
+                    finalWidth = pdfWidth * shrinkRatio;
+                    finalHeight = pdfHeight;
+                    xPos = (pdfWidth - finalWidth) / 2; // Center horizontally
+                }
                 
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
+                pdf.addImage(imgData, 'PNG', xPos, 0, finalWidth, finalHeight);
             }
 
             const fileName = `Multiple_Check_In_Out_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
