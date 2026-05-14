@@ -84,88 +84,154 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
         return pairedRecords;
     };
 
+    // Pagination Logic
+    const ROWS_PER_FIRST_PAGE = 12;
+    const ROWS_PER_SUBSEQUENT_PAGE = 20;
+    const EMPLOYEE_HEADER_COST = 4;
+
+    type PairedRecord = ReturnType<typeof getEmployeeRecords>[0];
+    type PageContent = { employee: EmployeeDocument; records: PairedRecord[] };
+    type PageData = { isFirstPage: boolean; content: PageContent[] };
+
+    const pages: PageData[] = [];
+    let currentPage: PageData = { isFirstPage: true, content: [] };
+    let currentRemainingCapacity = ROWS_PER_FIRST_PAGE;
+
+    employees.forEach((employee) => {
+        const empRecords = getEmployeeRecords(employee.id);
+        if (empRecords.length === 0 && data.isAllEmployees) return;
+
+        let remainingRecords = [...empRecords];
+
+        while (remainingRecords.length > 0 || (empRecords.length === 0 && !data.isAllEmployees)) {
+            if (empRecords.length === 0) {
+                if (currentRemainingCapacity < EMPLOYEE_HEADER_COST + 2) {
+                    pages.push(currentPage);
+                    currentPage = { isFirstPage: false, content: [] };
+                    currentRemainingCapacity = ROWS_PER_SUBSEQUENT_PAGE;
+                }
+                currentPage.content.push({ employee, records: [] });
+                currentRemainingCapacity -= (EMPLOYEE_HEADER_COST + 2);
+                break;
+            }
+
+            if (currentRemainingCapacity <= EMPLOYEE_HEADER_COST) {
+                pages.push(currentPage);
+                currentPage = { isFirstPage: false, content: [] };
+                currentRemainingCapacity = ROWS_PER_SUBSEQUENT_PAGE;
+            }
+
+            currentPage.content.push({ employee, records: [] });
+            currentRemainingCapacity -= EMPLOYEE_HEADER_COST;
+
+            const currentEmployeeContent = currentPage.content[currentPage.content.length - 1];
+            const chunk = remainingRecords.splice(0, currentRemainingCapacity);
+            currentEmployeeContent.records.push(...chunk);
+            currentRemainingCapacity -= chunk.length;
+
+            if (remainingRecords.length > 0) {
+                pages.push(currentPage);
+                currentPage = { isFirstPage: false, content: [] };
+                currentRemainingCapacity = ROWS_PER_SUBSEQUENT_PAGE;
+            }
+        }
+    });
+
+    if (currentPage.content.length > 0) {
+        pages.push(currentPage);
+    }
+
+    if (pages.length === 0) {
+        return <div className="text-center p-8 bg-white w-[210mm] mx-auto min-h-[297mm]">No data found.</div>;
+    }
+
     return (
-        <div className="bg-white font-sans text-gray-800 p-8 w-[210mm] min-h-[297mm] mx-auto">
-            <header className="flex justify-between items-center mb-4 pb-2 border-b-2 border-gray-200">
-                <div>
-                    {companyProfile?.companyLogoUrl && <Image src={companyProfile.invoiceLogoUrl || companyProfile.companyLogoUrl} alt="Company Logo" width={199} height={52} className="object-contain" data-ai-hint="company logo" />}
+        <div className="flex flex-col items-center gap-8 bg-gray-100 print:bg-transparent print:gap-0">
+            {pages.map((page, pageIndex) => (
+                <div key={pageIndex} className="a4-page-wrapper bg-white font-sans text-gray-800 p-8 w-[210mm] min-h-[297mm] shadow-2xl print:shadow-none mx-auto relative box-border" style={{ pageBreakAfter: pageIndex < pages.length - 1 ? 'always' : 'auto' }}>
+                    {page.isFirstPage && (
+                        <>
+                            <header className="flex justify-between items-center mb-4 pb-2 border-b-2 border-gray-200">
+                                <div>
+                                    {companyProfile?.companyLogoUrl && <Image src={companyProfile.invoiceLogoUrl || companyProfile.companyLogoUrl} alt="Company Logo" width={199} height={52} className="object-contain" data-ai-hint="company logo" />}
+                                </div>
+                                <div className="text-right">
+                                    <h1 className="text-xl font-bold text-gray-800">{companyProfile?.companyName || 'SMART SOLUTION'}</h1>
+                                    <p className="text-xs text-gray-600 whitespace-pre-line mt-1">{companyProfile?.address || 'LIVING CRYSTAL, HOUSE#50/A, 1ST FLOOR (B-1), ROAD#10, SECTOR#10, UTTARA, DHAKA-1230'}</p>
+                                </div>
+                            </header>
+                            
+                            <div className="text-center mb-4">
+                                <h2 className="text-2xl font-bold uppercase tracking-wider text-gray-800">Multiple Check In/Out Report</h2>
+                                <p className="text-sm font-medium text-gray-600 mt-2 bg-gray-100 inline-flex items-center justify-center px-4 py-1.5 rounded-full border border-gray-200 leading-none h-8">
+                                    Period: {formatDisplayDate(dateRange.from)} To {formatDisplayDate(dateRange.to)}
+                                </p>
+                            </div>
+                        </>
+                    )}
+
+                    {page.content.map((empContent, index) => {
+                        const { employee, records: employeePairedRecords } = empContent;
+
+                        return (
+                            <div key={`${employee.id}-${index}`} className="mb-6">
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 shadow-sm flex flex-col justify-center">
+                                    <h3 className="font-bold text-lg text-primary mb-1 flex items-center gap-2 leading-none">
+                                        <span className="w-2 h-2 bg-primary rounded-full"></span>
+                                        {employee.fullName} <span className="text-gray-500 font-normal text-sm">({employee.employeeCode})</span>
+                                        {pageIndex > 0 && index === 0 && <span className="text-xs italic font-normal text-gray-400 ml-2">(Continued)</span>}
+                                    </h3>
+                                    <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 items-center mt-1">
+                                        <p className="leading-none"><span className="font-semibold text-gray-700">Designation:</span> {employee.designation}</p>
+                                        <p className="leading-none"><span className="font-semibold text-gray-700">Department:</span> {employee.department || 'N/A'}</p>
+                                        <p className="leading-none"><span className="font-semibold text-gray-700">Branch:</span> {employee.branch || 'N/A'}</p>
+                                    </div>
+                                </div>
+
+                                {employeePairedRecords.length > 0 ? (
+                                    <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                                        <Table className="text-xs w-full">
+                                            <TableHeader className="bg-gray-100">
+                                                <TableRow>
+                                                    <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Date</TableHead>
+                                                    <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Company Visit</TableHead>
+                                                    <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Check In</TableHead>
+                                                    <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 w-[20%] align-middle">In Location</TableHead>
+                                                    <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Check Out</TableHead>
+                                                    <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 w-[20%] align-middle">Out Location</TableHead>
+                                                    <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Duration</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {employeePairedRecords.map((row, idx) => (
+                                                    <TableRow key={idx} className="hover:bg-gray-50 transition-colors align-top">
+                                                        <TableCell className="p-2 border-b border-gray-100 align-top pt-2">{row.date}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 font-medium align-top pt-2">{row.companyName}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 text-green-600 font-medium align-top pt-2">{row.checkInTime}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 align-top pt-2"><div className="whitespace-normal break-words leading-relaxed" title={row.checkInLocation}>{row.checkInLocation}</div></TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 text-red-600 font-medium align-top pt-2">{row.checkOutTime}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 align-top pt-2"><div className="whitespace-normal break-words leading-relaxed" title={row.checkOutLocation}>{row.checkOutLocation}</div></TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 font-semibold align-top pt-2">{row.duration}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200 border-dashed text-gray-500 italic">
+                                        No check in/out records found for this period.
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    <footer className="absolute bottom-8 left-8 right-8 pt-4 border-t border-gray-200 text-xs text-gray-500 flex justify-between items-center bg-white">
+                        <p>Generated by HR System on {format(new Date(), 'dd-MM-yyyy hh:mm a')}</p>
+                        <p className="font-medium">Page {pageIndex + 1} of {pages.length} {pageIndex === pages.length - 1 ? ' *** End of Report ***' : ''}</p>
+                    </footer>
                 </div>
-                <div className="text-right">
-                    <h1 className="text-xl font-bold text-gray-800">{companyProfile?.companyName || 'SMART SOLUTION'}</h1>
-                    <p className="text-xs text-gray-600 whitespace-pre-line mt-1">{companyProfile?.address || 'LIVING CRYSTAL, HOUSE#50/A, 1ST FLOOR (B-1), ROAD#10, SECTOR#10, UTTARA, DHAKA-1230'}</p>
-                </div>
-            </header>
-            
-            <div className="text-center mb-4">
-                <h2 className="text-2xl font-bold uppercase tracking-wider text-gray-800">Multiple Check In/Out Report</h2>
-                <p className="text-sm font-medium text-gray-600 mt-2 bg-gray-100 inline-flex items-center justify-center px-4 py-1.5 rounded-full border border-gray-200 leading-none h-8">
-                    Period: {formatDisplayDate(dateRange.from)} To {formatDisplayDate(dateRange.to)}
-                </p>
-            </div>
-
-            {employees.map((employee, index) => {
-                const employeePairedRecords = getEmployeeRecords(employee.id);
-                
-                // Only render if there are records for this employee or if a single employee was explicitly selected
-                if (employeePairedRecords.length === 0 && data.isAllEmployees) return null;
-
-                return (
-                    <div key={employee.id} className="mb-10 page-break-inside-avoid">
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 shadow-sm flex flex-col justify-center">
-                            <h3 className="font-bold text-lg text-primary mb-1 flex items-center gap-2 leading-none">
-                                <span className="w-2 h-2 bg-primary rounded-full"></span>
-                                {employee.fullName} <span className="text-gray-500 font-normal text-sm">({employee.employeeCode})</span>
-                            </h3>
-                            <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 items-center mt-1">
-                                <p className="leading-none"><span className="font-semibold text-gray-700">Designation:</span> {employee.designation}</p>
-                                <p className="leading-none"><span className="font-semibold text-gray-700">Department:</span> {employee.department || 'N/A'}</p>
-                                <p className="leading-none"><span className="font-semibold text-gray-700">Branch:</span> {employee.branch || 'N/A'}</p>
-                            </div>
-                        </div>
-
-                        {employeePairedRecords.length > 0 ? (
-                            <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-                                <Table className="text-xs w-full">
-                                    <TableHeader className="bg-gray-100">
-                                        <TableRow>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Date</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Company Visit</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Check In</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 w-[20%] align-middle">In Location</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Check Out</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 w-[20%] align-middle">Out Location</TableHead>
-                                            <TableHead className="font-bold text-gray-700 border-b border-gray-200 p-2 align-middle">Duration</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {employeePairedRecords.map((row, idx) => (
-                                            <TableRow key={idx} className="hover:bg-gray-50 transition-colors">
-                                                <TableCell className="p-2 border-b border-gray-100 align-middle">{row.date}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 font-medium align-middle">{row.companyName}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 text-green-600 font-medium align-middle">{row.checkInTime}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 align-middle"><div className="whitespace-normal break-words leading-relaxed" title={row.checkInLocation}>{row.checkInLocation}</div></TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 text-red-600 font-medium align-middle">{row.checkOutTime}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 align-middle"><div className="whitespace-normal break-words leading-relaxed" title={row.checkOutLocation}>{row.checkOutLocation}</div></TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 font-semibold align-middle">{row.duration}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        ) : (
-                            <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200 border-dashed text-gray-500 italic">
-                                No check in/out records found for this period.
-                            </div>
-                        )}
-                        {index < employees.length - 1 && data.isAllEmployees && employeePairedRecords.length > 0 && <div className="mt-8 border-b-2 border-dashed border-gray-300"></div>}
-                    </div>
-                );
-            })}
-
-            <footer className="mt-12 pt-4 border-t border-gray-200 text-xs text-gray-500 flex justify-between items-center">
-                <p>Generated by HR System on {format(new Date(), 'dd-MM-yyyy hh:mm a')}</p>
-                <p className="font-medium">*** End of Report ***</p>
-            </footer>
+            ))}
         </div>
     );
 };
@@ -216,24 +282,25 @@ export default function PrintMultipleCheckInOutReportPage() {
         if (utilityButtons) utilityButtons.style.display = 'none';
 
         try {
-            const canvas = await html2canvas(input, { scale: 2, useCORS: true });
-            const imgData = canvas.toDataURL('image/png');
+            const pages = input.querySelectorAll('.a4-page-wrapper');
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgRatio = canvas.height / canvas.width;
-            const imgHeight = pdfWidth * imgRatio;
-            let heightLeft = imgHeight;
 
-            let position = 0;
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-            heightLeft -= pdfHeight;
-
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-                heightLeft -= pdfHeight;
+            for (let i = 0; i < pages.length; i++) {
+                const pageElement = pages[i] as HTMLElement;
+                const canvas = await html2canvas(pageElement, { scale: 2, useCORS: true });
+                const imgData = canvas.toDataURL('image/png');
+                
+                if (i > 0) {
+                    pdf.addPage();
+                }
+                
+                // Scale image to fit the width of A4
+                const imgRatio = canvas.height / canvas.width;
+                const imgHeight = pdfWidth * imgRatio;
+                
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
             }
 
             const fileName = `Multiple_Check_In_Out_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
