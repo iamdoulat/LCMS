@@ -86,11 +86,11 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
 
     // Pagination Logic
     const ROWS_PER_FIRST_PAGE = 12;
-    const ROWS_PER_SUBSEQUENT_PAGE = 20;
+    const ROWS_PER_SUBSEQUENT_PAGE = 22;
     const EMPLOYEE_HEADER_COST = 4;
 
     type PairedRecord = ReturnType<typeof getEmployeeRecords>[0];
-    type PageContent = { employee: EmployeeDocument; records: PairedRecord[] };
+    type PageContent = { employee: EmployeeDocument; records: PairedRecord[], isFirstChunkForEmployee: boolean };
     type PageData = { isFirstPage: boolean; content: PageContent[] };
 
     const pages: PageData[] = [];
@@ -102,32 +102,37 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
         if (empRecords.length === 0 && data.isAllEmployees) return;
 
         let remainingRecords = [...empRecords];
+        let isFirstChunk = true;
 
         while (remainingRecords.length > 0 || (empRecords.length === 0 && !data.isAllEmployees)) {
+            const currentEmployeeHeaderCost = isFirstChunk ? EMPLOYEE_HEADER_COST : 0;
+
             if (empRecords.length === 0) {
-                if (currentRemainingCapacity < EMPLOYEE_HEADER_COST + 2) {
+                if (currentRemainingCapacity < currentEmployeeHeaderCost + 2) {
                     pages.push(currentPage);
                     currentPage = { isFirstPage: false, content: [] };
                     currentRemainingCapacity = ROWS_PER_SUBSEQUENT_PAGE;
                 }
-                currentPage.content.push({ employee, records: [] });
-                currentRemainingCapacity -= (EMPLOYEE_HEADER_COST + 2);
+                currentPage.content.push({ employee, records: [], isFirstChunkForEmployee: isFirstChunk });
+                currentRemainingCapacity -= (currentEmployeeHeaderCost + 2);
                 break;
             }
 
-            if (currentRemainingCapacity <= EMPLOYEE_HEADER_COST) {
+            if (currentRemainingCapacity <= currentEmployeeHeaderCost) {
                 pages.push(currentPage);
                 currentPage = { isFirstPage: false, content: [] };
                 currentRemainingCapacity = ROWS_PER_SUBSEQUENT_PAGE;
             }
 
-            currentPage.content.push({ employee, records: [] });
-            currentRemainingCapacity -= EMPLOYEE_HEADER_COST;
+            currentPage.content.push({ employee, records: [], isFirstChunkForEmployee: isFirstChunk });
+            currentRemainingCapacity -= currentEmployeeHeaderCost;
 
             const currentEmployeeContent = currentPage.content[currentPage.content.length - 1];
             const chunk = remainingRecords.splice(0, currentRemainingCapacity);
             currentEmployeeContent.records.push(...chunk);
             currentRemainingCapacity -= chunk.length;
+
+            isFirstChunk = false;
 
             if (remainingRecords.length > 0) {
                 pages.push(currentPage);
@@ -171,22 +176,23 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
                     )}
 
                     {page.content.map((empContent, index) => {
-                        const { employee, records: employeePairedRecords } = empContent;
+                        const { employee, records: employeePairedRecords, isFirstChunkForEmployee } = empContent;
 
                         return (
-                            <div key={`${employee.id}-${index}`} className="mb-6">
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 shadow-sm flex flex-col justify-center">
-                                    <h3 className="font-bold text-lg text-primary mb-1 flex items-center gap-2 leading-none">
-                                        <span className="w-2 h-2 bg-primary rounded-full"></span>
-                                        {employee.fullName} <span className="text-gray-500 font-normal text-sm">({employee.employeeCode})</span>
-                                        {pageIndex > 0 && index === 0 && <span className="text-xs italic font-normal text-gray-400 ml-2">(Continued)</span>}
-                                    </h3>
-                                    <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 items-center mt-1">
-                                        <p className="leading-none"><span className="font-semibold text-gray-700">Designation:</span> {employee.designation}</p>
-                                        <p className="leading-none"><span className="font-semibold text-gray-700">Department:</span> {employee.department || 'N/A'}</p>
-                                        <p className="leading-none"><span className="font-semibold text-gray-700">Branch:</span> {employee.branch || 'N/A'}</p>
+                            <div key={`${employee.id}-${index}`} className={isFirstChunkForEmployee ? "mb-6" : "mb-2"}>
+                                {isFirstChunkForEmployee && (
+                                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 shadow-sm flex flex-col justify-center">
+                                        <h3 className="font-bold text-lg text-primary mb-1 flex items-center gap-2 leading-none">
+                                            <span className="w-2 h-2 bg-primary rounded-full"></span>
+                                            {employee.fullName} <span className="text-gray-500 font-normal text-sm">({employee.employeeCode})</span>
+                                        </h3>
+                                        <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 items-center mt-1">
+                                            <p className="leading-none"><span className="font-semibold text-gray-700">Designation:</span> {employee.designation}</p>
+                                            <p className="leading-none"><span className="font-semibold text-gray-700">Department:</span> {employee.department || 'N/A'}</p>
+                                            <p className="leading-none"><span className="font-semibold text-gray-700">Branch:</span> {employee.branch || 'N/A'}</p>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 {employeePairedRecords.length > 0 ? (
                                     <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm">
@@ -205,13 +211,13 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
                                             <TableBody>
                                                 {employeePairedRecords.map((row, idx) => (
                                                     <TableRow key={idx} className="hover:bg-gray-50 transition-colors align-top">
-                                                        <TableCell className="p-2 border-b border-gray-100 align-top pt-2">{row.date}</TableCell>
-                                                        <TableCell className="p-2 border-b border-gray-100 font-medium align-top pt-2">{row.companyName}</TableCell>
-                                                        <TableCell className="p-2 border-b border-gray-100 text-green-600 font-medium align-top pt-2">{row.checkInTime}</TableCell>
-                                                        <TableCell className="p-2 border-b border-gray-100 align-top pt-2"><div className="whitespace-normal break-words leading-relaxed" title={row.checkInLocation}>{row.checkInLocation}</div></TableCell>
-                                                        <TableCell className="p-2 border-b border-gray-100 text-red-600 font-medium align-top pt-2">{row.checkOutTime}</TableCell>
-                                                        <TableCell className="p-2 border-b border-gray-100 align-top pt-2"><div className="whitespace-normal break-words leading-relaxed" title={row.checkOutLocation}>{row.checkOutLocation}</div></TableCell>
-                                                        <TableCell className="p-2 border-b border-gray-100 font-semibold align-top pt-2">{row.duration}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 align-top">{row.date}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 font-medium align-top">{row.companyName}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 text-green-600 font-medium align-top">{row.checkInTime}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 align-top whitespace-normal break-words" title={row.checkInLocation}>{row.checkInLocation}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 text-red-600 font-medium align-top">{row.checkOutTime}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 align-top whitespace-normal break-words" title={row.checkOutLocation}>{row.checkOutLocation}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 font-semibold align-top">{row.duration}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
