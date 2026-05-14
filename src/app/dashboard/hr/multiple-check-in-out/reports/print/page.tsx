@@ -86,7 +86,7 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
 
     return (
         <div className="bg-white font-sans text-gray-800 p-8 w-[210mm] min-h-[297mm] mx-auto">
-            <header className="flex justify-between items-center mb-8 pb-4 border-b-2 border-gray-200">
+            <header className="flex justify-between items-center mb-4 pb-2 border-b-2 border-gray-200">
                 <div>
                     {companyProfile?.companyLogoUrl && <Image src={companyProfile.invoiceLogoUrl || companyProfile.companyLogoUrl} alt="Company Logo" width={199} height={52} className="object-contain" data-ai-hint="company logo" />}
                 </div>
@@ -96,7 +96,7 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
                 </div>
             </header>
             
-            <div className="text-center mb-8">
+            <div className="text-center mb-4">
                 <h2 className="text-2xl font-bold uppercase tracking-wider text-gray-800">Multiple Check In/Out Report</h2>
                 <p className="text-sm font-medium text-gray-600 mt-2 bg-gray-100 inline-block px-4 py-1 rounded-full border border-gray-200">
                     Period: {formatDisplayDate(dateRange.from)} To {formatDisplayDate(dateRange.to)}
@@ -139,14 +139,14 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
                                     </TableHeader>
                                     <TableBody>
                                         {employeePairedRecords.map((row, idx) => (
-                                            <TableRow key={idx} className="hover:bg-gray-50 transition-colors">
-                                                <TableCell className="p-2 border-b border-gray-100">{row.date}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 font-medium">{row.companyName}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 text-green-600 font-medium">{row.checkInTime}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100"><span className="line-clamp-2" title={row.checkInLocation}>{row.checkInLocation}</span></TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 text-red-600 font-medium">{row.checkOutTime}</TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100"><span className="line-clamp-2" title={row.checkOutLocation}>{row.checkOutLocation}</span></TableCell>
-                                                <TableCell className="p-2 border-b border-gray-100 font-semibold">{row.duration}</TableCell>
+                                            <TableRow key={idx} className="hover:bg-gray-50 transition-colors align-top">
+                                                <TableCell className="p-2 border-b border-gray-100 pt-3">{row.date}</TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 font-medium pt-3">{row.companyName}</TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 text-green-600 font-medium pt-3">{row.checkInTime}</TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 pt-3"><div className="whitespace-normal break-words leading-relaxed" title={row.checkInLocation}>{row.checkInLocation}</div></TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 text-red-600 font-medium pt-3">{row.checkOutTime}</TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 pt-3"><div className="whitespace-normal break-words leading-relaxed" title={row.checkOutLocation}>{row.checkOutLocation}</div></TableCell>
+                                                <TableCell className="p-2 border-b border-gray-100 font-semibold pt-3">{row.duration}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
