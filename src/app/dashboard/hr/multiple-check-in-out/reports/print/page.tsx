@@ -222,7 +222,7 @@ export default function PrintMultipleCheckInOutReportPage() {
             const html2pdf = (await import('html2pdf.js')).default;
 
             const opt = {
-                margin: [0, 0, 15, 0], // top, left, bottom, right in mm (15mm bottom margin for footer)
+                margin: [0, 0, 15, 0] as [number, number, number, number], // top, left, bottom, right in mm (15mm bottom margin for footer)
                 filename: `Multiple_Check_In_Out_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`,
                 image: { type: 'jpeg', quality: 1.0 },
                 html2canvas: { scale: 2, useCORS: true, letterRendering: true },
