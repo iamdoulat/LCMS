@@ -48,154 +48,89 @@ interface ReportData {
 const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProfile: CompanyProfile | null }) => {
     const { employees, records, dateRange } = data;
 
-    // Group records by employee and company to find Check In and Check Out pairs
     const getEmployeeRecords = (employeeId: string) => {
         const empRecords = records.filter(r => r.employeeId === employeeId);
-        
         const checkIns = empRecords.filter(r => r.type === 'Check In').sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         const checkOuts = empRecords.filter(r => r.type === 'Check Out');
         
-        const pairedRecords = checkIns.map(checkIn => {
+        return checkIns.map(checkIn => {
             const matchingCheckOut = checkOuts.find(checkOut => 
                 checkOut.companyName === checkIn.companyName &&
-                new Date(checkOut.timestamp) > new Date(checkIn.timestamp) &&
-                new Date(checkOut.timestamp).getTime() - new Date(checkIn.timestamp).getTime() < 24 * 60 * 60 * 1000
+                new Date(checkOut.timestamp).getTime() > new Date(checkIn.timestamp).getTime()
             );
 
             let duration = '-';
             if (matchingCheckOut) {
                 const diffMs = new Date(matchingCheckOut.timestamp).getTime() - new Date(checkIn.timestamp).getTime();
-                const hours = Math.floor(diffMs / (1000 * 60 * 60));
-                const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                duration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                if (diffHours > 0) {
+                    duration = `${diffHours}h ${diffMinutes}m`;
+                } else {
+                    duration = `${diffMinutes}m`;
+                }
             }
 
             return {
+                date: formatDisplayDate(checkIn.date),
                 companyName: checkIn.companyName,
-                date: formatDisplayDate(checkIn.timestamp),
                 checkInTime: formatTime(checkIn.timestamp),
                 checkInLocation: checkIn.location.address || `${checkIn.location.latitude.toFixed(4)}, ${checkIn.location.longitude.toFixed(4)}`,
-                checkOutTime: matchingCheckOut ? formatTime(matchingCheckOut.timestamp) : 'Not Checked Out',
+                checkOutTime: matchingCheckOut ? formatTime(matchingCheckOut.timestamp) : '-',
                 checkOutLocation: matchingCheckOut ? (matchingCheckOut.location.address || `${matchingCheckOut.location.latitude.toFixed(4)}, ${matchingCheckOut.location.longitude.toFixed(4)}`) : '-',
                 duration: duration
             };
         });
-
-        return pairedRecords;
     };
 
-    // Pagination Logic
-    const ROWS_PER_FIRST_PAGE = 10;
-    const ROWS_PER_SUBSEQUENT_PAGE = 18;
-    const EMPLOYEE_HEADER_COST = 4;
-
-    type PairedRecord = ReturnType<typeof getEmployeeRecords>[0];
-    type PageContent = { employee: EmployeeDocument; records: PairedRecord[], isFirstChunkForEmployee: boolean };
-    type PageData = { isFirstPage: boolean; content: PageContent[] };
-
-    const pages: PageData[] = [];
-    let currentPage: PageData = { isFirstPage: true, content: [] };
-    let currentRemainingCapacity = ROWS_PER_FIRST_PAGE;
-
-    employees.forEach((employee) => {
+    const pairedRecordsMap = new Map<string, ReturnType<typeof getEmployeeRecords>>();
+    
+    employees.forEach(employee => {
         const empRecords = getEmployeeRecords(employee.id);
-        if (empRecords.length === 0 && data.isAllEmployees) return;
-
-        let remainingRecords = [...empRecords];
-        let isFirstChunk = true;
-
-        while (remainingRecords.length > 0 || (empRecords.length === 0 && !data.isAllEmployees)) {
-            const currentEmployeeHeaderCost = isFirstChunk ? EMPLOYEE_HEADER_COST : 0;
-
-            if (empRecords.length === 0) {
-                if (currentRemainingCapacity < currentEmployeeHeaderCost + 2) {
-                    pages.push(currentPage);
-                    currentPage = { isFirstPage: false, content: [] };
-                    currentRemainingCapacity = ROWS_PER_SUBSEQUENT_PAGE;
-                }
-                currentPage.content.push({ employee, records: [], isFirstChunkForEmployee: isFirstChunk });
-                currentRemainingCapacity -= (currentEmployeeHeaderCost + 2);
-                break;
-            }
-
-            if (currentRemainingCapacity <= currentEmployeeHeaderCost) {
-                pages.push(currentPage);
-                currentPage = { isFirstPage: false, content: [] };
-                currentRemainingCapacity = ROWS_PER_SUBSEQUENT_PAGE;
-            }
-
-            currentPage.content.push({ employee, records: [], isFirstChunkForEmployee: isFirstChunk });
-            currentRemainingCapacity -= currentEmployeeHeaderCost;
-
-            const currentEmployeeContent = currentPage.content[currentPage.content.length - 1];
-            const chunk = remainingRecords.splice(0, currentRemainingCapacity);
-            currentEmployeeContent.records.push(...chunk);
-            currentRemainingCapacity -= chunk.length;
-
-            isFirstChunk = false;
-
-            if (remainingRecords.length > 0) {
-                pages.push(currentPage);
-                currentPage = { isFirstPage: false, content: [] };
-                currentRemainingCapacity = ROWS_PER_SUBSEQUENT_PAGE;
-            }
+        if (empRecords.length > 0 || data.isAllEmployees) {
+            pairedRecordsMap.set(employee.id, empRecords);
         }
     });
 
-    if (currentPage.content.length > 0) {
-        pages.push(currentPage);
-    }
-
-    if (pages.length === 0) {
+    if (pairedRecordsMap.size === 0) {
         return <div className="text-center p-8 bg-white w-[210mm] mx-auto min-h-[297mm]">No data found.</div>;
     }
 
     return (
-        <div className="flex flex-col items-center gap-8 bg-gray-100 print:bg-transparent print:gap-0">
-            {pages.map((page, pageIndex) => (
-                <div key={pageIndex} className="a4-page-wrapper flex flex-col bg-white font-sans text-gray-800 p-8 w-[210mm] min-h-[297mm] shadow-2xl print:shadow-none mx-auto box-border" style={{ pageBreakAfter: pageIndex < pages.length - 1 ? 'always' : 'auto' }}>
-                    {page.isFirstPage && (
-                        <>
-                            <header className="flex justify-between items-center mb-4 pb-2 border-b-2 border-gray-200">
-                                <div>
-                                    {companyProfile?.companyLogoUrl && <Image src={companyProfile.invoiceLogoUrl || companyProfile.companyLogoUrl} alt="Company Logo" width={199} height={52} className="object-contain" data-ai-hint="company logo" />}
-                                </div>
-                                <div className="text-right">
-                                    <h1 className="text-xl font-bold text-gray-800">{companyProfile?.companyName || 'SMART SOLUTION'}</h1>
-                                    <p className="text-xs text-gray-600 whitespace-pre-line mt-1">{companyProfile?.address || 'LIVING CRYSTAL, HOUSE#50/A, 1ST FLOOR (B-1), ROAD#10, SECTOR#10, UTTARA, DHAKA-1230'}</p>
-                                </div>
-                            </header>
-                            
-                            <div className="text-center mb-4">
-                                <h2 className="text-2xl font-bold uppercase tracking-wider text-gray-800">Multiple Check In/Out Report</h2>
-                                <p className="text-sm font-medium text-gray-600 mt-2 bg-gray-100 inline-flex items-center justify-center px-4 py-1.5 rounded-full border border-gray-200 leading-none h-8">
-                                    Period: {formatDisplayDate(dateRange.from)} To {formatDisplayDate(dateRange.to)}
-                                </p>
-                            </div>
-                        </>
-                    )}
+        <div className="flex justify-center bg-gray-100 print:bg-transparent py-8 print:p-0">
+            <div id="pdf-content-wrapper" className="bg-white font-sans text-gray-800 px-8 pt-8 w-[210mm] shadow-2xl print:shadow-none box-border" style={{ paddingBottom: '20px' }}>
+                <header className="flex justify-between items-center mb-6 pb-4 border-b-2 border-gray-200" id="report-header">
+                    <div>
+                        {companyProfile?.companyLogoUrl && <Image src={companyProfile.invoiceLogoUrl || companyProfile.companyLogoUrl} alt="Company Logo" width={199} height={52} className="object-contain" data-ai-hint="company logo" />}
+                    </div>
+                    <div className="text-right">
+                        <h1 className="text-xl font-bold text-gray-800">{companyProfile?.companyName || 'SMART SOLUTION'}</h1>
+                        <p className="text-xs text-gray-600 whitespace-pre-line mt-1">{companyProfile?.address || 'LIVING CRYSTAL, HOUSE#50/A, 1ST FLOOR (B-1), ROAD#10, SECTOR#10, UTTARA, DHAKA-1230'}</p>
+                    </div>
+                </header>
 
-                    {page.content.map((empContent, index) => {
-                        const { employee, records: employeePairedRecords, isFirstChunkForEmployee } = empContent;
+                <div className="mb-6">
+                    <h2 className="text-lg font-bold text-gray-800 mb-1">Multiple Check In/Out Report</h2>
+                    <p className="text-sm text-gray-600 font-medium">Date Period: {formatDisplayDate(dateRange?.from)} to {formatDisplayDate(dateRange?.to)}</p>
+                </div>
 
+                <div className="flex flex-col gap-8">
+                    {Array.from(pairedRecordsMap.entries()).map(([employeeId, records]) => {
+                        const employee = employees.find(e => e.id === employeeId)!;
                         return (
-                            <div key={`${employee.id}-${index}`} className={isFirstChunkForEmployee ? "mb-6" : "mb-2"}>
-                                {isFirstChunkForEmployee && (
-                                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 shadow-sm flex flex-col justify-center">
-                                        <h3 className="font-bold text-lg text-primary mb-1 flex items-center gap-2 leading-none">
-                                            <span className="w-2 h-2 bg-primary rounded-full"></span>
-                                            {employee.fullName} <span className="text-gray-500 font-normal text-sm">({employee.employeeCode})</span>
-                                        </h3>
-                                        <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 items-center mt-1">
-                                            <p className="leading-none"><span className="font-semibold text-gray-700">Designation:</span> {employee.designation}</p>
-                                            <p className="leading-none"><span className="font-semibold text-gray-700">Department:</span> {employee.department || 'N/A'}</p>
-                                            <p className="leading-none"><span className="font-semibold text-gray-700">Branch:</span> {employee.branch || 'N/A'}</p>
-                                        </div>
+                            <div key={employeeId} className="flex flex-col gap-3 avoid-page-break-inside">
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <h3 className="font-bold text-gray-800 text-lg mb-2 border-b border-gray-200 pb-2">{employee.fullName}</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                                        <p className="leading-none"><span className="font-semibold text-gray-700">Staff ID:</span> {employee.employeeCode}</p>
+                                        <p className="leading-none"><span className="font-semibold text-gray-700">Designation:</span> {employee.designation}</p>
+                                        <p className="leading-none"><span className="font-semibold text-gray-700">Department:</span> {employee.department || 'N/A'}</p>
+                                        <p className="leading-none"><span className="font-semibold text-gray-700">Branch:</span> {employee.branch || 'N/A'}</p>
                                     </div>
-                                )}
+                                </div>
 
-                                {employeePairedRecords.length > 0 ? (
-                                    <div className="rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                                {records.length > 0 ? (
+                                    <div className="rounded-lg border border-gray-200 shadow-sm">
                                         <Table className="text-xs w-full">
                                             <TableHeader className="bg-gray-100">
                                                 <TableRow>
@@ -209,8 +144,8 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {employeePairedRecords.map((row, idx) => (
-                                                    <TableRow key={idx} className="hover:bg-gray-50 transition-colors align-top">
+                                                {records.map((row, idx) => (
+                                                    <TableRow key={idx} className="hover:bg-gray-50 transition-colors align-top avoid-page-break-inside">
                                                         <TableCell className="p-2 border-b border-gray-100 align-top">{row.date}</TableCell>
                                                         <TableCell className="p-2 border-b border-gray-100 font-medium align-top">{row.companyName}</TableCell>
                                                         <TableCell className="p-2 border-b border-gray-100 text-green-600 font-medium align-top">{row.checkInTime}</TableCell>
@@ -224,20 +159,15 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
                                         </Table>
                                     </div>
                                 ) : (
-                                    <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200 border-dashed text-gray-500 italic">
+                                    <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200 border-dashed text-gray-500 italic avoid-page-break-inside">
                                         No check in/out records found for this period.
                                     </div>
                                 )}
                             </div>
                         );
                     })}
-
-                    <footer className="mt-auto w-full pt-4 border-t border-gray-200 text-xs text-gray-500 flex justify-between items-center bg-white">
-                        <p>Generated by HR System on {format(new Date(), 'dd-MM-yyyy hh:mm a')}</p>
-                        <p className="font-medium">Page {pageIndex + 1} of {pages.length} {pageIndex === pages.length - 1 ? ' *** End of Report ***' : ''}</p>
-                    </footer>
                 </div>
-            ))}
+            </div>
         </div>
     );
 };
@@ -278,53 +208,66 @@ export default function PrintMultipleCheckInOutReportPage() {
     }, []);
 
     const handleDownloadPdf = async () => {
-        const input = printContainerRef.current;
+        const input = document.getElementById('pdf-content-wrapper');
         if (!input) {
             Swal.fire("Error", "Could not find the content to download.", "error");
             return;
         }
 
-        const utilityButtons = input.querySelector('.noprint') as HTMLElement;
+        const utilityButtons = document.querySelector('.noprint') as HTMLElement;
         if (utilityButtons) utilityButtons.style.display = 'none';
 
         try {
-            const pages = input.querySelectorAll('.a4-page-wrapper');
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
+            // @ts-ignore - html2pdf doesn't have good TS definitions by default when loaded dynamically
+            const html2pdf = (await import('html2pdf.js')).default;
 
-            for (let i = 0; i < pages.length; i++) {
-                const pageElement = pages[i] as HTMLElement;
-                const canvas = await html2canvas(pageElement, { scale: 2, useCORS: true });
-                const imgData = canvas.toDataURL('image/png');
+            const opt = {
+                margin: [0, 0, 15, 0], // top, left, bottom, right in mm (15mm bottom margin for footer)
+                filename: `Multiple_Check_In_Out_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`,
+                image: { type: 'jpeg', quality: 1.0 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'], avoid: '.avoid-page-break-inside' }
+            };
+
+            const worker = html2pdf().set(opt).from(input);
+
+            worker.toPdf().get('pdf').then((pdf: any) => {
+                const totalPages = pdf.internal.getNumberOfPages();
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
                 
-                if (i > 0) {
-                    pdf.addPage();
+                for (let i = 1; i <= totalPages; i++) {
+                    pdf.setPage(i);
+                    
+                    // Add Footer Line
+                    pdf.setDrawColor(229, 231, 235); // gray-200
+                    pdf.setLineWidth(0.5);
+                    pdf.line(10, pageHeight - 12, pageWidth - 10, pageHeight - 12);
+                    
+                    // Add Footer Text
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(107, 114, 128); // gray-500
+                    pdf.text(`Generated by HR System on ${format(new Date(), 'dd-MM-yyyy hh:mm a')}`, 10, pageHeight - 8);
+                    
+                    const pageText = `Page ${i} of ${totalPages} ${i === totalPages ? ' *** End of Report ***' : ''}`;
+                    const textWidth = pdf.getStringUnitWidth(pageText) * pdf.internal.getFontSize() / pdf.internal.scaleFactor;
+                    pdf.text(pageText, pageWidth - 10 - textWidth, pageHeight - 8);
                 }
-                
-                // Scale image to fit the width of A4
-                const imgRatio = canvas.height / canvas.width;
-                let finalWidth = pdfWidth;
-                let finalHeight = pdfWidth * imgRatio;
-                let xPos = 0;
+            }).save().then(() => {
+                if (utilityButtons) utilityButtons.style.display = 'flex';
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Downloaded!',
+                    text: 'The PDF has been successfully generated.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            });
 
-                // If the content is taller than A4 (due to long wrapping text), scale it down so the footer is not cropped
-                if (finalHeight > pdfHeight) {
-                    const shrinkRatio = pdfHeight / finalHeight;
-                    finalWidth = pdfWidth * shrinkRatio;
-                    finalHeight = pdfHeight;
-                    xPos = (pdfWidth - finalWidth) / 2; // Center horizontally
-                }
-                
-                pdf.addImage(imgData, 'PNG', xPos, 0, finalWidth, finalHeight);
-            }
-
-            const fileName = `Multiple_Check_In_Out_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-            pdf.save(fileName);
-        } catch (error) {
-            console.error("Error generating PDF:", error);
-            Swal.fire("Error", "An error occurred while generating the PDF.", "error");
-        } finally {
+        } catch (err) {
+            console.error('PDF Generation Error:', err);
+            Swal.fire("Error", "Failed to generate PDF. Please try again.", "error");
             if (utilityButtons) utilityButtons.style.display = 'flex';
         }
     };
