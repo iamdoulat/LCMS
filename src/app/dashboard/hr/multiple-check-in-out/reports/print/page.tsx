@@ -224,7 +224,7 @@ export default function PrintMultipleCheckInOutReportPage() {
             const opt = {
                 margin: [0, 0, 15, 0] as [number, number, number, number], // top, left, bottom, right in mm (15mm bottom margin for footer)
                 filename: `Multiple_Check_In_Out_Report_${format(new Date(), 'yyyy-MM-dd')}.pdf`,
-                image: { type: 'jpeg', quality: 1.0 },
+                image: { type: 'jpeg' as const, quality: 1.0 },
                 html2canvas: { scale: 2, useCORS: true, letterRendering: true },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['css', 'legacy'], avoid: '.avoid-page-break-inside' }
