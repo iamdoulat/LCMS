@@ -72,7 +72,7 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
             }
 
             return {
-                date: formatDisplayDate(checkIn.date),
+                date: formatDisplayDate(checkIn.timestamp),
                 companyName: checkIn.companyName,
                 checkInTime: formatTime(checkIn.timestamp),
                 checkInLocation: checkIn.location.address || `${checkIn.location.latitude.toFixed(4)}, ${checkIn.location.longitude.toFixed(4)}`,
