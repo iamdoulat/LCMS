@@ -232,7 +232,7 @@ export default function PrintMultipleCheckInOutReportPage() {
 
             const worker = html2pdf().set(opt).from(input);
 
-            worker.toPdf().get('pdf').then((pdf: any) => {
+            await worker.toPdf().get('pdf').then((pdf: any) => {
                 const totalPages = pdf.internal.getNumberOfPages();
                 const pageWidth = pdf.internal.pageSize.getWidth();
                 const pageHeight = pdf.internal.pageSize.getHeight();
@@ -254,15 +254,15 @@ export default function PrintMultipleCheckInOutReportPage() {
                     const textWidth = pdf.getStringUnitWidth(pageText) * pdf.internal.getFontSize() / pdf.internal.scaleFactor;
                     pdf.text(pageText, pageWidth - 10 - textWidth, pageHeight - 8);
                 }
-            }).save().then(() => {
-                if (utilityButtons) utilityButtons.style.display = 'flex';
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Downloaded!',
-                    text: 'The PDF has been successfully generated.',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
+            }).save();
+
+            if (utilityButtons) utilityButtons.style.display = 'flex';
+            Swal.fire({
+                icon: 'success',
+                title: 'Downloaded!',
+                text: 'The PDF has been successfully generated.',
+                timer: 1500,
+                showConfirmButton: false
             });
 
         } catch (err) {
