@@ -47,7 +47,8 @@ export function DatePickerInput({
 }: DatePickerInputProps) {
   const [open, setOpen] = React.useState(false);
 
-  const selectedDate = field?.value ? new Date(field.value) : undefined;
+  const parsedDate = field?.value ? new Date(field.value) : undefined;
+  const selectedDate = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : undefined;
 
   const handleTimeChange = (type: "hour" | "minute" | "ampm", value: string) => {
     if (!selectedDate) return;
@@ -86,20 +87,20 @@ export function DatePickerInput({
             variant={"outline"}
             className={cn(
               "w-full justify-start text-left font-normal h-auto py-3 px-4",
-              !field?.value && "text-muted-foreground"
+              !selectedDate && "text-muted-foreground"
             )}
             disabled={disabled}
           >
             <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
             <div className="flex flex-col items-start overflow-hidden">
-              {field?.value ? (
+              {selectedDate ? (
                 <>
                   <span className="text-sm font-semibold truncate w-full">
-                    {format(new Date(field.value), "PPP")}
+                    {format(selectedDate, "PPP")}
                   </span>
                   {showTimeSelect && (
                     <span className="text-xs text-blue-600 font-bold">
-                      {format(new Date(field.value), "p")}
+                      {format(selectedDate, "p")}
                     </span>
                   )}
                 </>
