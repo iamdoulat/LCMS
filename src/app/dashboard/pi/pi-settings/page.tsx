@@ -247,7 +247,7 @@ export default function PISettingsPage() {
                       aspect={(form.watch('logoWidth') || 64) / (form.watch('logoHeight') || 64)}
                       minWidth={form.watch('logoWidth') || 64}
                     >
-                      <img ref={imgRef} src={imgSrc} alt="Crop preview" onLoad={onImageLoad} style={{ maxHeight: '70vh' }} />
+                      <img ref={imgRef} src={imgSrc} alt="Crop preview" className="bg-white" onLoad={onImageLoad} style={{ maxHeight: '70vh' }} />
                     </ReactCrop>
                   )}
                   <DialogFooter>
@@ -356,7 +356,7 @@ export default function PISettingsPage() {
                   <FormItem>
                     <Label>PI Header Logo</Label>
                     <div className="flex items-center gap-4">
-                      <div className="w-32 h-32 rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden">
+                      <div className="w-32 h-32 rounded-md border flex items-center justify-center bg-white overflow-hidden">
                         {piLogoPreviewUrl ? (
                           <Image
                             src={piLogoPreviewUrl}
