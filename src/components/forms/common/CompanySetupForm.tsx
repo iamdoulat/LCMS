@@ -883,7 +883,7 @@ export function CompanySetupForm() {
 
                   <div className="w-full space-y-4">
                     <div className="flex flex-col gap-4">
-                      <div className="relative h-12 w-12 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden bg-white rounded-md border flex items-center justify-center self-center md:self-start">
                         {faviconUrl ?
                           <Image src={faviconUrl} alt="Favicon" fill className="object-contain" />
                           : <ImageIcon className="h-6 w-6 text-muted-foreground" />
@@ -973,7 +973,7 @@ export function CompanySetupForm() {
               {/* Icon 144 Section */}
               <div className="flex flex-col gap-4">
                 <Label className="text-sm font-semibold">Icon (144x144)</Label>
-                <div className="h-20 w-20 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start relative">
+                <div className="h-20 w-20 shrink-0 overflow-hidden bg-white rounded-md border flex items-center justify-center self-center md:self-start relative">
                   {pwa144Url ?
                     <Image src={pwa144Url} alt="PWA 144" fill className="object-contain" />
                     : <ImageIcon className="h-6 w-6 text-muted-foreground" />
@@ -998,7 +998,7 @@ export function CompanySetupForm() {
               {/* Icon 192 Section */}
               <div className="flex flex-col gap-4">
                 <Label className="text-sm font-semibold">Icon (192x192)</Label>
-                <div className="h-20 w-20 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start relative">
+                <div className="h-20 w-20 shrink-0 overflow-hidden bg-white rounded-md border flex items-center justify-center self-center md:self-start relative">
                   {pwa192Url ?
                     <Image src={pwa192Url} alt="PWA 192" fill className="object-contain" />
                     : <ImageIcon className="h-6 w-6 text-muted-foreground" />
@@ -1023,7 +1023,7 @@ export function CompanySetupForm() {
               {/* Icon 512 Section */}
               <div className="flex flex-col gap-4">
                 <Label className="text-sm font-semibold">Icon (512x512)</Label>
-                <div className="h-20 w-20 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start relative">
+                <div className="h-20 w-20 shrink-0 overflow-hidden bg-white rounded-md border flex items-center justify-center self-center md:self-start relative">
                   {pwa512Url ?
                     <Image src={pwa512Url} alt="PWA 512" fill className="object-contain" />
                     : <ImageIcon className="h-6 w-6 text-muted-foreground" />
@@ -1048,7 +1048,7 @@ export function CompanySetupForm() {
               {/* Maskable Icon Section */}
               <div className="flex flex-col gap-4">
                 <Label className="text-sm font-semibold">Maskable Icon</Label>
-                <div className="h-20 w-20 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start relative">
+                <div className="h-20 w-20 shrink-0 overflow-hidden bg-white rounded-md border flex items-center justify-center self-center md:self-start relative">
                   {pwaMaskableUrl ?
                     <Image src={pwaMaskableUrl} alt="PWA Maskable" fill className="object-contain" />
                     : <ImageIcon className="h-6 w-6 text-muted-foreground" />
@@ -1073,7 +1073,7 @@ export function CompanySetupForm() {
               {/* Screenshot Section */}
               <div className="flex flex-col gap-4">
                 <Label className="text-sm font-semibold">Screenshot</Label>
-                <div className="h-20 w-32 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start relative">
+                <div className="h-20 w-32 shrink-0 overflow-hidden bg-white rounded-md border flex items-center justify-center self-center md:self-start relative">
                   {pwaScreenshotUrl ?
                     <Image src={pwaScreenshotUrl} alt="PWA Screenshot" fill className="object-contain" />
                     : <ImageIcon className="h-6 w-6 text-muted-foreground" />
@@ -1140,7 +1140,7 @@ export function CompanySetupForm() {
           <DialogHeader><DialogTitle>Crop Invoice Logo</DialogTitle></DialogHeader>
           {invoiceLogoSrc && (
             <ReactCrop crop={invoiceLogoCrop} onChange={(_, c) => setInvoiceLogoCrop(c)} onComplete={(c) => setInvoiceLogoCompletedCrop(c)} aspect={invoiceWidth / invoiceHeight}>
-              <img ref={invoiceLogoImgRef} src={invoiceLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, invoiceWidth / invoiceHeight, setInvoiceLogoCrop)} style={{ maxHeight: '70vh' }} />
+              <img ref={invoiceLogoImgRef} src={invoiceLogoSrc} alt="Crop preview" className="bg-white" onLoad={(e) => onImageLoad(e, invoiceWidth / invoiceHeight, setInvoiceLogoCrop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -1163,7 +1163,7 @@ export function CompanySetupForm() {
           <DialogHeader><DialogTitle>Crop Favicon</DialogTitle></DialogHeader>
           {faviconSrc && (
             <ReactCrop crop={faviconCrop} onChange={(_, c) => setFaviconCrop(c)} onComplete={(c) => setFaviconCompletedCrop(c)} aspect={1} minWidth={48}>
-              <img ref={faviconImgRef} src={faviconSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setFaviconCrop)} style={{ maxHeight: '70vh' }} />
+              <img ref={faviconImgRef} src={faviconSrc} alt="Crop preview" className="bg-white" onLoad={(e) => onImageLoad(e, 1, setFaviconCrop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -1185,7 +1185,7 @@ export function CompanySetupForm() {
           <DialogHeader><DialogTitle>Crop App Icon (192x192)</DialogTitle></DialogHeader>
           {pwa192Src && (
             <ReactCrop crop={pwa192Crop} onChange={(_, c) => setPwa192Crop(c)} onComplete={(c) => setPwa192CompletedCrop(c)} aspect={1}>
-              <img ref={pwa192ImgRef} src={pwa192Src} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setPwa192Crop)} style={{ maxHeight: '70vh' }} />
+              <img ref={pwa192ImgRef} src={pwa192Src} alt="Crop preview" className="bg-white" onLoad={(e) => onImageLoad(e, 1, setPwa192Crop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -1208,7 +1208,7 @@ export function CompanySetupForm() {
           <DialogHeader><DialogTitle>Crop App Icon (512x512)</DialogTitle></DialogHeader>
           {pwa512Src && (
             <ReactCrop crop={pwa512Crop} onChange={(_, c) => setPwa512Crop(c)} onComplete={(c) => setPwa512CompletedCrop(c)} aspect={1}>
-              <img ref={pwa512ImgRef} src={pwa512Src} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setPwa512Crop)} style={{ maxHeight: '70vh' }} />
+              <img ref={pwa512ImgRef} src={pwa512Src} alt="Crop preview" className="bg-white" onLoad={(e) => onImageLoad(e, 1, setPwa512Crop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -1230,7 +1230,7 @@ export function CompanySetupForm() {
           <DialogHeader><DialogTitle>Crop App Icon (144x144)</DialogTitle></DialogHeader>
           {pwa144Src && (
             <ReactCrop crop={pwa144Crop} onChange={(_, c) => setPwa144Crop(c)} onComplete={(c) => setPwa144CompletedCrop(c)} aspect={1}>
-              <img ref={pwa144ImgRef} src={pwa144Src} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setPwa144Crop)} style={{ maxHeight: '70vh' }} />
+              <img ref={pwa144ImgRef} src={pwa144Src} alt="Crop preview" className="bg-white" onLoad={(e) => onImageLoad(e, 1, setPwa144Crop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -1253,7 +1253,7 @@ export function CompanySetupForm() {
           <DialogHeader><DialogTitle>Crop Maskable Icon (192x192)</DialogTitle></DialogHeader>
           {pwaMaskableSrc && (
             <ReactCrop crop={pwaMaskableCrop} onChange={(_, c) => setPwaMaskableCrop(c)} onComplete={(c) => setPwaMaskableCompletedCrop(c)} aspect={1}>
-              <img ref={pwaMaskableImgRef} src={pwaMaskableSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setPwaMaskableCrop)} style={{ maxHeight: '70vh' }} />
+              <img ref={pwaMaskableImgRef} src={pwaMaskableSrc} alt="Crop preview" className="bg-white" onLoad={(e) => onImageLoad(e, 1, setPwaMaskableCrop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
           <DialogFooter className="flex-col sm:flex-row gap-2">

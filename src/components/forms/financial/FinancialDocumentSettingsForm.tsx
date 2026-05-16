@@ -309,7 +309,7 @@ export function FinancialDocumentSettingsForm() {
               <Label>Invoice Logo</Label>
               <div className="flex items-start gap-4">
                 <div
-                  className="rounded-md border border-dashed flex items-center justify-center bg-muted/50 overflow-hidden shrink-0"
+                  className="rounded-md border flex items-center justify-center bg-white overflow-hidden shrink-0"
                   style={{
                     width: `${Math.min((form.watch('logoWidth') || 396) / 4, 128)}px`,
                     height: `${Math.min((form.watch('logoHeight') || 58) / 4, 128)}px`,
