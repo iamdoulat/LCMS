@@ -73,11 +73,11 @@ export async function getActiveStorageConfig(): Promise<StorageConfiguration | n
 /**
  * Resolves the public URL for a given storage path based on the active provider
  */
-export async function getFileUrl(path: string, fallbackUrl?: string): Promise<string> {
+export async function getFileUrl(path: string | null | undefined, fallbackUrl?: string): Promise<string> {
     if (!path) return fallbackUrl || '';
 
     // If it's already a full URL (http/https), return it
-    if (path.startsWith('http')) return path;
+    if (typeof path === 'string' && path.startsWith('http')) return path;
 
     const config = await getActiveStorageConfig();
 

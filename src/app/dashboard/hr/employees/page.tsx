@@ -439,9 +439,9 @@ export default function EmployeesListPage() {
   );
 }
 
-function EmployeeAvatar({ src, alt }: { src?: string; alt: string }) {
+function EmployeeAvatar({ src, alt }: { src?: string | null; alt: string }) {
   const [url, setUrl] = React.useState<string | undefined>(() => {
-    if (src && src.startsWith('http')) return src;
+    if (typeof src === 'string' && src.startsWith('http')) return src;
     return undefined;
   });
 
