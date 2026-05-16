@@ -45,7 +45,7 @@ const monthOptions = [
 const statusOptions = [ALL_STATUS, "Pending", "Paid", "Rejected"];
 
 export default function CommissionReportPage() {
-    const { companyName, companyLogoUrl, address, invoiceLogoUrl } = useAuth();
+    const { companyName, companyLogoUrl, address, invoiceLogoUrl, invoiceLogoWidth, invoiceLogoHeight } = useAuth();
     const [invoices, setInvoices] = useState<ProformaInvoiceDocument[]>([]);
     const [customers, setCustomers] = useState<CustomerDocument[]>([]);
     const [loading, setLoading] = useState(true);
@@ -173,9 +173,11 @@ export default function CommissionReportPage() {
             if (logoToUse) {
                 try {
                     const logoData = await getDataUrl(logoToUse);
+                    const widthInMm = invoiceLogoWidth ? (invoiceLogoWidth * 0.264583) : 22;
+                    const heightInMm = invoiceLogoHeight ? (invoiceLogoHeight * 0.264583) : 22;
                     if (logoData) {
-                        doc.addImage(logoData, 'PNG', margin, 8, 22, 22);
-                        textX = margin + 26;
+                        doc.addImage(logoData, 'PNG', margin, 8, widthInMm, heightInMm);
+                        textX = margin + widthInMm + 4;
                     }
                 } catch (error) {
                     console.warn("Could not add logo to PDF:", error);

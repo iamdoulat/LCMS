@@ -27,7 +27,16 @@ const Header = ({ companyProfile }: { companyProfile?: CompanyProfile }) => (
         <div className="flex items-center gap-2">
             {companyProfile?.invoiceLogoUrl ? (
                 <div className="flex flex-col">
-                    <img src={companyProfile.invoiceLogoUrl} alt="Logo" className="h-10 object-contain" />
+                    <img 
+                        src={companyProfile.invoiceLogoUrl} 
+                        alt="Logo" 
+                        style={{
+                            width: companyProfile?.invoiceLogoWidth ? `${companyProfile.invoiceLogoWidth}px` : companyProfile?.logoWidth ? `${companyProfile.logoWidth}px` : 'auto',
+                            height: companyProfile?.invoiceLogoHeight ? `${companyProfile.invoiceLogoHeight}px` : companyProfile?.logoHeight ? `${companyProfile.logoHeight}px` : '2.5rem',
+                            maxWidth: '100%',
+                            objectFit: 'contain'
+                        }} 
+                    />
                 </div>
             ) : (
                 <div>

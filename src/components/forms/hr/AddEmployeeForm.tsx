@@ -254,7 +254,7 @@ export function AddEmployeeForm() {
       // Process image upload first (client-side)
       if (selectedFile) {
         const tempId = Math.random().toString(36).substring(2, 15);
-        const filePath = `employeeImages/${tempId}/profile.jpg`;
+        const filePath = `employeeImages/${tempId}/profile.png`;
         photoDownloadURL = await uploadFile(selectedFile, filePath);
       } else if (externalUrl) {
         photoDownloadURL = externalUrl;
@@ -413,14 +413,11 @@ export function AddEmployeeForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
 
         <div className="flex items-center gap-6">
-          <div className="w-32 h-40 rounded-md border-2 border-dashed flex items-center justify-center bg-muted/50 overflow-hidden relative">
-            <Image
-              src={photoPreview || externalUrl || "https://placehold.co/128x160/e2e8f0/e2e8f0"}
-              width={128}
-              height={160}
-              alt="Profile image placeholder"
-              data-ai-hint="employee photo placeholder"
-              className="object-cover w-full h-full"
+          <div className="w-32 h-40 rounded-md border-2 border-dashed flex items-center justify-center bg-white overflow-hidden relative">
+            <EmployeePhotoPreview 
+              previewUrl={photoPreview} 
+              externalUrl={externalUrl} 
+              fallback="https://placehold.co/128x160/e2e8f0/e2e8f0"
             />
           </div>
           <div className="flex-1 space-y-6">
@@ -441,7 +438,7 @@ export function AddEmployeeForm() {
                       >
                         <Link2 className="h-4 w-4" />
                       </Button>
-                      <Button type="button" onClick={() => { setSelectedFile(null); setPhotoPreview(null); }} variant="outline" size="icon" title="Clear Photo">
+                      <Button type="button" onClick={() => { setSelectedFile(null); setPhotoPreview(null); setValue('photoURL', ''); setExternalUrl(''); }} variant="outline" size="icon" title="Clear Photo">
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -451,7 +448,10 @@ export function AddEmployeeForm() {
                       <Input
                         placeholder="https://example.com/photo.jpg"
                         value={externalUrl}
-                        onChange={(e) => setExternalUrl(e.target.value)}
+                        onChange={(e) => {
+                          setExternalUrl(e.target.value);
+                          if (!selectedFile) setPhotoPreview(e.target.value);
+                        }}
                         className="flex-1"
                       />
                     </div>
@@ -921,6 +921,46 @@ export function AddEmployeeForm() {
         </Button>
       </form>
     </Form>
+  );
+}
+
+function EmployeePhotoPreview({ previewUrl, externalUrl, fallback }: { previewUrl: string | null; externalUrl: string; fallback: string }) {
+  const [resolvedUrl, setResolvedUrl] = React.useState<string>(fallback);
+  const { getFileUrl } = require('@/lib/storage/storage');
+
+  React.useEffect(() => {
+    const updateUrl = async () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        setResolvedUrl(previewUrl);
+        return;
+      }
+      
+      const source = previewUrl || externalUrl;
+      if (source) {
+        try {
+          const url = await getFileUrl(source);
+          setResolvedUrl(url);
+        } catch (err) {
+          console.error("Error resolving preview URL:", err);
+          setResolvedUrl(source);
+        }
+      } else {
+        setResolvedUrl(fallback);
+      }
+    };
+
+    updateUrl();
+  }, [previewUrl, externalUrl, fallback]);
+
+  return (
+    <Image
+      src={resolvedUrl}
+      width={128}
+      height={160}
+      alt="Profile image preview"
+      data-ai-hint="employee photo"
+      className="object-contain w-full h-full"
+    />
   );
 }
 

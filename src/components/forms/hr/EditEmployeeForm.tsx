@@ -293,7 +293,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
 
       if (selectedFile) {
         // Use the employee's document ID for the path, which is always available.
-        const path = `employeeImages/${employee.id}/profile.jpg`;
+        const path = `employeeImages/${employee.id}/profile.png`;
         photoDownloadURL = await uploadFile(selectedFile, path);
       } else if (externalUrl) {
         // Use the external URL if provided and no file selected
@@ -469,14 +469,11 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
 
         <div className="flex items-center gap-6">
-          <div className="w-32 h-40 rounded-md border-2 border-dashed flex items-center justify-center bg-muted/50 overflow-hidden relative">
-            <Image
-              src={photoPreview && !selectedFile ? externalUrl || photoPreview : photoPreview || externalUrl || "https://placehold.co/128x160/e2e8f0/e2e8f0"}
-              width={128}
-              height={160}
-              alt="Profile image placeholder"
-              data-ai-hint="employee photo"
-              className="object-cover w-full h-full"
+          <div className="w-32 h-40 rounded-md border-2 border-dashed flex items-center justify-center bg-white overflow-hidden relative">
+            <EmployeePhotoPreview 
+              previewUrl={photoPreview} 
+              externalUrl={externalUrl} 
+              fallback="https://placehold.co/128x160/e2e8f0/e2e8f0"
             />
           </div>
           <div className="flex-1 space-y-6">
@@ -485,7 +482,7 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
               <FormControl>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Input type="file" accept="image/*" onChange={onFileSelect} className="w-full" />
+                    <Input type="file" accept="image/png, image/jpeg" onChange={onFileSelect} className="w-full" />
                     <div className="flex items-center gap-1">
                       <Button
                         type="button"
@@ -982,6 +979,47 @@ export function EditEmployeeForm({ employee }: EditEmployeeFormProps) {
         </Button>
       </form>
     </Form>
+  );
+}
+
+function EmployeePhotoPreview({ previewUrl, externalUrl, fallback }: { previewUrl: string | null; externalUrl: string; fallback: string }) {
+  const [resolvedUrl, setResolvedUrl] = React.useState<string>(fallback);
+  const { getFileUrl } = require('@/lib/storage/storage');
+
+  React.useEffect(() => {
+    const updateUrl = async () => {
+      // If it's a blob URL (staged for upload), use it directly
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        setResolvedUrl(previewUrl);
+        return;
+      }
+      
+      const source = previewUrl || externalUrl;
+      if (source) {
+        try {
+          const url = await getFileUrl(source);
+          setResolvedUrl(url);
+        } catch (err) {
+          console.error("Error resolving preview URL:", err);
+          setResolvedUrl(source);
+        }
+      } else {
+        setResolvedUrl(fallback);
+      }
+    };
+
+    updateUrl();
+  }, [previewUrl, externalUrl, fallback]);
+
+  return (
+    <Image
+      src={resolvedUrl}
+      width={128}
+      height={160}
+      alt="Profile image preview"
+      data-ai-hint="employee photo"
+      className="object-contain w-full h-full"
+    />
   );
 }
 

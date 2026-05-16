@@ -171,11 +171,16 @@ export default function PrintDeliveryChallanPage() {
                   <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={displayLogoWidth}
-                    height={displayLogoHeight}
+                    width={companySettings?.invoiceLogoWidth || companySettings?.logoWidth || displayLogoWidth}
+                    height={companySettings?.invoiceLogoHeight || companySettings?.logoHeight || displayLogoHeight}
                     className="object-contain"
                     priority
                     data-ai-hint="company logo"
+                    style={{
+                      width: companySettings?.invoiceLogoWidth ? `${companySettings.invoiceLogoWidth}px` : companySettings?.logoWidth ? `${companySettings.logoWidth}px` : `${displayLogoWidth}px`,
+                      height: companySettings?.invoiceLogoHeight ? `${companySettings.invoiceLogoHeight}px` : companySettings?.logoHeight ? `${companySettings.logoHeight}px` : `${displayLogoHeight}px`,
+                      maxWidth: '100%'
+                    }}
                   />
                 )}
                 {displayHeaderTitle && (

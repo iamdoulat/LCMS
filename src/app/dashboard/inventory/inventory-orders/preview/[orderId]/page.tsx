@@ -229,11 +229,16 @@ export default function PrintOrderPage() {
                   <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={displayLogoWidth}
-                    height={displayLogoHeight}
+                    width={settings?.invoiceLogoWidth || settings?.logoWidth || displayLogoWidth}
+                    height={settings?.invoiceLogoHeight || settings?.logoHeight || displayLogoHeight}
                     className="object-contain"
                     priority
                     data-ai-hint="company logo"
+                    style={{
+                      width: settings?.invoiceLogoWidth ? `${settings.invoiceLogoWidth}px` : settings?.logoWidth ? `${settings.logoWidth}px` : `${displayLogoWidth}px`,
+                      height: settings?.invoiceLogoHeight ? `${settings.invoiceLogoHeight}px` : settings?.logoHeight ? `${settings.logoHeight}px` : `${displayLogoHeight}px`,
+                      maxWidth: '100%'
+                    }}
                   />
                 )}
                 {displayHeaderTitle && (

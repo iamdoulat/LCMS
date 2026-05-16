@@ -29,6 +29,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getFileUrl } from '@/lib/storage/storage';
 import { useFirestoreQuery } from '@/hooks/useFirestoreQuery';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
@@ -337,7 +338,7 @@ export default function EmployeesListPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarImage src={employee.photoURL} alt={employee.fullName} data-ai-hint="employee photo" />
+                            <EmployeeAvatar src={employee.photoURL} alt={employee.fullName} />
                             <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
                           </Avatar>
                           <span className="font-medium">{employee.fullName}</span>
@@ -435,5 +436,51 @@ export default function EmployeesListPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function EmployeeAvatar({ src, alt }: { src?: string; alt: string }) {
+  const [url, setUrl] = React.useState<string | undefined>(() => {
+    if (src && src.startsWith('http')) return src;
+    return undefined;
+  });
+
+  React.useEffect(() => {
+    let isMounted = true;
+
+    const resolveUrl = async () => {
+      if (!src) {
+        if (isMounted) setUrl(undefined);
+        return;
+      }
+
+      // If it's already a full URL and we haven't set it yet, set it
+      if (src.startsWith('http')) {
+        if (isMounted && url !== src) setUrl(src);
+        return;
+      }
+
+      try {
+        const resolved = await getFileUrl(src);
+        if (isMounted) setUrl(resolved || undefined);
+      } catch (err) {
+        console.error("Error resolving avatar URL:", err);
+        if (isMounted) setUrl(src); // Fallback to raw src
+      }
+    };
+
+    resolveUrl();
+    return () => {
+      isMounted = false;
+    };
+  }, [src, url]);
+
+  return (
+    <AvatarImage 
+      src={url} 
+      alt={alt} 
+      className="object-cover w-full h-full"
+      data-ai-hint="employee photo" 
+    />
   );
 }

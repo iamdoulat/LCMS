@@ -12,6 +12,7 @@ import { auth, firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp, query, where, getDocs, collection, updateDoc, limit } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { getFileUrl } from '@/lib/storage/storage';
 import type { UserRole, CompanyProfile, UserDocumentForAdmin, Employee } from '@/types';
 
 const FINANCIAL_SETTINGS_COLLECTION = 'financial_settings';
@@ -59,6 +60,10 @@ interface AuthContextType {
   appVersion: string;
   hideCompanyLogo: boolean;
   hideCompanyName: boolean;
+  sidebarLogoWidth?: number;
+  sidebarLogoHeight?: number;
+  invoiceLogoWidth?: number;
+  invoiceLogoHeight?: number;
   operationStartDate?: any;
   employeeData: Employee | null;
   refreshEmployeeData: () => Promise<void>;
@@ -86,6 +91,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [appVersion, setAppVersion] = useState<string>(DEFAULT_APP_VERSION);
   const [hideCompanyLogo, setHideCompanyLogo] = useState<boolean>(false);
   const [hideCompanyName, setHideCompanyName] = useState<boolean>(false);
+  const [sidebarLogoWidth, setSidebarLogoWidth] = useState<number | undefined>(undefined);
+  const [sidebarLogoHeight, setSidebarLogoHeight] = useState<number | undefined>(undefined);
+  const [invoiceLogoWidth, setInvoiceLogoWidth] = useState<number | undefined>(undefined);
+  const [invoiceLogoHeight, setInvoiceLogoHeight] = useState<number | undefined>(undefined);
   const [operationStartDate, setOperationStartDate] = useState<any>(undefined);
   const [employeeData, setEmployeeData] = useState<Employee | null>(null);
   const [ghostMode, setGhostModeState] = useState<boolean>(false);
@@ -100,8 +109,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       if (profileDocSnap.exists()) {
         const profileData = profileDocSnap.data() as CompanyProfile;
         const newName = profileData.companyName || DEFAULT_COMPANY_NAME;
-        const newLogoUrl = profileData.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL;
-        const newInvoiceLogoUrl = profileData.invoiceLogoUrl || newLogoUrl;
+        const newLogoUrl = await getFileUrl(profileData.companyLogoUrl || '', DEFAULT_COMPANY_LOGO_URL);
+        const newInvoiceLogoUrl = await getFileUrl(profileData.invoiceLogoUrl || profileData.companyLogoUrl || '', DEFAULT_COMPANY_LOGO_URL);
         const newAddress = profileData.address || '';
         const newHideLogo = !!profileData.hideCompanyLogo;
         const newHideName = !!profileData.hideCompanyName;
@@ -114,6 +123,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
         setAddress(newAddress);
         setHideCompanyLogo(newHideLogo);
         setHideCompanyName(newHideName);
+        setSidebarLogoWidth(profileData.sidebarLogoWidth);
+        setSidebarLogoHeight(profileData.sidebarLogoHeight);
+        setInvoiceLogoWidth(profileData.invoiceLogoWidth);
+        setInvoiceLogoHeight(profileData.invoiceLogoHeight);
         setOperationStartDate(newOperationStartDate);
         setAppVersion(newVersion);
 
@@ -555,6 +568,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     setAppVersion(newVersion);
     setHideCompanyLogo(newHideLogo);
     setHideCompanyName(newHideName);
+    if (profile.sidebarLogoWidth !== undefined) setSidebarLogoWidth(profile.sidebarLogoWidth);
+    if (profile.sidebarLogoHeight !== undefined) setSidebarLogoHeight(profile.sidebarLogoHeight);
+    if (profile.invoiceLogoWidth !== undefined) setInvoiceLogoWidth(profile.invoiceLogoWidth);
+    if (profile.invoiceLogoHeight !== undefined) setInvoiceLogoHeight(profile.invoiceLogoHeight);
     setOperationStartDate(newOperationStartDate);
     if (profile.address !== undefined) setAddress(profile.address || '');
   }, [companyName, companyLogoUrl, invoiceLogoUrl, hideCompanyLogo, hideCompanyName, appVersion, operationStartDate]);
@@ -579,6 +596,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       appVersion,
       hideCompanyLogo,
       hideCompanyName,
+      sidebarLogoWidth,
+      sidebarLogoHeight,
+      invoiceLogoWidth,
+      invoiceLogoHeight,
       operationStartDate,
       employeeData,
       refreshEmployeeData,

@@ -1,12 +1,17 @@
 "use client";
 
-import { AddEmployeeForm } from '@/components/forms/hr';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { createLazyComponent } from '@/lib/lazy-load';
+
+// Lazy load the large form component
+const AddEmployeeForm = createLazyComponent(
+  () => import('@/components/forms/hr').then(mod => ({ default: mod.AddEmployeeForm }))
+);
 
 export default function AddEmployeePage() {
   return (

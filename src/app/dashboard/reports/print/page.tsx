@@ -128,8 +128,21 @@ function PrintPageContent() {
   return (
     <div className="print-container bg-white p-8 font-sans">
       <header className="flex flex-col items-center mb-4 print-header">
+        {companyProfile?.invoiceLogoUrl && (
+            <img 
+                src={companyProfile.invoiceLogoUrl} 
+                alt="Company Logo" 
+                className="mb-2"
+                style={{
+                    width: companyProfile?.invoiceLogoWidth ? `${companyProfile.invoiceLogoWidth}px` : companyProfile?.logoWidth ? `${companyProfile.logoWidth}px` : 'auto',
+                    height: companyProfile?.invoiceLogoHeight ? `${companyProfile.invoiceLogoHeight}px` : companyProfile?.logoHeight ? `${companyProfile.logoHeight}px` : '3rem',
+                    maxWidth: '100%',
+                    objectFit: 'contain'
+                }} 
+            />
+        )}
         <div className="text-center w-full">
-            <h1 className="text-xl font-bold">{displayCompanyName}</h1>
+            {!companyProfile?.invoiceLogoUrl && <h1 className="text-xl font-bold">{displayCompanyName}</h1>}
             <p className="text-xs text-gray-600 whitespace-pre-line">{displayCompanyAddress}</p>
         </div>
       </header>

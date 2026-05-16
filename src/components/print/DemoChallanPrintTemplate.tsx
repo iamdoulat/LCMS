@@ -45,11 +45,16 @@ export const DemoChallanPrintTemplate: React.FC<DemoChallanPrintTemplateProps> =
                                     <Image
                                         src={displayCompanyLogo}
                                         alt={`${displayCompanyName} Logo`}
-                                        width={piSettings.logoWidth}
-                                        height={piSettings.logoHeight}
+                                        width={companySettings?.invoiceLogoWidth || companySettings?.logoWidth || piSettings.logoWidth}
+                                        height={companySettings?.invoiceLogoHeight || companySettings?.logoHeight || piSettings.logoHeight}
                                         className="object-contain"
                                         priority
                                         data-ai-hint="company logo"
+                                        style={{
+                                          width: companySettings?.invoiceLogoWidth ? `${companySettings.invoiceLogoWidth}px` : companySettings?.logoWidth ? `${companySettings.logoWidth}px` : `${piSettings.logoWidth}px`,
+                                          height: companySettings?.invoiceLogoHeight ? `${companySettings.invoiceLogoHeight}px` : companySettings?.logoHeight ? `${companySettings.logoHeight}px` : `${piSettings.logoHeight}px`,
+                                          maxWidth: '100%'
+                                        }}
                                     />
                                 )}
                                 {piSettings.piName && (

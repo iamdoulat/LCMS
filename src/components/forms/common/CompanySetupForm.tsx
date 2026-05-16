@@ -1,7 +1,7 @@
 
 "use client";
 
-import * as React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +10,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '@/context/AuthContext';
 import { firestore } from '@/lib/firebase/config';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { uploadFile } from '@/lib/storage/storage';
+import { uploadFile, getActiveStorageConfig, getFileUrl } from '@/lib/storage/storage';
 import type { CompanyProfile } from '@/types';
 import Image from 'next/image';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop, type PixelCrop } from 'react-image-crop';
@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getCroppedImg } from '@/lib/image-utils';
 import { Separator } from '@/components/ui/separator';
@@ -59,6 +60,10 @@ interface FinancialSettingsProfile {
   appVersion?: string;
   timezone?: string;
   updatedAt?: any;
+  sidebarLogoWidth?: number;
+  sidebarLogoHeight?: number;
+  invoiceLogoWidth?: number;
+  invoiceLogoHeight?: number;
 }
 
 
@@ -87,6 +92,10 @@ const financialSettingsSchema = z.object({
   operationStartDate: z.any().optional(),
   appVersion: z.string().optional().or(z.literal('')),
   timezone: z.string().optional(),
+  sidebarLogoWidth: z.coerce.number().optional().or(z.literal('')),
+  sidebarLogoHeight: z.coerce.number().optional().or(z.literal('')),
+  invoiceLogoWidth: z.coerce.number().optional().or(z.literal('')),
+  invoiceLogoHeight: z.coerce.number().optional().or(z.literal('')),
 });
 
 type FinancialSettingsFormValues = z.infer<typeof financialSettingsSchema>;
@@ -209,6 +218,10 @@ export function CompanySetupForm() {
       operationStartDate: undefined,
       appVersion: DEFAULT_APP_VERSION,
       timezone: 'Asia/Dhaka',
+      sidebarLogoWidth: 64,
+      sidebarLogoHeight: 64,
+      invoiceLogoWidth: 180,
+      invoiceLogoHeight: 48,
     },
   });
 
@@ -231,6 +244,8 @@ export function CompanySetupForm() {
           pwaDescription: DEFAULT_PWA_DESCRIPTION,
           pwaIcon192Url: '',
           pwaIcon512Url: '',
+          pwaIcon144Url: '',
+          pwaIconMaskableUrl: '',
           pwaScreenshotUrl: '',
           cellNumber: '',
           hideCompanyName: false,
@@ -245,12 +260,33 @@ export function CompanySetupForm() {
 
         if (profileDocSnap.exists()) {
           const data = profileDocSnap.data() as CompanyProfile;
+          
+          // Resolve PWA icons and main logos to active storage if they use standard paths
+          const [res144, res192, res512, resMask, resScreen, resComp, resInv] = await Promise.all([
+            data.pwaIcon144Url ? getFileUrl(data.pwaIcon144Url) : Promise.resolve(''),
+            data.pwaIcon192Url ? getFileUrl(data.pwaIcon192Url) : Promise.resolve(''),
+            data.pwaIcon512Url ? getFileUrl(data.pwaIcon512Url) : Promise.resolve(''),
+            data.pwaIconMaskableUrl ? getFileUrl(data.pwaIconMaskableUrl) : Promise.resolve(''),
+            data.pwaScreenshotUrl ? getFileUrl(data.pwaScreenshotUrl) : Promise.resolve(''),
+            data.companyLogoUrl ? getFileUrl(data.companyLogoUrl) : Promise.resolve(''),
+            (data.invoiceLogoUrl || data.companyLogoUrl) ? getFileUrl(data.invoiceLogoUrl || data.companyLogoUrl) : Promise.resolve('')
+          ]);
+
           initialProfileData = {
             ...initialProfileData,
             ...data,
             companyName: data.companyName || DEFAULT_COMPANY_NAME,
-            companyLogoUrl: data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
-            invoiceLogoUrl: data.invoiceLogoUrl || data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+            companyLogoUrl: resComp || data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+            invoiceLogoUrl: resInv || data.invoiceLogoUrl || data.companyLogoUrl || DEFAULT_COMPANY_LOGO_URL,
+            pwaIcon144Url: res144,
+            pwaIcon192Url: res192,
+            pwaIcon512Url: res512,
+            pwaIconMaskableUrl: resMask,
+            pwaScreenshotUrl: resScreen,
+            sidebarLogoWidth: data.sidebarLogoWidth || 64,
+            sidebarLogoHeight: data.sidebarLogoHeight || 64,
+            invoiceLogoWidth: data.invoiceLogoWidth || 180,
+            invoiceLogoHeight: data.invoiceLogoHeight || 48,
           };
         }
         form.reset(initialProfileData);
@@ -263,6 +299,7 @@ export function CompanySetupForm() {
         setPwaMaskableUrl(initialProfileData.pwaIconMaskableUrl);
         setPwaScreenshotUrl(initialProfileData.pwaScreenshotUrl);
       } catch (error) {
+        console.error("Error loading company profile:", error);
         Swal.fire("Error", "Could not load company profile. Using defaults.", "error");
       } finally {
         setIsLoadingData(false);
@@ -273,7 +310,28 @@ export function CompanySetupForm() {
     else if (!authLoading) setIsLoadingData(false);
   }, [form, contextCompanyName, contextCompanyLogoUrl, authLoading, authUser]);
 
-  const onFileSelect = (
+  const [activeStorage, setActiveStorage] = useState<{ name: string; provider: string } | null>(null);
+  const [isLoadingStorage, setIsLoadingStorage] = useState(true);
+
+  useEffect(() => {
+    async function fetchActiveStorage() {
+      try {
+        const config = await getActiveStorageConfig();
+        if (config) {
+          setActiveStorage({ name: config.name, provider: config.provider });
+        } else {
+          setActiveStorage({ name: 'Default Firebase', provider: 'firebase' });
+        }
+      } catch (err) {
+        console.error("Error fetching active storage:", err);
+      } finally {
+        setIsLoadingStorage(false);
+      }
+    }
+    fetchActiveStorage();
+  }, []);
+
+  const onFileSelect = async (
     e: React.ChangeEvent<HTMLInputElement>,
     setSrc: React.Dispatch<React.SetStateAction<string>>,
     setFile: React.Dispatch<React.SetStateAction<File | null>>,
@@ -312,13 +370,13 @@ export function CompanySetupForm() {
 
     try {
       if (companyLogoSelectedFile) {
-        newCompanyLogoUrl = await handleLogoUpload(companyLogoSelectedFile, 'companyLogos/main_logo.jpg');
+        newCompanyLogoUrl = await handleLogoUpload(companyLogoSelectedFile, 'companyLogos/main_logo.png');
       } else if (data.companyLogoUrl) {
         newCompanyLogoUrl = data.companyLogoUrl;
       }
 
       if (invoiceLogoSelectedFile) {
-        newInvoiceLogoUrl = await handleLogoUpload(invoiceLogoSelectedFile, 'companyLogos/invoice_logo.jpg');
+        newInvoiceLogoUrl = await handleLogoUpload(invoiceLogoSelectedFile, 'companyLogos/invoice_logo.png');
       } else if (data.invoiceLogoUrl) {
         newInvoiceLogoUrl = data.invoiceLogoUrl;
       }
@@ -372,6 +430,10 @@ export function CompanySetupForm() {
         pwaAppName: data.pwaAppName,
         pwaShortName: data.pwaShortName,
         pwaDescription: data.pwaDescription,
+        sidebarLogoWidth: data.sidebarLogoWidth ? Number(data.sidebarLogoWidth) : undefined,
+        sidebarLogoHeight: data.sidebarLogoHeight ? Number(data.sidebarLogoHeight) : undefined,
+        invoiceLogoWidth: data.invoiceLogoWidth ? Number(data.invoiceLogoWidth) : undefined,
+        invoiceLogoHeight: data.invoiceLogoHeight ? Number(data.invoiceLogoHeight) : undefined,
         operationStartDate: data.operationStartDate || null,
         timezone: data.timezone || 'Asia/Dhaka',
         updatedAt: serverTimestamp(),
@@ -438,33 +500,49 @@ export function CompanySetupForm() {
     selectedFileParam: File | null,
     setFile: React.Dispatch<React.SetStateAction<File | null>>,
     setUrl: React.Dispatch<React.SetStateAction<string | undefined>>,
-    setCropping: React.Dispatch<React.SetStateAction<boolean>>
+    setCropping: React.Dispatch<React.SetStateAction<boolean>>,
+    skipCrop: boolean = false
   ) => {
-    if (!completedCrop || !imgRefParam.current || !selectedFileParam) {
-      Swal.fire("Error", "Could not process image crop. Please select and crop an image.", "error");
+    if (!selectedFileParam) {
+      Swal.fire("Error", "Please select an image first.", "error");
       return;
     }
+
+    if (!skipCrop && (!completedCrop || !imgRefParam.current)) {
+      Swal.fire("Error", "Could not process image crop. Please select and crop an image, or use 'Add without Crop'.", "error");
+      return;
+    }
+
     setIsUploading(true);
     try {
-      const croppedImageBlob = await getCroppedImg(
-        imgRefParam.current,
-        completedCrop,
-        selectedFileParam.name
-      );
-      if (!croppedImageBlob) {
-        throw new Error("Failed to create cropped image blob.");
+      let finalFile: File;
+      let tempUrl: string;
+
+      if (skipCrop) {
+        finalFile = selectedFileParam;
+        tempUrl = URL.createObjectURL(selectedFileParam);
+      } else {
+        const croppedImageBlob = await getCroppedImg(
+          imgRefParam.current!,
+          completedCrop!,
+          selectedFileParam.name
+        );
+        if (!croppedImageBlob) {
+          throw new Error("Failed to create cropped image blob.");
+        }
+        finalFile = croppedImageBlob;
+        tempUrl = URL.createObjectURL(croppedImageBlob);
       }
 
-      const tempUrl = URL.createObjectURL(croppedImageBlob);
       setUrl(tempUrl);
-      setFile(croppedImageBlob);
+      setFile(finalFile);
       setCropping(false);
 
       Swal.fire({
-        title: "Logo Staged",
-        text: "Your new logo is ready. Click 'Save Settings' to apply it.",
+        title: skipCrop ? "Logo Added" : "Logo Staged",
+        text: "Your logo is ready. Click 'Save All Changes' at the bottom to apply it permanently.",
         icon: "success",
-        timer: 1000,
+        timer: 1500,
         showConfirmButton: false,
       });
     } catch (err: any) {
@@ -475,6 +553,11 @@ export function CompanySetupForm() {
     }
   };
 
+  const sidebarWidth = form.watch('sidebarLogoWidth') || 64;
+  const sidebarHeight = form.watch('sidebarLogoHeight') || 64;
+  
+  const invoiceWidth = form.watch('invoiceLogoWidth') || 180;
+  const invoiceHeight = form.watch('invoiceLogoHeight') || 48;
 
   if (isLoadingData || authLoading) {
     return (
@@ -652,13 +735,34 @@ export function CompanySetupForm() {
                         <FormLabel htmlFor="hideCompanyLogo" className="text-xs font-normal cursor-pointer">Hide in sidebar</FormLabel>
                       </FormItem>
                     )} />
+                    <div className="flex gap-2 items-center mt-2">
+                      <FormField control={form.control} name="sidebarLogoWidth" render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel className="text-xs">Width (px)</FormLabel>
+                          <FormControl><Input type="number" placeholder="64" className="h-8 text-xs" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="sidebarLogoHeight" render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel className="text-xs">Height (px)</FormLabel>
+                          <FormControl><Input type="number" placeholder="64" className="h-8 text-xs" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                        </FormItem>
+                      )} />
+                    </div>
                   </div>
 
                   <div className="w-full space-y-4">
                     <div className="flex flex-col gap-4">
-                      <div className="h-28 w-28 shrink-0 overflow-hidden rounded-md border border-dashed bg-muted/30 flex items-center justify-center self-center md:self-start">
+                      <div 
+                        className="shrink-0 overflow-hidden bg-white flex items-center justify-center self-center md:self-start relative rounded-sm border"
+                        style={{ 
+                          width: sidebarWidth ? `${sidebarWidth}px` : '64px', 
+                          height: sidebarHeight ? `${sidebarHeight}px` : '64px',
+                          maxWidth: '100%',
+                        }}
+                      >
                         {companyLogoUrl ?
-                          <Image src={companyLogoUrl} alt="Company Logo" width={112} height={112} className="h-full w-full object-contain" />
+                          <Image src={companyLogoUrl} alt="Company Logo" fill className="object-contain" />
                           : <ImageIcon className="h-8 w-8 text-muted-foreground" />
                         }
                       </div>
@@ -709,14 +813,35 @@ export function CompanySetupForm() {
                           <FormLabel htmlFor="hideCompanyName" className="text-xs font-normal cursor-pointer">Hide company name on docs</FormLabel>
                         </FormItem>
                       )} />
+                      <div className="flex gap-2 items-center mt-2">
+                        <FormField control={form.control} name="invoiceLogoWidth" render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel className="text-xs">Width (px)</FormLabel>
+                            <FormControl><Input type="number" placeholder="180" className="h-8 text-xs" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="invoiceLogoHeight" render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel className="text-xs">Height (px)</FormLabel>
+                            <FormControl><Input type="number" placeholder="48" className="h-8 text-xs" {...field} value={field.value || ""} disabled={isReadOnly} /></FormControl>
+                          </FormItem>
+                        )} />
+                      </div>
                     </div>
                   </div>
 
                   <div className="w-full space-y-4">
                     <div className="flex flex-col gap-4">
-                      <div className="h-14 w-full max-w-[180px] shrink-0 overflow-hidden rounded-md border border-dashed bg-muted/30 flex items-center justify-center self-center md:self-start">
+                      <div 
+                        className="shrink-0 overflow-hidden bg-white flex items-center justify-center self-center md:self-start relative rounded-sm border"
+                        style={{ 
+                          width: invoiceWidth ? `${invoiceWidth}px` : '180px', 
+                          height: invoiceHeight ? `${invoiceHeight}px` : '48px',
+                          maxWidth: '100%',
+                        }}
+                      >
                         {invoiceLogoUrl ?
-                          <Image src={invoiceLogoUrl} alt="Invoice Logo" width={180} height={48} className="h-full w-full object-contain" />
+                          <Image src={invoiceLogoUrl} alt="Invoice Logo" fill className="object-contain" />
                           : <ImageIcon className="h-6 w-6 text-muted-foreground" />
                         }
                       </div>
@@ -758,9 +883,9 @@ export function CompanySetupForm() {
 
                   <div className="w-full space-y-4">
                     <div className="flex flex-col gap-4">
-                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md border border-dashed bg-muted/30 flex items-center justify-center self-center md:self-start">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start">
                         {faviconUrl ?
-                          <Image src={faviconUrl} alt="Favicon" width={48} height={48} className="h-full w-full object-contain" />
+                          <Image src={faviconUrl} alt="Favicon" fill className="object-contain" />
                           : <ImageIcon className="h-6 w-6 text-muted-foreground" />
                         }
                       </div>
@@ -799,9 +924,19 @@ export function CompanySetupForm() {
 
         {/* Section 4: PWA Settings */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">PWA Settings</CardTitle>
-            <CardDescription>Configure how your application looks when installed as a Progressive Web App.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-xl">PWA Settings</CardTitle>
+              <CardDescription>Configure how your application looks when installed as a Progressive Web App.</CardDescription>
+            </div>
+            {!isLoadingStorage && activeStorage && (
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Active Storage</span>
+                <Badge variant={activeStorage.provider === 'firebase' ? "secondary" : "default"} className="font-mono text-[10px]">
+                  {activeStorage.name} {activeStorage.provider !== 'firebase' && "(CDN)"}
+                </Badge>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -838,9 +973,9 @@ export function CompanySetupForm() {
               {/* Icon 144 Section */}
               <div className="flex flex-col gap-4">
                 <Label className="text-sm font-semibold">Icon (144x144)</Label>
-                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-dashed bg-muted/30 flex items-center justify-center self-center md:self-start">
+                <div className="h-20 w-20 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start relative">
                   {pwa144Url ?
-                    <Image src={pwa144Url} alt="PWA 144" width={80} height={80} className="h-full w-full object-contain" />
+                    <Image src={pwa144Url} alt="PWA 144" fill className="object-contain" />
                     : <ImageIcon className="h-6 w-6 text-muted-foreground" />
                   }
                 </div>
@@ -863,9 +998,9 @@ export function CompanySetupForm() {
               {/* Icon 192 Section */}
               <div className="flex flex-col gap-4">
                 <Label className="text-sm font-semibold">Icon (192x192)</Label>
-                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-dashed bg-muted/30 flex items-center justify-center self-center md:self-start">
+                <div className="h-20 w-20 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start relative">
                   {pwa192Url ?
-                    <Image src={pwa192Url} alt="PWA 192" width={80} height={80} className="h-full w-full object-contain" />
+                    <Image src={pwa192Url} alt="PWA 192" fill className="object-contain" />
                     : <ImageIcon className="h-6 w-6 text-muted-foreground" />
                   }
                 </div>
@@ -888,9 +1023,9 @@ export function CompanySetupForm() {
               {/* Icon 512 Section */}
               <div className="flex flex-col gap-4">
                 <Label className="text-sm font-semibold">Icon (512x512)</Label>
-                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-dashed bg-muted/30 flex items-center justify-center self-center md:self-start">
+                <div className="h-20 w-20 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start relative">
                   {pwa512Url ?
-                    <Image src={pwa512Url} alt="PWA 512" width={80} height={80} className="h-full w-full object-contain" />
+                    <Image src={pwa512Url} alt="PWA 512" fill className="object-contain" />
                     : <ImageIcon className="h-6 w-6 text-muted-foreground" />
                   }
                 </div>
@@ -913,9 +1048,9 @@ export function CompanySetupForm() {
               {/* Maskable Icon Section */}
               <div className="flex flex-col gap-4">
                 <Label className="text-sm font-semibold">Maskable Icon</Label>
-                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-dashed bg-muted/30 flex items-center justify-center self-center md:self-start">
+                <div className="h-20 w-20 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start relative">
                   {pwaMaskableUrl ?
-                    <Image src={pwaMaskableUrl} alt="PWA Maskable" width={80} height={80} className="h-full w-full object-contain" />
+                    <Image src={pwaMaskableUrl} alt="PWA Maskable" fill className="object-contain" />
                     : <ImageIcon className="h-6 w-6 text-muted-foreground" />
                   }
                 </div>
@@ -938,9 +1073,9 @@ export function CompanySetupForm() {
               {/* Screenshot Section */}
               <div className="flex flex-col gap-4">
                 <Label className="text-sm font-semibold">Screenshot</Label>
-                <div className="h-20 w-32 shrink-0 overflow-hidden rounded-md border border-dashed bg-muted/30 flex items-center justify-center self-center md:self-start">
+                <div className="h-20 w-32 shrink-0 overflow-hidden bg-transparent flex items-center justify-center self-center md:self-start relative">
                   {pwaScreenshotUrl ?
-                    <Image src={pwaScreenshotUrl} alt="PWA Screenshot" width={128} height={80} className="h-full w-full object-contain" />
+                    <Image src={pwaScreenshotUrl} alt="PWA Screenshot" fill className="object-contain" />
                     : <ImageIcon className="h-6 w-6 text-muted-foreground" />
                   }
                 </div>
@@ -981,15 +1116,20 @@ export function CompanySetupForm() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Crop Company Logo (Sidebar)</DialogTitle></DialogHeader>
           {companyLogoSrc && (
-            <ReactCrop crop={companyLogoCrop} onChange={(_, c) => setCompanyLogoCrop(c)} onComplete={(c) => setCompanyLogoCompletedCrop(c)} aspect={1} minWidth={100}>
-              <img ref={companyLogoImgRef} src={companyLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setCompanyLogoCrop)} style={{ maxHeight: '70vh' }} />
+            <ReactCrop crop={companyLogoCrop} onChange={(_, c) => setCompanyLogoCrop(c)} onComplete={(c) => setCompanyLogoCompletedCrop(c)} aspect={sidebarWidth / sidebarHeight} minWidth={100}>
+              <img ref={companyLogoImgRef} src={companyLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, sidebarWidth / sidebarHeight, setCompanyLogoCrop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => handleCropAndUpload(companyLogoImgRef, companyLogoCompletedCrop, companyLogoSelectedFile, setCompanyLogoSelectedFile, (url) => setCompanyLogoUrl(url), setIsCompanyLogoCropping, true)}>
+                Add without Crop
+              </Button>
+              <Button onClick={() => handleCropAndUpload(companyLogoImgRef, companyLogoCompletedCrop, companyLogoSelectedFile, setCompanyLogoSelectedFile, (url) => setCompanyLogoUrl(url), setIsCompanyLogoCropping)}>
+                <CropIcon className="mr-2 h-4 w-4" />Crop & Set
+              </Button>
+            </div>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={() => handleCropAndUpload(companyLogoImgRef, companyLogoCompletedCrop, companyLogoSelectedFile, setCompanyLogoSelectedFile, (url) => setCompanyLogoUrl(url), setIsCompanyLogoCropping)}>
-              <CropIcon className="mr-2 h-4 w-4" />Set Logo
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -999,15 +1139,20 @@ export function CompanySetupForm() {
         <DialogContent className="max-w-xl">
           <DialogHeader><DialogTitle>Crop Invoice Logo</DialogTitle></DialogHeader>
           {invoiceLogoSrc && (
-            <ReactCrop crop={invoiceLogoCrop} onChange={(_, c) => setInvoiceLogoCrop(c)} onComplete={(c) => setInvoiceLogoCompletedCrop(c)} aspect={396 / 58}>
-              <img ref={invoiceLogoImgRef} src={invoiceLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 396 / 58, setInvoiceLogoCrop)} style={{ maxHeight: '70vh' }} />
+            <ReactCrop crop={invoiceLogoCrop} onChange={(_, c) => setInvoiceLogoCrop(c)} onComplete={(c) => setInvoiceLogoCompletedCrop(c)} aspect={invoiceWidth / invoiceHeight}>
+              <img ref={invoiceLogoImgRef} src={invoiceLogoSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, invoiceWidth / invoiceHeight, setInvoiceLogoCrop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => handleCropAndUpload(invoiceLogoImgRef, invoiceLogoCompletedCrop, invoiceLogoSelectedFile, setInvoiceLogoSelectedFile, setInvoiceLogoUrl, setIsInvoiceLogoCropping, true)} disabled={isUploading}>
+                Add without Crop
+              </Button>
+              <Button onClick={() => handleCropAndUpload(invoiceLogoImgRef, invoiceLogoCompletedCrop, invoiceLogoSelectedFile, setInvoiceLogoSelectedFile, setInvoiceLogoUrl, setIsInvoiceLogoCropping)} disabled={isUploading || !invoiceLogoCompletedCrop?.width}>
+                {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Crop & Set</>}
+              </Button>
+            </div>
             <DialogClose asChild><Button variant="outline" disabled={isUploading}>Cancel</Button></DialogClose>
-            <Button onClick={() => handleCropAndUpload(invoiceLogoImgRef, invoiceLogoCompletedCrop, invoiceLogoSelectedFile, setInvoiceLogoSelectedFile, setInvoiceLogoUrl, setIsInvoiceLogoCropping)} disabled={isUploading || !invoiceLogoCompletedCrop?.width}>
-              {isUploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : <><CropIcon className="mr-2 h-4 w-4" />Set Logo</>}
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1021,11 +1166,16 @@ export function CompanySetupForm() {
               <img ref={faviconImgRef} src={faviconSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setFaviconCrop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => handleCropAndUpload(faviconImgRef, faviconCompletedCrop, faviconSelectedFile, setFaviconSelectedFile, (url) => setFaviconUrl(url), setIsFaviconCropping, true)}>
+                Add without Crop
+              </Button>
+              <Button onClick={() => handleCropAndUpload(faviconImgRef, faviconCompletedCrop, faviconSelectedFile, setFaviconSelectedFile, (url) => setFaviconUrl(url), setIsFaviconCropping)}>
+                <CropIcon className="mr-2 h-4 w-4" />Crop & Set
+              </Button>
+            </div>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={() => handleCropAndUpload(faviconImgRef, faviconCompletedCrop, faviconSelectedFile, setFaviconSelectedFile, (url) => setFaviconUrl(url), setIsFaviconCropping)}>
-              <CropIcon className="mr-2 h-4 w-4" />Set Favicon
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1038,11 +1188,16 @@ export function CompanySetupForm() {
               <img ref={pwa192ImgRef} src={pwa192Src} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setPwa192Crop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => handleCropAndUpload(pwa192ImgRef, pwa192CompletedCrop, pwa192SelectedFile, setPwa192SelectedFile, (url) => setPwa192Url(url), setIsPwa192Cropping, true)}>
+                Add without Crop
+              </Button>
+              <Button onClick={() => handleCropAndUpload(pwa192ImgRef, pwa192CompletedCrop, pwa192SelectedFile, setPwa192SelectedFile, (url) => setPwa192Url(url), setIsPwa192Cropping)}>
+                <CropIcon className="mr-2 h-4 w-4" />Crop & Set
+              </Button>
+            </div>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={() => handleCropAndUpload(pwa192ImgRef, pwa192CompletedCrop, pwa192SelectedFile, setPwa192SelectedFile, (url) => setPwa192Url(url), setIsPwa192Cropping)}>
-              <CropIcon className="mr-2 h-4 w-4" />Set Icon
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1056,11 +1211,16 @@ export function CompanySetupForm() {
               <img ref={pwa512ImgRef} src={pwa512Src} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setPwa512Crop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => handleCropAndUpload(pwa512ImgRef, pwa512CompletedCrop, pwa512SelectedFile, setPwa512SelectedFile, (url) => setPwa512Url(url), setIsPwa512Cropping, true)}>
+                Add without Crop
+              </Button>
+              <Button onClick={() => handleCropAndUpload(pwa512ImgRef, pwa512CompletedCrop, pwa512SelectedFile, setPwa512SelectedFile, (url) => setPwa512Url(url), setIsPwa512Cropping)}>
+                <CropIcon className="mr-2 h-4 w-4" />Crop & Set
+              </Button>
+            </div>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={() => handleCropAndUpload(pwa512ImgRef, pwa512CompletedCrop, pwa512SelectedFile, setPwa512SelectedFile, (url) => setPwa512Url(url), setIsPwa512Cropping)}>
-              <CropIcon className="mr-2 h-4 w-4" />Set Icon
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1073,11 +1233,16 @@ export function CompanySetupForm() {
               <img ref={pwa144ImgRef} src={pwa144Src} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setPwa144Crop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => handleCropAndUpload(pwa144ImgRef, pwa144CompletedCrop, pwa144SelectedFile, setPwa144SelectedFile, (url) => setPwa144Url(url), setIsPwa144Cropping, true)}>
+                Add without Crop
+              </Button>
+              <Button onClick={() => handleCropAndUpload(pwa144ImgRef, pwa144CompletedCrop, pwa144SelectedFile, setPwa144SelectedFile, (url) => setPwa144Url(url), setIsPwa144Cropping)}>
+                <CropIcon className="mr-2 h-4 w-4" />Crop & Set
+              </Button>
+            </div>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={() => handleCropAndUpload(pwa144ImgRef, pwa144CompletedCrop, pwa144SelectedFile, setPwa144SelectedFile, (url) => setPwa144Url(url), setIsPwa144Cropping)}>
-              <CropIcon className="mr-2 h-4 w-4" />Set Icon
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1091,11 +1256,16 @@ export function CompanySetupForm() {
               <img ref={pwaMaskableImgRef} src={pwaMaskableSrc} alt="Crop preview" onLoad={(e) => onImageLoad(e, 1, setPwaMaskableCrop)} style={{ maxHeight: '70vh' }} />
             </ReactCrop>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => handleCropAndUpload(pwaMaskableImgRef, pwaMaskableCompletedCrop, pwaMaskableSelectedFile, setPwaMaskableSelectedFile, (url) => setPwaMaskableUrl(url), setIsPwaMaskableCropping, true)}>
+                Add without Crop
+              </Button>
+              <Button onClick={() => handleCropAndUpload(pwaMaskableImgRef, pwaMaskableCompletedCrop, pwaMaskableSelectedFile, setPwaMaskableSelectedFile, (url) => setPwaMaskableUrl(url), setIsPwaMaskableCropping)}>
+                <CropIcon className="mr-2 h-4 w-4" />Crop & Set
+              </Button>
+            </div>
             <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-            <Button onClick={() => handleCropAndUpload(pwaMaskableImgRef, pwaMaskableCompletedCrop, pwaMaskableSelectedFile, setPwaMaskableSelectedFile, (url) => setPwaMaskableUrl(url), setIsPwaMaskableCropping)}>
-              <CropIcon className="mr-2 h-4 w-4" />Set Icon
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

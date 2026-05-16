@@ -36,6 +36,10 @@ interface CombinedSettingsProfile {
   invoiceLogoUrl?: string;
   piLogoUrl?: string;
   hideCompanyName?: boolean;
+  logoWidth?: number;
+  logoHeight?: number;
+  invoiceLogoWidth?: number;
+  invoiceLogoHeight?: number;
 }
 
 const formatDisplayDate = (dateString?: string) => {
@@ -243,11 +247,16 @@ export default function PrintOrderPage() {
                 <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={413}
-                    height={28}
+                    width={settings?.invoiceLogoWidth || settings?.logoWidth || 413}
+                    height={settings?.invoiceLogoHeight || settings?.logoHeight || 28}
                     className="object-contain mb-2"
                     priority
                     data-ai-hint="company logo"
+                    style={{
+                      width: settings?.invoiceLogoWidth ? `${settings.invoiceLogoWidth}px` : settings?.logoWidth ? `${settings.logoWidth}px` : '413px',
+                      height: settings?.invoiceLogoHeight ? `${settings.invoiceLogoHeight}px` : settings?.logoHeight ? `${settings.logoHeight}px` : '28px',
+                      maxWidth: '100%'
+                    }}
                 />
                 )}
                 {!hideCompanyName && (

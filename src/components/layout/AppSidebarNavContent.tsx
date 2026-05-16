@@ -266,7 +266,7 @@ const allNavGroups: (NavItemGroup & { subLinks: NavItem[] })[] = [
 
 export function AppSidebarNavContent() {
   const pathname = usePathname();
-  const { user, userRole, logout, loading: authLoading, companyName, companyLogoUrl, hideCompanyLogo, hideCompanyName } = useAuth();
+  const { user, userRole, logout, loading: authLoading, companyName, companyLogoUrl, hideCompanyLogo, hideCompanyName, sidebarLogoWidth, sidebarLogoHeight } = useAuth();
   const sidebar = useSidebar();
 
   const companyLogoUrlFromSettings = companyLogoUrl || "/icons/icon-192x192.png";
@@ -311,7 +311,7 @@ export function AppSidebarNavContent() {
 
   return (
     <>
-      <SidebarHeader className="border-b sticky top-0 bg-sidebar z-50 h-16 p-0">
+      <SidebarHeader className="sticky top-0 bg-sidebar z-50 h-16 p-0">
         <div className="flex items-center justify-between h-full px-4 gap-2">
           {user && ( // Only show the link and logo if a user is logged in
             <Link href="/dashboard" className="flex items-center gap-2 min-w-0 flex-1">
@@ -319,11 +319,16 @@ export function AppSidebarNavContent() {
                 <Image
                   src={companyLogoUrlFromSettings}
                   alt="Company Logo"
-                  width={32}
-                  height={32}
-                  className="rounded-sm object-contain flex-shrink-0"
+                  width={sidebarLogoWidth || 32}
+                  height={sidebarLogoHeight || 32}
+                  className="rounded-sm object-contain flex-shrink-0 bg-white"
                   priority
                   data-ai-hint="company logo"
+                  style={{
+                    width: sidebarLogoWidth ? `${sidebarLogoWidth}px` : '32px',
+                    height: sidebarLogoHeight ? `${sidebarLogoHeight}px` : '32px',
+                    maxWidth: '100%'
+                  }}
                 />
               )}
               <span

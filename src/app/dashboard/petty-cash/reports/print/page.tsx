@@ -169,10 +169,24 @@ function PrintPageContent() {
     return (
         <div ref={printContainerRef} className="print-invoice-container bg-white font-sans text-gray-800 flex flex-col border" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', padding: '0' }}>
             <div className="p-4 flex flex-col flex-grow">
-                <header className="flex justify-between items-center mb-4 print-header">
-                    <div>
-                        <h1 className="text-xl font-bold">{companyName || DEFAULT_COMPANY_NAME}</h1>
-                        <p className="text-xs text-gray-600 whitespace-pre-line">{address || DEFAULT_ADDRESS}</p>
+                <header className="flex justify-between items-start mb-4 print-header">
+                    <div className="flex flex-col gap-2">
+                        {companyProfile?.invoiceLogoUrl && (
+                            <img 
+                                src={companyProfile.invoiceLogoUrl} 
+                                alt="Company Logo" 
+                                style={{
+                                    width: companyProfile?.invoiceLogoWidth ? `${companyProfile.invoiceLogoWidth}px` : companyProfile?.logoWidth ? `${companyProfile.logoWidth}px` : 'auto',
+                                    height: companyProfile?.invoiceLogoHeight ? `${companyProfile.invoiceLogoHeight}px` : companyProfile?.logoHeight ? `${companyProfile.logoHeight}px` : '2.5rem',
+                                    maxWidth: '100%',
+                                    objectFit: 'contain'
+                                }} 
+                            />
+                        )}
+                        <div>
+                            {!companyProfile?.invoiceLogoUrl && <h1 className="text-xl font-bold">{companyName || DEFAULT_COMPANY_NAME}</h1>}
+                            <p className="text-xs text-gray-600 whitespace-pre-line">{address || DEFAULT_ADDRESS}</p>
+                        </div>
                     </div>
                     <div className="text-right">
                         <h2 className="text-2xl font-bold uppercase">Petty Cash Report</h2>

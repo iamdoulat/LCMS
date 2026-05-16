@@ -508,6 +508,10 @@ export interface CompanyProfile {
   appVersion?: string;
   logoWidth?: number;
   logoHeight?: number;
+  sidebarLogoWidth?: number;
+  sidebarLogoHeight?: number;
+  invoiceLogoWidth?: number;
+  invoiceLogoHeight?: number;
   piHeaderTitle?: string;
   updatedAt?: any;
 }

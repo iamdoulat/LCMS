@@ -34,6 +34,8 @@ interface FinancialSettingsProfile {
   hideCompanyName?: boolean;
   logoWidth?: number;
   logoHeight?: number;
+  invoiceLogoWidth?: number;
+  invoiceLogoHeight?: number;
   piHeaderTitle?: string;
 }
 
@@ -218,11 +220,16 @@ export default function PrintSaleInvoicePage() {
                   <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={financialSettings?.logoWidth || 396}
-                    height={financialSettings?.logoHeight || 58}
+                    width={financialSettings?.invoiceLogoWidth || financialSettings?.logoWidth || 396}
+                    height={financialSettings?.invoiceLogoHeight || financialSettings?.logoHeight || 58}
                     className="object-contain"
                     priority
                     data-ai-hint="company logo"
+                    style={{
+                      width: financialSettings?.invoiceLogoWidth ? `${financialSettings.invoiceLogoWidth}px` : financialSettings?.logoWidth ? `${financialSettings.logoWidth}px` : '396px',
+                      height: financialSettings?.invoiceLogoHeight ? `${financialSettings.invoiceLogoHeight}px` : financialSettings?.logoHeight ? `${financialSettings.logoHeight}px` : '58px',
+                      maxWidth: '100%'
+                    }}
                   />
                 )}
                 {financialSettings?.piHeaderTitle && (

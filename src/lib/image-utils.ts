@@ -45,10 +45,9 @@ export async function getCroppedImg(
           reject(new Error('Canvas is empty'));
           return;
         }
-        resolve(new File([blob], fileName, { type: 'image/jpeg' }));
+        resolve(new File([blob], fileName, { type: 'image/png' }));
       },
-      'image/jpeg',
-      0.95 // High quality
+      'image/png'
     );
   });
 }

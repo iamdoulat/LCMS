@@ -38,6 +38,8 @@ interface CombinedSettingsProfile {
   hideCompanyName?: boolean;
   logoWidth?: number;
   logoHeight?: number;
+  invoiceLogoWidth?: number;
+  invoiceLogoHeight?: number;
 }
 
 
@@ -298,11 +300,16 @@ export default function PrintQuotePage() {
                   <Image
                     src={displayCompanyLogo}
                     alt={`${displayCompanyName} Logo`}
-                    width={settings?.logoWidth || 50}
-                    height={settings?.logoHeight || 50}
+                    width={settings?.invoiceLogoWidth || settings?.logoWidth || 50}
+                    height={settings?.invoiceLogoHeight || settings?.logoHeight || 50}
                     className="object-contain"
                     priority
                     data-ai-hint="company logo"
+                    style={{
+                      width: settings?.invoiceLogoWidth ? `${settings.invoiceLogoWidth}px` : settings?.logoWidth ? `${settings.logoWidth}px` : '50px',
+                      height: settings?.invoiceLogoHeight ? `${settings.invoiceLogoHeight}px` : settings?.logoHeight ? `${settings.logoHeight}px` : '50px',
+                      maxWidth: '100%'
+                    }}
                   />
                 )}
                 {!hideCompanyName && (

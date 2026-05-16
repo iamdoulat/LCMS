@@ -75,7 +75,7 @@ ClaimStopwatch.displayName = 'ClaimStopwatch';
 
 export default function ClaimListPage() {
     const router = useRouter();
-    const { user, companyName, address, invoiceLogoUrl, companyLogoUrl, userRole, operationStartDate } = useAuth();
+    const { user, companyName, address, invoiceLogoUrl, companyLogoUrl, userRole, operationStartDate, invoiceLogoWidth, invoiceLogoHeight } = useAuth();
     const { toast } = useToast();
     const { supervisedEmployeeIds, isSupervisor, isDelegate } = useSupervisorCheck(user?.email);
     const [activeTab, setActiveTab] = useState<'My Claims' | 'Claim Requests'>('My Claims');
@@ -576,7 +576,9 @@ export default function ClaimListPage() {
                                                                         companyName: companyName || '',
                                                                         address: address || '',
                                                                         companyLogoUrl: companyLogoUrl || '',
-                                                                        invoiceLogoUrl: invoiceLogoUrl || ''
+                                                                        invoiceLogoUrl: invoiceLogoUrl || '',
+                                                                        invoiceLogoWidth: invoiceLogoWidth,
+                                                                        invoiceLogoHeight: invoiceLogoHeight,
                                                                     };
 
                                                                     // Fetch full employee data for better report

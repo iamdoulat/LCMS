@@ -206,7 +206,7 @@ const ReportContent = ({ data, companyProfile, attendancePolicies, pageBreakArgs
         <div className="bg-white font-sans text-gray-800 p-8" style={{ width: '210mm', minHeight: '297mm', margin: 'auto', ...pageBreakArgs }}>
             <header className="flex justify-between items-center mb-4">
                 <div>
-                    {companyProfile?.companyLogoUrl && <Image src={companyProfile.invoiceLogoUrl || ''} alt="Company Logo" width={199} height={52} className="object-contain" data-ai-hint="company logo" />}
+                    {companyProfile?.companyLogoUrl && <Image src={companyProfile.invoiceLogoUrl || ''} alt="Company Logo" width={companyProfile?.invoiceLogoWidth || companyProfile?.logoWidth || 199} height={companyProfile?.invoiceLogoHeight || companyProfile?.logoHeight || 52} className="object-contain" data-ai-hint="company logo" style={{ width: companyProfile?.invoiceLogoWidth ? `${companyProfile.invoiceLogoWidth}px` : companyProfile?.logoWidth ? `${companyProfile.logoWidth}px` : '199px', height: companyProfile?.invoiceLogoHeight ? `${companyProfile.invoiceLogoHeight}px` : companyProfile?.logoHeight ? `${companyProfile.logoHeight}px` : '52px', maxWidth: '100%' }} />}
                 </div>
                 <div className="text-right">
                     <h1 className="text-xl font-bold">{companyProfile?.companyName || 'SMART SOLUTION'}</h1>

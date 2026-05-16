@@ -7,6 +7,7 @@ import { storage as firebaseStorage } from '@/lib/firebase/config';
 
 // Simple in-memory cache for the active storage configuration
 let activeConfigCache: { config: StorageConfiguration | null; timestamp: number } | null = null;
+let pendingConfigPromise: Promise<StorageConfiguration | null> | null = null;
 const CACHE_DURATION = 60000; // 1 minute
 
 /**
@@ -20,35 +21,53 @@ export async function getActiveStorageConfig(): Promise<StorageConfiguration | n
         return activeConfigCache.config;
     }
 
-    try {
-        console.log(`[STORAGE] Fetching active configuration from API...`);
-
-        // Get auth token
-        const token = await auth.currentUser?.getIdToken();
-        const headers: HeadersInit = {};
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        const response = await fetch('/api/storage/config', { headers });
-
-        if (!response.ok) {
-            throw new Error(`API returned ${response.status}`);
-        }
-
-        const config = await response.json() as StorageConfiguration;
-
-        console.log(`[STORAGE] Active config fetched via API: ${config?.name || 'None'} (${config?.provider || 'firebase'})`);
-
-        // Update cache
-        activeConfigCache = { config, timestamp: now };
-        return config;
-    } catch (error) {
-        console.error("[STORAGE] Error fetching active storage config via API:", error);
-        // If fetch fails, return cached config even if stale as a fallback
-        // If No cache, will return null which defaults to firebase
-        return activeConfigCache?.config || null;
+    // If there's already a request in flight, return that promise
+    if (pendingConfigPromise) {
+        return pendingConfigPromise;
     }
+
+    pendingConfigPromise = (async () => {
+        try {
+            console.log(`[STORAGE] Fetching active configuration from API...`);
+
+            // Get auth token
+            const token = await auth.currentUser?.getIdToken();
+            const headers: HeadersInit = {};
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch('/api/storage/config', { 
+                headers,
+                // Add a cache-busting parameter just in case
+                next: { revalidate: 0 } 
+            } as any);
+
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    console.warn("[STORAGE] Unauthorized access to storage config API, defaulting to firebase.");
+                    return null;
+                }
+                throw new Error(`API returned ${response.status}`);
+            }
+
+            const config = await response.json() as StorageConfiguration;
+
+            console.log(`[STORAGE] Active config fetched via API: ${config?.name || 'None'} (${config?.provider || 'firebase'})`);
+
+            // Update cache
+            activeConfigCache = { config, timestamp: Date.now() };
+            return config;
+        } catch (error) {
+            console.error("[STORAGE] Error fetching active storage config via API:", error);
+            // If fetch fails, return cached config even if stale as a fallback
+            return activeConfigCache?.config || null;
+        } finally {
+            pendingConfigPromise = null;
+        }
+    })();
+
+    return pendingConfigPromise;
 }
 
 /**
@@ -65,7 +84,8 @@ export async function getFileUrl(path: string, fallbackUrl?: string): Promise<st
     // Default to Firebase if no config or firebase is active
     if (!config || config.provider === 'firebase') {
         try {
-            const storageRef = ref(firebaseStorage, path);
+            const sanitizedPath = path.replace(/^\//, '');
+            const storageRef = ref(firebaseStorage, sanitizedPath);
             return await getDownloadURL(storageRef);
         } catch (error) {
             console.error("[STORAGE] Error getting Firebase download URL:", error);
