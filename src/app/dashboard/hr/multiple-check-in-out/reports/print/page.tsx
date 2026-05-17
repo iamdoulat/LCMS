@@ -78,7 +78,9 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
                 checkInLocation: checkIn.location.address || `${checkIn.location.latitude.toFixed(4)}, ${checkIn.location.longitude.toFixed(4)}`,
                 checkOutTime: matchingCheckOut ? formatTime(matchingCheckOut.timestamp) : '-',
                 checkOutLocation: matchingCheckOut ? (matchingCheckOut.location.address || `${matchingCheckOut.location.latitude.toFixed(4)}, ${matchingCheckOut.location.longitude.toFixed(4)}`) : '-',
-                duration: duration
+                duration: duration,
+                checkInRemarks: checkIn.remarks || '',
+                checkOutRemarks: matchingCheckOut ? (matchingCheckOut.remarks || '') : ''
             };
         });
     };
@@ -109,7 +111,7 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
                     </div>
                 </header>
 
-                <div className="mb-6">
+                <div className="mb-6 text-center">
                     <h2 className="text-lg font-bold text-gray-800 mb-1">Multiple Check In/Out Report</h2>
                     <p className="text-sm text-gray-600 font-medium">Date Period: {formatDisplayDate(dateRange?.from)} to {formatDisplayDate(dateRange?.to)}</p>
                 </div>
@@ -147,7 +149,17 @@ const ReportContent = ({ data, companyProfile }: { data: ReportData, companyProf
                                                 {records.map((row, idx) => (
                                                     <TableRow key={idx} className="hover:bg-gray-50 transition-colors align-top avoid-page-break-inside">
                                                         <TableCell className="p-2 border-b border-gray-100 align-top">{row.date}</TableCell>
-                                                        <TableCell className="p-2 border-b border-gray-100 font-medium align-top">{row.companyName}</TableCell>
+                                                        <TableCell className="p-2 border-b border-gray-100 font-medium align-top">
+                                                            <div>{row.companyName}</div>
+                                                            <div className="mt-1 text-[10px] text-gray-500 font-normal leading-normal whitespace-normal break-words">
+                                                                <span className="font-semibold text-gray-700">In Remarks:</span> {row.checkInRemarks?.trim() || 'No Remarks provided'}
+                                                            </div>
+                                                            {row.checkOutTime !== '-' && (
+                                                                <div className="mt-0.5 text-[10px] text-gray-500 font-normal leading-normal whitespace-normal break-words">
+                                                                    <span className="font-semibold text-gray-700">Out Remarks:</span> {row.checkOutRemarks?.trim() || 'No Remarks provided'}
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
                                                         <TableCell className="p-2 border-b border-gray-100 text-green-600 font-medium align-top">{row.checkInTime}</TableCell>
                                                         <TableCell className="p-2 border-b border-gray-100 align-top whitespace-normal break-words" title={row.checkInLocation}>{row.checkInLocation}</TableCell>
                                                         <TableCell className="p-2 border-b border-gray-100 text-red-600 font-medium align-top">{row.checkOutTime}</TableCell>
